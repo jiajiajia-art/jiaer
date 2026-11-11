@@ -1,0 +1,285 @@
+.filters {
+  margin-bottom: 20px;
+}
+
+.dataSourceSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+}
+
+.dataSourceButton {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border-radius: 9px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dataSourceButtonActive {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.sectionError {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 22%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-surface) 86%, transparent);
+  color: var(--color-primary-bold);
+  font-size: 13px;
+}
+
+.sectionError button {
+  border: 1px solid color-mix(in srgb, var(--color-primary) 28%, transparent);
+  border-radius: 7px;
+  background: var(--color-surface);
+  color: var(--color-primary-bold);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 10px;
+}
+
+.filterGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.select,
+.dateInput {
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  border-radius: 10px;
+  background: var(--color-surface);
+  font-size: 14px;
+}
+
+.presetButton {
+  border: 1px solid color-mix(in srgb, var(--color-primary) 28%, transparent);
+  background: var(--color-surface);
+  color: var(--admin-accent-strong, var(--color-primary));
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.presetButtonActive {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border-color: transparent;
+}
+
+.section {
+  background: var(--color-surface);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary) 6%, transparent);
+}
+
+.sectionTitle {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.sectionToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.sectionToolbar .sectionTitle {
+  margin-bottom: 0;
+}
+
+.inlineFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.sectionHint {
+  margin: 0 0 16px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.chartWrap {
+  width: 100%;
+  height: 320px;
+}
+
+.tableWrap {
+  margin-top: 16px;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  text-align: left;
+  font-size: 13px;
+}
+
+.table th {
+  color: var(--color-text-muted);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--color-surface) 72%, transparent);
+}
+
+.table td {
+  color: var(--color-text);
+}
+
+.deviceSplit {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.deviceSplitTitle {
+  margin-bottom: 12px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.deviceSplitRows {
+  display: grid;
+  gap: 10px;
+}
+
+.deviceSplitRow {
+  display: grid;
+  grid-template-columns: minmax(72px, 96px) minmax(120px, 1fr) minmax(92px, auto);
+  gap: 10px;
+  align-items: center;
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.deviceSplitLabel,
+.deviceSplitValue {
+  white-space: nowrap;
+}
+
+.deviceSplitValue {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.deviceSplitBarTrack {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.deviceSplitBarFill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-primary);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.emptyState {
+  padding: 24px;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.tooltipCard {
+  min-width: 156px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-bg) 94%, transparent);
+  color: var(--color-text);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--color-shadow) 18%, transparent);
+}
+
+.tooltipTitle {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.tooltipRow + .tooltipRow {
+  margin-top: 6px;
+}
+
+@media (max-width: 720px) {
+  .inlineFilters {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .deviceSplitRow {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .deviceSplitValue {
+    text-align: left;
+  }
+}

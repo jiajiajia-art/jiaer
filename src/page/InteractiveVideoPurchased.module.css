@@ -1,0 +1,281 @@
+.pageRoot {
+    --ivp-bg: var(--color-bg);
+    --ivp-card: var(--color-surface);
+    --ivp-elevated: var(--color-surface-2);
+    --ivp-border: var(--color-border);
+    --ivp-label: var(--color-text-muted);
+    --ivp-value: var(--color-text);
+    --ivp-primary: var(--color-primary);
+    --ivp-primary-hover: var(--color-primary);
+    --ivp-divider: color-mix(in srgb, var(--color-text) 10%, transparent);
+    min-height: 100vh;
+    background: var(--ivp-bg);
+    color: var(--ivp-value);
+}
+
+.main {
+    min-height: 100vh;
+    padding: 0 0 84px;
+    background: var(--ivp-bg);
+}
+
+.shell {
+    width: min(100%, 720px);
+    margin: 0 auto;
+    background: var(--ivp-bg);
+}
+
+.headerDock {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px;
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+    box-sizing: border-box;
+    backdrop-filter: blur(8px);
+}
+
+.summarySection {
+    padding: 18px 16px 8px;
+    border-bottom: 1px solid var(--ivp-border);
+}
+
+.summaryDesc {
+    margin: 0 0 14px;
+    color: var(--ivp-label);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.summaryGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.summaryCard {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 12px;
+    background: var(--ivp-card);
+    border: 1px solid var(--ivp-border);
+    border-radius: 12px;
+}
+
+.summaryLabel {
+    font-size: 12px;
+    color: var(--ivp-label);
+    line-height: 1.2;
+    font-weight: 500;
+}
+
+.summaryValue {
+    font-size: 20px;
+    line-height: 1.1;
+    font-weight: 700;
+    color: var(--ivp-value);
+    font-variant-numeric: tabular-nums;
+}
+
+.statePanel {
+    margin: 18px 16px;
+    padding: 36px 20px;
+    border-radius: 14px;
+    border: 1px solid var(--ivp-border);
+    background: var(--ivp-card);
+    color: var(--ivp-label);
+    text-align: center;
+}
+
+.statePanel h2 {
+    margin: 12px 0 0;
+    color: var(--ivp-value);
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.statePanel p {
+    margin: 10px 0 0;
+    color: var(--ivp-label);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.emptyIcon {
+    color: var(--ivp-primary);
+    font-size: 36px;
+}
+
+.primaryButton {
+    min-height: 40px;
+    margin-top: 16px;
+    border: 0;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 16px;
+    background: var(--ivp-primary);
+    color: var(--color-on-primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.primaryButton:hover:not(:disabled) {
+    background: var(--ivp-primary-hover);
+}
+
+.primaryButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.gameList {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px;
+}
+
+.gameCard {
+    overflow: hidden;
+    border-radius: 14px;
+    border: 1px solid var(--ivp-border);
+    background: var(--ivp-card);
+}
+
+.coverWrap {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: var(--ivp-elevated);
+}
+
+.coverWrap img,
+.coverFallback {
+    width: 100%;
+    height: 100%;
+}
+
+.coverWrap img {
+    display: block;
+    object-fit: cover;
+}
+
+.coverFallback {
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 35%, transparent), color-mix(in srgb, var(--color-surface) 95%, transparent));
+    color: var(--color-primary-fg);
+    font-size: 40px;
+    font-weight: 800;
+}
+
+.offlineBadge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    min-height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
+    color: var(--color-on-media);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.cardBody {
+    padding: 16px;
+}
+
+.cardTitleRow {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.cardTitleRow h2 {
+    margin: 0;
+    color: var(--ivp-value);
+    font-size: 16px;
+    line-height: 1.35;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.cardTitleRow span {
+    flex: 0 0 auto;
+    min-height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+    color: var(--color-primary-fg);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.authorName {
+    margin: 8px 0 0;
+    color: var(--ivp-label);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.metaGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 14px 0 0;
+}
+
+.metaGrid div {
+    min-width: 0;
+    border-radius: 10px;
+    background: var(--ivp-elevated);
+    border: 1px solid var(--ivp-divider);
+    padding: 10px;
+}
+
+.metaGrid dt {
+    color: var(--ivp-label);
+    font-size: 12px;
+}
+
+.metaGrid dd {
+    margin: 4px 0 0;
+    color: var(--ivp-value);
+    font-size: 13px;
+    font-weight: 700;
+    word-break: break-all;
+}
+
+.gameCard .primaryButton {
+    width: 100%;
+}
+
+@media (max-width: 520px) {
+    .summaryGrid,
+    .metaGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .summarySection,
+    .gameList {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .statePanel {
+        margin-left: 12px;
+        margin-right: 12px;
+        padding: 28px 16px;
+    }
+}

@@ -1,0 +1,370 @@
+/* 功能注释：上传进度码头 — 墨黑片 + 酒红脉动，对齐 TXT 创建页而非旧白底浮层 */
+
+.modalOverlay {
+    --dock-ink: var(--color-text);
+    --dock-surface: var(--color-surface);
+    --dock-input: var(--color-surface);
+    --dock-accent: var(--color-primary-bold);
+    --dock-accent-hot: var(--color-primary);
+    --dock-ok: var(--color-success);
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.modalContent {
+    background: var(--dock-surface);
+    border-radius: 18px;
+    width: 380px;
+    max-height: 500px;
+    display: flex;
+    flex-direction: column;
+    color: var(--color-text);
+    pointer-events: auto;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    box-shadow: 0 20px 48px color-mix(in srgb, var(--color-shadow) 55%, transparent);
+    overflow: hidden;
+}
+
+.modalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    background: var(--dock-surface);
+    cursor: default;
+}
+
+.headerActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.minimizeButton,
+.closeButton {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-radius: 999px;
+    background: var(--dock-input);
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.closeButton {
+    font-size: 20px;
+}
+
+.minimizeButton:hover,
+.closeButton:hover {
+    color: var(--color-text);
+    border-color: color-mix(in srgb, var(--color-text) 28%, transparent);
+}
+
+.title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--color-text);
+}
+
+.modalBody {
+    padding: 12px 14px 14px;
+    overflow-y: auto;
+    max-height: 400px;
+    background: var(--dock-surface);
+}
+
+.jobItem {
+    /* 功能注释：任务卡内容上下居中，避免手机把状态拆成三行顶对齐 */
+    margin-bottom: 12px;
+    padding: 14px 14px 14px 16px;
+    background: var(--dock-input);
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+}
+
+.jobItem::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    bottom: 10px;
+    width: 3px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 18%, transparent);
+}
+
+.jobItemLive::before {
+    background: linear-gradient(180deg, var(--dock-accent-hot), var(--dock-accent));
+}
+
+.jobItem:last-child {
+    margin-bottom: 0;
+}
+
+.jobHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.jobInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+
+.fileName {
+    font-size: 14px;
+    font-weight: 600;
+    color: color-mix(in srgb, var(--color-text) 92%, transparent);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.status {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.statusLive {
+    color: var(--dock-accent-hot);
+}
+
+.statusDone {
+    color: var(--dock-ok);
+}
+
+.statusFail {
+    color: var(--dock-accent-hot);
+}
+
+.removeButton {
+    background: transparent;
+    color: var(--color-text-secondary);
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.removeButton:hover {
+    color: var(--color-text);
+    border-color: var(--dock-accent-hot);
+}
+
+.progressContainer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.progressBar {
+    flex: 1;
+    min-width: 0;
+    height: 6px;
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.progressFill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.3s ease;
+    background: var(--dock-ok);
+}
+
+.progressFill.statusLive,
+.progressFill.statusFail {
+    background: linear-gradient(90deg, var(--dock-accent-hot), var(--dock-accent));
+}
+
+.progressFillLive {
+    position: relative;
+    overflow: hidden;
+}
+
+.progressFillLive::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-text) 28%, transparent), transparent);
+    animation: dockShimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes dockShimmer {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(100%);
+    }
+}
+
+.progressText {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    min-width: 40px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.jobDetails {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 8px 12px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.stage {
+    color: var(--color-text-secondary);
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.time {
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.etaText {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-text-muted);
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.errorMessage {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
+    border-radius: 10px;
+    color: var(--color-primary-fg);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.successMessage {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: color-mix(in srgb, var(--color-success) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-success) 35%, transparent);
+    border-radius: 10px;
+    color: var(--color-success);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+@media (max-width: 768px) {
+    .modalOverlay {
+        left: 12px;
+        right: 12px;
+        bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .modalContent {
+        width: min(100%, 520px);
+        max-height: min(62vh, 520px);
+        border-radius: 20px;
+    }
+
+    .modalHeader {
+        padding: 14px 16px;
+    }
+
+    .title {
+        font-size: 15px;
+    }
+
+    .headerActions {
+        gap: 6px;
+    }
+
+    .modalBody {
+        padding: 12px 14px 14px;
+        max-height: min(48vh, 420px);
+    }
+
+    .jobItem {
+        padding: 14px 14px 14px 16px;
+        border-radius: 14px;
+    }
+
+    .fileName {
+        white-space: normal;
+        word-break: break-word;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+
+    .removeButton {
+        flex-shrink: 0;
+        padding: 6px 12px;
+    }
+
+    .progressText {
+        min-width: auto;
+        line-height: 1;
+    }
+
+    .stage,
+    .time,
+    .etaText,
+    .errorMessage,
+    .successMessage {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+}
+
+@media (max-width: 480px) {
+    .modalContent {
+        width: 100%;
+    }
+
+    .progressText {
+        min-width: 34px;
+    }
+}

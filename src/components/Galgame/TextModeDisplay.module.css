@@ -1,0 +1,714 @@
+/* 文本模式容器 - 作为页面主体内容 */
+.textModeContainer {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+    height: 100%;
+    padding-bottom: 0.75rem;
+}
+
+/* 当父容器已有 padding-bottom 时（如 galgameMap），移除 TextModeDisplay 的 padding-bottom */
+.textModeContainer.noPaddingBottom {
+    padding-bottom: 0;
+}
+
+.messagesContainer {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 1rem 1.25rem; /* 16px 20px */
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem; /* 12px */
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+}
+
+.messagesContainer::-webkit-scrollbar {
+    width: 0.5rem; /* 8px */
+}
+
+.messagesContainer::-webkit-scrollbar-track {
+    background: color-mix(in srgb, var(--color-text) 5%, transparent);
+    border-radius: 0.25rem; /* 4px */
+}
+
+.messagesContainer::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--color-text) 20%, transparent);
+    border-radius: 0.25rem; /* 4px */
+}
+
+.messagesContainer::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--color-text) 30%, transparent);
+}
+
+.emptyState {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: var(--color-text-secondary);
+    font-size: 1rem; /* 16px */
+}
+
+/* 加载状态 */
+.loadingContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem; /* 16px */
+    padding: 2.5rem 1.25rem; /* 40px 20px */
+    height: 100%;
+}
+
+.aiLoader {
+    position: relative;
+    width: 3.75rem; /* 60px */
+    height: 3.75rem; /* 60px */
+}
+
+.orbit {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 0.125rem solid color-mix(in srgb, var(--color-text) 20%, transparent); /* 2px */
+    border-top-color: color-mix(in srgb, var(--color-text) 80%, transparent);
+    border-radius: 50%;
+    animation: spin 1.2s linear infinite;
+}
+
+.orbitInner {
+    position: absolute;
+    top: 15%;
+    left: 15%;
+    width: 70%;
+    height: 70%;
+    border: 0.125rem solid color-mix(in srgb, var(--color-text) 15%, transparent); /* 2px */
+    border-top-color: color-mix(in srgb, var(--color-text) 60%, transparent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite reverse;
+}
+
+.core {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 1.25rem; /* 20px */
+    height: 1.25rem; /* 20px */
+    background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: translate(-50%, -50%) scale(1.2);
+    }
+}
+
+.statusText {
+    color: color-mix(in srgb, var(--color-text) 90%, transparent);
+    font-size: 1rem; /* 16px */
+    font-weight: 500;
+}
+
+.dots::after {
+    content: '...';
+    animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+    0%, 20% {
+        content: '.';
+    }
+    40% {
+        content: '..';
+    }
+    60%, 100% {
+        content: '...';
+    }
+}
+
+/* 消息包装器 */
+.messageWrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem; /* 8px */
+}
+
+/* 旁白气泡 */
+.narrationBubble {
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 0.75rem; /* 12px */
+    padding: 0.75rem 1rem; /* 12px 16px */
+    border-left: 0.1875rem solid color-mix(in srgb, var(--color-text) 30%, transparent); /* 3px */
+}
+
+.narrationLabel {
+    font-size: 0.75rem; /* 12px */
+    color: var(--color-text-secondary);
+    margin-bottom: 0.375rem; /* 6px */
+    font-weight: 500;
+}
+
+.narrationContent {
+    font-size: 0.9375rem; /* 15px */
+    line-height: 1.6;
+    word-wrap: break-word;
+}
+
+.narrationContent > div {
+    color: color-mix(in srgb, var(--color-text) 90%, transparent);
+}
+
+/* 对话气泡 */
+.dialogueBubble {
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
+    border-radius: 0.75rem; /* 12px */
+    padding: 0.75rem 1rem; /* 12px 16px */
+    border-left: 0.1875rem solid color-mix(in srgb, var(--color-text) 40%, transparent); /* 3px */
+}
+
+.speakerName {
+    font-size: 0.8125rem; /* 13px */
+    color: color-mix(in srgb, var(--color-primary-fg) 95%, transparent);
+    margin-bottom: 0.375rem; /* 6px */
+    font-weight: 600;
+    border-left: 0.1875rem solid var(--color-primary-light); /* 3px */
+    padding-left: 0.5rem; /* 8px */
+}
+
+.dialogueContent {
+    font-size: 0.9375rem; /* 15px */
+    line-height: 1.6;
+    word-wrap: break-word;
+}
+
+.dialogueContent > div {
+    color: color-mix(in srgb, var(--color-text) 95%, transparent);
+}
+
+/* 选择气泡 — Funloom 朱红点缀，与正常模式选项卡片对齐 */
+.choiceBubble {
+    --choice-accent: var(--color-primary-light);
+    --choice-accent-soft: var(--color-primary-light);
+    background: linear-gradient(
+        165deg,
+        color-mix(in srgb, var(--color-surface) 78%, transparent) 0%,
+        color-mix(in srgb, var(--color-surface) 72%, transparent) 100%
+    );
+    border-radius: 0.75rem;
+    padding: 1rem;
+    border: 0.0625rem solid color-mix(in srgb, var(--color-primary) 28%, transparent);
+    box-shadow: 0 0.35rem 1.1rem color-mix(in srgb, var(--color-shadow) 28%, transparent);
+}
+
+.choiceTitle {
+    font-size: 1rem;
+    color: color-mix(in srgb, var(--color-text) 96%, transparent);
+    margin-bottom: 0.5rem;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+}
+
+.choiceDescription {
+    font-size: 0.875rem;
+    margin-bottom: 0.85rem;
+    line-height: 1.5;
+}
+
+.choiceDescription > div {
+    color: color-mix(in srgb, var(--color-text) 78%, transparent);
+}
+
+.optionsList {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    counter-reset: text-mode-option;
+}
+
+/* 全宽单列卡片按钮，禁止斜切/扫描线 HUD */
+.optionItem {
+    position: relative;
+    isolation: isolate;
+    counter-increment: text-mode-option;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    min-height: 2.75rem;
+    background: color-mix(in srgb, var(--color-shadow) 58%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+    border-radius: 0.45rem;
+    padding: 0.7rem 0.9rem 0.7rem 2.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-weight: 600;
+    text-shadow: 0 0.0625rem 0.1875rem color-mix(in srgb, var(--color-shadow) 75%, transparent);
+    box-shadow: 0 0.25rem 0.75rem color-mix(in srgb, var(--color-shadow) 28%, transparent);
+    transform: none;
+    cursor: pointer;
+    transition:
+        background-color 160ms ease,
+        border-color 160ms ease,
+        transform 160ms ease,
+        box-shadow 160ms ease;
+}
+
+.optionItem::before {
+    content: counter(text-mode-option);
+    position: absolute;
+    left: 0.7rem;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    color: color-mix(in srgb, var(--color-text) 92%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 42%, transparent);
+    pointer-events: none;
+}
+
+.optionItem:hover {
+    background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 38%, transparent);
+    box-shadow: 0 0.3rem 0.9rem color-mix(in srgb, var(--color-shadow) 36%, transparent);
+    transform: translateY(-0.0625rem);
+}
+
+.optionItem:active {
+    transform: translateY(0);
+}
+
+.optionNumber {
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.optionText {
+    position: relative;
+    z-index: 1;
+    color: color-mix(in srgb, var(--color-text) 96%, transparent);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.45;
+    letter-spacing: 0.01em;
+    flex: 1 1 auto;
+    min-width: 0;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    transform: none;
+    animation: none;
+}
+
+.optionItem:hover .optionText {
+    animation: none;
+    letter-spacing: 0.01em;
+    transform: none;
+}
+
+/* 主选项：暖金描边，与正常模式 mainOption 同级强调 */
+.optionItemMain {
+    border-color: color-mix(in srgb, var(--color-highlight) 35%, transparent);
+    background: color-mix(in srgb, var(--color-surface) 68%, transparent);
+}
+
+.optionItemMain:hover {
+    background: color-mix(in srgb, var(--color-highlight) 80%, transparent);
+    border-color: color-mix(in srgb, var(--color-highlight) 48%, transparent);
+}
+
+.optionItemMain::before {
+    color: var(--color-highlight);
+    background: color-mix(in srgb, var(--color-highlight) 22%, transparent);
+    border-color: color-mix(in srgb, var(--color-highlight) 42%, transparent);
+}
+
+.optionTextMain {
+    color: var(--color-highlight);
+}
+
+.pointsCost {
+    position: relative;
+    z-index: 1;
+    color: color-mix(in srgb, var(--color-highlight) 85%, transparent);
+    font-size: 0.75rem;
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+.choicePrice {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem; /* 4px */
+    flex-shrink: 0;
+    color: var(--color-text);
+    font-size: 0.875rem; /* 14px */
+    font-weight: 600;
+}
+
+.choicePrice img {
+    width: 1rem; /* 16px */
+    height: 1rem; /* 16px */
+    object-fit: contain;
+    display: block;
+}
+
+.freeBadge {
+    color: color-mix(in srgb, var(--color-success) 90%, transparent);
+    font-size: 0.75rem; /* 12px */
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+/* 功能注释：输入区固定在文本模式底部，避免长消息盖住「发送」。 */
+.textModeComposer {
+  flex-shrink: 0;
+  padding: 0.75rem 1.25rem 0.625rem;
+  padding-bottom: max(0.625rem, env(safe-area-inset-bottom, 0px));
+  border-top: 0.0625rem solid color-mix(in srgb, var(--color-text) 14%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 90%, transparent) 0%, color-mix(in srgb, var(--color-shadow) 98%, transparent) 100%);
+  box-shadow: 0 -0.35rem 1.1rem color-mix(in srgb, var(--color-shadow) 38%, transparent);
+  z-index: 6;
+}
+
+.messagesContainerWithComposer {
+  scroll-padding-bottom: 0.75rem;
+}
+
+/* 自定义输入区域 */
+.customInputSection {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 0.0625rem solid color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+
+.customInputHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.625rem; /* 10px */
+    font-size: 0.8125rem; /* 13px */
+    color: var(--color-text-secondary);
+}
+
+.pointsCostHint {
+    color: color-mix(in srgb, var(--color-highlight) 80%, transparent);
+    font-size: 0.75rem; /* 12px */
+}
+
+.freeHint {
+    color: color-mix(in srgb, var(--color-success) 90%, transparent);
+    font-size: 0.75rem; /* 12px */
+}
+
+.customInputWrapper {
+    display: flex;
+    gap: 0.5rem; /* 8px */
+}
+
+.customInput {
+    flex: 1;
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    border: 0.0625rem solid color-mix(in srgb, var(--color-text) 15%, transparent); /* 1px */
+    border-radius: 0.5rem; /* 8px */
+    padding: 0.625rem 0.875rem; /* 10px 14px */
+    color: color-mix(in srgb, var(--color-text) 95%, transparent);
+    font-size: 0.875rem; /* 14px */
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.customInput::placeholder {
+    color: var(--color-text-muted);
+}
+
+.customInput:focus {
+    border-color: color-mix(in srgb, var(--color-text) 30%, transparent);
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
+}
+
+.customInput:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.customInputButton {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    border: none;
+    border-radius: 0.5rem; /* 8px */
+    padding: 0.625rem 1.25rem; /* 10px 20px */
+    font-size: 0.875rem; /* 14px */
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.customInputButton:hover:not(:disabled) {
+    background: var(--color-primary);
+}
+
+.customInputButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 场景切换气泡 */
+.sceneChangeBubble {
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    border-radius: 0.75rem; /* 12px */
+    padding: 0.75rem 1rem; /* 12px 16px */
+    border: 0.0625rem dashed color-mix(in srgb, var(--color-text) 20%, transparent); /* 1px */
+    text-align: center;
+}
+
+.sceneChangeBubble > div > div {
+    color: color-mix(in srgb, var(--color-text) 80%, transparent);
+}
+
+.sceneChangeBubble > div {
+    font-size: 0.875rem; /* 14px */
+    line-height: 1.6;
+    font-style: italic;
+}
+
+/* 文本颜色标记样式 - 使用 !important 确保覆盖父元素颜色 */
+.colorRed {
+    color: var(--color-primary-fg) !important;
+    font-weight: 500;
+}
+
+.colorYellow {
+    color: var(--color-highlight) !important;
+    font-weight: 500;
+}
+
+.colorGreen {
+    color: var(--color-success) !important;
+    font-weight: 500;
+}
+
+.colorBlue {
+    color: var(--color-info) !important;
+    font-weight: 500;
+}
+
+.colorPurple {
+    color: color-mix(in srgb, var(--color-text) 90%, transparent) !important;
+    font-weight: 500;
+}
+
+/* 光标动画 */
+.cursor {
+    display: inline-block;
+    width: 0.125rem; /* 2px */
+    height: 1em;
+    background-color: color-mix(in srgb, var(--color-surface) 90%, transparent);
+    margin-left: 0.125rem; /* 2px */
+    animation: blink 1s infinite;
+    vertical-align: baseline;
+}
+
+@keyframes blink {
+    0%, 50% {
+        opacity: 1;
+    }
+    51%, 100% {
+        opacity: 0;
+    }
+}
+
+/* 移动端适配 */
+@media (max-width: 480px) {
+    .messagesContainer {
+        padding: 0.75rem 1rem; /* 12px 16px */
+        gap: 0.625rem; /* 10px */
+    }
+
+    .narrationBubble,
+    .dialogueBubble,
+    .choiceBubble {
+        padding: 0.625rem 0.875rem; /* 10px 14px */
+    }
+
+    .narrationContent,
+    .dialogueContent {
+        font-size: 0.875rem; /* 14px */
+    }
+
+    .optionText {
+        font-size: 0.875rem; /* 14px */
+    }
+}
+
+/* 小说阅读器等浅色背景场景 */
+.textModeContainerLight .emptyState {
+    color: var(--color-text-secondary);
+}
+
+.textModeContainerLight .messagesContainer {
+    scroll-padding-top: 12px;
+}
+
+.textModeContainerLight .messagesContainer::-webkit-scrollbar-track {
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+.textModeContainerLight .messagesContainer::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--color-text) 18%, transparent);
+}
+
+.textModeContainerLight .messagesContainer::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--color-text) 28%, transparent);
+}
+
+.textModeContainerLight .narrationBubble {
+    background: var(--color-bg);
+    border-left-color: var(--color-highlight);
+    border-left-width: 3px;
+    border-left-style: solid;
+}
+
+.textModeContainerLight .narrationLabel {
+    color: var(--color-text-muted);
+}
+
+.textModeContainerLight .narrationContent > div,
+.textModeContainerLight .dialogueContent > div,
+.textModeContainerLight .choiceDescription > div {
+    color: var(--color-text);
+}
+
+.textModeContainerLight .dialogueBubble {
+    background: var(--color-bg);
+    border: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.textModeContainerLight .playerDialogueBubble {
+    background: var(--color-bg);
+    border-color: color-mix(in srgb, var(--color-primary-light) 20%, transparent);
+}
+
+.textModeContainerLight .npcDialogueBubble {
+    background: var(--color-bg);
+    border-color: color-mix(in srgb, var(--color-info) 15%, transparent);
+}
+
+.textModeContainerLight .speakerName {
+    color: var(--color-text-secondary);
+}
+
+.textModeContainerLight .choiceBubble {
+    background: var(--color-bg);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    box-shadow: none;
+}
+
+.textModeContainerLight .choiceTitle {
+    color: var(--color-text);
+}
+
+.textModeContainerLight .choiceDescription {
+    color: var(--color-text-secondary);
+}
+
+.textModeContainerLight .optionItem {
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    text-shadow: none;
+    transform: none;
+    box-shadow: 0 0.125rem 0.4rem color-mix(in srgb, var(--color-shadow) 6%, transparent);
+}
+
+.textModeContainerLight .optionItem::before {
+    color: var(--color-on-primary);
+    background: var(--color-primary-light);
+    border-color: var(--color-primary);
+}
+
+.textModeContainerLight .optionItem:hover {
+    background: var(--color-bg);
+    border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+    filter: none;
+}
+
+.textModeContainerLight .optionItemMain {
+    background: var(--color-bg);
+    border-color: color-mix(in srgb, var(--color-highlight) 28%, transparent);
+}
+
+.textModeContainerLight .optionText {
+    animation: none;
+    transform: none;
+    color: var(--color-text);
+}
+
+.textModeContainerLight .optionTextMain {
+    color: var(--color-highlight);
+}
+
+.textModeContainerLight .pointsCost,
+.textModeContainerLight .pointsCostHint {
+    color: var(--color-text-muted);
+}
+
+.textModeContainerLight .statusText {
+    color: var(--color-text-secondary);
+}
+
+.textModeContainerLight .orbit {
+    border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-top-color: color-mix(in srgb, var(--color-text) 45%, transparent);
+}
+
+.textModeContainerLight .orbitInner {
+    border-top-color: color-mix(in srgb, var(--color-text) 30%, transparent);
+}
+
+.textModeContainerLight .core {
+    background: color-mix(in srgb, var(--color-primary-light) 85%, transparent);
+}
+
+.textModeContainerLight .textModeComposer {
+    border-top-color: color-mix(in srgb, var(--color-text) 8%, transparent);
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 98%, transparent) 0%, var(--color-bg) 100%);
+    box-shadow: 0 -0.25rem 0.85rem color-mix(in srgb, var(--color-shadow) 8%, transparent);
+}

@@ -1,0 +1,25 @@
+/* 功能注释：确认条贴着大图，禁止再叠一层 16px 把预览顶下去 */
+.actionsContainer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 0;
+}
+
+.ghostSmall {
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: var(--color-text);
+    background: var(--color-surface);
+}
+
+.ghostSmall:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+

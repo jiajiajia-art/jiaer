@@ -1,0 +1,1721 @@
+.pageRoot {
+    width: 100%;
+    min-height: 100vh;
+    max-width: 1920px;
+    margin: 0 auto;
+}
+
+.mainContent {
+    color: var(--color-text);
+    display: flex;
+    margin: 0;
+    padding: 0;
+    margin-bottom: 200px;
+    min-height: 100vh;
+}
+
+.main {
+    display: flex;
+    flex-direction: column;
+    width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
+    max-width: none;
+    margin: 0 auto;
+    overflow: visible;
+    position: relative;
+}
+
+/* Embeddable profile panel (Create/Profile unified page) */
+.profileFunctionPanel {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    position: relative;
+    margin-top: 0;
+}
+
+/* 用户信息展示区域 */
+.userProfileSection {
+    width: 100vw;
+    max-width: 1920px;
+    position: relative;
+    padding: 0;
+    flex-shrink: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 38px;
+}
+
+.userProfileBackground {
+    width: 100%;
+    max-width: 1920px;
+    height: 400px;
+    position: relative;
+    overflow: hidden;
+}
+
+.userProfileBlur {
+    position: absolute;
+    top: -20px;
+    left: -20px;
+    right: -20px;
+    bottom: -20px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: blur(20px);
+    -webkit-filter: blur(20px);
+    z-index: 0;
+}
+
+.userProfileBackground::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: color-mix(in srgb, var(--color-shadow) 30%, transparent);
+    z-index: 1;
+}
+
+.userProfileContent {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    z-index: 2;
+}
+
+.profileAvatarWrap {
+    --verified-overlay-size: 32px;
+    --verified-overlay-right: 4px;
+    --verified-overlay-bottom: 4px;
+    margin-top: 80px;
+}
+
+.userAvatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--color-text);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-shadow) 30%, transparent);
+}
+
+.userName {
+    font-size: 30px;
+    font-weight: 600;
+    color: var(--color-on-media);
+    text-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 50%, transparent);
+}
+
+.userNameWrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.memberInfo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: -8px;
+}
+
+.memberCodeWrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.memberBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--color-highlight) 0%, var(--color-highlight) 100%);
+    color: var(--color-highlight);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.memberExpire {
+    font-size: 13px;
+    color: var(--color-on-media);
+    text-shadow: 0 1px 3px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.editNameIcon {
+    font-size: 20px;
+    color: var(--color-text);
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.editNameIcon:hover {
+    opacity: 1;
+}
+
+.editNameContainer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.editNameInput {
+    padding: 6px 12px;
+    border: 2px solid var(--color-text);
+    border-radius: 6px;
+    font-size: 16px;
+    outline: none;
+    background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+    width: 150px;
+}
+
+.editNameConfirm,
+.editNameCancel {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.editNameConfirm {
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-light) 100%);
+    color: var(--color-on-primary);
+}
+
+.editNameConfirm:hover {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%);
+}
+
+.editNameCancel {
+    background: color-mix(in srgb, var(--color-text) 30%, transparent);
+    color: var(--color-text);
+}
+
+.editNameCancel:hover {
+    background: color-mix(in srgb, var(--color-surface) 50%, transparent);
+}
+
+/* Kuran号 */
+.userCode {
+    margin-top: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--color-on-media);
+    text-shadow: 0 1px 4px color-mix(in srgb, var(--color-shadow) 50%, transparent);
+}
+
+.userCodeText {
+    white-space: nowrap;
+}
+
+.userCodeCopyButton {
+    background: transparent;
+    border-radius: 4px;
+    border: none;
+    color: var(--color-text);
+    min-width: auto;
+    min-height: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    outline: none;
+    transition: color 0.2s ease, transform 0.1s ease;
+}
+
+.userCodeCopyButton:hover {
+    color: var(--color-text);
+    transform: translateY(-1px);
+}
+
+.userCodeCopyButton svg {
+    font-size: 16px;
+}
+
+/* 功能列表 — 更多服务（深色面板 · 图标网格） */
+.functionList {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 12px 12px 10px;
+    box-sizing: border-box;
+    background: var(--creator-card, var(--color-surface));
+    border: 1px solid color-mix(in srgb, var(--color-text) 4%, transparent);
+    border-radius: 10px;
+}
+
+.functionListHeading {
+    margin: 0 4px 10px;
+    padding: 0;
+    color: var(--color-text);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.functionGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px 2px;
+}
+
+.functionGridItem {
+    appearance: none;
+    border: none;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 4px;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--color-text);
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: background 0.15s ease;
+}
+
+.functionGridItem:hover {
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+.functionGridItemActive {
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.functionGridIcon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: color-mix(in srgb, var(--color-text) 92%, transparent);
+    font-size: 30px;
+    flex-shrink: 0;
+}
+
+.functionGridIcon img {
+    width: 28px;
+    height: 28px;
+    display: block;
+    object-fit: contain;
+}
+
+.functionGridIcon svg {
+    width: 30px;
+    height: 30px;
+}
+
+.functionGridLabel {
+    width: 100%;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.35;
+    text-align: center;
+    color: color-mix(in srgb, var(--color-text) 92%, transparent);
+    word-break: break-word;
+}
+
+.functionExpandPanel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 0 4px;
+}
+
+.functionExpandPanel .inviteInput {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.functionItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 12px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.functionItem:hover {
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+.functionItemExpanded {
+    flex-wrap: wrap;
+    cursor: default;
+}
+
+.functionItemExpanded:hover {
+    background: transparent;
+}
+
+.functionIcon {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border-radius: 0;
+    color: var(--color-text);
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.functionIcon img {
+    width: 18px;
+    height: 18px;
+    display: block;
+    object-fit: contain;
+}
+
+.functionIcon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.functionTitle {
+    flex: 1;
+    min-width: 0;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--color-text);
+    line-height: 1.3;
+}
+
+.functionMeta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    margin-left: auto;
+    appearance: none;
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    color: inherit;
+}
+
+.functionHint {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+.functionChevron {
+    color: var(--color-text-muted);
+    font-size: 18px;
+    line-height: 1;
+    font-weight: 300;
+}
+
+.functionExpandRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1 1 100%;
+    width: 100%;
+    margin-top: 4px;
+    padding-left: 34px;
+    box-sizing: border-box;
+}
+
+.functionText {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.functionDesc {
+    font-size: 14px;
+    color: var(--color-text-muted);
+    word-break: break-word;
+}
+
+.inviteCodeHighlight {
+    color: var(--color-primary-fg);
+    font-weight: 700;
+}
+
+/* 按钮基础样式（弹窗等场景仍复用） */
+.functionButton {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+/* 未签到状态 - 红色渐变 */
+.functionButtonCheckIn {
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-light) 100%);
+    color: var(--color-on-primary);
+    cursor: pointer;
+}
+
+.functionButtonCheckIn:hover {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 30%, transparent);
+}
+
+.functionButtonCheckIn:active {
+    transform: translateY(0);
+}
+
+/* 已签到状态 - 柔和的蓝灰色渐变 */
+.functionButtonSignedIn {
+    background: color-mix(in srgb, var(--color-surface) 59.6%, transparent);
+    color: var(--color-text);
+    cursor: not-allowed;
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--color-info) 25%, transparent);
+}
+
+/* 其他按钮样式（保持原有红色） */
+.functionButton:not(.functionButtonCheckIn):not(.functionButtonSignedIn) {
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-light) 100%);
+    color: var(--color-on-primary);
+    cursor: pointer;
+}
+
+.exchangeButton {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-light) 100%);
+    color: var(--color-on-primary);
+    cursor: pointer;
+}
+
+.exchangeButton:hover {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 30%, transparent);
+}
+
+.exchangeButton:active {
+    transform: translateY(0);
+}
+
+.functionButton:not(.functionButtonCheckIn):not(.functionButtonSignedIn):hover {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 30%, transparent);
+}
+
+.functionButton:not(.functionButtonCheckIn):not(.functionButtonSignedIn):active {
+    transform: translateY(0);
+}
+
+.functionButton svg {
+    font-size: 18px;
+}
+
+.pointsActions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.inviteCampaignSection {
+    margin: 4px 8px 10px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
+    padding: 20px 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.inviteCampaignHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.inviteCampaignIcon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.inviteCampaignIcon img {
+    width: 22px;
+    height: 22px;
+    display: block;
+    object-fit: contain;
+}
+
+.inviteCampaignTitle {
+    font-size: 16px;
+    line-height: 1.35;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.inviteCampaignCodeRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.inviteCampaignCode {
+    flex: 1;
+    min-width: 0;
+    font-size: 22px;
+    line-height: 1.2;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--color-text);
+}
+
+.inviteCampaignCopyBtn {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    background: color-mix(in srgb, var(--color-text) 18%, transparent);
+    color: var(--color-text);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+}
+
+.inviteCampaignCopyBtn:hover {
+    background: color-mix(in srgb, var(--color-text) 28%, transparent);
+    transform: translateY(-1px);
+}
+
+.inviteCampaignRewardBtn {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    background: color-mix(in srgb, var(--color-text) 18%, transparent);
+    color: var(--color-text);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+    align-self: flex-start;
+}
+
+.inviteCampaignRewardBtn:hover {
+    background: color-mix(in srgb, var(--color-text) 28%, transparent);
+    transform: translateY(-1px);
+}
+
+.inviteCampaignMeta {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    margin-top: 8px;
+}
+
+.payButton {
+    background-color: var(--color-primary-light);
+    border-radius: 5px;
+    padding: 8px 16px;
+    color: var(--color-on-primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.payButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-shadow) 15%, transparent);
+}
+
+.inviteInput {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 12px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--color-text);
+}
+
+.inviteInput:focus {
+    border-color: color-mix(in srgb, var(--color-text) 35%, transparent);
+}
+
+.redeemInput {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid var(--color-border);
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+
+.redeemInput:focus {
+    border-color: var(--color-highlight);
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+
+.redeemResultBadge {
+    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-highlight) 16%, transparent);
+    color: var(--color-highlight);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.inviteInput::placeholder {
+    color: var(--color-text-muted);
+}
+
+.functionExpandSubmit {
+    appearance: none;
+    border: none;
+    flex-shrink: 0;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 8px;
+    background: var(--color-primary-bold);
+    color: var(--color-on-primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.functionExpandSubmit:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.dailyTaskModalOverlay {
+    position: fixed;
+    inset: 0;
+    background: color-mix(in srgb, var(--color-shadow) 70%, transparent);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 2000;
+    animation: dailyTaskFadeIn 0.3s ease-out;
+}
+
+@keyframes dailyTaskFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes dailyTaskSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dailyTaskModal {
+    position: relative;
+    width: min(360px, calc(100vw - 24px));
+    max-height: calc(100dvh - 32px - env(safe-area-inset-bottom));
+    overflow: hidden;
+    border-radius: 6px;
+    background:
+        linear-gradient(0deg, color-mix(in srgb, var(--color-text) 15%, transparent), color-mix(in srgb, var(--color-text) 15%, transparent)),
+        linear-gradient(180deg, var(--color-surface-2) 0%, color-mix(in srgb, var(--color-surface) 78%, transparent) 100%);
+    border: 0.68px solid transparent;
+    backdrop-filter: blur(47px);
+    -webkit-backdrop-filter: blur(47px);
+    box-shadow: none;
+    padding: 18px 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-sizing: border-box;
+    animation: dailyTaskSlideUp 0.3s ease-out;
+}
+
+.dailyTaskModal::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    padding: 0.68px;
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--color-surface) 55%, transparent) 0%,
+        color-mix(in srgb, var(--color-text) 18%, transparent) 60%,
+        transparent 90%
+    );
+    -webkit-mask:
+        linear-gradient(var(--color-surface) 0 0) content-box,
+        linear-gradient(var(--color-surface) 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.dailyTaskModal::after {
+    content: '';
+    position: absolute;
+    right: -40px;
+    bottom: -50px;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--color-primary) 8%, transparent) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.dailyTaskCloseBtn {
+    position: absolute;
+    top: 14px;
+    left: 12px;
+    z-index: 4;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--color-text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: opacity 0.2s ease;
+}
+
+.dailyTaskCloseBtn:hover {
+    opacity: 0.75;
+}
+
+.dailyTaskCloseIcon {
+    display: block;
+    width: 10px;
+    height: 10px;
+    border-left: 2px solid var(--color-text);
+    border-bottom: 2px solid var(--color-text);
+    transform: rotate(45deg);
+    margin-left: 4px;
+}
+
+.dailyTaskModalHeader {
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+    margin: 2px 0 0;
+    padding: 0 8px 0 4px;
+    text-align: left;
+}
+
+.dailyTaskModalTitle {
+    margin: 0 0 8px;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--color-text);
+    letter-spacing: 0.02em;
+    text-align: center;
+}
+
+.dailyTaskSummary {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--color-text-secondary);
+    text-align: left;
+}
+
+.dailyTaskLoading {
+    position: relative;
+    z-index: 1;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    text-align: center;
+    padding: 24px 0;
+}
+
+.dailyTaskError {
+    position: relative;
+    z-index: 1;
+    font-size: 13px;
+    color: var(--color-primary-fg);
+}
+
+.dailyTaskList {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    min-height: 0;
+    flex: 1 1 auto;
+    margin: 0 -4px;
+    padding: 0 4px;
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--color-text) 20%, transparent) transparent;
+}
+
+.dailyTaskItem {
+    border: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 0;
+    background: transparent;
+    padding: 14px 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dailyTaskItem:last-child {
+    border-bottom: none;
+}
+
+.makeupCardReward {
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+    padding: 12px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--color-surface) 56%, transparent);
+    opacity: 0.58;
+    transition: opacity 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.makeupCardRewardReady {
+    opacity: 1;
+    border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 16%, transparent), color-mix(in srgb, var(--color-text) 4%, transparent));
+}
+
+.makeupCardRewardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.makeupCardRewardHeader div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.makeupCardRewardHeader strong {
+    color: var(--color-text);
+    font-size: 14px;
+}
+
+.makeupCardRewardHeader span,
+.makeupCardRewardHeader b {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.makeupCardProgress {
+    height: 5px;
+    margin: 10px 0;
+    overflow: hidden;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
+}
+
+.makeupCardProgress span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
+    transition: width 0.2s ease;
+}
+
+.makeupCardClaimButton {
+    width: 100%;
+    min-height: 36px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    font-size: 13px;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.makeupCardClaimButton:disabled {
+    background: color-mix(in srgb, var(--color-text) 9%, transparent);
+    color: var(--color-text-muted);
+    cursor: not-allowed;
+}
+
+.dailyTaskItemClaimed {
+    opacity: 0.62;
+}
+
+.dailyTaskItemHeader {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.dailyTaskItemTitle {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.35;
+    color: color-mix(in srgb, var(--color-text) 92%, transparent);
+    letter-spacing: 0.01em;
+}
+
+.dailyTaskReward {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-primary);
+    flex-shrink: 0;
+    letter-spacing: 0.01em;
+    font-variant-numeric: tabular-nums;
+}
+
+.dailyTaskDescription {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--color-text-muted);
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.dailyTaskFooter {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 2px;
+}
+
+.dailyTaskProgressBlock {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.dailyTaskProgressBar {
+    position: relative;
+    width: 100%;
+    height: 2px;
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-radius: 0;
+    overflow: hidden;
+}
+
+.dailyTaskProgressFill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    background: var(--color-primary);
+    border-radius: 0;
+    transition: width 0.2s ease;
+}
+
+.dailyTaskProgressText {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+}
+
+.dailyTaskActionSlot {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.dailyTaskPrimaryBtn,
+.dailyTaskSecondaryBtn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 0 12px;
+    border-radius: 2px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+}
+
+.dailyTaskPrimaryBtn {
+    border: none;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+}
+
+.dailyTaskPrimaryBtn:hover:not(:disabled) {
+    background: var(--color-primary-light);
+}
+
+.dailyTaskPrimaryBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.dailyTaskSecondaryBtn {
+    border: 1px solid color-mix(in srgb, var(--color-text) 18%, transparent);
+    background: transparent;
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
+}
+
+.dailyTaskSecondaryBtn:hover {
+    border-color: color-mix(in srgb, var(--color-text) 32%, transparent);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.dailyTaskDoneLabel {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-text-muted);
+    line-height: 30px;
+    white-space: nowrap;
+}
+
+.dailyTaskHint {
+    position: relative;
+    z-index: 1;
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+    text-align: center;
+}
+
+/* 在 1920px 以下时，用户信息区域占据 100% 宽度 */
+@media (max-width: 1920px) {
+    .userProfileSection {
+        max-width: 100vw;
+    }
+
+    .userProfileBackground {
+        max-width: 100%;
+    }
+}
+
+/* 在 1080px 以下时，开始响应式调整 */
+@media (max-width: 1080px) {
+    .main {
+        max-width: 100%;
+        padding: 0;
+    }
+
+    .userProfileBackground {
+        height: 300px;
+    }
+
+    .profileAvatarWrap {
+        margin-top: 80px;
+        --verified-overlay-size: 26px;
+        --verified-overlay-right: 3px;
+        --verified-overlay-bottom: 3px;
+    }
+
+    .userAvatar {
+        width: 80px;
+        height: 80px;
+        border-width: 2px;
+    }
+
+    .userName {
+        font-size: 24px;
+    }
+
+    .functionList {
+        padding: 10px 10px 8px;
+    }
+}
+
+@media (max-width: 768px) {
+    .pageRoot {
+        width: 100%;
+        min-width: auto;
+        min-height: 100vh;
+        height: auto;
+        background-size: cover;
+        padding-bottom: 90px;
+    }
+
+    .mainContent {
+        min-height: calc(100vh - 40px - 70px);
+        /* padding-top: 20px; */
+    }
+
+    .main {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .userProfileSection {
+        margin-bottom: 20px;
+    }
+    
+    .userProfileBackground {
+        height: 250px;
+    }
+
+    .profileAvatarWrap {
+        margin-top: 80px;
+        --verified-overlay-size: 22px;
+        --verified-overlay-right: 2px;
+        --verified-overlay-bottom: 2px;
+    }
+
+    .userAvatar {
+        width: 60px;
+        height: 60px;
+        border-width: 2px;
+    }
+
+    .userName {
+        font-size: 20px;
+    }
+
+    .memberInfo {
+        gap: 6px;
+    }
+
+    .memberExpire {
+        font-size: 12px;
+    }
+
+    .memberCodeWrapper {
+        gap: 4px;
+    }
+
+    .userCode {
+        font-size: 14px;
+    }
+
+    .functionList {
+        padding: 10px 10px 8px;
+        border-radius: 10px;
+    }
+
+    .functionListHeading {
+        margin: 0 2px 8px;
+        font-size: 14px;
+    }
+
+    .functionGrid {
+        gap: 2px 0;
+    }
+
+    .functionGridItem {
+        padding: 6px 4px;
+        gap: 5px;
+    }
+
+    .functionGridIcon {
+        width: 32px;
+        height: 32px;
+        font-size: 26px;
+    }
+
+    .functionGridIcon img {
+        width: 24px;
+        height: 24px;
+    }
+
+    .functionGridIcon svg {
+        width: 26px;
+        height: 26px;
+    }
+
+    .functionGridLabel {
+        font-size: 11px;
+    }
+
+    .functionItem {
+        padding: 13px 10px;
+        gap: 10px;
+    }
+
+    .functionIcon {
+        width: 20px;
+        height: 20px;
+        font-size: 18px;
+    }
+
+    .functionIcon img {
+        width: 16px;
+        height: 16px;
+    }
+
+    .functionTitle {
+        font-size: 14px;
+    }
+
+    .functionHint {
+        font-size: 12px;
+    }
+
+    .functionExpandRow {
+        padding-left: 30px;
+    }
+
+    .functionButton {
+        padding: 6px 16px;
+        font-size: 13px;
+    }
+
+    .inviteCampaignSection {
+        padding: 16px;
+    }
+
+    .dailyTaskModal {
+        width: min(360px, calc(100vw - 24px));
+        max-height: calc(100dvh - 32px - env(safe-area-inset-bottom));
+        border-radius: 6px;
+        padding: 16px 14px 12px;
+    }
+
+    .dailyTaskModal::before {
+        border-radius: 6px;
+    }
+
+    .dailyTaskModalTitle {
+        font-size: 16px;
+    }
+
+    .dailyTaskSummary {
+        font-size: 12px;
+    }
+
+    .dailyTaskItem {
+        padding: 12px 2px;
+    }
+
+    .dailyTaskItemTitle {
+        font-size: 13px;
+    }
+
+    .inviteCampaignIcon {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+    }
+
+    .inviteCampaignCode {
+        font-size: 20px;
+    }
+
+    .inviteCampaignCopyBtn,
+    .inviteCampaignRewardBtn {
+        padding: 7px 12px;
+        font-size: 13px;
+    }
+
+    .inviteInput {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+
+    .redeemInput {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+}
+
+/* 加入用户群弹窗 */
+.groupModalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: color-mix(in srgb, var(--color-shadow) 70%, transparent);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.groupModalContent {
+    background: var(--color-surface);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 10px 40px color-mix(in srgb, var(--color-shadow) 30%, transparent);
+    animation: slideUp 0.3s ease-out;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px 20px 20px;
+    box-sizing: border-box;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.groupModalImage {
+    width: 30px;
+    max-width: 100px;
+    height: auto;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.groupModalImage img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.groupModalText {
+    color: var(--color-text);
+    font-size: 16px;
+    text-align: center;
+    line-height: 1.6;
+    margin-bottom: 30px;
+    padding: 0 10px;
+}
+
+.groupNumber {
+    color: var(--color-primary-fg);
+    font-weight: 600;
+    font-size: 18px;
+}
+
+.groupModalButtons {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    justify-content: center;
+}
+
+.groupModalCancelBtn,
+.groupModalCopyBtn {
+    flex: 1;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    max-width: 120px;
+}
+
+.groupModalCancelBtn {
+    background: var(--color-bg);
+    color: var(--color-text);
+}
+
+.groupModalCancelBtn:hover {
+    background: var(--color-surface-2);
+    transform: translateY(-1px);
+}
+
+.groupModalCopyBtn {
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-light) 100%);
+    color: var(--color-on-primary);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 30%, transparent);
+}
+
+.groupModalCopyBtn:hover {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 40%, transparent);
+}
+
+.groupModalCancelBtn:active,
+.groupModalCopyBtn:active {
+    transform: translateY(0);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .groupModalContent {
+        width: 95%;
+        padding: 25px 15px 15px 15px;
+    }
+
+    .groupModalImage {
+        max-width: 150px;
+        margin-bottom: 15px;
+    }
+
+    .groupModalText {
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+
+    .groupNumber {
+        font-size: 16px;
+    }
+
+    .groupModalButtons {
+        gap: 10px;
+    }
+
+    .groupModalCancelBtn,
+    .groupModalCopyBtn {
+        padding: 10px 20px;
+        font-size: 14px;
+        max-width: 100px;
+    }
+}
+
+/* 修改昵称弹窗 */
+.editNameModalOverlay {
+    position: fixed;
+    inset: 0;
+    background-color: color-mix(in srgb, var(--color-shadow) 45%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1100;
+    padding: 16px;
+}
+
+.editNameModal {
+    background-color: var(--color-surface);
+    border-radius: 16px;
+    padding: 20px 22px 16px;
+    min-width: 280px;
+    max-width: 360px;
+    width: 100%;
+    box-shadow: 0 18px 45px color-mix(in srgb, var(--color-shadow) 18%, transparent);
+}
+
+.editNameModalHeader {
+    margin-bottom: 8px;
+}
+
+.editNameModalTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.editNameModalBody {
+    margin-top: 8px;
+}
+
+.editNameModalBody .editNameInput {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--color-border);
+    font-size: 14px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.editNameModalBody .editNameInput:focus {
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.editNameTips {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.bindAccountStatusText {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text);
+    line-height: 1.6;
+}
+
+.editNameModalActions {
+    margin-top: 14px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.editNameCancelButton {
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-surface);
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.editNameConfirmButton {
+    padding: 6px 16px;
+    border-radius: 999px;
+    border: none;
+    background-color: var(--color-primary-light);
+    color: var(--color-on-primary);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.editNameCancelButton:disabled,
+.editNameConfirmButton:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* ================= 统一视觉（与弹窗体系一致） ================= */
+.functionList {
+    padding: 16px 14px 12px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+    border-radius: 18px;
+    background: var(--color-surface);
+}
+.functionListHeading { margin: 0 6px 12px; font-size: 15px; }
+.functionGrid { gap: 6px 4px; }
+.functionGridItem { gap: 8px; padding: 10px 4px; border-radius: 14px; transition: background 0.15s, transform 0.1s; }
+.functionGridItem:active { transform: scale(0.96); }
+.functionGridIcon {
+    width: 44px; height: 44px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--color-text);
+    font-size: 22px;
+    transition: background 0.15s, color 0.15s;
+}
+.functionGridIcon svg { width: 22px; height: 22px; }
+.functionGridIcon img { width: 24px; height: 24px; }
+.functionGridItem:hover .functionGridIcon,
+.functionGridItemActive .functionGridIcon { background: color-mix(in srgb, var(--color-primary) 16%, transparent); color: var(--color-primary-fg); }
+.functionGridLabel { color: color-mix(in srgb, var(--color-text) 78%, transparent); font-size: 12px; }
+.functionButton { border-radius: 10px; }
+.functionButtonCheckIn,
+.functionButton:not(.functionButtonCheckIn):not(.functionButtonSignedIn) { background: var(--color-primary); color: var(--color-on-primary); }
+.functionButtonCheckIn:hover,
+.functionButton:not(.functionButtonCheckIn):not(.functionButtonSignedIn):hover { background: var(--color-primary-bold); color: var(--color-on-primary); }
+.functionButtonSignedIn { background: color-mix(in srgb, var(--color-text) 10%, transparent); color: var(--color-text-secondary); }
+.functionExpandSubmit { border-radius: 10px; background: var(--color-primary); color: var(--color-on-primary); }
+.functionExpandSubmit:hover:not(:disabled) { background: var(--color-primary-bold); color: var(--color-on-primary); }
+.inviteCampaignSection { border-color: color-mix(in srgb, var(--color-text) 6%, transparent); border-radius: 18px; background: var(--color-surface); }
+.makeupCardClaimButton { border-radius: 10px; background: var(--color-primary); color: var(--color-on-primary); }
+.makeupCardProgress > * { background: var(--color-primary); color: var(--color-on-primary); }

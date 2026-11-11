@@ -1,0 +1,298 @@
+.pageRoot {
+    /* 功能注释：分类页本地暗色，对齐效果图黑底酒红强调 */
+    --primary: var(--color-primary);
+    --primary-light: var(--color-primary);
+    --primary-dark: var(--color-primary-bold);
+    --categories-label-width: 44px;
+    width: 100%;
+    min-height: 100vh;
+    max-width: none;
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+    overflow-x: hidden;
+}
+
+.mainContent {
+    /* 功能注释：纵向布局；去掉旧右侧栏预留的大 margin-bottom */
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+}
+
+.main {
+    width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
+    max-width: none;
+    margin: var(--app-desktop-navbar-height) auto 0;
+    padding: 16px 20px 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+/* 功能注释：效果图标题在滤镜卡外——返回左、标题居中 */
+.pageHeader {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 4px 0 2px;
+}
+
+.backButton {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-text);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+}
+
+.backButton svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.pageTitle {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: 0.02em;
+    color: var(--color-text);
+    text-align: center;
+}
+
+.filtersPanel {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.filtersCard {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 12px 14px;
+    border: none;
+    border-radius: 18px;
+    /* 功能注释：严格对齐效果图滤镜卡底色取样 #0A0A0A（非 #1A1A1A） */
+    background: var(--color-bg);
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-sizing: border-box;
+}
+
+/* 功能注释：效果图为「左标签 + 右 chips」同行排布 */
+.filterSection {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+}
+
+.filterTitle {
+    flex: 0 0 var(--categories-label-width);
+    width: var(--categories-label-width);
+    padding-top: 5px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--color-text);
+    white-space: nowrap;
+}
+
+.chipRow,
+.themeScrollRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 6px;
+    flex: 1 1 auto;
+    width: auto;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: visible;
+    padding: 0;
+    cursor: default;
+    user-select: none;
+    touch-action: manipulation;
+}
+
+/* 功能注释：玩法强制单行，过窄时行内横滑而不换行 */
+.chipRowSingle {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
+}
+
+.chipRowSingle::-webkit-scrollbar {
+    display: none;
+}
+
+.chipRowDragging,
+.themeScrollRowDragging {
+    cursor: default;
+}
+
+.tagChip {
+    border: none;
+    border-radius: 999px;
+    padding: 5px 10px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.25;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    transition: background 0.18s ease, color 0.18s ease;
+    touch-action: manipulation;
+}
+
+.tagChip:hover {
+    color: var(--color-text);
+}
+
+.tagChipActive {
+    border: none;
+    background: var(--color-primary-bold);
+    color: var(--color-on-primary);
+    font-weight: 600;
+}
+
+.tagSummaryRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.tagSummaryText {
+    font-size: 13px;
+    color: var(--color-text-muted);
+}
+
+.listBlock {
+    min-height: 320px;
+}
+
+.loadingMore {
+    margin-top: 14px;
+}
+
+.loadMoreTrigger {
+    height: 1px;
+}
+
+@media (max-width: 768px) {
+    .pageRoot {
+        min-height: 100vh;
+        padding-bottom: calc(72px + env(safe-area-inset-bottom));
+    }
+
+    .mainContent {
+        margin-bottom: 0;
+    }
+
+    .main {
+        width: 100%;
+        max-width: 100%;
+        padding: 8px 14px 16px;
+        gap: 12px;
+    }
+
+    .pageHeader {
+        min-height: 36px;
+        margin-bottom: 2px;
+    }
+
+    .pageTitle {
+        font-size: 18px;
+    }
+
+    .filtersCard {
+        padding: 12px 12px;
+        border-radius: 16px;
+        gap: 6px;
+    }
+
+    .filterSection {
+        gap: 6px;
+    }
+
+    .filterTitle {
+        flex-basis: 36px;
+        width: 36px;
+        padding-top: 5px;
+        font-size: 12px;
+    }
+
+    .chipRow,
+    .themeScrollRow {
+        gap: 2px 4px;
+    }
+
+    .tagChip {
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+
+    .chipRowSingle .tagChip {
+        padding: 4px 7px;
+        font-size: 11px;
+    }
+}
+
+@media (min-width: 769px) {
+    .pageTitle {
+        font-size: 22px;
+    }
+
+    .filtersCard {
+        padding: 16px 18px;
+        gap: 10px;
+    }
+
+    .filterTitle {
+        flex-basis: 48px;
+        width: 48px;
+        font-size: 14px;
+        padding-top: 6px;
+    }
+
+    .tagChip {
+        padding: 6px 12px;
+        font-size: 13px;
+    }
+}

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Custom UI 多层演示（纯客户端）</title>
+  <style>
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif; background: #0f172a; color:#111; }
+    .page{ min-height:100vh; padding:20px; background: linear-gradient(135deg, #0f172a, #1e293b); }
+    #game-container{ width:414px; height:896px; margin:0 auto; background:#000; border-radius:16px; box-shadow: 0 20px 60px rgba(0,0,0,.5); position:relative; overflow:hidden; }
+    .bg{ position:absolute; inset:0; background-size:cover; background-position:center; filter: saturate(1.05); }
+    .topHeader{ position: absolute; top:16px; left:50%; transform:translateX(-50%); z-index:100; color:#fff; background: #0000003e; padding:8px 16px; border-radius:20px; font-weight:600; }
+    .exit{ position:absolute; top:16px; left:16px; z-index:101; color:#fff; opacity:.6; cursor:pointer; }
+    .content{ position:absolute; bottom:0; left:0; right:0; min-height:200px; background: linear-gradient(to top, rgba(0,0,0,.85), rgba(0,0,0,.0)); z-index:150; color:#fff; padding:20px; padding-bottom:90px; }
+    .btnbar{ position:absolute; bottom:12px; left:0; right:0; display:flex; gap:14px; justify-content:flex-end; padding:0 18px; z-index:151; }
+    .btn{ background: rgba(255,255,255,.15); color:#fff; border:none; border-radius:12px; padding:8px 12px; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:6px; backdrop-filter: blur(6px); }
+    /* 重要：Host 需要允许指针事件，Shadow DOM 内部再用子层控制穿透 */
+    #custom-ui-root{ position:absolute; inset:0; z-index:1600; pointer-events:auto; }
+    .card{ background:#111; border-radius:12px; padding:12px; color:#fff; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <h1 style="color:#fff; text-align:center; margin-bottom:16px;">Custom UI 多层演示（纯客户端）</h1>
+  <p style="color:#9ca3af; text-align:center; margin-top:-8px;">从文件加载插件 UI（HTML/CSS/JS），不依赖后端</p>
+
+  <div id="game-container">
+    <div class="bg" id="bg" style="background-image:url('/data/assets/创作界面切图/defaultScene.png');"></div>
+    <div class="exit" id="exit">✕</div>
+    <div class="topHeader" id="sceneTag">⛰️ 山谷黄昏</div>
+    <div class="content">
+      <div class="card">
+        <div id="story">你来到一处幽静的山谷，晚霞映照着远处的云海。</div>
+      </div>
+    </div>
+    <div class="btnbar">
+      <button class="btn" id="btn-history">历史</button>
+      <button class="btn" id="btn-textmode">文本</button>
+      <button class="btn" id="btn-autoplay">自动</button>
+      <button class="btn" id="btn-music">音乐</button>
+    </div>
+
+    <div id="custom-ui-root"></div>
+  </div>
+</div>
+
+  <!-- For single-HTML UI demo, switch to simple_loader.js -->
+  <!-- <script type="module" src="./custom_ui_system/plugin.js"></script> -->
+  <script type="module" src="./custom_ui_system/simple_loader.js"></script>
+</body>
+</html>

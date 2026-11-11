@@ -1,0 +1,721 @@
+.panelStack {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    color-scheme: light;
+}
+
+.heroCard,
+.card {
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 45%, transparent);
+    border-radius: 22px;
+    box-shadow: 0 18px 40px color-mix(in srgb, var(--color-highlight) 14%, transparent);
+}
+
+.heroCard {
+    padding: 24px 28px;
+}
+
+.card {
+    padding: 24px;
+}
+
+.sectionBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: var(--color-bg);
+    color: var(--color-highlight);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.heroTitle {
+    margin: 14px 0 8px;
+    font-size: 24px;
+    color: var(--color-text);
+}
+
+.adminTabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding: 7px;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 48%, transparent);
+    border-radius: 18px;
+    background: var(--color-surface);
+    box-shadow: 0 12px 28px color-mix(in srgb, var(--color-highlight) 10%, transparent);
+}
+
+.adminTab,
+.adminTabActive {
+    min-height: 46px;
+    padding: 9px 14px;
+    border: 1px solid transparent;
+    border-radius: 13px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.adminTab:hover {
+    background: var(--color-bg);
+    color: var(--color-highlight);
+}
+
+.adminTabActive {
+    border-color: var(--color-primary);
+    background: var(--color-bg);
+    color: var(--color-primary-fg);
+    box-shadow: none;
+}
+
+.adminTab:focus-visible,
+.adminTabActive:focus-visible,
+.iconButton:focus-visible,
+.ghostButton:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-highlight) 24%, transparent);
+    outline-offset: 2px;
+}
+
+.heroDesc,
+.cardDesc,
+.emptyState {
+    color: var(--color-text-secondary);
+    line-height: 1.7;
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.cardTitle {
+    margin: 0 0 8px;
+    font-size: 18px;
+    color: var(--color-text);
+}
+
+.recordCount {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: var(--color-bg);
+    color: var(--color-highlight);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.formArea {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.fieldLabel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+}
+
+.textInput,
+.select {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 14px;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 88%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 14px;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.textInput:focus,
+.select:focus {
+    border-color: color-mix(in srgb, var(--color-highlight) 74%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-highlight) 12%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+
+.textInput:-webkit-autofill,
+.textInput:-webkit-autofill:hover,
+.textInput:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--color-text);
+    box-shadow: 0 0 0 1000px color-mix(in srgb, var(--color-text) 96%, transparent) inset;
+    transition: background-color 9999s ease-in-out 0s;
+}
+
+/* ========== 发放 Key 表单布局 ========== */
+.createFormWrap {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.createFormRow {
+    display: grid;
+    gap: 14px;
+    align-items: start;
+}
+
+.createFormRow:first-child {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+.createFormRow:last-child {
+    grid-template-columns: 1.5fr 1.5fr auto;
+    align-items: end;
+}
+
+/* 字段标签文字 */
+.fieldLabelText {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+}
+
+/* 可选标签样式 */
+.optionalTag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--color-bg);
+    color: var(--color-highlight);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* 指定兑换人：占 2 列 */
+.targetUserCodeField {
+    grid-column: span 1;
+}
+
+/* 创建按钮容器 */
+.createAction {
+    display: flex;
+    align-items: flex-end;
+}
+
+.createAction .primaryButton {
+    min-width: 140px;
+    padding: 12px 24px;
+    white-space: nowrap;
+}
+
+/* ========== 响应式布局 ========== */
+@media (max-width: 1200px) {
+    .createFormRow:first-child {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .createFormRow:first-child .fieldLabel:last-child {
+        grid-column: span 2;
+    }
+
+    .createFormRow:last-child {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .createAction {
+        grid-column: span 2;
+        justify-content: stretch;
+    }
+
+    .createAction .primaryButton {
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .createFormRow:first-child,
+    .createFormRow:last-child {
+        grid-template-columns: 1fr;
+    }
+
+    .createFormRow:first-child .fieldLabel:last-child {
+        grid-column: span 1;
+    }
+
+    .createAction {
+        grid-column: span 1;
+    }
+}
+
+/* ========== 旧样式（保留兼容） ========== */
+.inlineGrid,
+.filterGrid {
+    display: grid;
+    gap: 12px;
+}
+
+.membershipFilterGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.searchRow {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) auto auto;
+    align-items: end;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.searchField {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.inlineGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.filterGrid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin-bottom: 14px;
+}
+
+.formHint {
+    display: inline-block;
+    font-size: 12px;
+    line-height: 1.5;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.actionRow {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.primaryButton,
+.secondaryButton,
+.dangerButton,
+.ghostButton {
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.primaryButton {
+    border: none;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+}
+
+.secondaryButton {
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 88%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+}
+
+.dangerButton {
+    border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    color: var(--color-primary);
+}
+
+.ghostButton {
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 78%, transparent);
+    background: transparent;
+    color: var(--color-text-secondary);
+}
+
+.ghostButton:hover {
+    border-color: color-mix(in srgb, var(--color-highlight) 50%, transparent);
+    background: var(--color-bg);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.dangerButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.generatedPanel {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 70%, transparent);
+    border-radius: 16px;
+    background: var(--color-surface);
+}
+
+.generatedPanelHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    color: var(--color-text-secondary);
+}
+
+.generatedMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+}
+
+.generatedList {
+    max-height: 320px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 4px;
+}
+
+.generatedItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 60%, transparent);
+    background: var(--color-surface);
+}
+
+.keyCode {
+    display: inline-block;
+    max-width: 100%;
+    padding: 3px 7px;
+    border-radius: 8px;
+    background: var(--color-bg);
+    color: var(--color-highlight);
+    font-size: 12px;
+    word-break: break-all;
+}
+
+.keyCell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.iconButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 82%, transparent);
+    border-radius: 10px;
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.iconButton svg {
+    width: 18px;
+    height: 18px;
+}
+
+.iconButton:hover {
+    border-color: color-mix(in srgb, var(--color-highlight) 55%, transparent);
+    background: var(--color-bg);
+    color: var(--color-highlight);
+}
+
+.iconButton:disabled {
+    opacity: 0.52;
+    cursor: wait;
+}
+
+.dangerIconButton {
+    border-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+    color: var(--color-primary);
+}
+
+.statusPill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.status_active,
+.keyStatus_used {
+    background: color-mix(in srgb, var(--color-success) 12%, transparent);
+    color: var(--color-success);
+}
+
+.status_pending,
+.keyStatus_unused {
+    background: color-mix(in srgb, var(--color-highlight) 14%, transparent);
+    color: var(--color-highlight);
+}
+
+.status_expired,
+.keyStatus_expired,
+.keyStatus_archived {
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: var(--color-text-secondary);
+}
+
+.statusFrozen {
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    color: var(--color-primary);
+}
+
+.userCode,
+.userNickname {
+    display: block;
+}
+
+.userCode {
+    color: var(--color-text);
+    font-size: 13px;
+}
+
+.userNickname {
+    margin-top: 3px;
+    color: var(--color-text-muted);
+    font-size: 11px;
+}
+
+.referenceCode {
+    display: inline-block;
+    max-width: 210px;
+    overflow: hidden;
+    color: var(--color-highlight);
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tableWrapper {
+    overflow-x: auto;
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 72%, transparent);
+    background: var(--color-surface);
+}
+
+.table {
+    width: 100%;
+    min-width: 1480px;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.membershipTable {
+    min-width: 1120px;
+}
+
+.table th,
+.table td {
+    padding: 10px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-highlight) 16%, transparent);
+    text-align: left;
+    color: var(--color-text);
+    font-size: 13px;
+    vertical-align: middle;
+}
+
+.table th {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    background: var(--color-surface);
+    white-space: nowrap;
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.table tbody tr:hover {
+    background: var(--color-bg);
+}
+
+.paginationBar {
+    margin-top: 14px;
+}
+
+.emptyState {
+    padding: 16px;
+    border-radius: 16px;
+    background: var(--color-surface);
+}
+
+@media (max-width: 1200px) {
+    .filterGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .createFormRow:first-child {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .createFormRow:first-child .fieldLabel:last-child {
+        grid-column: span 2;
+    }
+
+    .createFormRow:last-child {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .membershipFilterGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .heroCard,
+    .card {
+        padding: 20px 16px;
+        border-radius: 16px;
+    }
+
+    .heroTitle {
+        font-size: 21px;
+    }
+
+    .adminTabs {
+        gap: 5px;
+        padding: 5px;
+        border-radius: 14px;
+    }
+
+    .adminTab,
+    .adminTabActive {
+        min-height: 52px;
+        padding: 7px 6px;
+        font-size: 12px;
+        line-height: 1.35;
+    }
+
+    .inlineGrid,
+    .filterGrid,
+    .membershipFilterGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .searchRow {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .searchField {
+        grid-column: 1 / -1;
+    }
+
+    .searchRow .primaryButton,
+    .searchRow .ghostButton {
+        width: 100%;
+    }
+
+    .tableWrapper {
+        overflow: visible;
+        border: none;
+        background: transparent;
+    }
+
+    .responsiveTable {
+        display: block;
+        min-width: 0;
+    }
+
+    .responsiveTable thead {
+        display: none;
+    }
+
+    .responsiveTable tbody {
+        display: grid;
+        gap: 12px;
+    }
+
+    .responsiveTable tr {
+        display: block;
+        overflow: hidden;
+        border: 1px solid color-mix(in srgb, var(--color-highlight) 72%, transparent);
+        border-radius: 14px;
+        background: var(--color-surface);
+    }
+
+    .responsiveTable td {
+        display: grid;
+        grid-template-columns: minmax(96px, 0.8fr) minmax(0, 1.4fr);
+        gap: 10px;
+        align-items: center;
+        padding: 10px 12px;
+        text-align: right;
+        overflow-wrap: anywhere;
+    }
+
+    .responsiveTable td::before {
+        content: attr(data-label);
+        color: var(--color-text-secondary);
+        font-size: 12px;
+        font-weight: 700;
+        text-align: left;
+    }
+
+    .responsiveTable td > * {
+        justify-self: end;
+    }
+
+    .responsiveTable .keyCell {
+        min-width: 0;
+    }
+
+    .responsiveTable .keyCode,
+    .responsiveTable .referenceCode {
+        max-width: 160px;
+    }
+
+    .iconButton {
+        width: 44px;
+        height: 44px;
+    }
+
+    .createFormRow:first-child,
+    .createFormRow:last-child {
+        grid-template-columns: 1fr;
+    }
+
+    .createFormRow:first-child .fieldLabel:last-child {
+        grid-column: span 1;
+    }
+}

@@ -1,0 +1,388 @@
+import { useCallback, useMemo } from "react";
+import type { GetGalgamePresetResponse } from "../../api/galgame/getGalgamePreset.type";
+import { extractPlainText, sanitizeVisualStepText, truncateTextWithTags } from "../../utils/textUtils";
+import { getPlayerImageUrl, getImageUrl } from "../../utils/constants";
+import { withCacheBust } from "../../utils/imageCache";
+import { ensureMinPlayChoiceOptions } from "../../lib/galgame/playChoiceOptions";
+import { resolveChoiceStepPromptMessage } from "../../lib/galgame/choiceStepPrompt";
+import { resolvePlayPortraitScale, isImportedCardPortraitUrl } from "../../lib/galgame/playerCharacterCard";
+import {
+    pickSessionNpcAvatarUrl,
+    resolveNpcPlayImagePath,
+    resolveNpcPlayPortraitScale,
+    type SessionNpcPortraitLike,
+} from "../../lib/galgame/npcPlayPortrait";
+
+export interface Message {
+    id: number;
+    type: 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
+    message: string;
+    characterName?: string;
+    characterImage?: string;
+    characterPosition?: 'left' | 'right';
+    portraitScale?: number;
+    portraitOffsetX?: number;
+    portraitOffsetY?: number;
+    /** 对白 NPC id，供局内立绘覆盖按 id 匹配（改名后姓名不可靠） */
+    npcId?: string;
+    options?: Array<{ id: number; text: string; isMain?: boolean }>;
+}
+
+/**
+ * Galgame 消息转换 Hook
+ */
+export const useGalgameMessage = (
+    worldSetting: GetGalgamePresetResponse['world'] | null,
+    npcSetting: GetGalgamePresetResponse['npcs'] | null,
+    gameStarted: boolean,
+    currentStep: any,
+    initialMessages: Message[],
+    displayedText: string,
+    isTyping: boolean,
+    isWaitingForData: boolean,
+    currentStepForTextModal: any,
+    /** 局内档案头像；优先于文档主角立绘 */
+    sessionPlayerAvatarUrl?: string | null,
+    /** 局内档案角色名；选项文案优先用此名 */
+    sessionPlayerName?: string | null,
+    /** 局内 NPC 档案；有 avatarUrl 时出场立绘优先于创作台文档图 */
+    sessionNpcEdits?: SessionNpcPortraitLike[] | null,
+) => {
+    const latestNpcById = useMemo(() => {
+        const map = new Map<string, GetGalgamePresetResponse['npcs']['npcs'][0]>();
+        (npcSetting?.npcs || []).forEach((npc) => {
+            if (npc?.id) {
+                map.set(String(npc.id), npc);
+            }
+        });
+        return map;
+    }, [npcSetting]);
+
+    const toDisplayImageUrl = useCallback((imagePath?: string | null): string | undefined => {
+        if (!imagePath) return undefined;
+        if (imagePath.startsWith('blob:') || imagePath.startsWith('data:')) return imagePath;
+        const imageUrl = getImageUrl(imagePath);
+        return imageUrl ? withCacheBust(imageUrl) : undefined;
+    }, []);
+
+    const resolveNpcImagePath = useCallback((step: any): string | undefined => {
+        const npcId = step?.speakerId || step?.npcId;
+        const speakerName = step?.speakerName;
+        const latestNpc = npcId ? latestNpcById.get(String(npcId)) : null;
+        const sessionAvatarUrl = pickSessionNpcAvatarUrl(sessionNpcEdits, { npcId, speakerName });
+        return resolveNpcPlayImagePath({
+            npcId,
+            speakerName,
+            activeImage: step?.activeImage,
+            documentImages: latestNpc?.images,
+            sessionAvatarUrl,
+        });
+    }, [latestNpcById, sessionNpcEdits]);
+
+    // 转换步骤为消息
+    const convertStepToMessage = useCallback((step: any): Message | null => {
+        if (!step) return null;
+        const stepText = sanitizeVisualStepText(step.content || step.text || step.message || '');
+        if (typeof step.description === 'string') {
+            step = { ...step, description: sanitizeVisualStepText(step.description) };
+        }
+
+        if (step.type === 'narration') {
+            return {
+                id: Date.now(),
+                type: 'narration',
+                message: stepText,
+            };
+        } else if (step.type === 'transition') {
+            return {
+                id: Date.now(),
+                type: 'transition',
+                message: stepText,
+            };
+        } else if (step.type === 'dialogue') {
+            const characterName = step.isPlayer
+                ? (String(step.speakerName || '').trim()
+                    || worldSetting?.player?.name
+                    || '玩家')
+                : step.speakerName || step.npcId || '未知角色';
+            let characterImage: string | undefined;
+            let portraitScale: number | undefined;
+            let portraitOffsetX: number | undefined;
+            let portraitOffsetY: number | undefined;
+
+            if (step.isPlayer) {
+                const playerImagePath = String(sessionPlayerAvatarUrl || '').trim()
+                    || getPlayerImageUrl(worldSetting?.player);
+                if (playerImagePath) {
+                    characterImage = toDisplayImageUrl(playerImagePath);
+                }
+                portraitScale = resolvePlayPortraitScale({
+                    sessionAvatarUrl: sessionPlayerAvatarUrl,
+                    documentPortraitScale: worldSetting?.player?.portraitScale,
+                });
+                if (!isImportedCardPortraitUrl(sessionPlayerAvatarUrl)) {
+                    portraitOffsetX = worldSetting?.player?.portraitOffsetX;
+                    portraitOffsetY = worldSetting?.player?.portraitOffsetY;
+                }
+            } else {
+                const npcId = step.speakerId || step.npcId;
+                const speakerName = step.speakerName;
+                const sessionAvatarUrl = pickSessionNpcAvatarUrl(sessionNpcEdits, { npcId, speakerName });
+                const npcImagePath = resolveNpcImagePath(step);
+                if (npcImagePath) {
+                    characterImage = toDisplayImageUrl(npcImagePath);
+                }
+                const npcData = npcId ? latestNpcById.get(String(npcId)) : null;
+                portraitScale = resolveNpcPlayPortraitScale({
+                    sessionAvatarUrl,
+                    documentPortraitScale: npcData?.portraitScale,
+                });
+                if (!isImportedCardPortraitUrl(sessionAvatarUrl)) {
+                    portraitOffsetX = (npcData as any)?.portraitOffsetX;
+                    portraitOffsetY = (npcData as any)?.portraitOffsetY;
+                }
+            }
+
+            if (!characterImage && step.activeImage) {
+                // 使用统一的 getImageUrl 处理 URL
+                characterImage = toDisplayImageUrl(step.activeImage);
+            }
+
+            const dialogueNpcId = step.isPlayer
+                ? undefined
+                : String(step.speakerId || step.npcId || '').trim() || undefined;
+            return {
+                id: Date.now(),
+                type: 'dialogue',
+                message: stepText,
+                characterName,
+                characterImage,
+                characterPosition: step.isPlayer ? 'right' : 'left',
+                portraitScale,
+                portraitOffsetX,
+                portraitOffsetY,
+                ...(dialogueNpcId ? { npcId: dialogueNpcId } : {}),
+            };
+        } else if (step.type === 'choice') {
+            // 支持后端新增的 mainOptions/mainOption 字段，并在 UI 中高亮展示
+            const rawMainOptions = Array.isArray(step.mainOptions)
+                ? step.mainOptions
+                : (step.mainOption ? [step.mainOption] : []);
+
+            const mainOptions =
+                rawMainOptions.map((opt: any, index: number) => ({
+                    id: index + 1,
+                    text: sanitizeVisualStepText(String(typeof opt === 'string' ? opt : (opt.text || opt))),
+                    isMain: true as const,
+                })) || [];
+
+            const startId = mainOptions.length + 1;
+
+            const rawOptions = step.options || [];
+            const normalOptions =
+                rawOptions.map((opt: any, index: number) => ({
+                    id: startId + index,
+                    text: sanitizeVisualStepText(String(typeof opt === 'string' ? opt : (opt.text || opt))),
+                    isMain: false as const,
+                })) || [];
+
+            const options = ensureMinPlayChoiceOptions(
+                [...mainOptions, ...normalOptions],
+                {
+                    sceneName: typeof step.sceneName === 'string' ? step.sceneName : '',
+                    npcNames: (npcSetting?.npcs || []).map((n) => n?.name).filter(Boolean).slice(0, 20),
+                    playerName: String(sessionPlayerName || worldSetting?.player?.name || '').trim() || '你',
+                },
+            );
+
+            // 功能注释：部分流式 choice 只把引导写在 content/text，description 为空；回退避免只剩按钮无正文
+            const message = resolveChoiceStepPromptMessage({
+                title: step.title,
+                description: step.description,
+                content: stepText,
+            });
+
+            let characterImage: string | undefined;
+            let portraitScale: number | undefined;
+            let portraitOffsetX: number | undefined;
+            let portraitOffsetY: number | undefined;
+            const playerImagePath = String(sessionPlayerAvatarUrl || '').trim()
+                || getPlayerImageUrl(worldSetting?.player);
+            if (playerImagePath) {
+                // 使用统一的 getImageUrl 处理 URL
+                characterImage = toDisplayImageUrl(playerImagePath);
+            }
+            portraitScale = resolvePlayPortraitScale({
+                sessionAvatarUrl: sessionPlayerAvatarUrl,
+                documentPortraitScale: worldSetting?.player?.portraitScale,
+            });
+            if (!isImportedCardPortraitUrl(sessionPlayerAvatarUrl)) {
+                portraitOffsetX = worldSetting?.player?.portraitOffsetX;
+                portraitOffsetY = worldSetting?.player?.portraitOffsetY;
+            }
+
+            return {
+                id: Date.now(),
+                type: 'choice',
+                message,
+                options,
+                characterImage,
+                characterPosition: 'right',
+                portraitScale,
+                portraitOffsetX,
+                portraitOffsetY,
+            };
+        } else if (step.type === 'scene_change') {
+            const newScene: GetGalgamePresetResponse['scenes']['scenes'][0] = {
+                id: step.sceneId || '',
+                name: step.sceneName || '',
+                type: '',
+                description: step.sceneDescription || '',
+                atmosphere: step.sceneAtmosphere,
+                dangerLevel: step.dangerLevel,
+                images: step.sceneImage,
+                npcs: [],
+                events: [],
+                soundtrack: step.soundtrack,
+            };
+
+            return {
+                id: Date.now(),
+                type: 'scene_change',
+                // 不再自动输出场景 description，scene_change 仅用于更新场景数据和背景
+                message: '',
+                sceneData: newScene,
+            } as Message & { sceneData: GetGalgamePresetResponse['scenes']['scenes'][0] };
+        }
+
+        return null;
+    }, [worldSetting, npcSetting, resolveNpcImagePath, toDisplayImageUrl, sessionPlayerAvatarUrl, sessionPlayerName, sessionNpcEdits, latestNpcById]);
+
+    const currentMessage = useMemo(() => {
+        if (gameStarted && currentStep && currentStep.type) {
+            const converted = convertStepToMessage(currentStep);
+            if (converted) {
+                return converted;
+            }
+        }
+
+        if (initialMessages.length > 0) {
+            return initialMessages[0];
+        }
+
+        return {
+            id: 0,
+            type: 'narration' as const,
+            message: '',
+        };
+    }, [gameStarted, currentStep, convertStepToMessage, initialMessages]);
+
+    const plainTextForTyping = useMemo(() => {
+        if (currentMessage && currentMessage.type !== 'choice') {
+            return extractPlainText(currentMessage.message);
+        }
+        return '';
+    }, [currentMessage]);
+
+    const finalDisplayText = isWaitingForData && !currentStep
+        ? ''
+        : (gameStarted ? displayedText : (currentMessage && currentMessage.type !== 'choice' ? currentMessage.message : ''));
+
+    const finalIsTyping = (isWaitingForData && !currentStep) ? false : isTyping;
+
+    // 转换步骤为文本模式格式
+    const convertStepsToTextModalFormat = useCallback((steps: any[]): any[] => {
+        return steps
+            .filter(step => step != null && step.type)
+            .map((step, index) => {
+                const stepContent = sanitizeVisualStepText(step.content || step.text || step.message || '');
+                const stableId = step.id || `step-${step.type}-${index}-${(step.content || '').substring(0, 20)}`;
+                const baseStep = {
+                    id: stableId,
+                    type: step.type,
+                    content: stepContent,
+                };
+
+                if (step.type === 'dialogue') {
+                    const speakerName = step.isPlayer
+                        ? (step.speakerName || step.characterName || '')
+                        : (step.speakerName || step.npcId);
+                    return {
+                        ...baseStep,
+                        speakerName,
+                        characterName: speakerName || (step.isPlayer ? '玩家' : '未知角色'),
+                        isPlayer: step.isPlayer || false,
+                    };
+                }
+
+        if (step.type === 'choice') {
+            const rawMainOptions = Array.isArray(step.mainOptions)
+                ? step.mainOptions
+                : (step.mainOption ? [step.mainOption] : []);
+
+            const mainOptions =
+                rawMainOptions.map((opt: any, idx: number) => ({
+                    id: idx + 1,
+                    text: sanitizeVisualStepText(String(typeof opt === 'string' ? opt : (opt.text || opt))),
+                    isMain: true as const,
+                })) || [];
+
+            const startId = mainOptions.length + 1;
+
+            const rawOptions = step.options || [];
+            const normalOptions =
+                rawOptions.map((opt: any, idx: number) => ({
+                    id: startId + idx,
+                    text: sanitizeVisualStepText(String(typeof opt === 'string' ? opt : (opt.text || opt))),
+                    isMain: false as const,
+                })) || [];
+
+            const options = ensureMinPlayChoiceOptions(
+                [...mainOptions, ...normalOptions],
+                {
+                    sceneName: typeof step.sceneName === 'string' ? step.sceneName : '',
+                    npcNames: (npcSetting?.npcs || []).map((n) => n?.name).filter(Boolean).slice(0, 20),
+                    playerName: String(sessionPlayerName || worldSetting?.player?.name || '').trim() || '你',
+                },
+            );
+
+            return {
+                ...baseStep,
+                title: step.title,
+                description: sanitizeVisualStepText(step.description || ''),
+                options,
+            };
+        }
+
+                return baseStep;
+            });
+    }, [npcSetting]);
+
+    const textModalDisplayText = useMemo(() => {
+        if (currentStepForTextModal &&
+            currentStepForTextModal.type !== 'choice' &&
+            currentMessage &&
+            currentMessage.type !== 'choice' &&
+            isTyping &&
+            displayedText.length > 0) {
+            const originalText = currentMessage.message || '';
+            const currentPlainLength = displayedText.length;
+
+            if (currentPlainLength > 0) {
+                const textWithTags = truncateTextWithTags(originalText, currentPlainLength);
+                return textWithTags;
+            }
+        }
+        return '';
+    }, [currentStepForTextModal, currentMessage, displayedText, isTyping]);
+
+    return {
+        convertStepToMessage,
+        currentMessage,
+        plainTextForTyping,
+        finalDisplayText,
+        finalIsTyping,
+        convertStepsToTextModalFormat,
+        textModalDisplayText,
+    };
+};

@@ -1,0 +1,111 @@
+/* 功能注释：世界书 / 数据库共用壳，对齐 funloom 墨黑账本，禁止白卡粉描边 */
+
+.worldBook {
+  --wb-ink: var(--color-text);
+  --wb-surface: var(--color-surface);
+  --wb-rail: var(--color-surface);
+  --wb-input: var(--color-surface);
+  --wb-accent: var(--color-primary-bold);
+  --wb-accent-hot: var(--color-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: 100%;
+  min-height: 0;
+  color: var(--color-text);
+}
+
+.header {
+  flex-shrink: 0;
+}
+
+.header h2 {
+  margin: 0 0 6px;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: 0;
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--wb-surface);
+  /* 功能注释：顶沿酒红印记，与素材进度条同一账本语汇 */
+  box-shadow: inset 0 2px 0 var(--wb-accent);
+}
+
+.subNav {
+  flex: 0 0 260px;
+  min-width: 220px;
+  max-width: 300px;
+  border-right: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  background: var(--wb-rail);
+  padding: 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 24px;
+  background: var(--wb-surface);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 280px;
+  text-align: center;
+  color: var(--color-text-secondary);
+  padding: 32px 24px;
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.emptyHint {
+  margin: 0;
+  max-width: 320px;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  .body {
+    flex-direction: column;
+  }
+
+  .subNav {
+    flex: 0 0 auto;
+    max-width: none;
+    border-right: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    max-height: 220px;
+  }
+
+  .content {
+    padding: 16px;
+  }
+}

@@ -1,0 +1,54 @@
+/* 共享按钮样式 */
+.ghostSmall {
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: var(--color-text);
+    background: var(--color-surface);
+    flex-shrink: 0;
+}
+
+.ghostSmall:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.ghostSmall:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: color-mix(in srgb, var(--color-text) 2%, transparent);
+}
+
+.ghostSmall:disabled:hover {
+    border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: var(--color-text);
+}
+
+.primary {
+    border-radius: 12px;
+    border: none;
+    padding: 10px 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: var(--color-text);
+    background: var(--primary);
+}
+
+.primary:hover {
+    background: var(--color-primary);
+}
+
+.primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.required {
+    color: var(--primary) !important;
+}
+

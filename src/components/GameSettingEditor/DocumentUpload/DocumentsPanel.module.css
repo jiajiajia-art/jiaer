@@ -1,0 +1,935 @@
+/* 功能注释：文档上传面板对齐 funloom 暗色创作壳（与 TXT 创建一致） */
+
+.panelContent {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.panelHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.75rem;
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.panelHeader h2 {
+    margin: 4px 0 4px 0;
+    color: var(--color-text);
+}
+
+.coverUploadIcon {
+    color: var(--color-text-muted);
+}
+
+.subtitle {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.95rem;
+}
+
+/* 功能注释：效果图「选择创建方式」——移动端展示；桌面隐藏以免与 AI 卡片重复 */
+.createMethodBlock {
+    display: none;
+}
+
+.createMethodLabel {
+    margin: 0 0 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.createMethodSelect {
+    position: relative;
+    width: 100%;
+}
+
+.createMethodTrigger {
+    width: 100%;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px 12px 16px;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.createMethodTrigger:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+    background: var(--color-surface-2);
+}
+
+.createMethodTrigger:focus-visible {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
+.createMethodTriggerOpen {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+
+.createMethodTrigger:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.createMethodTriggerLabel {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.createMethodChevron {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: var(--color-text-muted);
+    transition: transform 0.18s ease, color 0.15s ease;
+}
+
+.createMethodChevronOpen {
+    transform: rotate(180deg);
+    color: var(--color-primary-fg);
+}
+
+.createMethodMenu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 6px;
+    list-style: none;
+    z-index: 40;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    background: var(--color-surface);
+    box-shadow: 0 16px 36px color-mix(in srgb, var(--color-shadow) 55%, transparent);
+    animation: createMethodMenuIn 0.16s ease;
+}
+
+@keyframes createMethodMenuIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.createMethodOption {
+    width: 100%;
+    display: block;
+    padding: 12px 14px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: color-mix(in srgb, var(--color-text) 82%, transparent);
+    font-size: 0.92rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.createMethodOption:hover {
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--color-text);
+}
+
+.createMethodOptionSelected {
+    background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+    color: var(--color-primary-fg);
+}
+
+.hideOnMobile {
+    /* desktop visible */
+}
+
+@media (max-width: 768px) {
+    .panelContent {
+        gap: 14px;
+    }
+
+    .panelHeader {
+        gap: 8px;
+    }
+
+    .panelHeader h2 {
+        margin: 0;
+        font-size: 1.15rem;
+    }
+
+    .subtitle {
+        margin-top: 6px;
+        font-size: 0.82rem;
+        line-height: 1.45;
+    }
+
+    .createMethodBlock {
+        display: block;
+    }
+
+    .hideOnMobile {
+        display: none !important;
+    }
+
+    /* 功能注释：手机端按「选择创建方式」切换文档导入 / 一句话生成，避免一句话被藏掉 */
+    .panelContent[data-create-method='document'] .ideaMethodPanel {
+        display: none !important;
+    }
+
+    .panelContent[data-create-method='idea'] .documentMethodPanel {
+        display: none !important;
+    }
+
+    .ideaMethodPanel .generateFromIdeaContent {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    /* 功能注释：手机端把 ✨ 当右上角背景水印，避免挤在左上角像「图标跑偏」 */
+    .ideaMethodPanel .generateFromIdeaIcon {
+        position: absolute;
+        top: 10px;
+        right: 12px;
+        left: auto;
+        margin: 0;
+        font-size: 3.25rem;
+        line-height: 1;
+        opacity: 0.28;
+        pointer-events: none;
+        z-index: 0;
+        transform: rotate(12deg);
+    }
+
+    .ideaMethodPanel .generateFromIdeaText,
+    .ideaMethodPanel .generateFromIdeaActions {
+        position: relative;
+        z-index: 1;
+    }
+
+    .ideaMethodPanel .generateFromIdeaText {
+        padding-right: 52px;
+    }
+
+    .card {
+        padding: 14px;
+        gap: 12px;
+        border-radius: 14px;
+    }
+
+    .card h3 {
+        font-size: 1rem;
+    }
+}
+
+.ghost {
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    padding: 10px 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: var(--color-text);
+    background: var(--color-surface);
+}
+
+.ghost:hover {
+    border-color: var(--primary);
+    color: var(--color-on-primary);
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+
+.twoCol {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    flex: 1;
+    max-width: 100%;
+}
+
+.card {
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.card h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--color-text);
+}
+
+.muted {
+    color: var(--color-text-secondary);
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.mutedSmall {
+    color: var(--color-text-muted);
+    margin: 0;
+    font-size: 0.8rem;
+    padding-top: 12px;
+    border-top: 1px dashed color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.dropzone {
+    border: 1px dashed color-mix(in srgb, var(--color-text) 20%, transparent);
+    border-radius: 8px;
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    height: 160px;
+    background: var(--color-surface);
+}
+
+.dropzone:hover {
+    border-color: var(--primary);
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.dropzone p {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+}
+
+.link {
+    color: var(--primary);
+    cursor: pointer;
+    margin-left: 4px;
+}
+
+.link:hover {
+    text-decoration: underline;
+}
+
+/* 已上传文件 */
+.uploadedFileBox {
+    padding: 12px 16px;
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 80px;
+}
+
+.fileName {
+    flex: 1;
+    font-size: 0.9rem;
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fileSize {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+}
+
+.retryLink {
+    color: var(--primary);
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.retryLink:hover {
+    text-decoration: underline;
+}
+
+.errorText {
+    margin: 0;
+    color: var(--primary);
+    font-size: 0.85rem;
+}
+
+/* 进度展示区域 */
+.progressSection {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--color-surface);
+    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+/* 进度头部 */
+.progressHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 0;
+}
+
+.progressPercentage {
+    font-size: 1.4rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--color-primary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+
+.progressStage {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    padding: 2px 6px;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    border-radius: 8px;
+    white-space: nowrap;
+}
+
+.progressMeta {
+    font-size: 0.82rem;
+    color: var(--color-text-secondary);
+    line-height: 1.45;
+}
+
+/* 步骤指示器 */
+.stepsIndicator {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.stepItem {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 10px;
+    position: relative;
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.stepItem.stepPending {
+    opacity: 0.6;
+    background: var(--color-surface);
+}
+
+.stepItem.stepActive {
+    opacity: 1;
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.stepItem.stepDone {
+    opacity: 0.85;
+    background: color-mix(in srgb, var(--color-success) 8%, transparent);
+    border-color: color-mix(in srgb, var(--color-success) 25%, transparent);
+}
+
+/* 图标和连接线容器 */
+.stepIconWrapper {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 24px;
+    position: relative;
+    padding-top: 2px;
+}
+
+.stepIcon {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    position: relative;
+    z-index: 1;
+    font-size: 13px;
+}
+
+.stepItem.stepPending .stepIcon {
+    color: var(--color-text-muted);
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+.stepItem.stepActive .stepIcon {
+    color: var(--color-on-primary);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--color-primary-bold) 100%);
+    box-shadow: 0 2px 4px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.stepItem.stepDone .stepIcon {
+    color: var(--color-text);
+    background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success) 100%);
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--color-success) 25%, transparent);
+}
+
+/* 步骤连接线 - 在盒子之间 */
+.stepConnector {
+    position: absolute;
+    left: 11px;
+    top: 100%;
+    width: 2px;
+    height: 6px;
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 1px;
+    z-index: 0;
+}
+
+.stepConnectorDone {
+    background: linear-gradient(180deg, var(--color-success) 0%, color-mix(in srgb, var(--color-success) 30%, transparent) 100%);
+}
+
+.stepContent {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: 1px;
+    min-width: 0;
+}
+
+.stepLabel {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-text);
+    line-height: 1.4;
+}
+
+.stepItem.stepPending .stepLabel {
+    color: var(--color-text-muted);
+    font-weight: 400;
+}
+
+.stepItem.stepActive .stepLabel {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.stepItem.stepDone .stepLabel {
+    color: var(--color-text-secondary);
+}
+
+.stepDescription {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    line-height: 1.4;
+    margin-top: 1px;
+}
+
+
+/* 一句话生成卡片 */
+.generateFromIdeaCard {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 15%, transparent) 0%, color-mix(in srgb, var(--color-primary) 8%, transparent) 100%);
+    border: 2px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+    border-radius: 16px;
+    padding: 24px;
+    transition: all 0.3s ease;
+}
+
+.generateFromIdeaCard:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 20%, transparent);
+    transform: translateY(-2px);
+}
+
+.generateFromIdeaContent {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.generateFromIdeaIcon {
+    font-size: 2.5rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.generateFromIdeaText {
+    flex: 1;
+    min-width: 200px;
+}
+
+.generateFromIdeaTitle {
+    margin: 0 0 8px 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.generateFromIdeaDesc {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.generateFromIdeaHint {
+    margin: 8px 0 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+/* 功能注释：两枚 CTA 左右并排一行（效果图要求），窄屏等比收缩不换列 */
+.generateFromIdeaActions {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.generateFromIdeaSecondary {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 10px 14px;
+    background: var(--color-surface);
+    color: var(--primary);
+    border: 1.5px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.generateFromIdeaSecondary:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+
+.generateFromIdeaSecondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.generateFromIdeaButton {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--color-primary-bold) 100%);
+    color: var(--color-on-primary);
+    border: none;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 35%, transparent);
+    white-space: nowrap;
+    text-align: center;
+}
+
+.generateFromIdeaButton:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.generateFromIdeaButton:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.generateFromIdeaButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.errorModalOverlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
+    backdrop-filter: blur(6px);
+    z-index: 1400;
+}
+
+.errorModalContent {
+    width: min(100%, 640px);
+    border-radius: 24px;
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    box-shadow: 0 24px 72px color-mix(in srgb, var(--color-shadow) 55%, transparent);
+    overflow: hidden;
+}
+
+.errorModalHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 24px 24px 18px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.errorModalEyebrow {
+    margin: 0 0 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--primary);
+    text-transform: uppercase;
+}
+
+.errorModalHeader h3 {
+    margin: 0;
+    font-size: 1.35rem;
+    color: var(--color-text);
+}
+
+.errorModalClose {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--color-text-secondary);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.errorModalClose:hover {
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+    color: var(--primary);
+}
+
+.errorModalBody {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px;
+}
+
+.errorModalMessage {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+}
+
+.errorDetailBlock {
+    border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+    border-radius: 18px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 10%, transparent) 0%, color-mix(in srgb, var(--color-text) 25%, transparent) 100%);
+    overflow: hidden;
+}
+
+.errorDetailHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.errorDetailHeader span {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.copyErrorButton {
+    border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+    border-radius: 999px;
+    padding: 8px 14px;
+    background: var(--color-surface);
+    color: var(--primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.copyErrorButton:hover {
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+
+.errorDetailText {
+    margin: 0;
+    padding: 16px;
+    max-height: 260px;
+    overflow: auto;
+    font-family: "Consolas", "SFMono-Regular", monospace;
+    font-size: 0.84rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: color-mix(in srgb, var(--color-text) 78%, transparent);
+}
+
+.errorModalHint {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+}
+
+.errorModalFooter {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 24px 24px;
+}
+
+.errorModalPrimary {
+    min-width: 128px;
+    border: none;
+    border-radius: 999px;
+    padding: 12px 22px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--color-primary-bold) 100%);
+    color: var(--color-on-primary);
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s ease;
+    box-shadow: 0 8px 18px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.errorModalPrimary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+@media (max-width: 720px) {
+    .panelHeader {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .panelHeader h2 {
+        font-size: 1.4rem;
+    }
+
+    .twoCol {
+        grid-template-columns: 1fr;
+    }
+
+    .dropzone {
+        padding: 24px;
+    }
+
+    .generateFromIdeaContent {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+    }
+
+    .generateFromIdeaActions {
+        width: 100%;
+    }
+
+    .generateFromIdeaSecondary,
+    .generateFromIdeaButton {
+        width: auto;
+        padding: 10px 10px;
+        font-size: 0.82rem;
+    }
+
+    .errorModalOverlay {
+        align-items: flex-end;
+        padding: 12px;
+    }
+
+    .errorModalContent {
+        width: 100%;
+        border-radius: 22px 22px 18px 18px;
+    }
+
+    .errorModalHeader {
+        padding: 20px 18px 14px;
+    }
+
+    .errorModalHeader h3 {
+        font-size: 1.12rem;
+    }
+
+    .errorModalClose {
+        width: 36px;
+        height: 36px;
+        font-size: 1.35rem;
+    }
+
+    .errorModalBody {
+        padding: 18px;
+        gap: 14px;
+    }
+
+    .errorDetailHeader {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .copyErrorButton {
+        width: 100%;
+    }
+
+    .errorDetailText {
+        max-height: 220px;
+        font-size: 0.8rem;
+    }
+
+    .errorModalFooter {
+        padding: 0 18px 18px;
+    }
+
+    .errorModalPrimary {
+        width: 100%;
+    }
+}

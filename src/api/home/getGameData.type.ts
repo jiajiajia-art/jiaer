@@ -1,0 +1,161 @@
+export interface UserGameData {
+    id: string;
+    file_id: string;
+    creator_user_id: string | number;
+    title: string;
+    subtitle: string;
+    description: string;
+    version_notes?: string | null;
+    /** 横版 16:9 封面 */
+    cover_url: string;
+    /** 竖版 3:4 封面（首页列表卡） */
+    portrait_cover_url?: string | null;
+    doc_url: string;
+    files: string;
+    version?: string | number;
+    published_version?: number;
+    review_kind?: 'new' | 'update' | string | null;
+    price_amount: number|null;
+    special_price_amount: number;
+    rating_avg: string|null;
+    rating_count: number|null;
+    created_at: string;
+    updated_at: string;
+    author_name: string;
+    userCode?: string | null;
+    author_user_code?: string | null;
+    creator_user_code?: string | null;
+    is_public: number;
+    /** 风控态：taken_down 时创作者可见「违规下架」，对外不可公开 */
+    moderation_status?: 'none' | 'taken_down' | string | null;
+    moderationStatus?: 'none' | 'taken_down' | 'pending_review' | string | null;
+    like_count: number;
+    dislike_count: number;
+    /** 收藏数（详情/列表均可选返回，缺省时展示 0） */
+    favorite_count?: number;
+    /** 分享数（服务端可选，缺省时详情页展示 0） */
+    share_count?: number;
+    /** 当前用户对作品的点赞态：推荐 'like' / '0'；前端也兼容 1 / true / 'liked' */
+    reaction: string | number | boolean | null;
+    avatarUrl: string;
+    total_uv_count?: number;
+    total_pv_count?: number;
+    paid?: boolean;
+    game_tags: string;
+    is_preset: number;
+    // 新增：游戏引擎类型（服务端为准）与自定义游戏的 AppId（用于 Custom IF）
+    // RPG -> story, TXT -> galgame, AVG -> world, CUSTOM -> customif, IVG -> interactive-video
+    engine?: 'RPG' | 'TXT' | 'AVG' | 'CUSTOM' | 'IVG'| 'NOVEL';
+    playbackOrientation?: 'landscape' | 'portrait';
+    customAppId?: string;
+    needDeleted: boolean;
+    display_cover_url: string;
+    source_file_id?: string | null;
+    source_replay_id?: string | null;
+    source_author_name?: string | null;
+    source_author_user_id?: string | null;
+    novel_content_version?: string | null;
+    theme_tag_ids?: number[];
+    theme_tag_names?: string[];
+    /** 作品分类：male=男性向 / female=女性向 / all=全性向 */
+    audience_type?: 'male' | 'female' | 'all' | null;
+    /** 以下为激励计划相关的可选字段（由服务端逐步补充，前端做兼容） */
+    /** 作品激励开始时间（ISO 字符串），为空表示未参与 */
+    incentiveStartTime?: string | null;
+    /** 作品激励结束时间（ISO 字符串），为空表示未结束 */
+    incentiveEndTime?: string | null;
+    /** 作品激励状态：none | running | finished（服务端也可能返回下划线命名） */
+    incentiveStatus?: 'none' | 'running' | 'finished' | string;
+    /** 作品当前激励金额（服务端计算），缺失时前端可按 UV×5 做兜底展示 */
+    incentiveAmount?: number;
+    /** 作品激励中-待结算金额 */
+    incentivePendingAmount?: number;
+    /** 作品激励已结算金额（激励结束后的最终值） */
+    incentiveSettledAmount?: number;
+    /** 兼容服务端可能的下划线命名 */
+    incentive_status?: 'none' | 'running' | 'finished' | string;
+    incentive_amount?: number;
+    incentive_pending_amount?: number;
+    incentive_settled_amount?: number;
+    /** QQ群号，有值则渲染 */
+    groupNo?: string;
+    /** 当前用户是否已收藏该游戏 */
+    isFavorited?: boolean;
+    /** 详情页创作者关系态（GET /auth/games/info；未登录/缺省按 false） */
+    isCreatorSelf?: boolean;
+    isFollowingCreator?: boolean;
+    /** 我是否屏蔽了创作者 */
+    isCreatorBlocked?: boolean;
+    /** 创作者是否屏蔽了我 */
+    isCreatorBlockedBy?: boolean;
+    /** 首页推荐增量字段 */
+    recommend_reason?: string;
+    campaign_id?: number | null;
+    eligible?: boolean;
+    profile_source?: 'search' | 'behavior' | 'none' | string;
+    rank_score?: number;
+}
+
+export interface UserGameResponse {
+    success: boolean;
+    data: UserGameData[];
+}
+
+export interface UserGameRequest{
+    limit?: number;
+}
+
+export interface PublicGameRequest {
+    limit?: string;
+    offset?: string;
+    tagId?: string;
+    mode?: string;
+    sort?: string;
+}
+
+export interface PublicGameSearchRequest {
+    q: string;
+    page?: number;
+    pageSize?: number;
+    sort?: 'relevance' | 'newest' | 'rating_desc' | 'price_asc';
+}
+
+export interface PublicGameSearchPagination {
+    page: number;
+    pageSize: number;
+    total: number;
+    hasMore: boolean;
+}
+
+export interface PublicGameSearchResponse {
+    success: boolean;
+    data: UserGameData[];
+    pagination: PublicGameSearchPagination;
+}
+
+export interface GameDetailRequest {
+    fileId: string;
+}
+
+export interface GameDetailResponse {
+    success: boolean;
+    data: UserGameData;
+}
+
+export interface GamePlayStatusData {
+    hasContinueState: boolean;
+    hasSave: boolean;
+}
+
+export interface GamePlayStatusResponse {
+    success: boolean;
+    message?: string;
+    data: GamePlayStatusData;
+}
+
+export interface WareHouseResponse {
+    success: boolean;
+    data: {
+        rows:UserGameData[];
+    }
+}

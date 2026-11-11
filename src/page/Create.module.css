@@ -1,0 +1,1933 @@
+/* ============================================
+   Create Page - 创作工作室 / 个人中心（深色主题）
+   ============================================ */
+
+/* --- CSS Variables --- */
+.pageRoot {
+    --creator-radius: 16px;
+    --creator-gap: 18px;
+    --creator-padding: 26px;
+    --creator-bg: var(--color-bg);
+    --creator-card: var(--color-surface);
+    --creator-card-elevated: var(--color-surface-2);
+    --creator-label: var(--color-text-muted);
+    --creator-value: var(--color-text);
+    --creator-title: var(--color-primary);
+    --creator-accent: var(--color-primary-bold);
+    --creator-accent-soft: color-mix(in srgb, var(--color-primary) 28%, transparent);
+    --creator-divider: color-mix(in srgb, var(--color-text) 12%, transparent);
+    --primary: var(--color-primary);
+    --primary-light: var(--color-primary);
+    --primary-dark: var(--color-primary-bold);
+    width: 100%;
+    /* 功能注释：高度交给 AppPageShell；勿再垫满屏最小高度，否则中间区被撑出多余滚动条 */
+    max-width: 1920px;
+    margin: 0 auto;
+    background: var(--color-bg);
+    color: var(--color-text);
+}
+
+/* --- Page Layout --- */
+/* 功能注释：上/下避让由 AppPageShell 负责；纵向堆叠让页脚落底部，主内容占满壳宽 */
+.mainContent {
+    color: var(--color-text);
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    background: var(--creator-bg);
+}
+
+.main {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
+    max-width: none;
+    margin: 0 auto;
+    padding: 0 20px;
+    box-sizing: border-box;
+    overflow: visible;
+    position: relative;
+    min-width: 0;
+}
+
+/* --- User Profile Section --- */
+.userProfileSection {
+    width: 100vw;
+    max-width: 1920px;
+    position: relative;
+    padding: 0;
+    flex-shrink: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 38px;
+}
+
+.userProfileBackground {
+    width: 100%;
+    max-width: 1920px;
+    height: 400px;
+    position: relative;
+    overflow: hidden;
+}
+
+.userProfileBlur {
+    position: absolute;
+    top: -20px;
+    left: -20px;
+    right: -20px;
+    bottom: -20px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: blur(20px);
+    -webkit-filter: blur(20px);
+    z-index: 0;
+}
+
+.userProfileBackground::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: color-mix(in srgb, var(--color-shadow) 30%, transparent);
+    z-index: 1;
+}
+
+.userProfileContent {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    z-index: 2;
+}
+
+.userAvatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--color-text);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-shadow) 30%, transparent);
+    margin-top: 80px;
+}
+
+.userAvatar:hover {
+    transform: scale(1.05);
+    transition: transform 0.3s ease;
+}
+
+/* --- Creator Hero Card --- */
+/* 功能注释：壳已从顶栏下起排，hero 不再加 navbar 高度 margin */
+.creatorHeroSection {
+    width: 100%;
+    margin: 12px 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.creatorHeroCard {
+    position: relative;
+    overflow: hidden;
+    border-radius: 16px;
+    padding: 20px 24px 12px;
+    /* 顶部衔接 Navbar 黑色，底部略深于原卡片色 */
+    background: linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg) 100%);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.accountPanel {
+    margin-top: 0;
+    border-radius: 10px;
+    padding: 14px 16px 12px;
+    background: var(--creator-card);
+    border: 1px solid color-mix(in srgb, var(--color-text) 4%, transparent);
+    box-shadow: none;
+}
+
+.accountPanelTitle {
+    color: var(--color-text);
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 12px;
+}
+
+.accountActionGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.accountActionItem {
+    appearance: none;
+    border: none;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 2px;
+    cursor: pointer;
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
+}
+
+.accountActionIcon {
+    width: 36px;
+    height: 36px;
+    border-radius: 4px;
+    opacity: 1;
+    background: color-mix(in srgb, var(--color-text) 20%, transparent);
+    border: none;
+    box-shadow: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-primary);
+}
+
+.accountActionIcon img {
+    width: 20px;
+    height: 20px;
+    display: block;
+    object-fit: contain;
+}
+
+.accountActionIcon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.accountActionLabel {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
+}
+
+.accountViewAllButton {
+    appearance: none;
+    border: none;
+    background: transparent;
+    width: 100%;
+    margin-top: 10px;
+    padding: 8px 0 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: var(--creator-label);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.accountViewAllButton:hover {
+    color: color-mix(in srgb, var(--color-text) 85%, transparent);
+}
+
+.accountViewAllIcon {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.2s ease;
+}
+
+.accountViewAllIconOpen {
+    transform: rotate(180deg);
+}
+
+.moreServicesSlot {
+    margin-top: 0;
+}
+
+.creatorHeroTop {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 16px;
+    width: 100%;
+    margin: 0;
+    padding: 4px 2px 2px;
+}
+
+.creatorHeroAvatarFrame {
+    position: relative;
+    flex-shrink: 0;
+    width: 104px;
+    height: 104px;
+}
+
+.creatorHeroAvatarBtn {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.creatorHeroAvatarBtn:disabled {
+    cursor: wait;
+}
+
+.creatorHeroAvatarBtn:hover:not(:disabled) .creatorHeroAvatar {
+    opacity: 0.88;
+}
+
+.creatorHeroAvatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    transition: opacity 0.15s ease;
+}
+
+.creatorHeroAvatarLoading {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-shadow) 45%, transparent);
+}
+
+.hiddenFileInput {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.creatorHeroInfo {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.creatorHeroStats {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.creatorHeroNameRow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.creatorHeroNameGroup {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.creatorHeroName {
+    font-size: 28px;
+    line-height: 1.2;
+    font-weight: 700;
+    color: var(--color-text);
+    word-break: break-word;
+    margin: 0;
+}
+
+.creatorEditNameBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--creator-label);
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0;
+    margin-left: -2px;
+    margin-top: 4px;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.creatorEditNameBtn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.creatorEditNameBtn:hover {
+    color: var(--creator-value);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.creatorGenderBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin-left: 4px;
+    margin-top: 2px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+    border-radius: 999px;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent), 0 8px 18px color-mix(in srgb, var(--color-shadow) 18%, transparent);
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0;
+    font-size: 18px;
+    line-height: 1;
+    font-weight: 800;
+    transition: color 0.16s ease, border-color 0.16s ease, background-color 0.16s ease, transform 0.16s ease;
+}
+
+.creatorGenderBadgeFemale {
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-text) 12%, transparent) 0%, color-mix(in srgb, var(--color-text) 5%, transparent) 100%),
+        color-mix(in srgb, var(--color-primary) 20%, transparent);
+    color: var(--color-primary-fg);
+}
+
+.creatorGenderBadgeMale {
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-text) 12%, transparent) 0%, color-mix(in srgb, var(--color-text) 5%, transparent) 100%),
+        color-mix(in srgb, var(--color-info) 18%, transparent);
+    color: var(--color-info);
+}
+
+.creatorGenderBadge:hover,
+.creatorGenderBadge:focus-visible {
+    color: var(--color-text);
+    outline: none;
+    transform: translateY(-1px);
+}
+
+.creatorGenderBadgeFemale:hover,
+.creatorGenderBadgeFemale:focus-visible {
+    border-color: color-mix(in srgb, var(--color-primary-light) 68%, transparent);
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-primary-light) 18%, transparent) 0%, color-mix(in srgb, var(--color-primary) 16%, transparent) 100%),
+        color-mix(in srgb, var(--color-primary) 24%, transparent);
+}
+
+.creatorGenderBadgeMale:hover,
+.creatorGenderBadgeMale:focus-visible {
+    border-color: color-mix(in srgb, var(--color-info) 70%, transparent);
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-info) 20%, transparent) 0%, color-mix(in srgb, var(--color-info) 16%, transparent) 100%),
+        color-mix(in srgb, var(--color-info) 22%, transparent);
+}
+
+.creatorStreakBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.creatorHeroBadgeRow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--creator-value);
+    min-width: 0;
+}
+
+.creatorHeroIdGroup {
+    min-width: 0;
+    max-width: 100%;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.creatorHeroTokenRow,
+.creatorHeroMetaRow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--creator-value);
+    min-width: 0;
+}
+
+.creatorSocialRow {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    width: 100%;
+    margin-top: 4px;
+    min-width: 0;
+}
+
+.creatorSocialStats {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    font-size: 13px;
+    line-height: 1.2;
+}
+
+.creatorSocialItem {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    white-space: nowrap;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.creatorSocialItem:hover .creatorSocialValue {
+    color: var(--color-text);
+}
+
+.creatorSocialLabel {
+    color: var(--creator-label);
+}
+
+.creatorSocialValue {
+    color: var(--creator-value);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.creatorSocialDivider {
+    width: 1px;
+    height: 12px;
+    background: var(--creator-divider);
+    flex-shrink: 0;
+}
+
+.creatorPreviewHomeBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex-shrink: 0;
+    height: 26px;
+    padding: 0 10px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 22%, transparent);
+    border-radius: 999px;
+    background: var(--color-surface-2);
+    color: var(--color-text);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.creatorPreviewHomeBtn:hover {
+    background: var(--color-surface-2);
+    border-color: color-mix(in srgb, var(--color-text) 32%, transparent);
+}
+
+.creatorPreviewHomeIcon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.creatorHeroId,
+.creatorHeroTokenLabel,
+.creatorHeroTokenValue {
+    color: var(--creator-label);
+}
+
+.creatorHeroId {
+    min-width: 0;
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.creatorHeroTokenValue {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 220px;
+}
+
+.creatorCopyLink {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: var(--creator-label);
+    cursor: pointer;
+    line-height: 0;
+}
+
+.creatorCopyLink svg {
+    width: 14px;
+    height: 14px;
+}
+
+.creatorCopyLink:hover {
+    color: var(--color-text);
+}
+
+.creatorRoleBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: var(--creator-accent);
+    color: var(--color-on-primary);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.creatorRoleBadge,
+.creatorVipBadge,
+.creatorLevelBadge {
+    min-height: 28px;
+    box-sizing: border-box;
+}
+
+.creatorVipBadge {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 9px;
+    border: 1px solid color-mix(in srgb, var(--color-primary-light) 48%, transparent);
+    border-radius: 6px;
+    background: var(--creator-accent);
+    color: var(--color-on-primary);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.creatorVipBadgeInactive {
+    border-color: var(--color-border);
+    background: var(--color-text-muted);
+    color: var(--color-text);
+}
+
+.creatorVipBadgeInactive:hover,
+.creatorVipBadgeInactive:focus-visible {
+    border-color: var(--color-border);
+    background: var(--color-text-muted);
+    color: var(--color-text);
+}
+
+.creatorVipBadge:hover,
+.creatorVipBadge:focus-visible {
+    border-color: color-mix(in srgb, var(--color-primary-lighter) 86%, transparent);
+    background: var(--creator-accent-soft);
+    outline: none;
+}
+
+.creatorHeroLeft {
+    display: flex;
+    flex-direction: column;
+    gap: var(--creator-gap);
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 620px;
+}
+
+.creatorHeroActions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    align-self: center;
+    flex-shrink: 0;
+}
+
+.creatorHeroEyebrow {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-primary-fg);
+    margin-bottom: 4px;
+}
+
+/* --- Account Info Card --- */
+.creatorAccountCard {
+    display: flex;
+    align-items: stretch;
+    border-radius: 16px;
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    padding: 16px;
+    gap: 12px;
+}
+
+.creatorAccountHalf {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.creatorAccountDivider {
+    width: 1px;
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+
+.creatorAccountLabel {
+    font-size: 11px;
+    color: var(--creator-label);
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.creatorAccountValue {
+    font-size: 12px;
+    color: var(--creator-value);
+    font-weight: 400;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.creatorAccountCopyButton {
+    background: transparent;
+    border-radius: 999px;
+    border: none;
+    color: var(--color-text-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 4px;
+    outline: none;
+    transition: color 0.2s ease, transform 0.1s ease;
+    flex-shrink: 0;
+}
+
+.creatorAccountCopyButton:hover {
+    color: var(--creator-title);
+    transform: translateY(-1px);
+}
+
+.creatorAccountCopyButton svg {
+    font-size: 16px;
+}
+
+/* --- Asset Cards --- */
+.creatorAssets {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.creatorAssetCard {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    border-radius: var(--creator-radius);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    padding: 16px;
+}
+
+.creatorAssetHeader {
+    display: flex;
+    align-items: center;
+    gap: -4px;
+}
+
+.creatorAssetIcon,
+.creatorAssetIconDiamond {
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.creatorAssetLabel {
+    font-size: 12px;
+    color: var(--creator-label);
+    font-weight: 500;
+}
+
+.creatorAssetValue {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--creator-value);
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    margin-left: 24px;
+}
+
+.creatorAssetBody {
+    display: flex;
+    align-items: flex-start;
+}
+
+.creatorAssetRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+/* --- Action Buttons --- */
+.creatorPrimaryButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 18px;
+    width: auto;
+    border-radius: 999px;
+    border: none;
+    background: var(--color-primary-bold);
+    color: var(--color-on-primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: none;
+}
+
+.creatorPrimaryButton:hover {
+    transform: translateY(-2px);
+    box-shadow: none;
+}
+
+.creatorPrimaryButton svg {
+    font-size: 16px;
+}
+
+.creatorHelpButton {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+    background: var(--color-surface);
+    color: var(--creator-title);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: none;
+}
+
+.creatorHelpButton:hover {
+    transform: translateY(-2px);
+}
+
+.creatorHelpIcon {
+    line-height: 1;
+    user-select: none;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.draftHeaderActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+/* --- Stats (embedded in hero on Create; also used by StatsOverviewSection) --- */
+.statsSection {
+    width: 100%;
+    margin: 0 auto 28px;
+}
+
+.primaryStatsBar,
+.expandedStatsBar {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+    width: 100%;
+    gap: 0;
+}
+
+.primaryStatItem,
+.expandedStatItem {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 4px;
+    text-align: center;
+    position: relative;
+}
+
+/* 四列网格：行末不加竖线 */
+.primaryStatItem:not(:nth-child(4n))::after,
+.expandedStatItem:not(:nth-child(4n))::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 22%;
+    bottom: 22%;
+    width: 1px;
+    background: var(--creator-divider);
+}
+
+.primaryStatValue {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--color-text);
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+
+.primaryStatLabel {
+    font-size: 12px;
+    color: var(--creator-label);
+    font-weight: 500;
+}
+
+.primaryStatItemClickable {
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background-color 0.15s ease;
+}
+
+.primaryStatItemClickable:hover {
+    background-color: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+.primaryStatItemClickable:focus-visible {
+    outline: 1px solid color-mix(in srgb, var(--color-text) 35%, transparent);
+    outline-offset: 2px;
+}
+
+.statsExpandToggle {
+    margin: 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    color: var(--creator-label);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px 8px 4px;
+}
+
+.statsExpandToggleFooter {
+    margin: 0 auto;
+    align-self: center;
+}
+
+.statsExpandToggle:hover {
+    color: var(--color-text);
+}
+
+.statsExpandIcon {
+    transition: transform 0.2s ease;
+}
+
+.statsExpandIconOpen {
+    transform: rotate(180deg);
+}
+
+.expandedStatItemAction .statActionRow {
+    justify-content: center;
+}
+
+.sectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 22px;
+    gap: 10px;
+    width: 100%;
+}
+
+.sectionDividerDesktop {
+    flex: 1;
+    min-width: 0;
+    height: auto;
+    object-fit: contain;
+    margin: 0;
+    display: block;
+}
+
+.sectionDividerMobile {
+    display: none;
+    flex: 1;
+    min-width: 0;
+    height: 20px;
+    object-fit: contain;
+    margin: 0;
+}
+
+.sectionTitle {
+    width: 150px;
+    height: 64px;
+    flex-shrink: 0;
+}
+
+.sectionTitle img,
+.sectionTitleImage {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.sectionTitleImage {
+    width: 150px;
+    height: 64px;
+    flex-shrink: 0;
+    display: block;
+}
+
+.sectionDivider {
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    height: auto;
+    object-fit: contain;
+}
+
+.statsUpdateTime {
+    flex-shrink: 0;
+    color: var(--color-text-muted);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.sectionTitleText {
+    display: inline-flex;
+    align-items: center;
+    height: 64px;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.more {
+    width: auto;
+    height: 20px;
+    cursor: pointer;
+    transition: color 0.3s ease;
+    position: relative;
+    z-index: 10;
+    background-color: transparent;
+    outline: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.more img {
+    width: auto;
+    height: 100%;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.moreText {
+    gap: 4px;
+}
+
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0;
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.statBox {
+    width: 100%;
+    height: 100px;
+    background: transparent;
+    padding: 14px 12px;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: none;
+    border-right: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    transition: background 0.2s ease;
+}
+
+.statBox:last-child {
+    border-right: none;
+}
+
+.statBox:hover {
+    transform: none;
+    box-shadow: none;
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+.statValue {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.statLabel {
+    font-size: 16px;
+    color: var(--color-text-muted);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.statLabel img {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+    display: inline-block;
+}
+
+.statBoxWithAction {
+    height: auto;
+    min-height: 100px;
+}
+
+.statActionRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+}
+
+.settleButton {
+    min-height: 34px;
+    padding: 0 14px;
+    background-color: var(--color-primary-bold);
+    color: var(--color-on-primary);
+    border: none;
+    border-radius: 999px;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.settleButton:hover {
+    transform: translateY(-1px);
+    box-shadow: none;
+}
+
+/* --- Shop/Draft Section --- */
+.shopSection {
+    width: 100%;
+    margin: 0 auto;
+    margin-top: 38px;
+}
+
+.worksSection {
+    width: 100%;
+    margin: 12px auto 0;
+}
+
+.worksTabBar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    width: 100%;
+    margin: 0 0 18px;
+    min-height: 52px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    /* 功能注释：Tab 条圆角略小于卡片，避免显得过圆 */
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
+}
+
+/* 功能注释：栏目常驻左侧；草稿「管理」/「全部」靠右占位，切 Tab 不左右跳动 */
+.worksTabs {
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 28px;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.worksViewAllSlot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+    margin-left: auto;
+    min-width: 0;
+}
+
+@media (min-width: 769px) {
+    /* PC 预览已铺满作品，不展示「全部」 */
+    .worksViewAllSlot {
+        display: none;
+    }
+}
+
+.worksViewAllBtn {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
+    padding: 8px 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    transition: color 0.15s ease;
+}
+
+.worksViewAllBtn:hover {
+    color: var(--color-text);
+}
+
+.worksTabs::-webkit-scrollbar {
+    display: none;
+}
+
+.worksTab {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--creator-label);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.2;
+    padding: 14px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    position: relative;
+}
+
+.worksTabActive {
+    color: var(--color-text);
+}
+
+.worksTabActive::after {
+    content: '';
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 0;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--color-surface);
+}
+
+.appealBanner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+    color: color-mix(in srgb, var(--color-primary-lighter) 95%, transparent);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.appealBannerBtn {
+    appearance: none;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 999px;
+    padding: 6px 12px;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    font-size: 12px;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.worksTabPanel {
+    width: 100%;
+    min-height: 120px;
+}
+
+.worksEmpty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--creator-label);
+    /* 约等于一张 GameGrid 卡（3:4 封面 + body）并略高一点 */
+    min-height: 360px;
+    padding: 28px 16px;
+    box-sizing: border-box;
+    line-height: 1.5;
+}
+
+.worksPagination {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-top: 24px;
+    margin-bottom: 4px;
+}
+
+.draftSectionHeader {
+    position: relative;
+}
+
+.draftManageActions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 14px;
+    flex: 0 0 auto;
+    margin-left: auto;
+    flex-wrap: nowrap;
+    min-width: 0;
+}
+
+.draftManageActions.draftManageActionsExpanded {
+    /* 功能注释：展开后仍靠右同排，占文档流宽度，避免叠在左侧已选文案上 */
+    width: auto;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 0;
+    flex-wrap: nowrap;
+}
+
+/* 功能注释：管理模式单行栏 — 左已选数、右操作，不再另起第二行；双 class 压过断点里的 flex-start */
+.worksTabBar.worksTabBarManaging {
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.draftManageCount {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.draftManageButton {
+    appearance: none;
+    min-height: 0;
+    padding: 6px 2px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: color 0.15s ease;
+    white-space: nowrap;
+}
+
+.draftManageButton:hover {
+    color: var(--color-text);
+    transform: none;
+    box-shadow: none;
+}
+
+.draftManageButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+    box-shadow: none;
+    transform: none;
+}
+
+.draftDeleteButton {
+    border: none;
+    color: var(--color-primary-fg);
+}
+
+.draftDeleteButton:hover:not(:disabled) {
+    color: var(--color-primary-fg);
+}
+
+.draftSectionBody {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.draftFilterRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.draftFilterChip {
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    background: var(--color-surface-2);
+    color: var(--color-text-secondary);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.draftFilterChip:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+    color: var(--color-text);
+}
+
+.draftFilterChipActive {
+    background: var(--color-primary-bold);
+    border-color: transparent;
+    color: var(--color-on-primary);
+}
+
+.draftFilterEmpty {
+    text-align: center;
+    color: var(--color-text-muted);
+    min-height: 100px;
+    line-height: 100px;
+}
+
+.draftManageTip {
+    padding: 10px 14px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+    color: var(--color-primary-fg);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* ============================================
+   Responsive Breakpoints
+   ============================================ */
+
+/* Large Desktop: > 1080px */
+@media (min-width: 1081px) {
+    .creatorHeroActions {
+        width: auto;
+    }
+
+    .draftHeaderActions .creatorPrimaryButton {
+        min-width: 132px;
+    }
+}
+
+/* Tablet & Mobile: <= 1080px */
+@media (max-width: 1080px) {
+    .pageRoot {
+        padding-bottom: 20px;
+    }
+
+    .main {
+        max-width: 100%;
+        padding: 0 12px;
+        width: 100%;
+    }
+
+    .creatorHeroSection {
+        margin: 8px 0 12px;
+        gap: 12px;
+    }
+
+    .creatorHeroCard {
+        width: calc(100% + 24px);
+        margin-left: -12px;
+        margin-right: -12px;
+        padding: 10px 14px 8px;
+        border-radius: 0;
+        max-width: none;
+        gap: 10px;
+    }
+
+    .accountPanel {
+        margin-top: 0;
+        padding: 12px 12px 8px;
+        border-radius: 10px;
+    }
+
+    .accountPanelTitle {
+        font-size: 15px;
+        margin-bottom: 10px;
+    }
+
+    .accountActionIcon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .accountActionIcon img {
+        width: 18px;
+        height: 18px;
+    }
+
+    .accountActionIcon svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .accountActionLabel {
+        font-size: 11px;
+        white-space: normal;
+    }
+
+    .creatorHeroTop {
+        gap: 12px;
+        align-items: center;
+        justify-content: flex-start;
+        max-width: 100%;
+        padding: 2px 0;
+    }
+
+    .creatorHeroAvatarFrame {
+        width: 84px;
+        height: 84px;
+    }
+
+    .creatorHeroInfo {
+        gap: 4px;
+    }
+
+    .creatorHeroMetaRow {
+        align-items: flex-start;
+        row-gap: 6px;
+    }
+
+    .creatorHeroBadgeRow {
+        flex-basis: auto;
+        margin-left: 0;
+    }
+
+    .creatorHeroName {
+        font-size: 20px;
+    }
+
+    .creatorHeroLeft {
+        flex: none;
+        width: 100%;
+        gap: 12px;
+    }
+
+    .creatorHeroActions {
+        flex: none;
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .creatorAccountCard,
+    .creatorAssetCard {
+        padding: 14px;
+        border-radius: 12px;
+        gap: 8px;
+    }
+
+    .creatorAccountValue {
+        font-size: 13px;
+    }
+
+    .creatorAssetValue {
+        font-size: 18px;
+    }
+
+    .draftHeaderActions {
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .creatorPrimaryButton {
+        min-height: 38px;
+        width: auto;
+        font-size: 13px;
+        border-radius: 999px;
+        padding: 0 14px;
+    }
+
+    .creatorPrimaryButton svg {
+        font-size: 15px;
+    }
+
+    .creatorHelpButton {
+        width: 38px;
+        height: 38px;
+        border-radius: 999px;
+    }
+
+    .primaryStatsBar,
+    .expandedStatsBar {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .primaryStatItem,
+    .expandedStatItem {
+        padding: 6px 2px;
+        gap: 3px;
+    }
+
+    .primaryStatValue {
+        font-size: 17px;
+    }
+
+    .primaryStatLabel {
+        font-size: 11px;
+    }
+
+    .expandedStatItem {
+        gap: 4px;
+    }
+
+    .expandedStatItem .statValue {
+        font-size: 18px;
+    }
+
+    .expandedStatItem .statLabel {
+        font-size: 11px;
+        line-height: 1.25;
+    }
+
+    .statsSection,
+    .shopSection,
+    .worksSection {
+        width: 100%;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    .worksSection {
+        margin-top: 20px;
+    }
+
+    .worksTabBar {
+        position: relative;
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 10px;
+        width: 100%;
+        margin: 0 0 14px;
+        min-height: 52px;
+        padding: 0 12px;
+        border-radius: 10px;
+        box-sizing: border-box;
+        overflow: visible;
+    }
+
+    .worksTabs {
+        flex: 1 1 auto;
+        width: auto;
+        max-width: 100%;
+        min-width: 0;
+        justify-content: flex-start;
+        gap: 16px;
+        transform: none;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .worksTab {
+        flex: 0 0 auto;
+        min-width: 0;
+        text-align: center;
+        font-size: 13px;
+        padding: 14px 6px;
+    }
+
+    .worksTabActive::after {
+        left: 8px;
+        right: 8px;
+        height: 2px;
+    }
+
+    .worksViewAllSlot {
+        position: static;
+        right: auto;
+        top: auto;
+        transform: none;
+        flex: 0 0 auto;
+        margin-left: auto;
+        z-index: auto;
+    }
+
+    .worksViewAllBtn {
+        font-size: 13px;
+        padding: 6px 2px;
+    }
+
+    .draftManageActions {
+        position: static;
+        right: auto;
+        top: auto;
+        transform: none;
+        flex: 0 0 auto;
+        margin-left: auto;
+        justify-content: flex-end;
+        gap: 10px;
+        flex-wrap: nowrap;
+        min-width: 0;
+        max-width: none;
+        padding: 0;
+        box-sizing: border-box;
+        z-index: auto;
+    }
+
+    .draftManageActions.draftManageActionsExpanded {
+        position: static;
+        right: auto;
+        top: auto;
+        transform: none;
+        flex: 0 0 auto;
+        width: auto;
+        margin-left: auto;
+        margin-bottom: 0;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 0;
+        flex-wrap: nowrap;
+        max-width: none;
+    }
+
+    .statsGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0;
+    }
+
+    .statBox {
+        width: 100%;
+        max-width: 100%;
+        height: 90px;
+        border-right: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+        border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    }
+
+    .statBox:nth-child(2n) {
+        border-right: none;
+    }
+
+    .statBoxWithAction {
+        height: 90px;
+        min-height: 90px;
+    }
+
+    .statValue {
+        font-size: 26px;
+    }
+
+    .statLabel {
+        font-size: 14px;
+    }
+
+    .statActionRow {
+        align-items: center;
+        gap: 8px;
+    }
+
+    .settleButton {
+        min-height: 28px;
+        padding: 0 12px;
+        font-size: 12px;
+    }
+
+    .sectionHeader {
+        gap: 6px;
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 6px;
+    }
+
+    .sectionDividerDesktop {
+        flex: 1;
+        min-width: 0;
+        max-width: none;
+        height: auto;
+        margin: 0;
+        display: none;
+    }
+
+    .sectionDividerMobile {
+        display: block;
+        flex: 1;
+        min-width: 0;
+        max-width: none;
+        margin: 0;
+        object-fit: contain;
+    }
+
+    .sectionTitle {
+        width: 80px;
+        height: 32px;
+        flex-shrink: 0;
+    }
+
+    .sectionTitle img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    .more {
+        font-size: 14px;
+        height: 20px;
+        gap: 2px;
+        flex-shrink: 0;
+    }
+
+    .more img {
+        height: 14px;
+        width: auto;
+    }
+
+    .draftManageActions {
+        justify-content: flex-end;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    .worksTabBar .draftManageActions {
+        max-width: none;
+        flex-shrink: 0;
+        margin-left: auto;
+    }
+
+    .worksTabBar .draftManageActions.draftManageActionsExpanded {
+        justify-content: flex-end;
+        width: auto;
+        flex: 0 0 auto;
+        gap: 10px;
+    }
+
+    .draftSectionHeader {
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .draftSectionHeader .sectionTitle {
+        order: 1;
+    }
+
+    .draftSectionHeader .sectionDividerDesktop,
+    .draftSectionHeader .sectionDividerMobile {
+        order: 2;
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    .draftSectionHeader .draftManageActions {
+        order: 3;
+    }
+
+    .draftSectionHeader .draftManageActions.draftManageActionsExpanded {
+        flex-basis: auto;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+
+    .draftManageButton {
+        min-height: 0;
+        padding: 4px 1px;
+        font-size: 13px;
+    }
+
+    .draftManageCount {
+        font-size: 13px;
+    }
+
+    .draftSectionBody {
+        gap: 10px;
+    }
+
+    .draftManageTip {
+        padding: 8px 12px;
+        font-size: 12px;
+        border-radius: 12px;
+    }
+}

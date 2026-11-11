@@ -1,0 +1,289 @@
+/* SubSceneTab 组件样式 */
+
+/* NPC 调色板 */
+.npcPalette {
+    background: var(--color-surface);
+    border-radius: 14px;
+    border: 1px solid var(--border-light);
+    padding: 12px;
+    box-shadow: var(--shadow-sm);
+}
+
+.npcPalette h4 {
+    color: var(--text-primary);
+    margin: 0 0 8px;
+    font-size: 14px;
+}
+
+.npcItems {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.npcItem {
+    background: var(--color-surface);
+    border: 1px dashed var(--border-light);
+    border-radius: 12px;
+    padding: 10px;
+    cursor: grab;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.npcItem:active {
+    cursor: grabbing;
+}
+
+.npcItemDisabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.defaultNpcImage {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    border: 1px solid var(--border-light);
+}
+
+.npcName {
+    color: var(--text-primary);
+    font-size: 12px;
+}
+
+.npcHint {
+    margin-top: 8px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+/* 新增：画布容器，尺寸固定为 414x740，用于承载图片和NPC */
+.imageCanvas {
+    position: relative;
+    width: 414px;
+    height: 740px;
+    background: var(--color-surface-2);
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--color-shadow) 10%, transparent);
+    border-radius: 4px;
+    overflow: visible; /* 允许控制面板溢出显示 */
+    user-select: none;
+    flex-shrink: 0;
+    display: block;
+}
+
+/* 已放置的NPC */
+.placedNPC {
+    position: absolute;
+    cursor: move;
+    z-index: 10;
+    transition: opacity 0.3s ease; /* 移除 position 相关的 transition，防止拖拽抖动 */
+    border: 2px solid transparent;
+    border-radius: 8px;
+    animation: fadeIn 0.3s ease;
+    will-change: transform, opacity;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.placedNPC:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.npcImage {
+    max-width: 100px;
+    max-height: 150px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
+    border-radius: 6px;
+}
+
+.npcButtonText {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* 背景色通过内联样式动态设置 */
+    color: var(--color-text);
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 6px;
+    padding: 8px 12px;
+    text-align: center;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 15%, transparent);
+    pointer-events: none;
+    width: fit-content;
+    height: fit-content;
+    min-width: fit-content;
+}
+
+/* 按钮型NPC容器 */
+.placedNPCButton {
+    width: auto !important;
+    height: auto !important;
+}
+
+/* NPC 控制面板 */
+.npcControls {
+    position: absolute;
+    bottom: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: color-mix(in srgb, var(--color-surface) 95%, transparent);
+    padding: 6px 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 15%, transparent);
+    border: 1px solid var(--border-light);
+    white-space: nowrap;
+    z-index: 20;
+}
+
+/* 层级控制 */
+.zIndexControl {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-right: 8px;
+    border-right: 1px solid var(--border-light);
+}
+
+.zIndexLabel {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-right: 2px;
+}
+
+.zIndexBtnSmall {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid var(--border-light);
+    background: var(--color-surface);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+}
+
+.zIndexBtnSmall:hover:not(:disabled) {
+    background: var(--primary);
+    color: var(--color-text);
+    border-color: var(--primary);
+}
+
+.zIndexBtnSmall:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.zIndexInputSmall {
+    width: 45px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    border: 1px solid var(--border-light);
+    background: var(--color-surface);
+    color: var(--text-primary);
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.zIndexInputSmall:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+/* 调整大小手柄 */
+.resizeHandle {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: var(--primary);
+    border: 2px solid var(--color-text);
+    border-radius: 50%;
+    cursor: nwse-resize;
+    z-index: 30;
+    box-shadow: 0 2px 4px color-mix(in srgb, var(--color-shadow) 20%, transparent);
+    transition: all 0.2s ease;
+}
+
+.resizeHandle:hover {
+    transform: scale(1.2);
+    background: var(--color-primary);
+    box-shadow: 0 4px 8px color-mix(in srgb, var(--color-shadow) 30%, transparent);
+}
+
+.resizeHandleNW {
+    top: -6px;
+    left: -6px;
+    cursor: nwse-resize;
+}
+
+.resizeHandleNE {
+    top: -6px;
+    right: -6px;
+    cursor: nesw-resize;
+}
+
+.resizeHandleSW {
+    bottom: -6px;
+    left: -6px;
+    cursor: nesw-resize;
+}
+
+.resizeHandleSE {
+    bottom: -6px;
+    right: -6px;
+    cursor: nwse-resize;
+}
+
+.removeBtn {
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-light);
+    background: var(--color-surface);
+    color: var(--text-danger, var(--color-primary));
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.removeBtn:hover {
+    background: var(--text-danger, var(--color-primary));
+    color: var(--color-on-primary);
+    border-color: var(--text-danger, var(--color-primary));
+}

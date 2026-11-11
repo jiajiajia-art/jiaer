@@ -1,0 +1,98 @@
+/* 功能注释：创作分步轨紧贴标题行，轨下仅靠 topBar row-gap */
+.rail {
+  margin: 0;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  min-width: min(100%, 720px);
+}
+
+.step {
+  position: relative;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px 10px;
+  min-width: 96px;
+  border-bottom: 2px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  color: var(--color-text-muted);
+}
+
+.step + .step::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 18px;
+  width: 1px;
+  height: 18px;
+  background: color-mix(in srgb, var(--color-text) 10%, transparent);
+}
+
+.index {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+
+.label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+}
+
+.active {
+  border-bottom-color: var(--color-primary-bold);
+  color: var(--color-text);
+}
+
+.active .index {
+  background: var(--color-primary-bold);
+  border-color: transparent;
+  color: var(--color-on-primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
+.active .label {
+  color: var(--color-primary-fg);
+}
+
+.done {
+  color: var(--color-text-secondary);
+  border-bottom-color: color-mix(in srgb, var(--color-success) 55%, transparent);
+}
+
+.done .index {
+  background: color-mix(in srgb, var(--color-success) 68%, var(--color-shadow));
+  border-color: transparent;
+  color: var(--color-on-primary);
+}
+
+@media (max-width: 768px) {
+  .list {
+    min-width: 560px;
+  }
+
+  .label {
+    font-size: 0.72rem;
+  }
+}

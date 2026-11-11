@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 24 24" fill="none">
+  <!-- 图2顶栏消息：圆角方形气泡 + 两行文案线 + 左下角尾；源文件放 assetsv2/home -->
+  <rect x="5" y="3.2" width="14" height="12.2" rx="2.2" stroke="#FFFFFF" stroke-width="1.7"/>
+  <path d="M7.4 14.8 L5.6 20.6 L11 14.8" stroke="#FFFFFF" stroke-width="1.7" stroke-linejoin="round" fill="none"/>
+  <path d="M7.6 8 H16.4" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M7.6 11.4 H16.4" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

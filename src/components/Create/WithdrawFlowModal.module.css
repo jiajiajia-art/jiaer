@@ -1,0 +1,336 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--color-shadow) 70%, transparent);
+  backdrop-filter: blur(5px);
+}
+
+.modal {
+  --withdraw-accent: var(--color-primary);
+  --withdraw-accent-deep: var(--color-primary-bold);
+  --withdraw-surface: transparent;
+  --withdraw-card: color-mix(in srgb, var(--color-text) 6%, transparent);
+  --withdraw-elevated: color-mix(in srgb, var(--color-text) 8%, transparent);
+  --withdraw-border: color-mix(in srgb, var(--color-text) 8%, transparent);
+  --withdraw-muted: var(--color-text-secondary);
+  --withdraw-faint: var(--color-text-muted);
+  position: relative;
+  width: min(520px, 100%);
+  max-height: min(86vh, 720px);
+  overflow: auto;
+  border-radius: 10px;
+  /* 上深下浅，底部保留灰，避免通透成黑 */
+  background:
+    linear-gradient(0deg, color-mix(in srgb, var(--color-text) 15%, transparent), color-mix(in srgb, var(--color-text) 15%, transparent)),
+    linear-gradient(180deg, var(--color-surface-2) 0%, color-mix(in srgb, var(--color-surface) 72%, transparent) 100%);
+  border: 0.68px solid transparent;
+  backdrop-filter: blur(47px);
+  -webkit-backdrop-filter: blur(47px);
+  box-shadow: none;
+  padding: 20px 22px 22px;
+  color: var(--color-text);
+  box-sizing: border-box;
+}
+
+/* 白边线性渐变（border-image 与 border-radius 不兼容） */
+.modal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  padding: 0.68px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-surface) 55%, transparent) 0%,
+    color-mix(in srgb, var(--color-text) 18%, transparent) 60%,
+    transparent 90%
+  );
+  -webkit-mask:
+    linear-gradient(var(--color-surface) 0 0) content-box,
+    linear-gradient(var(--color-surface) 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.header {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+}
+
+.close {
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--withdraw-muted);
+}
+
+.close:hover {
+  color: var(--color-text);
+}
+
+.body {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.state,
+.hint {
+  margin: 0;
+  color: var(--withdraw-muted);
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.pendingBox,
+.rejectBox {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+  color: var(--color-primary-lighter);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.rejectBox {
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+  color: var(--color-primary-fg);
+}
+
+.rejectRemark {
+  margin-top: 6px;
+  color: var(--color-primary-fg);
+  font-size: 13px;
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  font-size: 13px;
+  color: var(--withdraw-muted);
+}
+
+/* 可提上限数字加粗，方便用户一眼看到能提多少 */
+.maxHighlight {
+  font-weight: 800;
+  color: var(--color-text);
+  margin-left: 2px;
+}
+
+.meta {
+  margin: 0;
+  font-size: 13px;
+  color: var(--withdraw-faint);
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* 标题与最低提现 tip 同一行：tip 靠右 */
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.amountHint {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--withdraw-faint);
+  text-align: right;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--withdraw-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--withdraw-elevated);
+  color: var(--color-text);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--withdraw-faint);
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+}
+
+.primaryButton {
+  border: none;
+  border-radius: 999px;
+  min-height: 42px;
+  padding: 0 18px;
+  background: var(--withdraw-accent);
+  color: var(--color-on-primary);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background: var(--withdraw-accent-deep);
+}
+
+.primaryButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.records {
+  position: relative;
+  z-index: 4;
+  margin-top: 18px;
+  border-top: 1px solid var(--withdraw-border);
+  padding-top: 14px;
+}
+
+.recordsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.recordsTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.viewAllButton {
+  border: none;
+  background: transparent;
+  color: var(--color-highlight);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.viewAllButton:hover {
+  color: var(--color-primary-lighter);
+}
+
+.recordList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.recordItem {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--color-text) 78%, transparent);
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--withdraw-elevated);
+  border: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.recordTime {
+  color: var(--withdraw-faint);
+}
+
+.statusText {
+  font-weight: 700;
+}
+
+.statusPending {
+  color: var(--color-highlight);
+}
+
+.statusApproved {
+  color: var(--color-success);
+}
+
+.statusRejected {
+  color: var(--color-primary-fg);
+}
+
+/* 列表内驳回说明独占一行；备注文字紧跟「备注：」左对齐 */
+.recordRejectRemark {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-primary-fg);
+  text-align: left;
+}
+
+.recordRejectLabel {
+  flex-shrink: 0;
+  color: var(--withdraw-faint);
+  font-weight: 600;
+}
+
+@media (max-width: 560px) {
+  .recordItem {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ================= 统一弹窗风格 ================= */
+.modal {
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 18px;
+    background: var(--color-surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 24px 64px color-mix(in srgb, var(--color-shadow) 50%, transparent);
+    color: var(--color-text);
+}
+.modal::before { display: none; }

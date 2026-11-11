@@ -1,0 +1,100 @@
+.root {
+  display: grid;
+  gap: 20px;
+  /* 功能注释：管理台浅色区必须显式落墨色；否则继承全站 body 白字，列表会「看不见」 */
+  color: var(--admin-text, var(--color-text));
+}
+
+.input,
+.select {
+  min-width: 160px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--admin-text, var(--color-text));
+  font-size: 14px;
+}
+
+.searchButton {
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  background: var(--admin-accent, var(--color-surface));
+  color: var(--color-on-primary);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  background: var(--color-surface);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+  color: var(--admin-text, var(--color-text));
+}
+
+.table th,
+.table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+  text-align: left;
+  color: var(--admin-text, var(--color-text));
+}
+
+.table th {
+  color: var(--admin-text-soft, var(--color-text-secondary));
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.emptyState {
+  padding: 24px;
+  text-align: center;
+  color: var(--admin-muted, var(--color-text-muted));
+}
+
+.paginationBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pageSizeField {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--admin-text-soft, var(--color-text-secondary));
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.paginationWrap {
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.paginationSummaryOnly {
+  color: var(--admin-text-soft, var(--color-text-secondary));
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.paginationHint {
+  color: var(--admin-muted, var(--color-text-muted));
+  font-size: 13px;
+}

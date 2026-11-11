@@ -1,0 +1,341 @@
+/* 功能注释：详情页评分/更新日志/作品反馈弹窗——对齐平台墨黑弹层 */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3400;
+  background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.panel {
+  width: min(100%, 480px);
+  max-height: min(90vh, 720px);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.close {
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.body {
+  padding: 14px 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.label {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.textarea,
+.select,
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.footer {
+  display: flex;
+  gap: 10px;
+  padding: 12px 18px 16px;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.btn,
+.btnGhost {
+  flex: 1;
+  border: none;
+  border-radius: 999px;
+  padding: 11px 14px;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.btn {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btnGhost {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.stars {
+  display: flex;
+  gap: 4px;
+}
+
+.starHit {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-text-muted);
+}
+
+.starHitFilled {
+  color: var(--color-primary);
+}
+
+.starHalf {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  overflow: hidden;
+  color: var(--color-primary);
+}
+
+.logList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.logItem time {
+  display: block;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
+}
+
+.logItem p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
+  white-space: pre-wrap;
+}
+
+.shots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.thumb {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbRemove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-shadow) 65%, transparent);
+  color: var(--color-on-media);
+  cursor: pointer;
+}
+
+.addShot {
+  width: 68px;
+  height: 68px;
+  border-radius: 10px;
+  border: 1px dashed color-mix(in srgb, var(--color-text) 28%, transparent);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.hidden {
+  display: none;
+}
+
+.charCount {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+/* 功能注释：故障反馈弹窗——效果图深色卡片、红叹号标题、通栏红提交钮 */
+.issuePanel {
+  width: min(100%, 420px);
+  max-width: 1000px;
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  border-radius: 16px;
+  padding: 0;
+}
+
+.issueHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 1.25rem 1.25rem 0.35rem;
+}
+
+.issueIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.issueTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.3;
+}
+
+.issueBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.85rem 1.25rem 0.35rem;
+}
+
+.issueLabel {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.issueRequired {
+  color: var(--color-primary);
+}
+
+.issueTextarea {
+  min-height: 7.5rem;
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  border-radius: 10px;
+}
+
+.issueInput {
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  border-radius: 10px;
+}
+
+.issueTextarea::placeholder,
+.issueInput::placeholder {
+  color: var(--color-text-muted);
+}
+
+.issueFooter {
+  padding: 0.85rem 1.25rem 1.25rem;
+}
+
+.issueSubmitBtn {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.issueSubmitBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.issueSubmitBtn:hover:not(:disabled) {
+  background: var(--color-primary);
+}
+
+/* ================= 统一弹窗风格 ================= */
+.panel {
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 18px;
+    background: var(--color-surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 24px 64px color-mix(in srgb, var(--color-shadow) 50%, transparent);
+    color: var(--color-text);
+}
+.issuePanel {
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 18px;
+    background: var(--color-surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 24px 64px color-mix(in srgb, var(--color-shadow) 50%, transparent);
+    color: var(--color-text);
+}

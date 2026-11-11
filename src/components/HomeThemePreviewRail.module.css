@@ -1,0 +1,729 @@
+.rail {
+    display: flex;
+    gap: 18px;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 6px 4px 10px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    cursor: grab;
+    user-select: none;
+    scroll-snap-type: x proximity;
+}
+
+.rail::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+}
+
+.railDragging {
+    cursor: grabbing;
+    scroll-snap-type: none;
+}
+
+.cardButton {
+    flex: 0 0 auto;
+    padding: 0;
+    border: none;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    color: inherit;
+    user-select: none;
+}
+
+.moreCardButton {
+    display: inline-flex;
+}
+
+.cardShell {
+    width: clamp(292px, 24vw, 350px);
+}
+
+.moreCardShell {
+    width: 216px;
+}
+
+.card {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 11;
+    border-radius: 18px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 95%, transparent) 0%, var(--color-surface) 100%);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    box-shadow:
+        0 24px 48px color-mix(in srgb, var(--color-shadow) 30%, transparent),
+        inset 0 1px 0 color-mix(in srgb, var(--color-text) 8%, transparent);
+    overflow: hidden;
+    transition: transform 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease;
+}
+
+.cardShell:not(.moreCardShell):not(.emptyCardShell) .card {
+    border-radius: 14px;
+}
+
+.cardButton:hover .card {
+    transform: translateY(-6px);
+    border-color: color-mix(in srgb, var(--color-text) 16%, transparent);
+    box-shadow:
+        0 30px 56px color-mix(in srgb, var(--color-shadow) 36%, transparent),
+        0 0 0 1px color-mix(in srgb, var(--color-text) 4%, transparent),
+        0 18px 42px color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+
+.cardButton:hover .coverImage {
+    transform: scale(1.04);
+}
+
+.cardButton:active .card {
+    transform: translateY(-2px) scale(0.985);
+}
+
+.coverWrap {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+}
+
+.coverWrap::before,
+.coverWrap::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.coverWrap::before {
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-text) 14%, transparent) 0%, color-mix(in srgb, var(--color-surface) 34%, transparent) 42%, color-mix(in srgb, var(--color-surface) 92%, transparent) 100%);
+    z-index: 1;
+}
+
+.coverWrap::after {
+    background:
+        radial-gradient(circle at 72% 22%, color-mix(in srgb, var(--color-text) 16%, transparent) 0%, transparent 34%),
+        radial-gradient(circle at 18% 18%, color-mix(in srgb, var(--color-primary) 26%, transparent) 0%, transparent 44%);
+    mix-blend-mode: screen;
+    opacity: 0.74;
+    z-index: 2;
+}
+
+.coverImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    -webkit-user-drag: none;
+    user-select: none;
+    transition: transform 0.45s ease, filter 0.45s ease;
+}
+
+.coverTopRow {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    z-index: 3;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.badgeGroup {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-width: 72%;
+}
+
+.themeBadge,
+.typeTag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    /* 功能注释：效果图标签无描边、无投影 */
+    border: none;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: var(--color-on-media);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.themeBadge {
+    background: color-mix(in srgb, var(--color-text) 14%, transparent);
+    box-shadow: none;
+}
+
+.typeTag {
+    max-width: 40%;
+    margin-left: auto;
+    /* 底色由 resolveGameTypeToneStyle 内联覆盖 */
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-shadow: 0 1px 1px color-mix(in srgb, var(--color-shadow) 25%, transparent);
+    box-shadow: none;
+}
+
+.coverBottomRow {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 72px 18px 18px;
+    z-index: 3;
+}
+
+.coverBottomMeta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    width: 100%;
+}
+
+.cardCopy {
+    flex: 1;
+    min-width: 0;
+}
+
+.title {
+    color: var(--color-on-media);
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.2;
+    /* 功能注释：标题横向单行展开，过长省略，禁止被挤成竖向断字 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    width: 100%;
+}
+
+.subtitle {
+    margin-top: 8px;
+    color: color-mix(in srgb, var(--color-on-media) 78%, transparent);
+    font-size: 14px;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Byline Credit：封面底栏作者署名（头像+昵称），叠在暗色渐变上可读 */
+.author {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 0;
+    min-width: 0;
+    /* 功能注释：署名可收缩，把横向空间留给统计徽标单行 */
+    flex: 1 1 0;
+}
+
+.authorAvatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: color-mix(in srgb, var(--color-text) 18%, transparent);
+    box-shadow:
+        0 0 0 1.5px color-mix(in srgb, var(--color-text) 92%, transparent),
+        0 0 0 2.5px color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.authorName {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: color-mix(in srgb, var(--color-on-media) 90%, transparent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+    text-shadow: 0 1px 2px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+}
+
+.cardButton:hover .authorAvatar {
+    box-shadow:
+        0 0 0 1.5px color-mix(in srgb, var(--color-text) 98%, transparent),
+        0 0 0 2.5px color-mix(in srgb, var(--color-primary) 65%, transparent);
+}
+
+.statsRow {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    /* 功能注释：禁止换行，避免火焰/心形折成两行导致底栏乱版 */
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+}
+
+.statItem {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 28px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    /* 功能注释：统计胶囊无描边、无投影，与题材标签一致 */
+    border: none;
+    background: color-mix(in srgb, var(--color-shadow) 42%, transparent);
+    color: var(--color-on-media);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: none;
+}
+
+.statItem svg,
+.statIcon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    object-fit: contain;
+    display: block;
+}
+
+/* 功能注释：统计图标略放大但控制在单行徽标内，避免挤爆窄卡 */
+.statFlame {
+    width: 11px;
+    height: 15px;
+    flex-shrink: 0;
+    color: var(--color-text);
+    display: block;
+}
+
+.statHeart {
+    width: 13px;
+    height: 11px;
+    flex-shrink: 0;
+    color: var(--color-text);
+    display: block;
+}
+
+.moreCard {
+    display: flex;
+    align-items: stretch;
+    border: 1.5px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
+    background:
+        radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--color-primary-light) 35%, transparent), transparent 40%),
+        radial-gradient(circle at 88% 88%, color-mix(in srgb, var(--color-primary) 40%, transparent), transparent 42%),
+        linear-gradient(155deg, var(--color-primary-light) 0%, var(--primary) 48%, var(--primary-dark) 100%);
+    box-shadow:
+        0 16px 32px color-mix(in srgb, var(--color-primary) 28%, transparent),
+        inset 0 1px 0 color-mix(in srgb, var(--color-text) 28%, transparent);
+}
+
+.moreInner {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 22px 18px;
+    gap: 16px;
+    position: relative;
+    z-index: 1;
+    text-align: center;
+}
+
+.moreTitle {
+    color: var(--color-on-media);
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.3;
+    letter-spacing: 0.02em;
+    text-shadow: 0 1px 8px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+.moreArrow {
+    width: 48px;
+    height: 48px;
+    margin-top: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    color: var(--primary);
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1;
+    background: var(--color-surface);
+    border: none;
+    box-shadow:
+        0 8px 20px color-mix(in srgb, var(--color-primary) 22%, transparent),
+        inset 0 1px 0 color-mix(in srgb, var(--color-text) 95%, transparent);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.moreCardButton:hover .moreArrow {
+    transform: translateX(3px);
+    box-shadow:
+        0 10px 24px color-mix(in srgb, var(--color-primary) 28%, transparent),
+        inset 0 1px 0 color-mix(in srgb, var(--color-text) 95%, transparent);
+}
+
+.moreCardButton:hover .moreCard {
+    filter: brightness(1.04);
+    box-shadow:
+        0 20px 40px color-mix(in srgb, var(--color-primary) 36%, transparent),
+        inset 0 1px 0 color-mix(in srgb, var(--color-text) 32%, transparent);
+}
+
+.moreCardButton:focus-visible .moreCard {
+    outline: 2px solid var(--color-text);
+    outline-offset: 3px;
+}
+
+.emptyCardShell {
+    width: clamp(292px, 24vw, 350px);
+}
+
+.emptyCard {
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed color-mix(in srgb, var(--color-text) 18%, transparent);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 94%, transparent) 0%, color-mix(in srgb, var(--color-surface) 98%, transparent) 100%);
+}
+
+.emptyText {
+    padding: 24px;
+    color: var(--color-text-secondary);
+    font-size: 15px;
+    line-height: 1.6;
+    text-align: left;
+}
+
+@media (min-width: 769px) {
+    .card {
+        background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 98%, transparent) 0%, var(--color-surface) 100%);
+        border-color: color-mix(in srgb, var(--color-text) 8%, transparent);
+        box-shadow: 0 18px 36px color-mix(in srgb, var(--color-shadow) 35%, transparent);
+    }
+
+    .cardButton:hover .card {
+        border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+        box-shadow: 0 26px 42px color-mix(in srgb, var(--color-shadow) 40%, transparent);
+    }
+
+    .coverWrap::before {
+        background:
+            linear-gradient(180deg, color-mix(in srgb, var(--color-text) 8%, transparent) 0%, color-mix(in srgb, var(--color-text) 28%, transparent) 40%, color-mix(in srgb, var(--color-shadow) 88%, transparent) 100%);
+    }
+
+    .coverWrap::after {
+        background:
+            radial-gradient(circle at 72% 22%, color-mix(in srgb, var(--color-text) 12%, transparent) 0%, transparent 36%),
+            radial-gradient(circle at 18% 18%, color-mix(in srgb, var(--color-primary) 28%, transparent) 0%, transparent 44%);
+        opacity: 0.78;
+    }
+
+    .themeBadge {
+        border: none;
+        color: var(--color-text);
+        background: color-mix(in srgb, var(--color-text) 14%, transparent);
+        box-shadow: none;
+    }
+
+    .typeTag {
+        /* 玩法角标保留彩色底 + 白字，色值由内联 style 写入 */
+        color: var(--color-on-media);
+        border: none;
+        box-shadow: none;
+    }
+
+    .subtitle {
+        color: color-mix(in srgb, var(--color-on-media) 78%, transparent);
+    }
+
+    .authorName {
+        color: color-mix(in srgb, var(--color-on-media) 90%, transparent);
+    }
+
+    .statItem {
+        border: none;
+        background: color-mix(in srgb, var(--color-shadow) 55%, transparent);
+        color: var(--color-on-media);
+        box-shadow: none;
+    }
+
+    .moreCard {
+        border-color: color-mix(in srgb, var(--color-primary) 50%, transparent);
+        background:
+            radial-gradient(circle at 16% 14%, color-mix(in srgb, var(--color-primary) 45%, transparent), transparent 42%),
+            linear-gradient(155deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
+        box-shadow: none;
+    }
+
+    .moreTitle {
+        color: var(--color-text);
+    }
+
+    .moreArrow {
+        color: var(--color-primary-bold);
+        background: var(--color-surface);
+        box-shadow: none;
+    }
+
+    .emptyCard {
+        border: 1px dashed color-mix(in srgb, var(--color-text) 18%, transparent);
+        background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-surface) 100%);
+        box-shadow: none;
+    }
+
+    .emptyText {
+        color: var(--color-text-muted);
+    }
+
+    .moreCardButton {
+        align-self: center;
+    }
+
+    .moreInner {
+        height: 100%;
+        padding: 0 12px;
+        box-sizing: border-box;
+    }
+}
+
+@media (max-width: 768px) {
+    .rail {
+        gap: 12px;
+        padding: 0 0 4px;
+        cursor: auto;
+        scroll-snap-type: x mandatory;
+    }
+
+    .moreCardButton {
+        display: none;
+    }
+
+    .cardShell,
+    .emptyCardShell {
+        width: min(72vw, 268px);
+    }
+
+    .moreCardShell {
+        width: min(44vw, 176px);
+    }
+
+    .card {
+        border-radius: 16px;
+    }
+
+    .cardShell:not(.moreCardShell):not(.emptyCardShell) .card {
+        border-radius: 12px;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+    }
+
+    .coverTopRow {
+        top: 12px;
+        left: 12px;
+        right: 12px;
+        gap: 8px;
+    }
+
+    .badgeGroup {
+        gap: 6px;
+        max-width: 72%;
+    }
+
+    .themeBadge,
+    .typeTag {
+        min-height: 28px;
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+
+    .coverBottomRow {
+        gap: 10px;
+        padding: 68px 14px 14px;
+    }
+
+    .coverWrap::after {
+        background:
+            linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-text) 14%, transparent) 38%, color-mix(in srgb, var(--color-surface) 92%, transparent) 100%),
+            radial-gradient(circle at 18% 18%, color-mix(in srgb, var(--color-primary) 16%, transparent) 0%, transparent 44%);
+        opacity: 1;
+    }
+
+    .coverImage {
+        transform: translateY(var(--mobile-content-image-guard-shift-y)) scale(var(--mobile-content-image-guard-scale));
+        transform-origin: center center;
+    }
+
+    .title {
+        font-size: 20px;
+    }
+
+    .subtitle {
+        margin-top: 6px;
+        font-size: 12px;
+    }
+
+    .author {
+        gap: 6px;
+        margin-top: 0;
+    }
+
+    .authorAvatar {
+        width: 18px;
+        height: 18px;
+        box-shadow:
+            0 0 0 1px color-mix(in srgb, var(--color-text) 92%, transparent),
+            0 0 0 2px color-mix(in srgb, var(--color-primary) 45%, transparent);
+    }
+
+    .authorName {
+        font-size: 12px;
+    }
+
+    .statsRow {
+        gap: 5px;
+        justify-content: flex-end;
+        flex-wrap: nowrap;
+    }
+
+    .statItem {
+        min-height: 26px;
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+
+    .statItem svg {
+        width: 11px;
+        height: 11px;
+    }
+
+    .statFlame {
+        width: 10px;
+        height: 14px;
+    }
+
+    .statHeart {
+        width: 12px;
+        height: 10px;
+    }
+
+    .moreInner {
+        padding: 18px 14px;
+        gap: 14px;
+    }
+
+    .moreCard {
+        border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+        background:
+            radial-gradient(circle at 18% 20%, color-mix(in srgb, var(--color-primary) 35%, transparent), transparent 42%),
+            linear-gradient(180deg, var(--color-surface) 0%, var(--color-surface) 100%);
+        box-shadow: none;
+    }
+
+    .moreTitle {
+        font-size: 18px;
+        color: var(--color-text);
+    }
+
+    .moreArrow {
+        width: 38px;
+        height: 38px;
+        font-size: 22px;
+    }
+
+    .emptyText {
+        padding: 18px;
+        font-size: 14px;
+    }
+}
+
+/* ===== 样式调优：标签轻量化 + 顶部/底部托底渐变，标签与标题都保留但不再压图（只改样式） ===== */
+.coverWrap::before {
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 50%, transparent) 0%, transparent 26%),
+        linear-gradient(180deg, transparent 45%, color-mix(in srgb, var(--color-surface) 60%, transparent) 72%, color-mix(in srgb, var(--color-surface) 94%, transparent) 100%);
+}
+
+.badgeGroup {
+    flex-wrap: nowrap;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.themeBadge,
+.typeTag {
+    flex-shrink: 0;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.themeBadge {
+    background: color-mix(in srgb, var(--color-shadow) 42%, transparent);
+    color: color-mix(in srgb, var(--color-on-media) 92%, transparent);
+}
+
+.title {
+    text-shadow: 0 2px 10px color-mix(in srgb, var(--color-shadow) 60%, transparent);
+}
+
+@media (max-width: 768px) {
+    .coverTopRow {
+        top: 8px;
+        left: 8px;
+        right: 8px;
+        gap: 6px;
+    }
+
+    .badgeGroup {
+        gap: 4px;
+    }
+
+    /* 标签缩小为细胶囊，只占封面顶部一条窄边 */
+    .themeBadge,
+    .typeTag {
+        min-height: 20px;
+        padding: 3px 8px;
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 14px;
+    }
+
+    .coverBottomRow {
+        gap: 8px;
+        padding: 56px 12px 12px;
+    }
+
+    .title {
+        font-size: 17px;
+    }
+
+    .authorName {
+        max-width: 7em;
+    }
+}

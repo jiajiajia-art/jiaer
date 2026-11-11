@@ -1,0 +1,104 @@
+.actionBar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.pointsPill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-sizing: border-box;
+    min-height: 44px;
+    padding: 9px 14px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    box-shadow: none;
+}
+
+.pointsIcon {
+    width: 16px;
+    height: 16px;
+    color: var(--color-primary);
+    flex: 0 0 auto;
+}
+
+.pointsLabel {
+    color: var(--color-text-secondary);
+}
+
+.pointsValue {
+    color: var(--color-text);
+    font-variant-numeric: tabular-nums;
+}
+
+/* 功能注释：角色页效果图——深灰轨道 + 左侧「68 我的积分」+ 右侧亮红生成胶囊嵌在同一条 pill 里 */
+.actionBarHero {
+    display: flex;
+    width: 100%;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+    box-sizing: border-box;
+    min-height: 52px;
+    padding: 4px 4px 4px 16px;
+    border-radius: 999px;
+    background: var(--color-surface-2);
+}
+
+.pointsHero {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: 6px;
+    min-width: 0;
+    flex: 0 0 auto;
+    padding: 0 4px 0 0;
+    border: none;
+    background: transparent;
+}
+
+.actionBarHero .pointsValue {
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--color-primary);
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+}
+
+.actionBarHero .pointsLabel {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+@media (max-width: 720px) {
+    .actionBar {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 420px) {
+    .actionBar:not(.actionBarHero),
+    .actionBar:not(.actionBarHero) > * {
+        box-sizing: border-box;
+        width: 100%;
+    }
+
+    .pointsPill {
+        min-height: 40px;
+    }
+}

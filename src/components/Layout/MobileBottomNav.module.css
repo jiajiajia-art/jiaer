@@ -1,0 +1,122 @@
+.container {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    /* 功能注释：底栏按设计稿 — 黑底；选中 #F16C83；未选中 #B8B8C2；创作为红底白加号 */
+    .container {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100vw;
+        height: calc(72px + env(safe-area-inset-bottom));
+        padding-bottom: env(safe-area-inset-bottom);
+        background: var(--color-bg);
+        z-index: 999;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+        border-radius: 22px 22px 0 0;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+
+    .navItem {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: var(--color-text-secondary);
+        font-size: 12px;
+        font-weight: 600;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 10px 4px;
+        transition: color 0.2s ease;
+        gap: 4px;
+    }
+
+    .navItemActive {
+        color: var(--color-primary-fg);
+    }
+
+    .navItemDisabled {
+        opacity: 0.42;
+    }
+
+    .adminIcon {
+        color: var(--color-text-secondary);
+    }
+
+    .adminIconActive {
+        color: var(--color-primary-fg);
+    }
+
+    .icon {
+        width: 24px;
+        height: 24px;
+        display: block;
+        flex-shrink: 0;
+        color: inherit;
+    }
+
+    /* 功能注释：创作钮按底部icon.html 1:1 —— 40×32 红底圆角+白加号，明显大于两侧 24 线框 */
+    .createIcon {
+        width: 40px;
+        height: 32px;
+        color: inherit;
+    }
+
+    /* 功能注释：创作项少一点上下 padding，让 32 高的中钮相对两侧上移贴齐设计稿 */
+    .navItemCreate {
+        padding-top: 6px;
+        padding-bottom: 6px;
+    }
+
+    .label {
+        pointer-events: none;
+        line-height: 1;
+    }
+
+    .userMenu {
+        position: fixed;
+        bottom: 82px;
+        right: 16px;
+        left: 16px;
+        background: var(--color-surface);
+        border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+        border-radius: 16px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        box-shadow: 0 12px 32px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+        animation: slideUp 0.2s ease-out;
+    }
+
+    .userMenu button {
+        padding: 12px;
+        border-radius: 12px;
+        border: none;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--color-on-primary);
+        background: var(--color-primary-bold);
+        cursor: pointer;
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(12px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+}

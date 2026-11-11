@@ -1,0 +1,435 @@
+.shell {
+  --admin-accent: var(--color-primary);
+  --admin-accent-strong: var(--color-primary);
+  --admin-accent-soft: var(--color-bg);
+  --admin-border: var(--color-border);
+  --admin-border-soft: var(--color-border);
+  --admin-surface: var(--color-surface);
+  --admin-surface-soft: var(--color-surface);
+  --admin-text: var(--color-text);
+  --admin-text-soft: var(--color-text-secondary);
+  --admin-muted: var(--color-text-muted);
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--admin-text);
+}
+
+.layout {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.header {
+  position: sticky;
+  z-index: 10;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 0 28px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--color-primary) 4%, transparent);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 232px;
+}
+
+.brandMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--color-bg);
+  color: var(--color-primary-fg);
+  font-size: 16px;
+}
+
+.brandName {
+  color: var(--color-text);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.homeButton {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.homeButton:hover {
+  color: var(--color-primary-fg) !important;
+}
+
+.avatarButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px 2px 2px;
+  border: 0;
+  border-radius: 20px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.avatarButton:hover {
+  background: var(--color-bg);
+}
+
+.sider {
+  position: sticky !important;
+  top: 64px;
+  height: calc(100vh - 64px);
+  overflow: auto;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface) !important;
+}
+
+.siderInner {
+  padding: 18px 12px 24px;
+}
+
+.menu {
+  border-inline-end: 0 !important;
+  background: transparent !important;
+}
+
+.menuItemLabel {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: auto;
+  min-width: 0;
+}
+
+.menuItemLabelWithSubmenu {
+  padding-inline-end: 24px;
+}
+
+.menuBadge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--color-primary-light);
+  color: var(--color-on-primary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+}
+
+.content {
+  min-width: 0;
+  min-height: calc(100vh - 64px);
+  padding: 28px 32px 48px;
+  background: var(--color-bg);
+}
+
+.content :global(input:not([type='checkbox']):not([type='radio']):not([type='file'])),
+.content :global(select),
+.content :global(textarea) {
+  min-height: 36px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.content :global(input:not([type='checkbox']):not([type='radio']):not([type='file']):focus),
+.content :global(select:focus),
+.content :global(textarea:focus) {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+
+.content :global(button) {
+  border-radius: 8px;
+  font-family: inherit;
+}
+
+.content :global(button:focus-visible),
+.content :global(a:focus-visible) {
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 48%, transparent);
+  outline-offset: 2px;
+}
+
+.content :global(table) {
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--color-surface);
+}
+
+.content :global(th) {
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.content :global(th),
+.content :global(td) {
+  border-bottom-color: var(--color-border);
+}
+
+.content :global(tbody tr:hover td) {
+  background: var(--color-bg);
+}
+
+.content :global([class*='panelStack']) {
+  gap: 16px;
+}
+
+.content :global([class*='heroCard']) {
+  padding: 16px 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.content :global([class*='_card_']) {
+  border-color: var(--color-border);
+  border-radius: 8px;
+  background-color: var(--color-surface);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.content :global(h1) {
+  color: var(--color-text);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.content :global(h2) {
+  color: var(--color-text);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.content :global(h3) {
+  color: var(--color-text);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.content :global([class*='heroTitle']),
+.content :global([class*='heroDesc']),
+.content :global([class*='heroDescription']),
+.content :global([class*='sectionBadge']) {
+  display: none;
+}
+
+.content :global([class*='heroCard']:not(:has(button, input, [class*='heroMetric'], [class*='heroStats']))) {
+  display: none;
+}
+
+/* Keep legacy manager pages inside the shared shell visually consistent. */
+.content :global([class*='_heroCard_']),
+.content :global([class*='_card_']),
+.content :global([class*='_Card_']),
+.content :global([class*='_header_']),
+.content :global([class*='_panel_']),
+.content :global([class*='_section_']),
+.content :global([class*='_panelSection_']),
+.content :global([class*='_fieldCard_']),
+.content :global([class*='_statusCard_']),
+.content :global([class*='_itemCard_']) {
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px !important;
+  background: var(--color-surface) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.content :global([class*='_heroCard_']) {
+  padding: 16px 20px !important;
+  justify-content: flex-end;
+}
+
+.content :global([class*='_card_']),
+.content :global([class*='_panel_']),
+.content :global([class*='_section_']) {
+  padding: 20px !important;
+}
+
+.content :global([class*='_tableWrap_']),
+.content :global([class*='_reviewTableWrapper_']) {
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px !important;
+  background: var(--color-surface) !important;
+  box-shadow: none !important;
+}
+
+.content :global([class*='_tabs_']) {
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px !important;
+  background: var(--color-surface) !important;
+}
+
+.content :global([class*='_table_'] th),
+.content :global([class*='_reviewTable_'] th) {
+  border-bottom: 1px solid var(--color-border) !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text-secondary) !important;
+  font-weight: 600 !important;
+}
+
+.content :global([class*='_table_'] td),
+.content :global([class*='_reviewTable_'] td) {
+  border-bottom-color: var(--color-border) !important;
+  color: var(--color-text);
+}
+
+.content :global([class*='_table_'] tbody tr:hover td),
+.content :global([class*='_reviewTable_'] tbody tr:hover td) {
+  background: var(--color-bg) !important;
+}
+
+.content :global([class*='_card_'] [class*='_Card_']),
+.content :global([class*='_card_'] [class*='_itemCard_']),
+.content :global([class*='_card_'] [class*='_statusCard_']) {
+  border-color: transparent !important;
+  background: var(--color-surface) !important;
+  box-shadow: none !important;
+}
+
+.content :global([class*='_heroTitle_']),
+.content :global([class*='_heroDesc_']),
+.content :global([class*='_heroDescription_']),
+.content :global([class*='_sectionBadge_']) {
+  display: none !important;
+}
+
+.content :global(input:not([type='checkbox']):not([type='radio']):not([type='file'])),
+.content :global(select),
+.content :global(textarea) {
+  border-radius: 8px !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text) !important;
+}
+
+.content :global(label[class*='_fieldLabel_']),
+.content :global(label[class*='_field_']),
+.content :global([class*='_fieldTitle_']) {
+  color: var(--color-text) !important;
+}
+
+.content :global([class*='_fieldHint_']),
+.content :global([class*='_sectionHint_']),
+.content :global([class*='_cardHint_']) {
+  color: var(--color-text-muted) !important;
+}
+
+.content :global(button[class*='Button_']) {
+  border-radius: 8px !important;
+  box-shadow: none;
+  transform: none;
+}
+
+.content :global(button[class*='_primaryButton_']),
+.content :global(button[class*='_primary_']),
+.content :global(button[class*='_publishButton_']),
+.content :global(button[class*='_decisionApprove_']),
+.content :global(button[class*='_approveButton_']) {
+  border: 1px solid var(--color-primary) !important;
+  border-radius: 8px !important;
+  background: var(--color-primary) !important;
+  color: var(--color-on-primary) !important;
+  box-shadow: none !important;
+}
+
+.content :global(button[class*='_secondaryButton_']),
+.content :global(button[class*='_secondary_']),
+.content :global(button[class*='_primaryGhostButton_']),
+.content :global(button[class*='_actionButton_']),
+.content :global(button[class*='_toolbarBtn_']),
+.content :global(button[class*='_decisionReject_']) {
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text) !important;
+  box-shadow: none !important;
+}
+
+.content :global(button[class*='_dangerButton_']),
+.content :global(button[class*='_rejectButton_']) {
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+.content :global(button[class*='Active_']) {
+  border-color: var(--color-primary) !important;
+  background: var(--color-bg) !important;
+  color: var(--color-primary-fg) !important;
+}
+
+.content :global([class*='_status_']),
+.content :global([class*='_statusTag_']),
+.content :global([class*='_actionBadge_']) {
+  border-radius: 6px !important;
+  box-shadow: none !important;
+}
+
+.content :global([class*='_emptyState_']) {
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+/* Secondary pages should use the shell's scroll area instead of a nested card scroll. */
+.content :global([class*='_activityListPage_']) {
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.content :global([class*='_activityListPage_'] [class*='_list_']) {
+  max-height: none !important;
+  overflow-y: visible !important;
+  padding-right: 0 !important;
+}
+
+@media (max-width: 900px) {
+  .header {
+    padding: 0 16px;
+  }
+
+  .brand {
+    min-width: auto;
+  }
+
+  .brandName {
+    display: none;
+  }
+
+  .content {
+    padding: 20px 16px 36px;
+  }
+}

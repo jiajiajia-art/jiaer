@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shadow DOM 游戏UI示例</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    /* 主游戏区域样式 */
+    #game-container {
+      max-width: 800px;
+      margin: 0 auto 20px;
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    h1 {
+      color: #667eea;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .game-info {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #f5f5f5;
+      border-radius: 8px;
+    }
+
+    .info-item {
+      text-align: center;
+    }
+
+    .info-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+
+    .info-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    .game-controls {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      background: #48bb78;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #38a169;
+      transform: translateY(-2px);
+    }
+
+    .game-log {
+      height: 150px;
+      overflow-y: auto;
+      padding: 15px;
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .log-entry {
+      margin-bottom: 8px;
+      padding: 5px;
+      border-left: 3px solid #667eea;
+      padding-left: 10px;
+    }
+
+    /* 自定义UI容器占位 */
+    #custom-ui-root {
+      position: fixed;
+      pointer-events: none;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1000;
+    }
+
+    /* 编辑器区域 */
+    .editor-container {
+      max-width: 800px;
+      margin: 20px auto;
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    .editor-container h2 {
+      color: #667eea;
+      margin-bottom: 15px;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      resize: vertical;
+      margin-bottom: 10px;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .editor-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-warning {
+      background: #f56565;
+      color: white;
+    }
+
+    .btn-warning:hover {
+      background: #e53e3e;
+    }
+  </style>
+</head>
+<body>
+  <!-- 主游戏界面 -->
+  <div id="game-container">
+    <h1>🎮 简单点击游戏</h1>
+    
+    <div class="game-info">
+      <div class="info-item">
+        <div class="info-label">分数</div>
+        <div class="info-value" id="score">0</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">点击次数</div>
+        <div class="info-value" id="clicks">0</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">等级</div>
+        <div class="info-value" id="level">1</div>
+      </div>
+    </div>
+
+    <div class="game-controls">
+      <button class="btn-primary" id="clickBtn">点击得分 (+10)</button>
+      <button class="btn-secondary" id="boostBtn">加速 (x2)</button>
+      <button class="btn-warning" id="resetBtn">重置游戏</button>
+    </div>
+
+    <div class="game-log" id="gameLog">
+      <div class="log-entry">游戏已开始...</div>
+    </div>
+  </div>
+
+  <!-- 自定义UI的容器 -->
+  <div id="custom-ui-root"></div>
+
+  <!-- UI编辑器 -->
+  <div class="editor-container">
+    <h2>📝 自定义UI编辑器</h2>
+    <p style="color: #666; margin-bottom: 15px;">
+      编辑下方代码来自定义游戏UI。自定义UI会通过Shadow DOM隔离，不影响主页面样式。
+    </p>
+    
+    <label style="display: block; margin-bottom: 5px; font-weight: bold;">HTML:</label>
+    <textarea id="htmlEditor" rows="6">
+<div class="custom-panel">
+  <h3>自定义面板</h3>
+  <div class="stats">
+    <p>当前分数: <span id="custom-score">0</span></p>
+    <p>效率: <span id="efficiency">0</span> 分/次</p>
+  </div>
+  <button id="customAction">触发特殊动作</button>
+  <div class="message" id="customMessage"></div>
+</div>
+    </textarea>
+
+    <label style="display: block; margin-bottom: 5px; font-weight: bold;">CSS:</label>
+    <textarea id="cssEditor" rows="8">
+.custom-panel {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 280px;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  pointer-events: auto;
+  font-family: Arial, sans-serif;
+}
+
+.custom-panel h3 {
+  margin: 0 0 15px 0;
+  font-size: 20px;
+}
+
+.stats {
+  background: rgba(255,255,255,0.2);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+.stats p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.custom-panel button {
+  width: 100%;
+  padding: 12px;
+  background: white;
+  color: #f5576c;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.custom-panel button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.message {
+  margin-top: 12px;
+  padding: 10px;
+  background: rgba(255,255,255,0.3);
+  border-radius: 6px;
+  min-height: 40px;
+  font-size: 13px;
+  text-align: center;
+}
+    </textarea>
+
+    <label style="display: block; margin-bottom: 5px; font-weight: bold;">JavaScript:</label>
+    <textarea id="jsEditor" rows="10">
+// 监听游戏状态更新
+gameAPI.on('scoreChange', (data) => {
+  const scoreEl = shadowRoot.getElementById('custom-score');
+  if (scoreEl) {
+    scoreEl.textContent = data.score;
+    scoreEl.style.animation = 'none';
+    setTimeout(() => scoreEl.style.animation = 'pulse 0.3s', 10);
+  }
+  
+  const effEl = shadowRoot.getElementById('efficiency');
+  if (effEl && data.clicks > 0) {
+    effEl.textContent = (data.score / data.clicks).toFixed(1);
+  }
+});
+
+gameAPI.on('levelUp', (data) => {
+  const msgEl = shadowRoot.getElementById('customMessage');
+  if (msgEl) {
+    msgEl.textContent = `🎉 恭喜升到 ${data.level} 级！`;
+    setTimeout(() => msgEl.textContent = '', 3000);
+  }
+});
+
+// 自定义UI的按钮事件
+const btn = shadowRoot.getElementById('customAction');
+if (btn) {
+  btn.addEventListener('click', () => {
+    gameAPI.triggerSpecialAction();
+  });
+}
+
+// 添加动画样式
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+  }
+`;
+shadowRoot.appendChild(style);
+    </textarea>
+
+    <div class="editor-actions">
+      <button class="btn-primary" id="applyBtn">应用自定义UI</button>
+      <button class="btn-warning" id="clearBtn">清除自定义UI</button>
+    </div>
+  </div>
+
+  <script>
+    // ==================== 游戏核心逻辑 ====================
+    class Game {
+      constructor() {
+        this.score = 0;
+        this.clicks = 0;
+        this.level = 1;
+        this.multiplier = 1;
+        this.listeners = {};
+      }
+
+      // 事件系统
+      on(event, callback) {
+        if (!this.listeners[event]) {
+          this.listeners[event] = [];
+        }
+        this.listeners[event].push(callback);
+      }
+
+      emit(event, data) {
+        if (this.listeners[event]) {
+          this.listeners[event].forEach(callback => callback(data));
+        }
+      }
+
+      // 游戏操作
+      click() {
+        this.clicks++;
+        this.score += 10 * this.multiplier;
+        this.updateLevel();
+        this.updateUI();
+        this.emit('scoreChange', this.getState());
+        this.log(`点击! +${10 * this.multiplier} 分`);
+      }
+
+      boost() {
+        this.multiplier = 2;
+        this.log('🚀 加速模式激活! (持续5秒)');
+        setTimeout(() => {
+          this.multiplier = 1;
+          this.log('加速模式结束');
+        }, 5000);
+      }
+
+      updateLevel() {
+        const newLevel = Math.floor(this.score / 100) + 1;
+        if (newLevel > this.level) {
+          this.level = newLevel;
+          this.emit('levelUp', this.getState());
+          this.log(`🎉 升级到 ${this.level} 级!`);
+        }
+      }
+
+      reset() {
+        this.score = 0;
+        this.clicks = 0;
+        this.level = 1;
+        this.multiplier = 1;
+        this.updateUI();
+        this.emit('reset', this.getState());
+        this.log('游戏已重置');
+      }
+
+      getState() {
+        return {
+          score: this.score,
+          clicks: this.clicks,
+          level: this.level,
+          multiplier: this.multiplier
+        };
+      }
+
+      updateUI() {
+        document.getElementById('score').textContent = this.score;
+        document.getElementById('clicks').textContent = this.clicks;
+        document.getElementById('level').textContent = this.level;
+      }
+
+      log(message) {
+        const logEl = document.getElementById('gameLog');
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        logEl.insertBefore(entry, logEl.firstChild);
+      }
+
+      // 供自定义UI调用的特殊动作
+      specialAction() {
+        this.score += 50;
+        this.updateUI();
+        this.emit('scoreChange', this.getState());
+        this.log('⭐ 特殊动作触发! +50 分');
+      }
+    }
+
+    // 初始化游戏
+    const game = new Game();
+
+    // 主游戏按钮事件
+    document.getElementById('clickBtn').addEventListener('click', () => game.click());
+    document.getElementById('boostBtn').addEventListener('click', () => game.boost());
+    document.getElementById('resetBtn').addEventListener('click', () => game.reset());
+
+    // ==================== Shadow DOM UI管理器 ====================
+    class CustomUIManager {
+      constructor(gameInstance) {
+        this.game = gameInstance;
+        this.containerParent = document.getElementById('custom-ui-root');
+        this.container = null;
+        this.shadowRoot = null;
+      }
+
+      load(html, css, js) {
+        // 清除旧的Shadow DOM（通过删除整个容器）
+        this.clear();
+
+        // 创建新的容器元素
+        this.container = document.createElement('div');
+        this.containerParent.appendChild(this.container);
+
+        // 创建新的Shadow DOM
+        this.shadowRoot = this.container.attachShadow({ mode: 'open' });
+
+        // 注入HTML和CSS
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `
+          <style>${css}</style>
+          ${html}
+        `;
+        this.shadowRoot.appendChild(wrapper);
+
+        // 创建安全的API对象
+        const gameAPI = {
+          on: (event, callback) => this.game.on(event, callback),
+          getState: () => this.game.getState(),
+          triggerSpecialAction: () => this.game.specialAction()
+        };
+
+        // 在沙箱环境中执行用户JS
+        try {
+          const fn = new Function('gameAPI', 'shadowRoot', js);
+          fn(gameAPI, this.shadowRoot);
+          console.log('✅ 自定义UI已加载');
+        } catch (error) {
+          console.error('❌ 自定义UI脚本错误:', error);
+          alert('脚本执行错误: ' + error.message);
+        }
+      }
+
+      clear() {
+        // 通过删除容器元素来彻底清除Shadow DOM
+        if (this.container && this.container.parentNode) {
+          this.container.parentNode.removeChild(this.container);
+          this.container = null;
+          this.shadowRoot = null;
+          console.log('🗑️ 自定义UI已清除');
+        }
+      }
+    }
+
+    // 初始化UI管理器
+    const uiManager = new CustomUIManager(game);
+
+    // 编辑器按钮事件
+    document.getElementById('applyBtn').addEventListener('click', () => {
+      const html = document.getElementById('htmlEditor').value;
+      const css = document.getElementById('cssEditor').value;
+      const js = document.getElementById('jsEditor').value;
+      
+      uiManager.load(html, css, js);
+      game.log('🎨 自定义UI已应用');
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      uiManager.clear();
+      game.log('🗑️ 自定义UI已移除');
+    });
+
+    // 页面加载时自动应用默认UI
+    window.addEventListener('load', () => {
+      document.getElementById('applyBtn').click();
+    });
+  </script>
+</body>
+</html>

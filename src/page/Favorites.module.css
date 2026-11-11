@@ -1,0 +1,124 @@
+.pageRoot {
+  /* 功能注释：收藏夹对齐效果图——墨黑壳 + 返回/白字标题，禁止浅色灰底 */
+  --primary: var(--color-primary);
+  --primary-light: var(--color-primary);
+  --primary-dark: var(--color-primary-bold);
+  --favorites-muted: var(--color-text-muted);
+  width: 100%;
+  min-height: 100vh;
+  max-width: none;
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  overflow-x: hidden;
+}
+
+.mainContent {
+  /* 功能注释：纵向布局，页脚落底部而非右侧 */
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  color: inherit;
+}
+
+.main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
+  max-width: none;
+  margin: 0 auto;
+  overflow: visible;
+  padding: 16px 20px 20px;
+  box-sizing: border-box;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* 功能注释：效果图箭头处——左返回细chevron + 左对齐白字「收藏夹」 */
+.pageHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  margin: 4px 0 8px;
+  padding: 0;
+}
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.backButton svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.backButton:hover {
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.backButton:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+  color: var(--color-text);
+}
+
+.emptyState {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--favorites-muted);
+  font-size: 0.95rem;
+}
+
+.loadingMore {
+  padding: 20px 0;
+}
+
+@media (max-width: 768px) {
+  .pageRoot {
+    padding-bottom: 0;
+  }
+
+  .mainContent {
+    margin-bottom: 0;
+  }
+
+  .main {
+    width: 100%;
+    max-width: 100%;
+    margin-top: 0;
+    padding: 10px 12px 20px;
+  }
+
+  .pageTitle {
+    font-size: 18px;
+  }
+}

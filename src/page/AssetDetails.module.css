@@ -1,0 +1,909 @@
+.pageRoot {
+    --ad-bg: var(--color-bg);
+    --ad-card: var(--color-surface);
+    --ad-elevated: var(--color-surface-2);
+    --ad-border: var(--color-border);
+    --ad-label: var(--color-text-muted);
+    --ad-value: var(--color-text);
+    --ad-primary: var(--color-primary);
+    --ad-primary-hover: var(--color-primary);
+    --ad-divider: color-mix(in srgb, var(--color-text) 10%, transparent);
+    min-height: 100vh;
+    background: var(--ad-bg);
+    color: var(--ad-value);
+}
+
+.main {
+    min-height: 100vh;
+    padding: 0 0 84px;
+    background: var(--ad-bg);
+}
+
+.shell {
+    width: min(100%, 720px);
+    margin: 0 auto;
+    background: var(--ad-bg);
+}
+
+.headerDock {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px;
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+    box-sizing: border-box;
+    backdrop-filter: blur(8px);
+}
+
+.balanceSection {
+    padding: 12px 16px 14px;
+    border-bottom: 1px solid var(--ad-border);
+    background: var(--ad-bg);
+}
+
+.balanceRow {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: hidden;
+    border: 1px solid var(--ad-border);
+    border-radius: 12px;
+    background: var(--ad-card);
+}
+
+.kkBreakdownSection {
+    padding: 14px 16px 16px;
+    border-bottom: 1px solid var(--ad-border);
+    background: var(--ad-bg);
+}
+
+.kkBreakdownTitle {
+    margin: 0;
+    color: var(--ad-value);
+    font-size: 14px;
+    line-height: 1.4;
+    font-weight: 600;
+}
+
+.kkBreakdownGroups {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.kkBreakdownGroup {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid var(--ad-border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--color-text) 2.5%, transparent);
+}
+
+.kkBreakdownHeading {
+    margin: 0 0 8px;
+    color: var(--ad-label);
+    font-size: 12px;
+    line-height: 1.3;
+    font-weight: 500;
+}
+
+.kkBreakdownGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.kkBreakdownButton {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+    min-height: 64px;
+    padding: 10px;
+    border: 1px solid var(--ad-border);
+    border-radius: 10px;
+    background: var(--ad-card);
+    color: var(--ad-value);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+
+.kkBreakdownButton:hover {
+    border-color: color-mix(in srgb, var(--color-text) 28%, transparent);
+    background: var(--ad-elevated);
+}
+
+.kkBreakdownButton:active {
+    transform: translateY(1px);
+}
+
+.kkBreakdownButton:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 75%, transparent);
+    outline-offset: 2px;
+}
+
+.kkBreakdownButtonActive {
+    border-color: var(--ad-primary);
+    background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+}
+
+.kkBreakdownButton span,
+.expiryHint {
+    color: var(--ad-label);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.kkBreakdownButton strong {
+    color: var(--ad-value);
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+}
+
+.expiryHint {
+    margin: 10px 0 0;
+}
+
+.balanceCard {
+    min-width: 0;
+    padding: 12px 14px 8px;
+    background: transparent;
+}
+
+.balanceCard + .balanceCard {
+    border-left: 1px solid var(--ad-border);
+}
+
+.balanceHeading {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.balanceIcon,
+.balanceIconDiamond {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.balanceInfo {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.balanceLabel {
+    font-size: 12px;
+    color: var(--ad-label);
+    line-height: 1.2;
+    font-weight: 500;
+}
+
+.balanceValueRow {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    min-width: 0;
+    margin-top: 6px;
+}
+
+.balanceValue {
+    align-self: flex-start;
+    font-size: 24px;
+    line-height: 1.1;
+    font-weight: 700;
+    color: var(--ad-value);
+    font-variant-numeric: tabular-nums;
+}
+
+.balanceActions {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    flex: 0 0 auto;
+}
+
+.balanceAction {
+    min-height: 0;
+    padding: 0 0 2px;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: transparent;
+    color: var(--color-primary-fg);
+    font-size: 12px;
+    line-height: 1;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.balanceAction svg {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+}
+
+.balanceAction:hover {
+    color: var(--color-primary-fg);
+}
+
+.balanceAction:active {
+    opacity: 0.72;
+}
+
+.balanceAction:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 75%, transparent);
+    outline-offset: 2px;
+}
+
+.toolbar {
+    position: sticky;
+    top: calc(env(safe-area-inset-top, 0px) + 56px);
+    z-index: 15;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 10px 16px;
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+    border-bottom: 1px solid var(--ad-border);
+    backdrop-filter: blur(8px);
+}
+
+.tabs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+    min-width: max-content;
+}
+
+.tabButton {
+    position: relative;
+    min-height: 36px;
+    min-width: 0;
+    padding: 0 10px;
+    border: none;
+    background: transparent;
+    color: var(--ad-label);
+    font-size: 14px;
+    line-height: 1;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: center;
+    border-radius: 8px;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.tabButton:hover {
+    color: var(--ad-value);
+}
+
+.tabButtonActive {
+    color: var(--ad-value);
+    font-weight: 600;
+}
+
+.tabButtonActive::after {
+    content: '';
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 2px;
+    height: 2px;
+    background: var(--ad-primary);
+    border-radius: 1px;
+}
+
+.filterRow {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    min-width: max-content;
+}
+
+.selectArea {
+    position: static;
+}
+
+.dateFilterArea {
+    order: 1;
+}
+
+.activityFilterArea {
+    order: 2;
+}
+
+.selectTrigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 68px;
+    min-height: 44px;
+    padding: 0 10px;
+    border: 1px solid var(--ad-border);
+    border-radius: 8px;
+    background: var(--ad-card);
+    color: var(--ad-label);
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.selectTrigger:hover {
+    color: var(--ad-value);
+}
+
+.selectTriggerActive {
+    border-color: var(--ad-primary);
+    color: var(--ad-value);
+}
+
+.filterChevron {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+}
+
+.filterBackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 19;
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+
+.selectPopup {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    bottom: auto;
+    left: auto;
+    z-index: 20;
+    box-sizing: border-box;
+    min-width: 112px;
+    max-width: calc(100vw - 24px);
+    border: 1px solid var(--ad-border);
+    border-radius: 12px;
+    background: var(--ad-elevated);
+    box-shadow: 0 12px 32px color-mix(in srgb, var(--color-shadow) 48%, transparent);
+    overflow: hidden;
+}
+
+.selectOption {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 36px;
+    padding: 0 12px;
+    border: none;
+    background: transparent;
+    color: var(--ad-label);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    text-align: left;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.selectOption:hover {
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
+    color: var(--ad-value);
+}
+
+.selectOption + .selectOption {
+    border-top: 1px solid var(--ad-border);
+}
+
+.selectOptionActive {
+    color: var(--ad-value);
+    font-weight: 600;
+}
+
+.filterPopup {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    bottom: auto;
+    left: auto;
+    z-index: 20;
+    box-sizing: border-box;
+    width: min(320px, calc(100vw - 24px));
+    border: 1px solid var(--ad-border);
+    border-radius: 12px;
+    background: var(--ad-elevated);
+    box-shadow: 0 12px 32px color-mix(in srgb, var(--color-shadow) 48%, transparent);
+    overflow: hidden;
+}
+
+.filterColumns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: 220px;
+}
+
+.filterColumn {
+    display: flex;
+    flex-direction: column;
+    max-height: 252px;
+    overflow-y: auto;
+    background: var(--ad-elevated);
+}
+
+.filterColumn + .filterColumn {
+    border-left: 1px solid var(--ad-border);
+}
+
+.filterOption {
+    min-height: 42px;
+    padding: 0 12px;
+    border: none;
+    background: transparent;
+    color: var(--ad-label);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.filterOption:hover {
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
+    color: var(--ad-value);
+}
+
+.filterOptionActive {
+    color: var(--ad-value);
+    font-weight: 600;
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+.filterActions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding: 12px;
+    border-top: 1px solid var(--ad-border);
+    background: var(--ad-card);
+}
+
+.filterActionButton {
+    min-height: 34px;
+    border: 1px solid var(--ad-border);
+    border-radius: 8px;
+    background: var(--ad-elevated);
+    color: var(--ad-label);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.filterActionButton:hover {
+    color: var(--ad-value);
+    border-color: var(--color-border);
+}
+
+.filterConfirmButton {
+    background: var(--ad-primary);
+    border-color: var(--ad-primary);
+    color: var(--color-on-primary);
+}
+
+.filterConfirmButton:hover {
+    background: var(--ad-primary-hover);
+    border-color: var(--ad-primary-hover);
+    color: var(--color-on-primary);
+}
+
+.listSection {
+    padding: 0;
+    background: var(--ad-bg);
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    background: var(--ad-bg);
+}
+
+.item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: flex-start;
+    column-gap: 16px;
+    row-gap: 8px;
+    padding: 16px;
+    border-bottom: 1px solid var(--ad-divider);
+    background: var(--ad-bg);
+}
+
+.itemMain {
+    min-width: 0;
+}
+
+.itemTypeRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.itemTypeBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 22px;
+    padding: 0 8px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--color-primary) 20%, transparent);
+    color: var(--color-primary-fg);
+    font-size: 11px;
+    line-height: 1;
+    font-weight: 600;
+}
+
+.itemTypeBadgePoints {
+    background: color-mix(in srgb, var(--color-text) 22%, transparent);
+    color: var(--color-text-secondary);
+}
+
+.kkFilterPopup {
+    width: min(360px, calc(100vw - 24px));
+    max-height: min(70vh, 520px);
+    padding: 14px;
+    overflow-y: auto;
+}
+
+.kkFilterSection + .kkFilterSection {
+    margin-top: 12px;
+}
+
+.kkFilterSection h3 {
+    margin: 0 0 8px;
+    color: var(--ad-label);
+    font-size: 12px;
+    line-height: 1.3;
+    font-weight: 500;
+}
+
+.kkFilterOptions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.kkFilterOption {
+    min-width: 68px;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--ad-border);
+    border-radius: 8px;
+    background: var(--ad-card);
+    color: var(--ad-label);
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+
+.kkFilterOption:hover,
+.kkFilterOption:focus-visible {
+    border-color: color-mix(in srgb, var(--color-text) 28%, transparent);
+    color: var(--ad-value);
+}
+
+.kkFilterOption:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 75%, transparent);
+    outline-offset: 2px;
+}
+
+.kkFilterOptionActive {
+    border-color: var(--ad-primary);
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+    color: var(--ad-value);
+    font-weight: 600;
+}
+
+.kkFilterFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--ad-border);
+}
+
+.kkFilterFooter span {
+    min-width: 0;
+    color: var(--ad-label);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.kkFilterFooter button {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--ad-border);
+    border-radius: 8px;
+    background: var(--ad-card);
+    color: var(--ad-value);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.kkFilterFooter button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.itemTitle {
+    margin: 4px 0 0;
+    font-size: 15px;
+    line-height: 1.45;
+    font-weight: 600;
+    color: var(--ad-value);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.itemSubtitle {
+    margin: 6px 0 0;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--ad-label);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.itemTime {
+    grid-column: 1 / -1;
+    display: block;
+    min-width: 0;
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--ad-label);
+    white-space: nowrap;
+}
+
+.itemAmount {
+    flex-shrink: 0;
+    padding-top: 2px;
+    font-size: 15px;
+    line-height: 1;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.itemAmountIncome {
+    color: var(--ad-value);
+}
+
+.itemAmountExpense {
+    color: var(--color-primary-fg);
+}
+
+.itemAmountStack {
+    display: flex;
+    flex: 0 0 auto;
+    min-width: 72px;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    padding-top: 1px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.itemOriginalAmount {
+    color: var(--ad-label);
+    font-size: 12px;
+    line-height: 1;
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+}
+
+.itemActualAmount {
+    padding-top: 0;
+    font-size: 16px;
+}
+
+.itemDiscountBadge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    padding: 0 6px;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+    border-radius: 5px;
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-primary-fg);
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 600;
+}
+
+.stateBlock {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+    padding: 24px 16px;
+    color: var(--ad-label);
+    font-size: 14px;
+    line-height: 1.6;
+    text-align: center;
+}
+
+.loadMoreSentinel {
+    width: 100%;
+    height: 1px;
+}
+
+.loadMoreButton {
+    display: block;
+    width: calc(100% - 32px);
+    min-height: 44px;
+    margin: 18px auto 0;
+    border: 1px solid var(--ad-border);
+    border-radius: 10px;
+    background: var(--ad-card);
+    color: var(--ad-label);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.loadMoreButton:hover:not(:disabled) {
+    color: var(--ad-value);
+    border-color: var(--color-border);
+    background: var(--ad-elevated);
+}
+
+.loadMoreButton:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.listEndHint {
+    margin: 16px 0 8px;
+    color: var(--ad-label);
+    font-size: 13px;
+    text-align: center;
+}
+
+@media (min-width: 769px) {
+    .main {
+        padding-bottom: 96px;
+    }
+
+    .shell {
+        width: min(100%, 820px);
+    }
+
+    .headerDock {
+        padding-left: 24px;
+        padding-right: 24px;
+    }
+
+    .balanceSection {
+        padding: 16px 24px;
+    }
+
+    .toolbar {
+        padding-left: 24px;
+        padding-right: 24px;
+    }
+
+    .item {
+        padding: 18px 24px;
+    }
+
+    .tabs {
+        gap: 12px;
+    }
+
+    .tabButton {
+        font-size: 15px;
+        padding: 0 12px;
+    }
+
+    .filterPopup {
+        width: 320px;
+    }
+
+}
+
+@media (max-width: 560px) {
+    .balanceSection {
+        padding: 10px 12px 12px;
+    }
+
+    .balanceCard {
+        padding: 12px 10px 8px;
+    }
+
+    .balanceValueRow {
+        gap: 4px;
+    }
+
+    .balanceAction svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    .kkBreakdownGroups {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .toolbar {
+        align-items: center;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 4px;
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .tabs {
+        gap: 0;
+    }
+
+    .tabButton {
+        min-height: 44px;
+        padding: 0 7px;
+        font-size: 12px;
+    }
+
+    .tabButtonActive::after {
+        left: 7px;
+        right: 7px;
+    }
+
+    .filterRow {
+        width: auto;
+        justify-content: flex-start;
+        gap: 4px;
+    }
+
+    .selectTrigger {
+        min-width: 62px;
+        padding: 0 7px;
+        font-size: 11px;
+    }
+
+    .item {
+        gap: 10px;
+    }
+
+    .itemAmountStack {
+        min-width: 64px;
+        gap: 3px;
+    }
+
+    .itemActualAmount {
+        font-size: 15px;
+    }
+
+}

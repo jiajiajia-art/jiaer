@@ -1,0 +1,129 @@
+.root {
+    position: relative;
+    z-index: 4;
+    flex: 0 0 auto;
+}
+
+.trigger {
+    min-width: 190px;
+    min-height: 44px;
+    display: grid;
+    grid-template-columns: auto minmax(72px, 1fr) auto;
+    align-items: center;
+    gap: 9px;
+    padding: 0 12px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 11%, transparent);
+    border-radius: 10px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    cursor: pointer;
+    font-size: 12px;
+    text-align: left;
+}
+
+.trigger > span {
+    color: var(--color-text-secondary);
+}
+
+.trigger strong {
+    overflow: hidden;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.trigger svg {
+    width: 17px;
+    height: 17px;
+    color: var(--color-text-secondary);
+    transition: transform 180ms ease;
+}
+
+.trigger .chevronOpen {
+    transform: rotate(180deg);
+}
+
+.trigger:hover {
+    border-color: color-mix(in srgb, var(--color-primary-light) 52%, transparent);
+    background: var(--color-surface);
+}
+
+.trigger:focus-visible,
+.option:focus-visible,
+.optionActive:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-primary-light) 58%, transparent);
+    outline-offset: 2px;
+}
+
+.menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: max(100%, 220px);
+    display: grid;
+    gap: 3px;
+    padding: 6px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 13%, transparent);
+    border-radius: 12px;
+    background: var(--color-surface-2);
+    box-shadow: 0 18px 48px color-mix(in srgb, var(--color-shadow) 50%, transparent);
+    box-sizing: border-box;
+}
+
+.option,
+.optionActive {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--color-text);
+    cursor: pointer;
+    font-size: 14px;
+    text-align: left;
+}
+
+.option:hover {
+    background: color-mix(in srgb, var(--color-text) 7%, transparent);
+    color: var(--color-text);
+}
+
+.optionActive {
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+    color: var(--color-primary-fg);
+    font-weight: 700;
+}
+
+.optionActive svg {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+}
+
+@media (max-width: 720px) {
+    .root,
+    .trigger {
+        width: 100%;
+    }
+
+    .trigger {
+        grid-template-columns: auto 1fr auto;
+    }
+
+    .menu {
+        left: 0;
+        right: auto;
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .trigger svg {
+        transition: none;
+    }
+}

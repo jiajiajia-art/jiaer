@@ -1,0 +1,119 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  padding: 1rem;
+}
+
+.panel {
+  width: min(440px, 100%);
+  max-height: 90%;
+  overflow: auto;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+  background: linear-gradient(165deg, var(--color-info), var(--color-info));
+  color: var(--color-text);
+  padding: 1.25rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.field input {
+  border-radius: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+  background: color-mix(in srgb, var(--color-shadow) 38%, transparent);
+  color: var(--color-on-media);
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+}
+
+.field input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 16%, transparent);
+}
+
+.section {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.routeList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.routeCard {
+  text-align: left;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  color: var(--color-text);
+  padding: 0.7rem 0.8rem;
+  cursor: pointer;
+}
+
+.routeActive {
+  border-color: color-mix(in srgb, var(--color-info) 80%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-info) 35%, transparent);
+}
+
+.routeTitle {
+  font-weight: 600;
+}
+
+.routeSummary {
+  margin-top: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+
+.monoBox {
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--color-text) 28%, transparent);
+  padding: 0.65rem 0.75rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.startBtn {
+  margin-top: 0.35rem;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.7rem 1rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  background: linear-gradient(180deg, var(--color-highlight), var(--color-highlight));
+  cursor: pointer;
+}
+
+.startBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

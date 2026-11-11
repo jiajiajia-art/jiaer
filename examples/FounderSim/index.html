@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>创始人模拟器 - Founder Simulator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 游戏主容器 -->
+    <div class="game-container">
+        <!-- 侧边栏 - 玩家信息面板 -->
+        <aside class="sidebar">
+            <!-- 基本信息卡片 -->
+            <div class="info-card player-card">
+                <h3>👤 基本信息</h3>
+                <div class="player-info">
+                    <div class="info-item">
+                        <span class="label">姓名：</span>
+                        <span id="player-name" class="value">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">性别：</span>
+                        <span id="player-gender" class="value">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">年龄：</span>
+                        <span id="player-age" class="value">22</span> 岁
+                    </div>
+                    <div class="info-item">
+                        <span class="label">存款：</span>
+                        <span id="player-money" class="value highlight">10000</span> 元
+                    </div>
+                    <div class="info-item">
+                        <span class="label">学历：</span>
+                        <span id="player-education" class="value">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">学校：</span>
+                        <span id="player-school" class="value">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">职业：</span>
+                        <span id="player-career" class="value">待业</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 属性卡片 -->
+            <div class="info-card attributes-card">
+                <h3>⚡ 属性</h3>
+                <div class="attributes-list">
+                    <div class="attribute-item">
+                        <span class="attr-label">精力：</span>
+                        <span id="attr-energy" class="attr-value">0</span>
+                    </div>
+                    <div class="attribute-item">
+                        <span class="attr-label">智商：</span>
+                        <span id="attr-intelligence" class="attr-value">0</span>
+                    </div>
+                    <div class="attribute-item">
+                        <span class="attr-label">沟通：</span>
+                        <span id="attr-communication" class="attr-value">0</span>
+                    </div>
+                    <div class="attribute-item">
+                        <span class="attr-label">气运：</span>
+                        <span id="attr-luck" class="attr-value">0</span>
+                    </div>
+                    <div class="attribute-item">
+                        <span class="attr-label">理想：</span>
+                        <span id="attr-ideal" class="attr-value">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 开销卡片 -->
+            <div class="info-card expenses-card">
+                <h3>💰 每月开销</h3>
+                <div class="expenses-list">
+                    <div class="expense-category">
+                        <label>租房标准：</label>
+                        <select id="housing-standard" class="expense-select">
+                            <option value="simple">简朴 - 2000元</option>
+                            <option value="normal">普通 - 4000元</option>
+                            <option value="luxury">豪华 - 8000元</option>
+                        </select>
+                    </div>
+                    
+                    <div class="expense-category">
+                        <label>饮食标准：</label>
+                        <select id="food-standard" class="expense-select">
+                            <option value="simple">简朴 - 1000元</option>
+                            <option value="normal">普通 - 2000元</option>
+                            <option value="luxury">豪华 - 4000元</option>
+                        </select>
+                    </div>
+                    
+                    <div class="expense-category">
+                        <label>社交开销：</label>
+                        <select id="social-standard" class="expense-select">
+                            <option value="simple">简朴 - 500元</option>
+                            <option value="normal">普通 - 1500元</option>
+                            <option value="luxury">豪华 - 3000元</option>
+                        </select>
+                    </div>
+                    
+                    <div class="expenses-total">
+                        <span class="label">总计：</span>
+                        <span id="expenses-total" class="value highlight">3500</span> 元
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 角色创建面板 -->
+            <div id="character-creation" class="panel">
+                <!-- 钻石余额显示 -->
+                <div id="currency-display" class="currency-display">
+                    <span class="diamonds-icon">💎</span>
+                    <span id="diamonds-balance">0</span>
+                    <button type="button" id="recharge-btn" class="btn btn-primary btn-small">充值</button>
+                </div>
+                
+                <h1>角色创建</h1>
+                <p>欢迎来到创始人模拟器！你刚刚大学毕业，准备开始你的人生旅程。</p>
+                <form id="character-form">
+                    <!-- 基本信息区域 -->
+                    <div class="form-section">
+                        <h3>基本信息</h3>
+                        <div class="form-group">
+                            <label for="char-name">角色名称：</label>
+                            <input type="text" id="char-name" required placeholder="请输入角色名称">
+                        </div>
+                        <div class="form-group">
+                            <label for="char-gender">性别：</label>
+                            <select id="char-gender" required>
+                                <option value="">请选择</option>
+                                <option value="男">男</option>
+                                <option value="女">女</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- 教育背景区域 -->
+                    <div class="form-section">
+                        <h3>教育背景</h3>
+                        <div class="form-group">
+                            <label for="char-school">毕业学校：</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <select id="char-school" required style="flex: 1;">
+                                    <option value="">请选择</option>
+                                </select>
+                                <div id="school-unlock-buttons" style="display: flex; gap: 5px; flex-wrap: wrap;"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="char-degree">学历：</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <select id="char-degree" required style="flex: 1;">
+                                    <option value="">请选择</option>
+                                </select>
+                                <div id="degree-unlock-buttons" style="display: flex; gap: 5px; flex-wrap: wrap;"></div>
+                            </div>
+                            <small style="color: #666; display: block; margin-top: 5px;">初始只能选择学士，后续可通过读研究生提升</small>
+                        </div>
+                    </div>
+                    
+                    <!-- 属性分配区域 -->
+                    <div class="form-section">
+                        <h3>属性分配</h3>
+                        <div class="attr-allocation-panel">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                                <div class="extra-points-display">
+                                    <strong>剩余额外点数：<span id="extra-points-remaining">20</span></strong>
+                                </div>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <button type="button" class="btn btn-secondary btn-reroll" id="reroll-attributes-btn">
+                                        重新生成基础属性 <span id="reroll-count-display">(剩余3次)</span>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-small premium-feature" id="purchase-unlimited-reroll-btn">
+                                        无限重roll (50💎)
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-small premium-feature" id="purchase-extra-points-btn">
+                                        购买额外点数
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- 属性预设模板 -->
+                            <div style="margin-bottom: 15px; padding: 10px; background: #f0f0f0; border-radius: 5px;">
+                                <strong style="display: block; margin-bottom: 8px;">属性预设模板 (20💎)：</strong>
+                                <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                                    <button type="button" class="btn btn-small premium-feature template-btn" data-template="tech">技术流</button>
+                                    <button type="button" class="btn btn-small premium-feature template-btn" data-template="social">社交流</button>
+                                    <button type="button" class="btn btn-small premium-feature template-btn" data-template="lucky">幸运流</button>
+                                    <button type="button" class="btn btn-small premium-feature template-btn" data-template="balanced">均衡流</button>
+                                </div>
+                            </div>
+                            
+                            <div id="attributes-container" style="display: grid; gap: 15px; margin-bottom: 20px;">
+                                <!-- 属性卡片将通过JavaScript动态生成 -->
+                            </div>
+                            
+                            <div class="attr-preview" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                                <h4 style="margin-bottom: 10px; color: #667eea;">最终属性预览</h4>
+                                <div id="final-attributes-preview" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;">
+                                    <!-- 最终属性预览将通过JavaScript动态生成 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 初始资金加成 -->
+                    <div class="form-section" style="margin-top: 20px;">
+                        <h3>初始资金加成（可选）</h3>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" class="btn btn-small premium-feature" id="purchase-money-5000">+5000元 (30💎)</button>
+                            <button type="button" class="btn btn-small premium-feature" id="purchase-money-10000">+10000元 (50💎)</button>
+                            <button type="button" class="btn btn-small premium-feature" id="purchase-money-20000">+20000元 (80💎)</button>
+                        </div>
+                        <div id="money-bonus-display" style="margin-top: 10px; color: #28a745; font-weight: bold;"></div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" style="margin-top: 20px;">创建角色</button>
+                </form>
+            </div>
+            
+            <!-- 充值弹窗 -->
+            <div id="recharge-modal" class="modal hidden">
+                <div class="modal-content" style="max-width: 600px;">
+                    <span class="close" id="close-recharge-modal">&times;</span>
+                    <h3>充值钻石</h3>
+                    <div id="recharge-packages" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px;">
+                        <!-- 充值套餐将通过JavaScript动态生成 -->
+                    </div>
+                    <p style="margin-top: 20px; color: #666; font-size: 14px;">注：当前为演示版本，充值功能为模拟实现</p>
+                </div>
+            </div>
+
+            <!-- 主游戏界面 -->
+            <div id="main-game" class="panel hidden">
+                <div class="game-header">
+                    <h2>第 <span id="current-turn">1</span> 回合</h2>
+                    <button id="next-turn-btn" class="btn btn-primary">进入下个月</button>
+                </div>
+
+                <!-- 选择面板 -->
+                <div id="choice-panel" class="choice-panel">
+                    <h3>请选择你的下一步行动：</h3>
+                    <div class="choice-buttons">
+                        <button class="btn btn-choice" data-choice="work">找工作</button>
+                        <button class="btn btn-choice" data-choice="graduate">读研究生</button>
+                        <button class="btn btn-choice" data-choice="startup">创业</button>
+                    </div>
+                </div>
+
+                <!-- 工作选择面板 -->
+                <div id="work-panel" class="panel hidden">
+                    <h3>选择工作</h3>
+                    <div id="work-list" class="list-container"></div>
+                    <button class="btn btn-secondary" id="back-from-work">返回</button>
+                </div>
+
+                <!-- 工作管理面板 -->
+                <div id="work-management" class="panel hidden">
+                    <h3>工作管理</h3>
+                    <div class="company-info">
+                        <div class="info-row">
+                            <span>岗位名称：</span>
+                            <span id="job-name">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span>职级：</span>
+                            <span id="job-level">初级</span>
+                        </div>
+                        <div class="info-row">
+                            <span>月薪：</span>
+                            <span id="job-salary">0</span> 元
+                            <span id="salary-breakdown" style="font-size: 12px; color: #666; margin-left: 10px;"></span>
+                        </div>
+                        <div class="info-row">
+                            <span>工作月数：</span>
+                            <span id="work-months">0</span> 个月
+                        </div>
+                        <div class="info-row">
+                            <span>人脉值：</span>
+                            <span id="network-value">0</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 工作表现显示（多维度） -->
+                    <div class="performance-section" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <h4 style="margin-bottom: 10px; color: #667eea;">工作表现</h4>
+                        <div id="work-performance-details">
+                            <div class="info-row" style="padding: 3px 0;">
+                                <span>综合评分：</span>
+                                <span id="work-performance-overall" style="font-weight: bold; color: #667eea;">50</span> / 100
+                            </div>
+                            <div class="info-row" style="padding: 3px 0;">
+                                <span>工作质量：</span>
+                                <span id="work-performance-quality">50</span> / 100
+                            </div>
+                            <div class="info-row" style="padding: 3px 0;">
+                                <span>工作效率：</span>
+                                <span id="work-performance-efficiency">50</span> / 100
+                            </div>
+                            <div class="info-row" style="padding: 3px 0;">
+                                <span>团队协作：</span>
+                                <span id="work-performance-teamwork">50</span> / 100
+                            </div>
+                            <div class="info-row" style="padding: 3px 0;">
+                                <span>主动性：</span>
+                                <span id="work-performance-initiative">50</span> / 100
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 技能显示 -->
+                    <div class="skills-section" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <h4 style="margin-bottom: 10px; color: #667eea;">技能</h4>
+                        <div id="skills-list"></div>
+                        <div style="margin-top: 10px; font-weight: bold;">
+                            <span>技能点：</span>
+                            <span id="skill-points">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn btn-action" id="work-hard-btn">努力板砖</button>
+                        <button class="btn btn-action" id="work-slack-btn">偷偷摸鱼</button>
+                        <button class="btn btn-action" id="work-learn-btn">自主学习</button>
+                        <button class="btn btn-action" id="work-overtime-btn">加班</button>
+                        <button class="btn btn-action" id="work-social-btn">社交</button>
+                        <button class="btn btn-action" id="work-training-btn">培训</button>
+                        <button class="btn btn-action" id="work-sidejob-btn">副业</button>
+                        <button class="btn btn-action" id="work-jobhunt-btn">跳槽</button>
+                        <button class="btn btn-action" id="work-quit-btn">辞职</button>
+                    </div>
+                    <p id="work-action-hint" style="text-align: center; color: #666; margin-top: 20px;">每回合只能执行一次行动（培训和跳槽不受限制）</p>
+                </div>
+
+                <!-- 培训面板 -->
+                <div id="training-panel" class="panel hidden">
+                    <h3>选择培训课程</h3>
+                    <p style="color: #666; margin-bottom: 15px;">参加培训可以提升属性和技能，但需要花费金钱</p>
+                    <div id="training-courses" class="list-container"></div>
+                    <button class="btn btn-secondary" id="back-from-training">返回</button>
+                </div>
+
+                <!-- 跳槽面板 -->
+                <div id="jobhunt-panel" class="panel hidden">
+                    <h3>寻找新工作</h3>
+                    <p style="color: #666; margin-bottom: 15px;">根据你的技能和经验，以下工作可能适合你：</p>
+                    <div id="available-jobs" class="list-container"></div>
+                    <button class="btn btn-secondary" id="back-from-jobhunt">返回</button>
+                </div>
+
+                <!-- 研究生选择面板 -->
+                <div id="graduate-panel" class="panel hidden">
+                    <h3>选择专业</h3>
+                    <div id="major-list" class="list-container"></div>
+                    <button class="btn btn-secondary" id="back-from-graduate">返回</button>
+                </div>
+
+                <!-- 研究生管理面板 -->
+                <div id="graduate-management" class="panel hidden">
+                    <h3>研究生管理</h3>
+                    <div class="company-info">
+                        <div class="info-row">
+                            <span>专业：</span>
+                            <span id="graduate-major-name">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span>学习进度：</span>
+                            <span id="graduate-study-progress">0/24</span> 个月
+                        </div>
+                        <div class="info-row">
+                            <span>学术积分：</span>
+                            <span id="graduate-academic-points">0/100</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 学术能力显示 -->
+                    <div class="performance-section" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <h4 style="margin-bottom: 10px; color: #667eea;">学术能力</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;">
+                            <div>
+                                <span>研究能力：</span>
+                                <span id="graduate-research-ability" style="font-weight: bold;">50</span>
+                            </div>
+                            <div>
+                                <span>写作能力：</span>
+                                <span id="graduate-writing-ability" style="font-weight: bold;">50</span>
+                            </div>
+                            <div>
+                                <span>实验能力：</span>
+                                <span id="graduate-experiment-ability" style="font-weight: bold;">50</span>
+                            </div>
+                            <div>
+                                <span>综合能力：</span>
+                                <span id="graduate-overall-ability" style="font-weight: bold; color: #28a745;">50</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 状态信息 -->
+                    <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <div class="info-row">
+                            <span>奖学金：</span>
+                            <span id="graduate-scholarship">无</span>
+                        </div>
+                        <div class="info-row">
+                            <span>实习：</span>
+                            <span id="graduate-internship">无</span>
+                        </div>
+                        <div class="info-row">
+                            <span>导师关系：</span>
+                            <span id="graduate-mentor-relationship">50</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 学术成果列表 -->
+                    <div class="section" style="margin-top: 20px;">
+                        <h4>学术成果</h4>
+                        <div id="graduate-achievements-list" class="list-container" style="max-height: 200px; overflow-y: auto;"></div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn btn-action" id="graduate-study-btn">努力学习</button>
+                        <button class="btn btn-action" id="graduate-research-btn">进行研究</button>
+                        <button class="btn btn-action" id="graduate-paper-btn">写论文</button>
+                        <button class="btn btn-action" id="graduate-experiment-btn">做实验</button>
+                        <button class="btn btn-action" id="graduate-conference-btn">参加学术会议</button>
+                        <button class="btn btn-action" id="graduate-competition-btn">参加竞赛</button>
+                        <button class="btn btn-action" id="graduate-internship-btn">寻找实习</button>
+                        <button class="btn btn-action" id="graduate-socialize-btn">学术社交</button>
+                        <button class="btn btn-action" id="graduate-scholarship-btn">申请奖学金</button>
+                        <button class="btn btn-action" id="graduate-early-btn" style="display: none;">提前毕业</button>
+                    </div>
+                    <p id="graduate-action-hint" style="text-align: center; color: #666; margin-top: 20px;">每回合只能执行一次行动</p>
+                </div>
+
+                <!-- 创业面板 -->
+                <div id="startup-panel" class="panel hidden">
+                    <h3>选择行业</h3>
+                    <div id="industry-list" class="list-container"></div>
+                    <button class="btn btn-secondary" id="back-from-industry">返回</button>
+                </div>
+
+                <!-- 融资选择面板 -->
+                <div id="funding-panel" class="panel hidden">
+                    <h3>选择资金来源</h3>
+                    <div class="funding-options">
+                        <button class="btn btn-choice" data-funding="deposit">使用存款</button>
+                        <button class="btn btn-choice" data-funding="loan">无息贷款</button>
+                        <button class="btn btn-choice" data-funding="investment">融资</button>
+                    </div>
+                    <div id="deposit-input" class="hidden">
+                        <label>投入金额：</label>
+                        <input type="number" id="deposit-amount" min="0" placeholder="请输入金额">
+                        <button class="btn btn-primary" id="confirm-deposit">确认</button>
+                    </div>
+                    <button class="btn btn-secondary" id="back-from-funding">返回</button>
+                </div>
+
+                <!-- 创业管理面板 -->
+                <div id="startup-management" class="panel hidden">
+                    <h3>公司管理</h3>
+                    <div class="company-info">
+                        <div class="info-row">
+                            <span>账户余额：</span>
+                            <span id="company-balance">0</span> 元
+                        </div>
+                        <div class="info-row">
+                            <span>融资轮次：</span>
+                            <span id="funding-round">种子轮</span>
+                        </div>
+                        <div class="info-row">
+                            <span>公司估值：</span>
+                            <span id="company-valuation">0</span> 万元
+                        </div>
+                        <!-- 新增：行业信息 -->
+                        <div id="industry-info-section" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <h4 style="margin-bottom: 10px; color: #667eea;">行业信息</h4>
+                            <div id="industry-details"></div>
+                        </div>
+                        <!-- 新增：贷款信息 -->
+                        <div id="loans-info" class="loans-section" style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #dee2e6;">
+                            <h4 style="margin-bottom: 10px; color: #dc3545;">贷款信息</h4>
+                            <div id="loans-list"></div>
+                            <div id="total-loan-payment" style="margin-top: 10px; color: #dc3545; font-weight: bold;">
+                                本月需还款：<span id="monthly-loan-total">0</span> 元
+                            </div>
+                        </div>
+                        <!-- 新增：融资历史 -->
+                        <div id="funding-history-section" class="funding-history" style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #dee2e6;">
+                            <h4 style="margin-bottom: 10px; color: #28a745;">融资历史</h4>
+                            <div id="funding-history-list"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn btn-action" id="hire-employee-btn">招聘员工</button>
+                        <button class="btn btn-action" id="create-project-btn">项目立项</button>
+                        <button class="btn btn-action" id="apply-loan-btn">申请贷款</button>
+                        <button class="btn btn-action" id="apply-funding-btn">继续融资</button>
+                        <button class="btn btn-action" id="learn-summary-btn">总结学习</button>
+                    </div>
+
+                    <div class="sections">
+                        <div class="section">
+                            <h4>员工列表</h4>
+                            <div id="employee-list" class="list-container"></div>
+                        </div>
+                        <div class="section">
+                            <h4>项目列表</h4>
+                            <div id="project-list" class="list-container"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 贷款申请面板 -->
+                <div id="loan-panel" class="panel hidden">
+                    <h3>申请贷款</h3>
+                    <div class="loan-info">
+                        <p>根据公司估值，您最多可申请 <span id="max-loan-amount">0</span> 元贷款</p>
+                        <p style="color: #666; font-size: 14px;">年利率：<span id="loan-interest-rate">5</span>%</p>
+                    </div>
+                    <div class="form-group">
+                        <label>贷款金额：</label>
+                        <input type="number" id="loan-amount-input" min="0" placeholder="请输入金额">
+                    </div>
+                    <div class="form-group">
+                        <label>贷款期限：</label>
+                        <select id="loan-months-select">
+                            <option value="12">12个月</option>
+                            <option value="18">18个月</option>
+                            <option value="24" selected>24个月</option>
+                        </select>
+                    </div>
+                    <div id="loan-preview" style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin: 15px 0;">
+                        <p>每月还款：<span id="loan-monthly-payment">0</span> 元</p>
+                        <p>总利息：<span id="loan-total-interest">0</span> 元</p>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" id="confirm-loan-btn">确认申请</button>
+                        <button class="btn btn-secondary" id="cancel-loan-btn">取消</button>
+                    </div>
+                </div>
+
+                <!-- 融资申请面板（管理面板中的） -->
+                <div id="funding-panel-management" class="panel hidden">
+                    <h3>继续融资</h3>
+                    <div class="funding-info">
+                        <p>当前融资轮次：<span id="current-funding-round-display">种子轮</span></p>
+                        <p>下一轮次：<span id="next-funding-round-display">天使轮</span></p>
+                        <p>预计融资金额：<span id="estimated-funding-amount">0</span> 万元</p>
+                        <p>预计公司估值：<span id="estimated-valuation">0</span> 万元</p>
+                    </div>
+                    <div class="funding-conditions" style="padding: 15px; background: #fff3cd; border-radius: 8px; margin: 15px 0;">
+                        <h4>融资条件：</h4>
+                        <ul id="funding-conditions-list"></ul>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" id="confirm-funding-btn">确认融资</button>
+                        <button class="btn btn-secondary" id="cancel-funding-btn">取消</button>
+                    </div>
+                </div>
+
+                <!-- 招聘面板 -->
+                <div id="hire-panel" class="panel hidden">
+                    <h3>招聘员工</h3>
+                    
+                    <!-- 招聘渠道选择 -->
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 10px;">选择招聘渠道</h4>
+                        <div id="recruitment-channels" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;"></div>
+                    </div>
+                    
+                    <!-- 筛选条件 -->
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px;">
+                        <h4 style="margin-bottom: 10px;">筛选条件</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                            <div>
+                                <label style="display: block; font-size: 12px; margin-bottom: 5px;">岗位：</label>
+                                <select id="filter-position" class="expense-select" style="width: 100%;">
+                                    <option value="all">全部</option>
+                                    <option value="产品">产品</option>
+                                    <option value="研发">研发</option>
+                                    <option value="销售">销售</option>
+                                    <option value="行政">行政</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; margin-bottom: 5px;">能力范围：</label>
+                                <div style="display: flex; gap: 5px; align-items: center;">
+                                    <input type="number" id="filter-ability-min" value="0" min="0" max="200" style="width: 60px; padding: 4px;">
+                                    <span>-</span>
+                                    <input type="number" id="filter-ability-max" value="200" min="0" max="200" style="width: 60px; padding: 4px;">
+                                </div>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; margin-bottom: 5px;">薪资范围（元）：</label>
+                                <div style="display: flex; gap: 5px; align-items: center;">
+                                    <input type="number" id="filter-salary-min" value="0" min="0" style="width: 80px; padding: 4px;">
+                                    <span>-</span>
+                                    <input type="number" id="filter-salary-max" value="1000000" min="0" style="width: 80px; padding: 4px;">
+                                </div>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; margin-bottom: 5px;">工作年限：</label>
+                                <select id="filter-experience" class="expense-select" style="width: 100%;">
+                                    <option value="all">全部</option>
+                                    <option value="0-2">0-2年</option>
+                                    <option value="3-5">3-5年</option>
+                                    <option value="5-10">5-10年</option>
+                                    <option value="10+">10年以上</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; margin-bottom: 5px;">学历要求：</label>
+                                <select id="filter-degree" class="expense-select" style="width: 100%;">
+                                    <option value="all">不限</option>
+                                    <option value="1">学士</option>
+                                    <option value="2">硕士</option>
+                                    <option value="3">博士</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary" id="apply-filter-btn" style="margin-top: 10px;">应用筛选</button>
+                    </div>
+                    
+                    <!-- 候选人列表 -->
+                    <div id="candidate-list" class="list-container"></div>
+                    
+                    <!-- 操作按钮 -->
+                    <div style="margin-top: 20px; display: flex; gap: 10px;">
+                        <button class="btn btn-secondary" id="refresh-candidates-btn">刷新候选人（500元）</button>
+                        <button class="btn btn-secondary" id="back-from-hire">返回</button>
+                    </div>
+                </div>
+
+                <!-- 项目立项面板 -->
+                <div id="project-create-panel" class="panel hidden">
+                    <h3>项目立项</h3>
+                    <div id="project-options" class="list-container"></div>
+                    <button class="btn btn-secondary" id="back-from-project-create">返回</button>
+                </div>
+
+                <!-- 员工分配面板 -->
+                <div id="assign-employees-panel" class="panel hidden">
+                    <h3>分配员工</h3>
+                    <p id="assign-project-name" style="margin-bottom: 15px;"></p>
+                    <div id="available-employees-list" class="list-container"></div>
+                    <div style="margin-top: 20px;">
+                        <h4>已分配员工：</h4>
+                        <div id="assigned-employees-list" class="list-container"></div>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <button class="btn btn-primary" id="save-assignments-btn">保存分配</button>
+                        <button class="btn btn-secondary" id="cancel-assignments-btn">取消</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 事件弹窗 -->
+            <div id="event-modal" class="modal hidden">
+                <div class="modal-content">
+                    <h3 id="event-title">事件</h3>
+                    <p id="event-description"></p>
+                    <div id="event-check" class="hidden">
+                        <p>需要进行 <span id="check-attribute"></span> 检定（需要 <span id="check-value"></span>）</p>
+                        <p>你的 <span id="player-attribute-value"></span> 为 <span id="player-attribute"></span></p>
+                        <p id="check-result"></p>
+                    </div>
+                    <button class="btn btn-primary" id="event-close">确定</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

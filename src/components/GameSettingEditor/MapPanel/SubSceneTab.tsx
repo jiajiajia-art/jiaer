@@ -1,0 +1,575 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import styles from './SubSceneTab.module.css';
+import sharedStyles from './shared.module.css';
+import FunctionalNPCList from './FunctionalNPCList';
+import ColorPicker from './ColorPicker';
+import { useSubSceneTab } from './hooks/useSubSceneTab';
+import type { SubScene, Scene } from './types';
+import type { AbilityNodeSetting } from '../../../api/worldInteraction/worldInteractionApi.type';
+import {
+    DEFAULT_MAP_IMAGE,
+    DEFAULT_NPC_IMAGE,
+    BASE_NPC_WIDTH,
+    BASE_NPC_HEIGHT,
+    MAX_NPCS,
+    DEFAULT_Z_INDEX,
+    MIN_Z_INDEX,
+    MAX_Z_INDEX,
+} from './constants';
+import { getImageUrl } from '../../../utils/constants';
+import worldEditor from '../../../api/worldInteraction/worldEditor';
+import type { NpcSlot, FunctionalNpcPatch } from '../../../api/worldInteraction/worldEditor.type';
+import toast from 'react-hot-toast';
+import SaveConfirmModal from '../../CommonModal/SaveConfirmModal';
+
+interface SubSceneTabProps {
+    subScenes: SubScene[];
+    sceneSetting?: { scenes?: Scene[] };
+    fileId: string;
+    onDataChange?: () => void;
+    isActive?: boolean;
+    abilityNodeSetting?: AbilityNodeSetting;
+    onHasUnsavedChanges?: (hasChanges: boolean) => void;
+}
+
+export interface SubSceneTabRef {
+    checkUnsavedChanges: () => boolean;
+    save: () => Promise<void>;
+}
+
+const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
+    subScenes,
+    sceneSetting,
+    fileId,
+    onDataChange,
+    isActive,
+    abilityNodeSetting,
+    onHasUnsavedChanges,
+}, ref) => {
+    const {
+        selectedSubSceneId,
+        setSelectedSubSceneId,
+        placedNormalNPCs,
+        placedFunctionalNPCs,
+        allPlacedNPCs,
+        draggingNPCId,
+        selectedNPCId,
+        setSelectedNPCId,
+        previewRef,
+        imageRef,
+        currentSceneIdRef,
+        currentSubSceneIdRef,
+        setImageLoaded,
+        isSubSceneContentReady,
+        handleDragStart,
+        handleDrop,
+        handleDragOver,
+        handleDragEnd,
+        handleNPCMouseDown,
+        handleResizeStart,
+        handleRemoveNPC,
+        handleChangeZIndex,
+        handleSetZIndex,
+        handleChangeBackgroundColor,
+        resetInitialState,
+        checkUnsavedChanges,
+        currentSubScene,
+    } = useSubSceneTab({ subScenes, sceneSetting, isActive, abilityNodeSetting });
+
+    const { t } = useTranslation();
+    const [saveConfirmModalOpen, setSaveConfirmModalOpen] = React.useState(false);
+    const [pendingSubSceneId, setPendingSubSceneId] = React.useState<string | null>(null);
+
+    // 检查是否可以切换子场景
+    const checkBeforeSwitchSubScene = React.useCallback((targetSubSceneId: string) => {
+        if (checkUnsavedChanges()) {
+            setPendingSubSceneId(targetSubSceneId);
+            setSaveConfirmModalOpen(true);
+            return false;
+        }
+        return true;
+    }, [checkUnsavedChanges]);
+
+    // 执行待处理的切换操作
+    const executePendingSwitch = React.useCallback(() => {
+        if (pendingSubSceneId !== null) {
+            setSelectedSubSceneId(pendingSubSceneId);
+            setPendingSubSceneId(null);
+        }
+    }, [pendingSubSceneId, setSelectedSubSceneId]);
+
+    const previewImageUrl = React.useMemo(() => {
+        // 优先使用当前选中的子场景图片
+        if (currentSubScene?.image && currentSubScene.image.trim() !== '') {
+            return getImageUrl(currentSubScene.image);
+        }
+        // 兜底：使用默认地图图
+        return DEFAULT_MAP_IMAGE;
+    }, [currentSubScene]);
+
+    const handleConfirm = React.useCallback(async () => {
+        if (!currentSceneIdRef.current || !currentSubSceneIdRef.current || !currentSubScene) {
+            toast.error('请先选择子场景');
+            return;
+        }
+
+        if (!fileId) {
+            toast.error('文件ID不存在，请先上传文件');
+            return;
+        }
+
+        try {
+            // 1. 准备覆盖数据：获取当前页面上所有的普通 NPC 槽位
+            const npcSlots: NpcSlot[] = placedNormalNPCs.map(npc => ({
+                position: [npc.x, npc.y] as [number, number],
+                zoom: npc.scale,
+                layer: npc.zIndex ?? DEFAULT_Z_INDEX,
+            }));
+            
+            // 2. 准备覆盖数据：获取当前页面上所有的功能性 NPC ID
+            const newNodeIds = placedFunctionalNPCs.map(npc => npc.nodeId).filter(Boolean);
+
+            // 3. 执行全量覆盖更新 (同步到 SubScene 对象)
+            // 排除 UI 辅助字段 parentId, parentName
+            const { parentId, parentName, ...baseSubScene } = currentSubScene as any;
+            const updatedSubSceneData = {
+                ...baseSubScene,
+                npcs_slots: npcSlots,
+                abilityNodes: newNodeIds,
+            };
+            
+            const responseSub = await worldEditor.updateSubScene(
+                fileId,
+                currentSceneIdRef.current,
+                updatedSubSceneData
+            );
+
+            if (!responseSub.data?.success) {
+                toast.error('保存场景信息失败');
+                return;
+            }
+
+            // 4. 更新功能性 NPC 的详细位置信息 (Patch)
+            const validFunctionalNPCs = placedFunctionalNPCs.filter(npc => npc.nodeId);
+            if (validFunctionalNPCs.length >= 0) {
+                const patchData: FunctionalNpcPatch = {
+                    patches: validFunctionalNPCs.map(npc => ({
+                        node_id: npc.nodeId!,
+                        sceneBinding: {
+                            sceneId: currentSceneIdRef.current!,
+                            subsceneId: currentSubSceneIdRef.current!,
+                        },
+                        position: [npc.x, npc.y] as [number, number],
+                        layer: npc.zIndex ?? DEFAULT_Z_INDEX,
+                        scale: npc.scale,
+                        color: npc.backgroundColor || undefined,
+                    })),
+                };
+                await worldEditor.moveFunctionalNpc(fileId, patchData);
+            }
+
+            toast.success('NPC位置和层级已保存');
+            resetInitialState();
+            if (onDataChange) {
+                onDataChange();
+            }
+        } catch (error: any) {
+            console.error('保存失败:', error);
+            toast.error('保存失败：' + (error.message || '请检查网络连接'));
+        }
+    }, [placedNormalNPCs, placedFunctionalNPCs, fileId, onDataChange, currentSceneIdRef, currentSubSceneIdRef, currentSubScene, resetInitialState]);
+
+    // 暴露 checkUnsavedChanges 和 save 方法给父组件
+    React.useImperativeHandle(ref, () => ({
+        checkUnsavedChanges,
+        save: handleConfirm,
+    }), [checkUnsavedChanges, handleConfirm]);
+
+    // 当未保存状态变化时，通知父组件
+    React.useEffect(() => {
+        if (onHasUnsavedChanges) {
+            const hasChanges = checkUnsavedChanges();
+            onHasUnsavedChanges(hasChanges);
+        }
+    }, [checkUnsavedChanges, onHasUnsavedChanges, placedNormalNPCs, placedFunctionalNPCs]);
+
+    return (
+        <>
+            {/* 左侧：功能性NPC列表 */}
+            <div className={sharedStyles.mapLeftSidebar} onMouseDown={(e) => e.stopPropagation()}>
+                <FunctionalNPCList
+                    abilityNodeSetting={abilityNodeSetting}
+                    usedNodeIds={placedFunctionalNPCs
+                        .filter(npc => !!npc.nodeId)
+                        .map(npc => npc.nodeId as string)}
+                />
+            </div>
+
+            {/* 中间：拖拽区域 */}
+            <div
+                ref={previewRef}
+                className={sharedStyles.mapPreview}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragEnd={handleDragEnd}
+                onMouseDown={() => setSelectedNPCId(null)}
+            >
+                {/* 关键修改：将 imageRef 移到这个 div 上，作为逻辑画布的基准 */}
+                <div 
+                    ref={imageRef}
+                    className={styles.imageCanvas}
+                    onMouseDown={(e) => {
+                        // 如果点击的是画布本身或背景图片，取消选中
+                        if (e.target === e.currentTarget || (e.target as HTMLElement).tagName === 'IMG') {
+                            setSelectedNPCId(null);
+                        }
+                    }}
+                >
+                    <img
+                        src={previewImageUrl}
+                        alt="子场景预览"
+                        className={sharedStyles.sceneImage}
+                        draggable={false}
+                        onLoad={() => {
+                            requestAnimationFrame(() => {
+                                const container = imageRef.current;
+                                if (container) {
+                                    const rect = container.getBoundingClientRect();
+                                    if (rect.width > 0 && rect.height > 0) {
+                                        setImageLoaded(true);
+                                    }
+                                }
+                            });
+                        }}
+                        onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            if (target.src !== DEFAULT_MAP_IMAGE) {
+                                target.src = DEFAULT_MAP_IMAGE;
+                            } else {
+                                setImageLoaded(true);
+                            }
+                        }}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+
+                    {/* 加载遮罩 */}
+                    {!isSubSceneContentReady && (
+                        <div className={sharedStyles.loadingOverlay} style={{ borderRadius: 0 }}>
+                            <div className={sharedStyles.loadingSpinner}></div>
+                            <div className={sharedStyles.loadingText}>正在加载场景...</div>
+                        </div>
+                    )}
+
+                    {/* NPC 渲染列表 */}
+                    {isSubSceneContentReady &&
+                        [...allPlacedNPCs]
+                            .sort((a, b) => (a.zIndex ?? DEFAULT_Z_INDEX) - (b.zIndex ?? DEFAULT_Z_INDEX))
+                            .map(npc => {
+                                const isSelected = selectedNPCId === npc.id;
+                                const isDragging = draggingNPCId === npc.id;
+
+                                // 基础尺寸
+                                let baseWidth = BASE_NPC_WIDTH;
+                                let baseHeight = BASE_NPC_HEIGHT;
+                                if (npc.type === 'button' && npc.name) {
+                                    const textWidth = npc.name.length * 10 + 24;
+                                    const textHeight = 32;
+                                    baseWidth = Math.max(textWidth, 60);
+                                    baseHeight = textHeight;
+                                }
+
+                                return (
+                                    <div
+                                        key={npc.id}
+                                        className={`${styles.placedNPC} ${npc.type === 'button' ? styles.placedNPCButton : ''} ${isSelected ? sharedStyles.placedNPCSelected : ''} ${isDragging ? sharedStyles.placedNPCDragging : ''}`}
+                                        style={{
+                                            left: `${npc.x * 414}px`,
+                                            top: `${npc.y * 740}px`,
+                                            width: npc.type === 'button' ? 'auto' : `${baseWidth}px`,
+                                            height: npc.type === 'button' ? 'auto' : `${baseHeight}px`,
+                                            // 保持中心点定位，缩放不偏移
+                                            transform: `translate(-50%, -50%) scale(${npc.scale || 1})`,
+                                            transformOrigin: 'center center',
+                                            zIndex: npc.zIndex ?? DEFAULT_Z_INDEX,
+                                            opacity: 1,
+                                        }}
+                                        onMouseDown={(e) => handleNPCMouseDown(e, npc.id)}
+                                        onClick={() => setSelectedNPCId(npc.id)}
+                                    >
+                                        {(() => {
+                                            // 按钮型NPC：显示文字
+                                            if (npc.nodeId && npc.type === 'button' && npc.name) {
+                                                return (
+                                                    <div 
+                                                        className={styles.npcButtonText}
+                                                        style={{
+                                                            backgroundColor: npc.backgroundColor || 'color-mix(in srgb, var(--color-shadow) 50.2%, transparent)',
+                                                        }}
+                                                    >
+                                                        {npc.name}
+                                                    </div>
+                                                );
+                                            }
+                                            // 立绘型NPC：显示真实图片
+                                            if (npc.nodeId && npc.imagePath && npc.type === 'illustration') {
+                                                return (
+                                                    <img
+                                                        src={getImageUrl(npc.imagePath)}
+                                                        alt={npc.authorNote || '功能性NPC'}
+                                                        draggable={false}
+                                                        className={styles.npcImage}
+                                                        onError={(e) => {
+                                                            (e.target as HTMLImageElement).src = DEFAULT_NPC_IMAGE;
+                                                        }}
+                                                    />
+                                                );
+                                            }
+                                            // 默认显示默认图片
+                                            return (
+                                                <img
+                                                    src={DEFAULT_NPC_IMAGE}
+                                                    alt="NPC 立绘"
+                                                    draggable={false}
+                                                    className={styles.npcImage}
+                                                />
+                                            );
+                                        })()}
+                                        {isSelected && (
+                                            <>
+                                                {/* 四个角的调整手柄 */}
+                                                <div
+                                                    className={`${styles.resizeHandle} ${styles.resizeHandleNW}`}
+                                                    onMouseDown={(e) => handleResizeStart(e, npc.id, 'nw')}
+                                                />
+                                                <div
+                                                    className={`${styles.resizeHandle} ${styles.resizeHandleNE}`}
+                                                    onMouseDown={(e) => handleResizeStart(e, npc.id, 'ne')}
+                                                />
+                                                <div
+                                                    className={`${styles.resizeHandle} ${styles.resizeHandleSW}`}
+                                                    onMouseDown={(e) => handleResizeStart(e, npc.id, 'sw')}
+                                                />
+                                                <div
+                                                    className={`${styles.resizeHandle} ${styles.resizeHandleSE}`}
+                                                    onMouseDown={(e) => handleResizeStart(e, npc.id, 'se')}
+                                                />
+                                                {/* 控制按钮 */}
+                                                <div className={styles.npcControls}>
+                                                    {/* 层级控制 */}
+                                                    <div className={styles.zIndexControl}>
+                                                        <span className={styles.zIndexLabel}>层级:</span>
+                                                        <button
+                                                            className={styles.zIndexBtnSmall}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleChangeZIndex(npc.id, -1);
+                                                            }}
+                                                            disabled={(npc.zIndex ?? DEFAULT_Z_INDEX) <= MIN_Z_INDEX}
+                                                            title="降低层级"
+                                                        >
+                                                            -
+                                                        </button>
+                                                        <input
+                                                            type="number"
+                                                            className={styles.zIndexInputSmall}
+                                                            value={npc.zIndex ?? DEFAULT_Z_INDEX}
+                                                            min={MIN_Z_INDEX}
+                                                            max={MAX_Z_INDEX}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            onChange={(e) => {
+                                                                const value = parseInt(e.target.value, 10);
+                                                                if (!isNaN(value)) {
+                                                                    handleSetZIndex(npc.id, value);
+                                                                }
+                                                            }}
+                                                        />
+                                                        <button
+                                                            className={styles.zIndexBtnSmall}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleChangeZIndex(npc.id, 1);
+                                                            }}
+                                                            disabled={(npc.zIndex ?? DEFAULT_Z_INDEX) >= MAX_Z_INDEX}
+                                                            title="提高层级"
+                                                        >
+                                                            +
+                                                        </button>
+                                                    </div>
+                                                    {/* 按钮型NPC的颜色选择器 */}
+                                                    {npc.type === 'button' && (
+                                                        <ColorPicker
+                                                            color={npc.backgroundColor || 'color-mix(in srgb, var(--color-text) 50.2%, transparent)'}
+                                                            onChange={(color) => {
+                                                                handleChangeBackgroundColor(npc.id, color);
+                                                            }}
+                                                        />
+                                                    )}
+                                                    {/* 移除按钮 */}
+                                                    <button
+                                                        className={styles.removeBtn}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleRemoveNPC(npc.id);
+                                                        }}
+                                                    >
+                                                        移除
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                </div>
+
+                <div className={sharedStyles.mapOverlayHint}>
+                    拖拽 NPC 到场景，支持缩放
+                    <br />
+                    普通NPC: {placedNormalNPCs.length}/{MAX_NPCS} | 功能性NPC: {placedFunctionalNPCs.length}
+                    {selectedNPCId && (
+                        <span className={sharedStyles.hintSelected}> • 拖拽四个角调整大小</span>
+                    )}
+                </div>
+            </div>
+
+            {/* 右侧：原有的侧边栏内容 */}
+            <div className={sharedStyles.mapSidebar} onMouseDown={(e) => e.stopPropagation()}>
+                <div className={sharedStyles.subSceneList}>
+                    <h4>子场景列表</h4>
+                    <div className={sharedStyles.subSceneItems}>
+                        {subScenes.length === 0 && (
+                            <div className={sharedStyles.subSceneDesc}>暂无子场景，请先上传并解析数据</div>
+                        )}
+                        {subScenes.map((sub) => (
+                            <div
+                                key={sub.id}
+                                className={`${sharedStyles.subSceneItem} ${selectedSubSceneId === sub.id ? sharedStyles.subSceneItemActive : ''}`}
+                                onClick={() => {
+                                    if (checkBeforeSwitchSubScene(sub.id)) {
+                                        setSelectedSubSceneId(sub.id);
+                                    }
+                                }}
+                            >
+                                <div className={sharedStyles.subSceneThumbWrapper}>
+                                    {sub.image && sub.image.trim() !== '' ? (
+                                        <img
+                                            src={getImageUrl(sub.image)}
+                                            alt={sub.name}
+                                            className={sharedStyles.subSceneThumbImage}
+                                            onError={(e) => {
+                                                const target = e.target as HTMLImageElement;
+                                                target.onerror = null;
+                                                target.style.display = 'none';
+                                                const placeholder = target.nextElementSibling as HTMLElement;
+                                                if (placeholder) placeholder.style.display = 'block';
+                                            }}
+                                        />
+                                    ) : null}
+                                    <div
+                                        className={sharedStyles.subSceneThumb}
+                                        style={{
+                                            display: sub.image && sub.image.trim() !== '' ? 'none' : 'block',
+                                            backgroundImage:
+                                                !sub.image || sub.image.trim() === ''
+                                                    ? `url('${DEFAULT_MAP_IMAGE}')`
+                                                    : undefined,
+                                            backgroundSize: 'cover',
+                                            backgroundPosition: 'center',
+                                        }}
+                                    />
+                                </div>
+                                <div className={sharedStyles.subSceneMeta}>
+                                    <div className={sharedStyles.subSceneName}>{sub.name}</div>
+                                    {sub.parentName && (
+                                        <div className={sharedStyles.subSceneParent}>父场景：{sub.parentName}</div>
+                                    )}
+                                    {sub.description && (
+                                        <div className={sharedStyles.subSceneDesc} title={sub.description}>
+                                            {sub.description}
+                                        </div>
+                                    )}
+                                    {sub.npcs_slots && sub.npcs_slots.length > 0 && (
+                                        <div className={sharedStyles.npcCount}>已有NPC: {sub.npcs_slots.length}个</div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className={styles.npcPalette}>
+                    <h4>普通NPC 立绘（拖拽）</h4>
+                    <div className={styles.npcItems}>
+                        <div
+                            className={`${styles.npcItem} ${placedNormalNPCs.length >= MAX_NPCS ? styles.npcItemDisabled : ''}`}
+                            draggable={placedNormalNPCs.length < MAX_NPCS}
+                            onDragStart={handleDragStart}
+                        >
+                            <img
+                                src={DEFAULT_NPC_IMAGE}
+                                alt="NPC 立绘"
+                                className={styles.defaultNpcImage}
+                                draggable={false}
+                            />
+                            <div className={styles.npcName}>{t('createGame.npcPortrait')}</div>
+                        </div>
+                    </div>
+                    <div className={styles.npcHint}>
+                        可拖拽一张立绘至场景，单场景最多放置 {MAX_NPCS} 个
+                        <br />
+                        基础尺寸: {BASE_NPC_WIDTH}×{BASE_NPC_HEIGHT}px
+                    </div>
+                </div>
+
+                <div className={sharedStyles.confirmSection}>
+                    <button
+                        className={sharedStyles.confirmBtn}
+                        onClick={handleConfirm}
+                        // disabled={(placedNormalNPCs.length === 0 && placedFunctionalNPCs.length === 0) || !fileId}
+                    >
+                        确认保存 NPC 位置
+                    </button>
+                    <div className={sharedStyles.confirmHint}>
+                        {(placedNormalNPCs.length === 0 && placedFunctionalNPCs.length === 0)
+                            ? '请先放置NPC到场景中'
+                            : `将保存 ${placedNormalNPCs.length} 个普通NPC和 ${placedFunctionalNPCs.length} 个功能性NPC的位置和层级信息`}
+                    </div>
+                </div>
+            </div>
+
+            {/* 保存确认弹窗（切换子场景时） */}
+            <SaveConfirmModal
+                isOpen={saveConfirmModalOpen}
+                onSave={async () => {
+                    try {
+                        await handleConfirm();
+                        setSaveConfirmModalOpen(false);
+                        executePendingSwitch();
+                    } catch (error) {
+                        // 保存失败时不关闭弹窗，不执行切换
+                        console.error('保存失败:', error);
+                    }
+                }}
+                onDiscard={() => {
+                    setSaveConfirmModalOpen(false);
+                    // 重置未保存状态
+                    resetInitialState();
+                    executePendingSwitch();
+                }}
+                onCancel={() => {
+                    setSaveConfirmModalOpen(false);
+                    setPendingSubSceneId(null);
+                }}
+                title="未保存的修改"
+                message="您有未保存的NPC位置修改，是否要保存？"
+                saveButtonText="保存"
+                discardButtonText="不保存"
+            />
+        </>
+    );
+});
+
+SubSceneTab.displayName = 'SubSceneTab';
+
+export default SubSceneTab;

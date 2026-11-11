@@ -1,0 +1,404 @@
+/* 功能注释：场景详情表单对齐 funloom 暗色创作壳（与 TXT 创建一致） */
+
+/* 场景大图 */
+.sceneHero {
+    width: 100%;
+    /* 功能注释：竖构图预览需要更高画幅，280×1.8=504；图贴顶避免确认条下出现空带 */
+    height: 504px;
+    border-radius: 20px;
+    background-size: contain;
+    background-position: center top;
+    background-repeat: no-repeat;
+    background-color: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.sceneHero.empty {
+    border-style: dashed;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+}
+
+.heroHint {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: color-mix(in srgb, var(--color-shadow) 50%, transparent);
+    color: var(--color-on-media);
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    opacity: 0;
+    transition: 0.2s ease;
+    pointer-events: none;
+}
+
+.sceneHero:hover .heroHint {
+    opacity: 1;
+}
+
+/* 下载按钮 */
+.downloadButton {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-shadow) 60%, transparent);
+    border: none;
+    color: var(--color-on-media);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 10;
+    backdrop-filter: blur(4px);
+}
+
+.downloadButton:hover {
+    background: color-mix(in srgb, var(--color-shadow) 80%, transparent);
+    transform: scale(1.1);
+}
+
+.downloadButton:active {
+    transform: scale(0.95);
+}
+
+.sceneImageActions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.sceneImageActions button {
+    flex: 1 1 140px;
+}
+
+/* 按钮样式 */
+.ghostSmall {
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: var(--color-text);
+    background: var(--color-surface);
+}
+
+.ghostSmall:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.ghostSmall:disabled:hover {
+    border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: var(--color-text);
+}
+
+/* AI生成按钮样式优化 */
+.dangerButton {
+    border-color: color-mix(in srgb, var(--color-primary) 22%, transparent);
+    color: var(--color-primary);
+}
+
+.dangerButton:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 42%, transparent);
+    color: var(--color-primary);
+}
+
+.dangerButton:disabled:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 22%, transparent);
+    color: var(--color-primary);
+}
+
+.generateButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.priceIcon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.generateButton span {
+    line-height: 1;
+}
+
+/* 会员折扣价格样式（AI 生成按钮） */
+.discountPrice {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--color-primary-fg);
+    font-size: 12px;
+}
+
+.discountPriceBlack {
+    color: color-mix(in srgb, var(--color-text) 85%, transparent);
+}
+
+.sceneImageActions:hover .discountPrice,
+.sceneImageActions:hover .discountPriceBlack {
+    color: var(--color-primary-fg);
+}
+
+.originalPrice {
+    text-decoration: line-through;
+    color: var(--color-text-muted);
+    font-size: 0.85em;
+    font-weight: 400;
+}
+
+/* 表单布局 */
+.formGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.wide {
+    width: 100%;
+}
+
+.formGrid label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.formGrid label span {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.formGrid input,
+.formGrid textarea,
+.formGrid select {
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    padding: 11px 14px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.selectWrap {
+    position: relative;
+    width: 100%;
+}
+
+.selectWrap::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 16px;
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid color-mix(in srgb, var(--color-text) 35%, transparent);
+    border-bottom: 2px solid color-mix(in srgb, var(--color-text) 35%, transparent);
+    transform: translateY(-65%) rotate(45deg);
+    pointer-events: none;
+}
+
+.specialBgmSelect {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: 42px !important;
+    background: var(--color-surface) !important;
+    border-color: color-mix(in srgb, var(--color-primary) 12%, transparent) !important;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 6%, transparent);
+    cursor: pointer;
+}
+
+.specialBgmSelect:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 28%, transparent) !important;
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent) !important;
+}
+
+.mobileSelectTrigger {
+    width: 100%;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 12%, transparent);
+    padding: 13px 14px;
+    background: var(--color-surface);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.mobileSelectTrigger:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 28%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.mobileSelectValue {
+    color: var(--color-text);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.mobileSelectArrow {
+    flex-shrink: 0;
+    color: color-mix(in srgb, var(--color-primary) 88%, transparent);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.mobilePickerOverlay {
+    position: fixed;
+    inset: 0;
+    background: color-mix(in srgb, var(--color-text) 28%, transparent);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 1200;
+    padding: 16px;
+}
+
+.mobilePickerSheet {
+    width: min(100%, 420px);
+    max-height: min(72vh, 560px);
+    background: var(--color-surface);
+    border-radius: 24px 24px 18px 18px;
+    box-shadow: 0 -8px 32px color-mix(in srgb, var(--color-shadow) 14%, transparent);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.mobilePickerHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 18px 14px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.mobilePickerHeader strong {
+    font-size: 1rem;
+    color: var(--color-text);
+}
+
+.mobilePickerClose {
+    border: none;
+    background: transparent;
+    color: color-mix(in srgb, var(--color-primary) 88%, transparent);
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mobilePickerList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px 18px;
+    overflow-y: auto;
+}
+
+.mobilePickerOption {
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    border-radius: 16px;
+    background: var(--color-surface);
+    padding: 14px 16px;
+    text-align: left;
+    color: var(--color-text);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.mobilePickerOptionActive {
+    border-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.mobilePickerOptionDesc {
+    color: var(--color-text-secondary);
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.formGrid input:focus,
+.formGrid textarea:focus,
+.formGrid select:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.specialBgmSelect:focus {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent), 0 10px 24px color-mix(in srgb, var(--color-primary) 8%, transparent) !important;
+}
+
+.formGrid textarea {
+    resize: vertical;
+    min-height: 80px;
+    line-height: 1.5;
+}
+
+.labelRowWithCounter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.wordCounter {
+    margin-left: auto;
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--color-text-muted);
+}
+
+@media (max-width: 720px) {
+    .specialBgmSelect {
+        min-height: 46px;
+        font-size: 16px;
+    }
+
+    .mobilePickerOverlay {
+        padding: 12px;
+    }
+
+    .mobilePickerSheet {
+        width: 100%;
+        border-radius: 24px 24px 16px 16px;
+        max-height: min(76vh, 620px);
+    }
+
+    .mobilePickerOption {
+        padding: 15px 16px;
+    }
+}
+

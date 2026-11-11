@@ -1,0 +1,159 @@
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.navButton,
+.pageButton {
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--admin-text, var(--color-text));
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.prevNextButton {
+    min-width: 96px;
+    height: 42px;
+    padding: 0 16px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.pageButton {
+    min-width: 42px;
+    height: 42px;
+    padding: 0 12px;
+    border-radius: 14px;
+    font-size: 15px;
+    line-height: 1;
+}
+
+.navButton:hover,
+.pageButton:hover {
+    transform: translateY(-1px);
+    border-color: var(--color-info);
+    box-shadow: none;
+}
+
+.pageButtonActive {
+    border-color: var(--color-info);
+    background: color-mix(in srgb, var(--color-info) 68%, var(--color-shadow));
+    color: var(--color-on-primary);
+    box-shadow: none;
+}
+
+.navButton:disabled,
+.pageButton:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.summary {
+    color: var(--admin-text-soft, var(--color-text-secondary));
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: nowrap;
+}
+
+.paginationCreator {
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+}
+
+.paginationCreator .controls {
+    justify-content: center;
+    gap: 8px;
+}
+
+.paginationCreator .navButton,
+.paginationCreator .pageButton {
+    border-color: color-mix(in srgb, var(--color-text) 14%, transparent);
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-weight: 600;
+    box-shadow: none;
+}
+
+.paginationCreator .navButton:hover,
+.paginationCreator .pageButton:hover {
+    border-color: color-mix(in srgb, var(--color-text) 28%, transparent);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--color-text);
+    box-shadow: none;
+    transform: none;
+}
+
+.paginationCreator .pageButtonActive {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    box-shadow: none;
+}
+
+.paginationCreator .pageButtonActive:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary-bold);
+    color: var(--color-on-primary);
+}
+
+@media (max-width: 768px) {
+    .pagination {
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .paginationCreator {
+        align-items: center;
+    }
+
+    .paginationCreator .controls {
+        gap: 6px;
+    }
+
+    .controls {
+        gap: 8px;
+    }
+
+    .prevNextButton {
+        min-width: 84px;
+        height: 38px;
+        padding: 0 12px;
+        border-radius: 12px;
+        font-size: 13px;
+    }
+
+    .paginationCreator .prevNextButton {
+        min-width: 72px;
+        padding: 0 10px;
+    }
+
+    .pageButton {
+        min-width: 38px;
+        height: 38px;
+        padding: 0 10px;
+        border-radius: 12px;
+        font-size: 14px;
+    }
+
+    .summary {
+        font-size: 13px;
+        line-height: 1.5;
+        white-space: normal;
+    }
+}

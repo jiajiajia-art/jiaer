@@ -1,0 +1,310 @@
+/* 功能注释：BGM 库对齐效果图——墨底卡 + 描边空井 + 底栏酒红胶囊上传 */
+
+.musicListContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 20px;
+    padding: 16px 12px 14px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.musicListHeader {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    margin: 0;
+}
+
+.musicListHeader h4 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-text);
+    letter-spacing: 0.01em;
+}
+
+.musicList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.musicItem {
+    display: flex;
+    flex-direction: column;
+    padding: 14px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    border-radius: 12px;
+    background: var(--color-surface);
+    transition: border-color 0.2s ease, background 0.2s ease;
+    gap: 12px;
+    cursor: pointer;
+}
+
+.musicItem:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+    background: var(--color-surface);
+}
+
+.musicItemExpanded {
+    padding: 16px;
+    border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
+.musicInfo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.musicInfoContent {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+
+.deleteButton {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    border: none;
+    background: var(--color-primary-bold);
+    color: var(--color-on-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.16s ease, transform 0.16s ease;
+    flex-shrink: 0;
+}
+
+.deleteButton:hover {
+    background: var(--color-primary);
+    transform: scale(1.06);
+}
+
+.musicControls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.playButton {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.playButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.musicName {
+    font-size: 0.95rem;
+    color: var(--color-text);
+    font-weight: 600;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.musicDescription {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    margin: 0;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.progressContainer {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.progressBar {
+    flex: 1;
+    height: 4px;
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-radius: 2px;
+    overflow: visible;
+    position: relative;
+    cursor: pointer;
+}
+
+.musicItemExpanded .progressBar {
+    height: 6px;
+}
+
+.progressFill {
+    height: 100%;
+    background: var(--color-primary-bold);
+    border-radius: 2px;
+    transition: width 0.1s linear;
+    width: 0%;
+    pointer-events: none;
+}
+
+.progressActive {
+    background: linear-gradient(90deg, var(--color-primary-bold) 0%, var(--color-primary) 100%);
+}
+
+.progressThumb {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px;
+    height: 14px;
+    background: var(--color-primary);
+    border: 2px solid var(--color-text);
+    border-radius: 50%;
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.progressContainer:hover .progressThumb,
+.musicItemExpanded .progressThumb {
+    opacity: 1;
+}
+
+.musicDuration {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+    min-width: 80px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.restartButton {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+    color: var(--color-on-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: background 0.2s ease, transform 0.2s ease;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.restartButton:hover {
+    background: color-mix(in srgb, var(--color-primary) 45%, transparent);
+    transform: rotate(180deg);
+}
+
+/* 功能注释：空井铺满卡片内容宽（相对旧 24px 内边距加宽约两成），高度按内容收，避免 60px 空洞 */
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 168px;
+    padding: 28px 16px;
+    text-align: center;
+    gap: 8px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    border-radius: 16px;
+    background: var(--color-surface);
+}
+
+.emptyIconWrap {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: var(--color-surface-2);
+    color: var(--color-text);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+}
+
+.emptyIcon {
+    width: 26px;
+    height: 26px;
+}
+
+.emptyTitle {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.emptyDescription {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--color-text-muted);
+}
+
+.uploadCta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 48px;
+    margin: 0;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 999px;
+    background: var(--color-primary-bold);
+    color: var(--color-on-primary);
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.16s ease;
+}
+
+.uploadCta:hover {
+    background: var(--color-primary);
+}
+
+.uploadCtaIcon {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-text) 18%, transparent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}

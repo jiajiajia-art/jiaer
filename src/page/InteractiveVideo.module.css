@@ -1,0 +1,3003 @@
+.pageRoot {
+    --ivg-bg: var(--color-bg);
+    --ivg-surface: var(--color-surface);
+    --ivg-surface-muted: var(--color-surface-2);
+    --ivg-panel: var(--color-surface);
+    --ivg-border: color-mix(in srgb, var(--color-primary) 18%, transparent);
+    --ivg-border-strong: color-mix(in srgb, var(--color-primary) 34%, transparent);
+    --ivg-text: var(--color-text);
+    --ivg-text-soft: var(--color-text-secondary);
+    --ivg-muted: var(--color-text-muted);
+    --ivg-accent: var(--color-primary-light);
+    --ivg-accent-strong: var(--color-primary);
+    --ivg-on-accent: var(--color-on-primary);
+    --ivg-accent-soft: color-mix(in srgb, var(--color-primary-light) 10%, transparent);
+    --ivg-accent-mid: color-mix(in srgb, var(--color-primary-light) 18%, transparent);
+    --ivg-green: var(--color-success);
+    --ivg-monitor: var(--color-bg);
+    --ivg-control-bg: color-mix(in srgb, var(--color-surface) 92%, transparent);
+    --ivg-control-hover: color-mix(in srgb, var(--color-primary-light) 12%, transparent);
+    --ivg-control-text: var(--color-text);
+    --ivg-overlay: color-mix(in srgb, var(--color-surface) 74%, transparent);
+    --ivg-loader-surface: linear-gradient(145deg, var(--color-surface) 0%, var(--color-bg) 100%);
+    --ivg-tree-canvas: var(--color-bg);
+    --ivg-shadow: 0 18px 48px color-mix(in srgb, var(--color-primary) 14%, transparent);
+    --ivg-float-bg: color-mix(in srgb, var(--color-surface) 90%, transparent);
+    --ivg-float-border: color-mix(in srgb, var(--color-primary) 22%, transparent);
+    --ivg-float-text: var(--color-text);
+    --ivg-float-shadow: 0 12px 30px color-mix(in srgb, var(--color-primary) 14%, transparent);
+    --ivg-icon-float-bg: transparent;
+    --ivg-icon-float-text: var(--color-primary);
+    --ivg-icon-float-border: transparent;
+    --ivg-sheet-shadow: 0 -20px 70px color-mix(in srgb, var(--color-primary) 16%, transparent);
+    --ivg-scrim: color-mix(in srgb, var(--color-primary) 32%, transparent);
+    --ivg-flow-control-bg: var(--color-surface);
+    --ivg-flow-control-text: var(--color-text);
+    min-height: 100vh;
+    background: var(--ivg-bg);
+    color: var(--ivg-text);
+    display: flex;
+    flex-direction: column;
+}
+
+.pageRootDark {
+    --ivg-bg: var(--color-surface);
+    --ivg-surface: var(--color-surface);
+    --ivg-surface-muted: var(--color-surface-2);
+    --ivg-panel: var(--color-surface);
+    --ivg-border: color-mix(in srgb, var(--color-text) 10%, transparent);
+    --ivg-border-strong: color-mix(in srgb, var(--color-highlight) 34%, transparent);
+    --ivg-text: var(--color-text);
+    --ivg-text-soft: var(--color-text);
+    --ivg-muted: var(--color-text-secondary);
+    --ivg-accent: var(--color-highlight);
+    --ivg-accent-strong: var(--color-highlight);
+    --ivg-on-accent: var(--color-on-primary);
+    --ivg-accent-soft: color-mix(in srgb, var(--color-highlight) 10%, transparent);
+    --ivg-accent-mid: color-mix(in srgb, var(--color-highlight) 16%, transparent);
+    --ivg-green: var(--color-success);
+    --ivg-monitor: var(--color-bg);
+    --ivg-control-bg: color-mix(in srgb, var(--color-surface) 90%, transparent);
+    --ivg-control-hover: color-mix(in srgb, var(--color-highlight) 16%, transparent);
+    --ivg-control-text: var(--color-text);
+    --ivg-overlay: color-mix(in srgb, var(--color-shadow) 42%, transparent);
+    --ivg-loader-surface: linear-gradient(145deg, var(--color-surface) 0%, var(--color-bg) 100%);
+    --ivg-tree-canvas: var(--color-surface);
+    --ivg-shadow: 0 24px 90px color-mix(in srgb, var(--color-shadow) 48%, transparent);
+    --ivg-float-bg: color-mix(in srgb, var(--color-surface) 84%, transparent);
+    --ivg-float-border: color-mix(in srgb, var(--color-highlight) 28%, transparent);
+    --ivg-float-text: var(--color-text);
+    --ivg-float-shadow: 0 12px 30px color-mix(in srgb, var(--color-shadow) 30%, transparent);
+    --ivg-icon-float-bg: transparent;
+    --ivg-icon-float-text: var(--color-text-secondary);
+    --ivg-icon-float-border: transparent;
+    --ivg-sheet-shadow: 0 -20px 70px color-mix(in srgb, var(--color-shadow) 46%, transparent);
+    --ivg-scrim: color-mix(in srgb, var(--color-shadow) 46%, transparent);
+    --ivg-flow-control-bg: color-mix(in srgb, var(--color-surface) 94%, transparent);
+    --ivg-flow-control-text: var(--color-text);
+}
+
+.landscapeVideoPage {
+    --ivg-landscape-frame: 1;
+}
+
+.portraitVideoPage {
+    --ivg-portrait-frame: 1;
+}
+
+.miniProgramPlayerPage {
+    --ivg-mini-program-runtime: 1;
+}
+
+.loadingPlaybackPage {
+    min-height: 100dvh;
+    background:
+        linear-gradient(color-mix(in srgb, var(--color-text) 2.6%, transparent) 1px, transparent 1px),
+        linear-gradient(90deg, color-mix(in srgb, var(--color-text) 2.2%, transparent) 1px, transparent 1px),
+        radial-gradient(circle at 50% 46%, color-mix(in srgb, var(--color-text) 16%, transparent), transparent 30%),
+        var(--color-bg);
+    background-size: 44px 44px, 44px 44px, auto, auto;
+}
+
+.portalRoot {
+    min-height: 0;
+    display: contents;
+    background: transparent;
+}
+
+.portalViewportFrame {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    min-height: 0;
+    overflow: hidden;
+    background: transparent;
+}
+
+.portalRootViewportDesktop {
+    --ivg-portal-viewport: desktop;
+}
+
+.portalRootViewportPortrait {
+    --ivg-portal-viewport: portrait;
+}
+
+.portalRootViewportLandscape {
+    --ivg-portal-viewport: landscape;
+}
+
+.portalRootDesktop {
+    --ivg-portal-posture: desktop;
+}
+
+.portalRootMobilePortraitVideo {
+    --ivg-portal-posture: mobile-portrait-video;
+}
+
+.portalRootMobileLandscapeVideo {
+    --ivg-portal-posture: mobile-landscape-video;
+}
+
+.portalRootLandscapeRotated {
+    --ivg-portal-rotation: landscape-rotated;
+}
+
+.portalRootMiniProgram {
+    --ivg-mini-program-runtime: 1;
+}
+
+.header {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 18px);
+    left: calc(env(safe-area-inset-left, 0px) + 18px);
+    z-index: 31;
+    width: auto;
+    height: auto;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    pointer-events: none;
+}
+
+.iconButton,
+.headerButton,
+.themeToggleButton,
+.sidePanelActionButton,
+.messagePanel button {
+    border: 1px solid var(--ivg-border);
+    background: var(--ivg-control-bg);
+    color: var(--ivg-control-text);
+    border-radius: 8px;
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.iconButton {
+    width: 40px;
+    font-size: 20px;
+}
+
+.header .iconButton {
+    position: relative;
+    isolation: isolate;
+    width: 44px;
+    min-height: 44px;
+    pointer-events: auto;
+    border-color: color-mix(in srgb, var(--color-text) 24%, transparent);
+    border-radius: 0;
+    background: transparent;
+    box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--color-text) 18%, transparent),
+        inset 0 0 0 1px color-mix(in srgb, var(--color-text) 4%, transparent);
+    color: var(--color-on-media);
+    font-size: 30px;
+    text-shadow: 0 1px 4px color-mix(in srgb, var(--color-shadow) 62%, transparent);
+    backdrop-filter: none;
+    transition:
+        border-color 160ms ease,
+        background 160ms ease,
+        color 160ms ease,
+        box-shadow 160ms ease,
+        transform 160ms ease;
+}
+
+.header .iconButton::before {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    z-index: 0;
+    border: 1px solid color-mix(in srgb, var(--color-text) 13%, transparent);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-text) 10%, transparent), transparent 46%);
+    pointer-events: none;
+}
+
+.header .iconButton::after {
+    content: "";
+    position: absolute;
+    top: -1px;
+    right: 5px;
+    bottom: -1px;
+    z-index: 0;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--color-text) 38%, transparent), transparent);
+    transform: skewX(-12deg);
+    opacity: 0.72;
+    pointer-events: none;
+}
+
+.header .iconButton:hover,
+.header .iconButton:focus-visible {
+    border-color: color-mix(in srgb, var(--color-text) 42%, transparent);
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: var(--color-text);
+    box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--color-text) 24%, transparent),
+        inset 0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent);
+    transform: translateY(-1px);
+}
+
+.header .iconButton svg {
+    position: relative;
+    z-index: 1;
+    transform: translateX(-1px) scaleY(1.06);
+}
+
+.headerButton {
+    padding: 0 14px;
+}
+
+.headerActions {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.themeToggleButton {
+    padding: 0 12px;
+    font-weight: 800;
+}
+
+.themeToggleButton svg {
+    font-size: 17px;
+}
+
+.headerTitle {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.headerTitle span {
+    font-size: 16px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.headerTitle small {
+    color: var(--ivg-muted);
+    font-size: 12px;
+}
+
+.playerGrid {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+}
+
+.stage {
+    min-width: 0;
+    padding: 24px;
+}
+
+.monitor {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 48px);
+    min-height: 520px;
+    overflow: hidden;
+    border-radius: 8px;
+    background: var(--ivg-monitor);
+    box-shadow: inset 0 0 0 1px var(--ivg-border);
+}
+
+.video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: var(--color-bg);
+}
+
+.videoFrameSuppressed {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.videoBlankSurface {
+    width: 100%;
+    height: 100%;
+    background: var(--color-bg);
+}
+
+.cinematicVideoPage .playerGrid {
+    grid-template-columns: minmax(0, 1fr);
+    background: var(--color-bg);
+}
+
+.cinematicVideoPage .stage {
+    padding: 0;
+    background: var(--color-bg);
+}
+
+.cinematicVideoPage .monitor {
+    height: 100dvh;
+    min-height: 0;
+    border-radius: 0;
+    background: var(--color-bg);
+    box-shadow: none;
+}
+
+.cinematicVideoPage .sidePanel {
+    display: none;
+}
+
+.cinematicVideoPage .textScene {
+    align-items: center;
+    overflow: auto;
+    text-align: center;
+    padding:
+        calc(env(safe-area-inset-top, 0px) + clamp(72px, 12vh, 124px))
+        clamp(28px, 8vw, 104px)
+        calc(env(safe-area-inset-bottom, 0px) + clamp(128px, 18vh, 196px));
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-text) 18%, transparent), color-mix(in srgb, var(--color-shadow) 78%, transparent)),
+        linear-gradient(135deg, var(--color-bg) 0%, var(--color-surface) 52%, var(--color-bg) 100%);
+}
+
+.cinematicVideoPage .textScene span {
+    color: color-mix(in srgb, var(--color-primary-fg) 94%, transparent);
+}
+
+.cinematicVideoPage .textScene h1 {
+    max-width: min(860px, 100%);
+    color: var(--color-on-media);
+    font-size: clamp(30px, 5vw, 64px);
+    text-shadow: 0 18px 46px color-mix(in srgb, var(--color-shadow) 50%, transparent);
+}
+
+.cinematicVideoPage .textScene p {
+    max-width: min(720px, 100%);
+    color: color-mix(in srgb, var(--color-on-media) 78%, transparent);
+    text-shadow: 0 10px 28px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+}
+
+.minigamePlayerPage .header,
+.minigamePlayerPage .mobileToolsButton,
+.minigamePlayerPage .videoHud {
+    display: none;
+}
+
+.minigamePlayerPage .monitor {
+    display: grid;
+    place-items: center;
+}
+
+.videoHud {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 180ms ease;
+}
+
+.videoHudHidden {
+    opacity: 0;
+}
+
+.miniProgramPlayerPage .videoHud {
+    transition: opacity 80ms linear;
+}
+
+.videoSceneTitle {
+    position: absolute;
+    top: calc(env(safe-area-inset-top, 0px) + 20px);
+    left: calc(env(safe-area-inset-left, 0px) + 78px);
+    max-width: min(620px, calc(100% - 156px));
+    color: var(--color-text);
+    background: transparent;
+    text-shadow: none;
+    pointer-events: none;
+}
+
+.videoSceneTitle strong {
+    display: block;
+    overflow: hidden;
+    font-size: clamp(24px, 2.1vw, 30px);
+    font-weight: 900;
+    line-height: 1.16;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    -webkit-text-stroke: 0.4px color-mix(in srgb, var(--color-text) 78%, transparent);
+    text-shadow:
+        0 1px 0 color-mix(in srgb, var(--color-shadow) 92%, transparent),
+        0 2px 6px color-mix(in srgb, var(--color-shadow) 72%, transparent);
+}
+
+.videoControlDock {
+    position: absolute;
+    right: calc(env(safe-area-inset-right, 0px) + 18px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 0;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+    backdrop-filter: none;
+    pointer-events: auto;
+}
+
+.videoHudWithSkip .videoControlDock {
+    gap: 8px;
+}
+
+.nonVideoControlDock {
+    position: absolute;
+    inset: 0;
+    z-index: 12;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 180ms ease;
+}
+
+.nonVideoControlDockHidden {
+    opacity: 0;
+}
+
+.nonVideoControlDockHidden .videoControlDock {
+    pointer-events: none;
+}
+
+.nonVideoControlDockVisible {
+    opacity: 1;
+}
+
+.nonVideoControlDock .videoControlDock {
+    gap: 8px;
+}
+
+.videoControlButton {
+    position: relative;
+    isolation: isolate;
+    min-width: 0;
+    width: 96px;
+    min-height: 78px;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 6px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: color-mix(in srgb, var(--color-on-media) 90%, transparent);
+    padding: 13px 17px;
+    font-size: 13px;
+    font-weight: 900;
+    -webkit-text-stroke: 0.16px color-mix(in srgb, var(--color-text) 42%, transparent);
+    text-shadow:
+        0 0 1px color-mix(in srgb, var(--color-text) 64%, transparent),
+        0 1px 5px color-mix(in srgb, var(--color-shadow) 90%, transparent);
+    box-shadow: none;
+    cursor: pointer;
+    transition:
+        opacity 140ms ease,
+        color 140ms ease,
+        transform 140ms ease;
+}
+
+.videoControlButton::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border: 1px solid color-mix(in srgb, var(--color-text) 20%, transparent);
+    background:
+        linear-gradient(116deg, color-mix(in srgb, var(--color-text) 22%, transparent), color-mix(in srgb, var(--color-text) 7%, transparent) 31%, color-mix(in srgb, var(--color-text) 17%, transparent) 72%),
+        radial-gradient(circle at 28% 18%, color-mix(in srgb, var(--color-text) 20%, transparent), transparent 30%),
+        color-mix(in srgb, var(--color-surface) 46%, transparent);
+    box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--color-text) 30%, transparent),
+        inset 0 -22px 30px color-mix(in srgb, var(--color-shadow) 18%, transparent),
+        inset 0 0 18px color-mix(in srgb, var(--color-text) 3%, transparent),
+        0 18px 34px color-mix(in srgb, var(--color-shadow) 32%, transparent);
+    clip-path: polygon(18px 0, 100% 0, calc(100% - 18px) 100%, 0 100%);
+    backdrop-filter: blur(18px) saturate(1.28);
+    transition:
+        border-color 140ms ease,
+        background 140ms ease,
+        box-shadow 140ms ease,
+        transform 140ms ease;
+}
+
+.videoControlButton::after {
+    content: "";
+    position: absolute;
+    inset: 4px 9px;
+    z-index: 0;
+    background:
+        linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-surface) 62%, transparent) 16%, color-mix(in srgb, var(--color-text) 18%, transparent) 52%, transparent) top left / 100% 1px no-repeat,
+        linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-text) 22%, transparent), transparent) bottom left / 100% 1px no-repeat,
+        linear-gradient(180deg, transparent, color-mix(in srgb, var(--color-text) 46%, transparent), transparent) right 5px top / 1px 100% no-repeat;
+    clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+.videoControlButton:hover,
+.videoControlButton:focus-visible {
+    color: var(--color-text);
+    transform: translateY(-2px);
+}
+
+.videoControlButton:hover::before,
+.videoControlButton:focus-visible::before {
+    border-color: color-mix(in srgb, var(--color-text) 40%, transparent);
+    background:
+        linear-gradient(116deg, color-mix(in srgb, var(--color-text) 30%, transparent), color-mix(in srgb, var(--color-text) 9%, transparent) 31%, color-mix(in srgb, var(--color-text) 15%, transparent) 72%),
+        radial-gradient(circle at 28% 18%, color-mix(in srgb, var(--color-text) 28%, transparent), transparent 30%),
+        color-mix(in srgb, var(--color-surface) 60%, transparent);
+    box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--color-text) 38%, transparent),
+        inset 0 -22px 30px color-mix(in srgb, var(--color-shadow) 12%, transparent),
+        inset 0 0 20px color-mix(in srgb, var(--color-text) 5%, transparent),
+        0 20px 38px color-mix(in srgb, var(--color-shadow) 38%, transparent);
+}
+
+.videoControlButton svg {
+    position: relative;
+    z-index: 1;
+    display: block;
+    font-size: 25px;
+}
+
+.videoControlButton span {
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.minigameFrame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: var(--color-bg);
+}
+
+.minigameFrameLandscape {
+    width: 100%;
+    height: 100%;
+}
+
+.minigameFramePortrait {
+    width: min(100%, calc(100vh * 9 / 16));
+    height: min(100%, calc(100vw * 16 / 9));
+    max-width: 100%;
+    max-height: 100%;
+    aspect-ratio: 9 / 16;
+}
+
+.textScene {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 56px;
+    background:
+        linear-gradient(135deg, var(--ivg-surface), var(--ivg-surface-muted)),
+        radial-gradient(circle at 80% 20%, var(--ivg-accent-mid), transparent 34%);
+}
+
+.textScene span,
+.endingModal span,
+.restartConfirmModal span,
+.unlockModal span {
+    color: var(--ivg-accent-strong);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.textScene h1,
+.endingModal h1,
+.restartConfirmModal h1,
+.unlockModal h1 {
+    margin: 10px 0 12px;
+    font-size: 32px;
+    line-height: 1.2;
+    color: var(--ivg-text);
+}
+
+.textScene p,
+.endingModal p,
+.restartConfirmModal p,
+.unlockModal p {
+    margin: 0;
+    color: var(--ivg-text-soft);
+    font-size: 16px;
+    line-height: 1.75;
+    white-space: pre-wrap;
+}
+
+.playOverlayButton {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 128px;
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid var(--ivg-border-strong);
+    border-radius: 8px;
+    background: var(--ivg-control-bg);
+    color: var(--ivg-control-text);
+    font-size: 15px;
+    font-weight: 800;
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+}
+
+.playOverlayButton svg {
+    font-size: 24px;
+}
+
+.videoTransitionOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: 8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    isolation: isolate;
+    background: color-mix(in srgb, var(--color-shadow) 48%, transparent);
+    color: color-mix(in srgb, var(--color-on-media) 94%, transparent);
+    pointer-events: none;
+    backdrop-filter: blur(2px);
+}
+
+.videoTransitionOverlay::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 0;
+    width: min(240px, calc(100% - 40px));
+    height: 132px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+    box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--color-text) 8%, transparent),
+        0 18px 46px color-mix(in srgb, var(--color-shadow) 36%, transparent);
+    transform: translate(-50%, -50%);
+}
+
+.videoTransitionOverlay strong {
+    position: relative;
+    z-index: 1;
+    color: color-mix(in srgb, var(--color-text) 94%, transparent);
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.videoTransitionLoader {
+    position: relative;
+    z-index: 1;
+    width: 44px;
+    height: 44px;
+}
+
+.videoTransitionLoader span {
+    position: absolute;
+    inset: 0;
+    border: 2px solid color-mix(in srgb, var(--color-text) 20%, transparent);
+    border-top-color: color-mix(in srgb, var(--color-text) 92%, transparent);
+    border-radius: 999px;
+    animation: ivgLoadingSpin 0.9s linear infinite;
+}
+
+.videoTransitionLoader span:nth-child(2) {
+    inset: 10px;
+    border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-bottom-color: color-mix(in srgb, var(--color-text) 86%, transparent);
+    animation-duration: 0.68s;
+    animation-direction: reverse;
+}
+
+.preloadPool {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.preloadPool video {
+    width: 1px;
+    height: 1px;
+}
+
+.choiceDock {
+    position: absolute;
+    left: 50%;
+    right: auto;
+    bottom: clamp(42px, 6vh, 72px);
+    transform: translateX(-50%);
+    width: min(860px, calc(100% - 36px));
+    max-height: min(58%, 440px);
+    overflow: visible;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(180px, max-content));
+    align-items: center;
+    justify-content: center;
+    justify-items: center;
+    gap: clamp(8px, 1.6vh, 18px) clamp(42px, 10vw, 140px);
+    scrollbar-color: color-mix(in srgb, var(--color-text) 18%, transparent) transparent;
+}
+
+.choiceButton {
+    position: relative;
+    isolation: isolate;
+    width: max-content;
+    min-width: 0;
+    max-width: none;
+    min-height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 0;
+    appearance: none;
+    background: transparent;
+    color: var(--color-on-media);
+    padding: 6px 46px;
+    font-weight: 900;
+    text-align: center;
+    -webkit-text-stroke: 0.25px color-mix(in srgb, var(--color-text) 42%, transparent);
+    text-shadow:
+        0 0 1px color-mix(in srgb, var(--color-text) 72%, transparent),
+        0 2px 5px color-mix(in srgb, var(--color-shadow) 96%, transparent);
+    transform-origin: center;
+    transform: skewX(-6deg);
+    cursor: pointer;
+    transition:
+        color 180ms ease,
+        opacity 180ms ease,
+        text-shadow 180ms ease,
+        transform 180ms ease;
+}
+
+.choiceButton::before {
+    content: "";
+    position: absolute;
+    inset: 11px -34px;
+    z-index: 0;
+    display: block;
+    background: repeating-linear-gradient(
+        0deg,
+        color-mix(in srgb, var(--color-text) 14%, transparent) 0,
+        color-mix(in srgb, var(--color-text) 14%, transparent) 1px,
+        transparent 1px,
+        transparent 4px
+    );
+    mask-image: linear-gradient(90deg, transparent 0%, var(--color-bg) 18%, var(--color-bg) 82%, transparent 100%);
+    opacity: 0.34;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    transform: translate3d(-2px, 1px, 0);
+    transition:
+        opacity 180ms ease,
+        transform 180ms ease;
+    animation: choiceHudScanDrift 5.6s ease-in-out infinite;
+}
+
+.choiceButton strong {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    inline-size: 15em;
+    max-inline-size: calc(100vw - 128px);
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    color: inherit;
+    font-size: clamp(18px, 1.9vw, 24px);
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 1.05;
+    text-overflow: ellipsis;
+    white-space: normal;
+    transform: translate3d(0, 0, 0) scaleX(0.88);
+    transition: transform 180ms ease;
+    animation: choiceHudTextDrift 4.8s ease-in-out infinite;
+}
+
+.choiceButton:hover {
+    background: transparent;
+    box-shadow: none;
+    color: var(--color-on-media);
+    filter: none;
+    text-shadow:
+        0 0 1px color-mix(in srgb, var(--color-text) 88%, transparent),
+        0 2px 6px color-mix(in srgb, var(--color-shadow) 98%, transparent);
+    transform: skewX(-6deg) scale(1.035);
+}
+
+.choiceButton:hover strong {
+    animation: none;
+    transform: translate3d(0, 0, 0) scaleX(0.92);
+}
+
+.choiceButton:hover::before,
+.choiceButton:focus-visible::before {
+    opacity: 0.48;
+    transform: translate3d(3px, 0, 0);
+    animation-play-state: paused;
+}
+
+.choiceButton:active {
+    transform: skewX(-6deg) scale(1.02);
+}
+
+.choiceButton:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-text) 72%, transparent);
+    outline-offset: 6px;
+}
+
+.choiceDockPortrait,
+.choiceDockLandscape {
+    grid-template-columns: repeat(2, minmax(180px, max-content));
+}
+
+.miniProgramPlayerPage .videoControlDock,
+.miniProgramPlayerPage .playOverlayButton,
+.miniProgramPlayerPage .videoTransitionOverlay,
+.miniProgramPlayerPage .choiceButton,
+.miniProgramPlayerPage .noChoices,
+.miniProgramPlayerPage .videoNotice,
+.portalRootMiniProgram .mobileToolsSheet,
+.portalRootMiniProgram .treeDialogTitle,
+.portalRootMiniProgram .treeProgress {
+    backdrop-filter: none;
+}
+
+.miniProgramPlayerPage .choiceButton {
+    transition:
+        color 80ms linear,
+        opacity 80ms linear,
+        transform 80ms linear;
+}
+
+.choiceDockOne .choiceButton {
+    grid-column: 1 / -1;
+    justify-self: center;
+}
+
+.choiceDockThree .choiceButton:nth-child(3),
+.choiceDockFive .choiceButton:nth-child(5) {
+    grid-column: 1 / -1;
+    justify-self: center;
+}
+
+.noChoices,
+.videoNotice {
+    border-radius: 8px;
+    padding: 12px 14px;
+    background: var(--ivg-accent-soft);
+    color: var(--ivg-text-soft);
+}
+
+.videoNotice {
+    position: absolute;
+    top: 18px;
+    left: 18px;
+}
+
+@keyframes choiceHudTextDrift {
+    0%,
+    100% {
+        transform: translate3d(-0.5px, 0, 0) scaleX(0.88);
+    }
+
+    35% {
+        transform: translate3d(0.5px, -0.6px, 0) scaleX(0.88);
+    }
+
+    70% {
+        transform: translate3d(0.2px, 0.5px, 0) scaleX(0.88);
+    }
+}
+
+@keyframes choiceHudScanDrift {
+    0%,
+    100% {
+        transform: translate3d(-3px, 1px, 0);
+    }
+
+    50% {
+        transform: translate3d(3px, -1px, 0);
+    }
+}
+
+.sidePanel {
+    border-left: 1px solid var(--ivg-border);
+    background: var(--ivg-panel);
+    padding: 18px;
+    overflow-y: auto;
+}
+
+.sidePanelHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--ivg-border);
+}
+
+.sidePanelTitle {
+    min-width: 0;
+    flex: 1;
+    margin: 0;
+    overflow: hidden;
+    color: var(--ivg-text);
+    font-size: 16px;
+    font-weight: 900;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sidePanelHeaderActions {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sidePanelActionButton {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    min-height: 38px;
+    padding: 0;
+    background: transparent;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.sidePanelActionButton svg {
+    font-size: 18px;
+}
+
+.sidePanelActionButton:hover {
+    border-color: var(--ivg-border-strong);
+    background: var(--ivg-control-hover);
+    color: var(--ivg-accent-strong);
+}
+
+.panelSection {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--ivg-border);
+}
+
+.sectionTitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ivg-text);
+    font-size: 14px;
+    font-weight: 800;
+    margin-bottom: 12px;
+}
+
+.variableList {
+    display: grid;
+    gap: 8px;
+}
+
+.variableRow {
+    min-height: 38px;
+    border-radius: 8px;
+    background: var(--ivg-surface-muted);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 12px;
+}
+
+.variableRow span,
+.emptyText {
+    color: var(--ivg-muted);
+    font-size: 13px;
+}
+
+.variableRow strong {
+    color: var(--ivg-text);
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.historyPanelSection {
+    min-height: 0;
+}
+
+.historyList {
+    position: relative;
+    display: grid;
+    gap: 0;
+    max-height: min(320px, 32dvh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 2px 2px 2px 0;
+}
+
+.historyList::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    left: 12px;
+    width: 1px;
+    background: var(--ivg-border-strong);
+}
+
+.historyItem {
+    position: relative;
+    min-height: 38px;
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    padding: 7px 0 7px 32px;
+}
+
+.historyItem::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    width: 9px;
+    height: 9px;
+    border: 2px solid var(--ivg-accent-strong);
+    border-radius: 999px;
+    background: var(--ivg-panel);
+    transform: translateY(-50%);
+    box-shadow: 0 0 0 3px var(--ivg-panel);
+}
+
+.historyItem span {
+    color: var(--ivg-muted);
+    font-size: 11px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.historyItem strong {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--ivg-text);
+    font-size: 13px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.historyList .emptyText {
+    padding: 8px 0 0 32px;
+}
+
+.openTreeButton {
+    position: relative;
+    width: 100%;
+    min-height: 72px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--ivg-accent-strong) 74%, var(--ivg-border));
+    border-radius: 8px;
+    background:
+        linear-gradient(135deg, var(--ivg-accent-strong), var(--ivg-accent)),
+        var(--ivg-accent-strong);
+    color: var(--ivg-on-accent);
+    display: grid;
+    align-content: center;
+    padding: 14px 14px 18px;
+    text-align: left;
+    font-weight: 800;
+    box-shadow: 0 14px 32px color-mix(in srgb, var(--ivg-accent-strong) 20%, transparent);
+    cursor: pointer;
+}
+
+.openTreeButton:hover {
+    border-color: var(--ivg-accent-strong);
+    background:
+        linear-gradient(135deg, var(--ivg-accent), var(--ivg-accent-strong)),
+        var(--ivg-accent-strong);
+}
+
+.openTreeButtonContent {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.openTreeButtonContent svg {
+    flex: 0 0 auto;
+    font-size: 20px;
+}
+
+.openTreeButtonText {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.openTreeButtonText strong {
+    overflow: hidden;
+    color: inherit;
+    font-size: 14px;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.openTreeButtonText small {
+    color: color-mix(in srgb, var(--ivg-on-accent) 76%, transparent);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.openTreeProgressTrack {
+    position: absolute;
+    right: 12px;
+    bottom: 10px;
+    left: 12px;
+    height: 3px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ivg-on-accent) 26%, transparent);
+}
+
+.openTreeProgressFill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--ivg-on-accent);
+}
+
+.mobileToolsButton {
+    display: none;
+}
+
+.mobileToolsOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 34;
+    display: block;
+    background: var(--ivg-scrim);
+}
+
+.mobileToolsSheet {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(420px, 100vw);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-left: 1px solid var(--ivg-border);
+    background: var(--ivg-surface);
+    box-shadow: var(--ivg-shadow);
+}
+
+.mobileToolsHeader {
+    min-height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--ivg-border);
+}
+
+.mobileToolsHeaderActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mobileToolsHeader strong {
+    color: var(--ivg-text);
+    font-size: 15px;
+}
+
+.mobileRestartButton {
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid var(--ivg-border-strong);
+    border-radius: 8px;
+    background: var(--ivg-accent-soft);
+    color: var(--ivg-text);
+    padding: 0 10px;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.mobileToolsClose {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--ivg-border);
+    border-radius: 8px;
+    background: var(--ivg-control-bg);
+    color: var(--ivg-control-text);
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.mobileToolsTabs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding: 12px 14px 0;
+}
+
+.mobileToolsTabs button {
+    min-height: 36px;
+    border: 1px solid var(--ivg-border);
+    border-radius: 8px;
+    background: var(--ivg-control-bg);
+    color: var(--ivg-muted);
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.mobileToolsTabs .mobileToolsTabActive {
+    border-color: var(--ivg-border-strong);
+    background: var(--ivg-accent-soft);
+    color: var(--ivg-text);
+}
+
+.mobileToolsContent {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 2px 16px 18px;
+}
+
+.variableBoardOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 36;
+    display: grid;
+    place-items: center;
+    padding:
+        calc(env(safe-area-inset-top, 0px) + 20px)
+        calc(env(safe-area-inset-right, 0px) + 16px)
+        calc(env(safe-area-inset-bottom, 0px) + 20px)
+        calc(env(safe-area-inset-left, 0px) + 16px);
+    background: color-mix(in srgb, var(--ivg-bg) 28%, color-mix(in srgb, var(--color-shadow) 72%, transparent));
+}
+
+.variableBoardModal {
+    width: min(460px, calc(100vw - 32px));
+    max-height: min(78dvh, 580px);
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--ivg-border);
+    border-radius: 12px;
+    background: var(--ivg-surface);
+    box-shadow: var(--ivg-shadow);
+}
+
+.variableBoardHeader {
+    min-height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--ivg-border);
+}
+
+.variableBoardTitle {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ivg-text);
+}
+
+.variableBoardTitle svg {
+    flex: 0 0 auto;
+    font-size: 18px;
+}
+
+.variableBoardTitle h2 {
+    margin: 0;
+    overflow: hidden;
+    font-size: 16px;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.variableBoardClose {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--ivg-border);
+    border-radius: 8px;
+    background: var(--ivg-control-bg);
+    color: var(--ivg-control-text);
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.variableBoardContent {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px 16px 18px;
+}
+
+.variableBoardContent .panelSection {
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.variableBoardContent .sectionTitle {
+    display: none;
+}
+
+.treeOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: color-mix(in srgb, var(--color-shadow) 56%, transparent);
+}
+
+.treeDialog {
+    width: min(1180px, 100%);
+    height: min(760px, calc(100vh - 48px));
+    min-height: 420px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+    box-shadow: 0 24px 80px color-mix(in srgb, var(--color-shadow) 38%, transparent);
+}
+
+.treeDialogHeader {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 18px 0 22px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    background: color-mix(in srgb, var(--color-surface) 98%, transparent);
+}
+
+.treeDialogTitle {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.treeDialogActions {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 10px;
+    margin-left: auto;
+}
+
+.treeDialogHeader span {
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0;
+}
+
+.treeDialogHeader h2 {
+    margin: 2px 0 0;
+    color: color-mix(in srgb, var(--color-text) 96%, transparent);
+    font-size: 18px;
+}
+
+.treeProgress {
+    width: fit-content;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 4px 8px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+    color: color-mix(in srgb, var(--color-text) 90%, transparent);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.treeProgressCompact {
+    display: none;
+}
+
+.treeCloseButton {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+    color: color-mix(in srgb, var(--color-text) 92%, transparent);
+    font-size: 20px;
+    cursor: pointer;
+    transition:
+        border-color 150ms ease,
+        background 150ms ease,
+        color 150ms ease;
+}
+
+.treeCloseButton:hover,
+.treeCloseButton:focus-visible {
+    border-color: color-mix(in srgb, var(--color-text) 26%, transparent);
+    background: color-mix(in srgb, var(--color-bg) 96%, transparent);
+    color: var(--color-text);
+}
+
+.treeCanvas {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    overscroll-behavior: contain;
+    touch-action: none;
+    background:
+        linear-gradient(color-mix(in srgb, var(--color-text) 3.5%, transparent) 1px, transparent 1px),
+        linear-gradient(90deg, color-mix(in srgb, var(--color-text) 3%, transparent) 1px, transparent 1px),
+        color-mix(in srgb, var(--color-surface) 96%, transparent);
+    background-size: 32px 32px, 32px 32px, auto;
+}
+
+.treeCanvas :global(.react-flow__pane) {
+    cursor: grab;
+}
+
+.treeCanvas :global(.react-flow__pane:active) {
+    cursor: grabbing;
+}
+
+.treeCanvas :global(.react-flow__controls) {
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+    background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+    box-shadow: 0 12px 30px color-mix(in srgb, var(--color-shadow) 34%, transparent);
+}
+
+.treeCanvas :global(.react-flow__controls-button) {
+    border-bottom-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+    background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
+}
+
+.treeCanvas :global(.react-flow__controls-button:hover),
+.treeCanvas :global(.react-flow__controls-button:focus-visible) {
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+
+.treeCanvas :global(.react-flow__controls-button svg) {
+    fill: currentColor;
+    color: currentColor;
+}
+
+.treeHandle {
+    width: 1px;
+    height: 1px;
+    border: 0;
+    background: transparent;
+    opacity: 0;
+}
+
+.treePlotButton,
+.treeChoiceCard {
+    --tree-node-accent: color-mix(in srgb, var(--color-surface) 78%, transparent);
+    position: relative;
+    isolation: isolate;
+    width: 238px;
+    min-height: 84px;
+    display: grid;
+    align-content: center;
+    gap: 6px;
+    padding: 14px 40px 14px 14px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--tree-node-accent) 34%, color-mix(in srgb, var(--color-text) 10%, transparent));
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--color-bg) 94%, transparent);
+    color: color-mix(in srgb, var(--color-text) 94%, transparent);
+    text-align: left;
+    box-shadow: 0 14px 28px color-mix(in srgb, var(--color-shadow) 26%, transparent);
+    transition:
+        border-color 150ms ease,
+        background 150ms ease,
+        box-shadow 150ms ease;
+}
+
+.treePlotButton::before,
+.treeChoiceCard::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 0;
+    width: 3px;
+    background: var(--tree-node-accent);
+    opacity: 0.88;
+    pointer-events: none;
+}
+
+.treePlotButton {
+    cursor: pointer;
+}
+
+.treePlotButton:disabled {
+    cursor: default;
+}
+
+.treePlotButton span,
+.treeChoiceCard span {
+    color: color-mix(in srgb, var(--color-text) 86%, transparent);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.treePlotButton strong,
+.treeChoiceCard strong {
+    overflow: hidden;
+    color: color-mix(in srgb, var(--color-text) 96%, transparent);
+    font-size: 15px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.treePlotButton em {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--tree-node-accent) 16%, transparent);
+    color: color-mix(in srgb, var(--tree-node-accent) 88%, var(--color-text));
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 900;
+}
+
+.treePlotVisited,
+.treeChoiceVisited {
+    border-color: color-mix(in srgb, var(--tree-node-accent) 42%, color-mix(in srgb, var(--color-text) 14%, transparent));
+    background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+}
+
+.treePlotCurrent {
+    --tree-node-accent: color-mix(in srgb, var(--color-surface) 95%, transparent);
+    border-color: color-mix(in srgb, var(--tree-node-accent) 64%, color-mix(in srgb, var(--color-text) 14%, transparent));
+    background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--color-text) 18%, transparent),
+        0 18px 38px color-mix(in srgb, var(--color-shadow) 30%, transparent);
+}
+
+.treePlotEnding {
+    --tree-node-accent: color-mix(in srgb, var(--color-primary-light) 92%, transparent);
+}
+
+.treePlotMinigame {
+    --tree-node-accent: color-mix(in srgb, var(--color-success) 92%, transparent);
+}
+
+.treePlotDisabled {
+    opacity: 0.72;
+}
+
+.treeChoiceCard {
+    --tree-node-accent: color-mix(in srgb, var(--color-highlight) 92%, transparent);
+    background: color-mix(in srgb, var(--color-surface) 95%, transparent);
+}
+
+.treeResultCard {
+    --tree-node-accent: color-mix(in srgb, var(--color-surface) 92%, transparent);
+    background: color-mix(in srgb, var(--color-surface) 95%, transparent);
+}
+
+.treeEmpty {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    color: var(--ivg-muted);
+}
+
+.endingOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-text) 12%, transparent), color-mix(in srgb, var(--color-shadow) 72%, transparent)),
+        color-mix(in srgb, var(--color-shadow) 58%, transparent);
+}
+
+.restartConfirmOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 46;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: var(--ivg-scrim);
+}
+
+.unlockOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 47;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: var(--ivg-scrim);
+}
+
+.restartConfirmModal {
+    position: relative;
+    width: min(420px, 100%);
+    border: 1px solid var(--ivg-border);
+    border-radius: 8px;
+    background: var(--ivg-surface);
+    color: var(--ivg-text);
+    padding: 28px;
+    box-shadow: var(--ivg-shadow);
+}
+
+.unlockModal {
+    position: relative;
+    width: min(460px, 100%);
+    border: 1px solid var(--ivg-border);
+    border-radius: 8px;
+    background: var(--ivg-surface);
+    color: var(--ivg-text);
+    padding: 28px;
+    box-shadow: var(--ivg-shadow);
+}
+
+.restartConfirmModal h1 {
+    padding-right: 44px;
+    font-size: 24px;
+}
+
+.unlockModal h1 {
+    padding-right: 44px;
+    font-size: 24px;
+}
+
+.restartConfirmModal p {
+    color: var(--ivg-text-soft);
+    font-size: 14px;
+    line-height: 1.65;
+}
+
+.unlockModal p {
+    color: var(--ivg-text-soft);
+    font-size: 14px;
+    line-height: 1.65;
+}
+
+.endingModal,
+.messagePanel,
+.loadingPanel {
+    position: relative;
+    width: min(560px, 100%);
+    border-radius: 8px;
+    background: var(--ivg-surface);
+    color: var(--ivg-text);
+    padding: 28px;
+    box-shadow: var(--ivg-shadow);
+}
+
+.endingModal {
+    width: min(540px, calc(100vw - 32px));
+    border: 1px solid color-mix(in srgb, var(--color-text) 18%, transparent);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 94%, transparent), color-mix(in srgb, var(--color-surface) 94%, transparent));
+    color: var(--color-text);
+    box-shadow: 0 28px 80px color-mix(in srgb, var(--color-shadow) 46%, transparent);
+    backdrop-filter: blur(14px);
+}
+
+.endingModal span {
+    color: color-mix(in srgb, var(--color-primary-fg) 94%, transparent);
+}
+
+.endingModal h1 {
+    color: var(--color-text);
+}
+
+.endingModal p {
+    color: var(--color-text-secondary);
+}
+
+.endingModal .endingCloseButton {
+    border-color: color-mix(in srgb, var(--color-text) 18%, transparent);
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    color: color-mix(in srgb, var(--color-text) 84%, transparent);
+}
+
+.endingCloseButton,
+.restartConfirmClose,
+.unlockCloseButton {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--ivg-border);
+    border-radius: 8px;
+    background: var(--ivg-control-bg);
+    color: var(--ivg-control-text);
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.unlockActions,
+.restartConfirmActions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+}
+
+.unlockActions button,
+.restartConfirmActions button {
+    min-height: 40px;
+    border-radius: 8px;
+    padding: 0 14px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.unlockActions button {
+    border: 1px solid var(--ivg-accent-strong);
+    background: var(--ivg-accent-strong);
+    color: var(--ivg-on-accent);
+}
+
+.unlockPlanSection {
+    display: grid;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.unlockPlanSection > strong {
+    color: var(--ivg-text);
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.unlockActions button:disabled,
+.unlockConfirmActions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.62;
+}
+
+.unlockBuyout {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--ivg-border);
+}
+
+.unlockConfirmActions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+}
+
+.unlockConfirmActions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    border-radius: 8px;
+    padding: 0 14px;
+    border: 1px solid var(--ivg-border);
+    background: var(--ivg-control-bg);
+    color: var(--ivg-control-text);
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.unlockConfirmActions button:last-child {
+    border-color: var(--ivg-accent-strong);
+    background: var(--ivg-accent-strong);
+    color: var(--ivg-on-accent);
+}
+
+.unlockLoadingIcon {
+    flex: 0 0 auto;
+    font-size: 15px;
+    animation: ivgLoadingSpin 0.8s linear infinite;
+}
+
+.restartConfirmSecondary {
+    border: 1px solid var(--ivg-border);
+    background: var(--ivg-control-bg);
+    color: var(--ivg-control-text);
+}
+
+.restartConfirmPrimary {
+    border: 1px solid var(--ivg-accent-strong);
+    background: var(--ivg-accent-strong);
+    color: var(--ivg-on-accent);
+}
+
+.endingActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.endingActions button {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid var(--ivg-border-strong);
+    border-radius: 8px;
+    background: var(--ivg-accent-strong);
+    color: var(--ivg-on-accent);
+    padding: 0 14px;
+    cursor: pointer;
+}
+
+.messagePanel,
+.loadingPanel {
+    margin: auto;
+}
+
+.messagePanel h1 {
+    margin: 0 0 10px;
+}
+
+.messagePanel p {
+    color: var(--ivg-text-soft);
+}
+
+.messagePanel button {
+    background: var(--ivg-accent-strong);
+    color: var(--ivg-on-accent);
+    padding: 0 14px;
+}
+
+.loadingPanel {
+    width: min(460px, calc(100% - 48px));
+    min-height: 224px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-radius: 8px;
+    background:
+        linear-gradient(color-mix(in srgb, var(--color-text) 3.5%, transparent) 1px, transparent 1px),
+        linear-gradient(90deg, color-mix(in srgb, var(--color-text) 2.5%, transparent) 1px, transparent 1px),
+        color-mix(in srgb, var(--color-surface) 94%, transparent);
+    background-size: 28px 28px, 28px 28px, auto;
+    color: color-mix(in srgb, var(--color-text) 96%, transparent);
+    text-align: center;
+    box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--color-text) 8%, transparent),
+        0 24px 72px color-mix(in srgb, var(--color-shadow) 42%, transparent);
+}
+
+.loadingOrb {
+    position: relative;
+    width: 58px;
+    height: 58px;
+}
+
+.loadingOrbit,
+.loadingOrbitInner,
+.loadingCore {
+    position: absolute;
+    border-radius: 999px;
+}
+
+.loadingOrbit {
+    inset: 0;
+    border: 2px solid color-mix(in srgb, var(--color-text) 18%, transparent);
+    border-top-color: color-mix(in srgb, var(--color-text) 92%, transparent);
+    animation: ivgLoadingSpin 1.2s linear infinite;
+}
+
+.loadingOrbitInner {
+    inset: 12px;
+    border: 2px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-bottom-color: color-mix(in srgb, var(--color-text) 86%, transparent);
+    animation: ivgLoadingSpin 0.86s linear infinite reverse;
+}
+
+.loadingCore {
+    top: 50%;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+    box-shadow:
+        0 0 0 5px color-mix(in srgb, var(--color-text) 10%, transparent),
+        0 0 22px color-mix(in srgb, var(--color-text) 28%, transparent);
+    transform: translate(-50%, -50%);
+    animation: ivgLoadingPulse 1.5s ease-in-out infinite;
+}
+
+.loadingEyebrow {
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0;
+}
+
+.loadingPanel h1 {
+    margin: 0;
+    color: color-mix(in srgb, var(--color-text) 96%, transparent);
+    font-size: 24px;
+    line-height: 1.2;
+}
+
+.loadingPanel p {
+    margin: 0;
+    color: color-mix(in srgb, var(--color-text) 92%, transparent);
+    font-size: 14px;
+}
+
+@keyframes ivgLoadingSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes ivgLoadingPulse {
+    0%,
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+        opacity: 0.58;
+        transform: translate(-50%, -50%) scale(1.22);
+    }
+}
+
+@media (max-width: 980px), (max-height: 720px) and (max-width: 1280px) and (orientation: landscape) {
+    .cinematicVideoPage .videoSceneTitle {
+        display: none;
+    }
+
+    .videoSceneTitle {
+        top: calc(env(safe-area-inset-top, 0px) + 14px);
+        left: calc(env(safe-area-inset-left, 0px) + 62px);
+        max-width: calc(100% - 124px);
+    }
+
+    .videoSceneTitle strong {
+        font-size: clamp(18px, 3.6vw, 24px);
+    }
+
+    .videoControlDock {
+        right: calc(env(safe-area-inset-right, 0px) + 14px);
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+        left: auto;
+        width: auto;
+        max-width: calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px);
+        transform: none;
+        gap: 3px;
+        border-radius: 0;
+        padding: 0;
+    }
+
+    .videoHudWithSkip .videoControlDock {
+        width: auto;
+        max-width: calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px);
+    }
+
+    .nonVideoControlDock .videoControlDock {
+        width: auto;
+        max-width: calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px);
+    }
+
+    .videoControlButton {
+        width: 52px;
+        min-height: 46px;
+        padding: 6px 7px;
+        font-size: 9px;
+        border-radius: 0;
+    }
+
+    .videoControlButton::before {
+        clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+    }
+
+    .videoControlButton::after {
+        inset: 3px 6px;
+        clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+        background:
+            linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-surface) 54%, transparent) 18%, color-mix(in srgb, var(--color-text) 14%, transparent) 54%, transparent) top left / 100% 1px no-repeat,
+            linear-gradient(180deg, transparent, color-mix(in srgb, var(--color-text) 38%, transparent), transparent) right 4px top / 1px 100% no-repeat;
+    }
+
+    .videoControlButton svg {
+        font-size: 16px;
+    }
+
+    .cinematicVideoPage .mobileToolsButton {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .loadingOrbit,
+    .loadingOrbitInner,
+    .loadingCore,
+    .videoTransitionLoader span {
+        animation: none;
+    }
+}
+
+@media (max-width: 980px), (max-height: 720px) and (max-width: 1280px) and (orientation: landscape) {
+    .pageRoot {
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    .header {
+        position: fixed;
+        top: calc(env(safe-area-inset-top, 0px) + 12px);
+        left: calc(env(safe-area-inset-left, 0px) + 14px);
+        z-index: 31;
+        width: auto;
+        height: auto;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        pointer-events: none;
+    }
+
+    .header .iconButton {
+        width: 38px;
+        min-height: 38px;
+        pointer-events: auto;
+        border: 1px solid color-mix(in srgb, var(--color-text) 24%, transparent);
+        border-radius: 0;
+        background: transparent;
+        box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--color-text) 18%, transparent),
+            inset 0 0 0 1px color-mix(in srgb, var(--color-text) 4%, transparent);
+        color: var(--color-text);
+        filter: none;
+        backdrop-filter: none;
+    }
+
+    .headerTitle,
+    .headerActions,
+    .headerButton {
+        display: none;
+    }
+
+    .playerGrid {
+        grid-template-columns: 1fr;
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    .stage {
+        height: 100%;
+        min-height: 0;
+        padding: 0;
+    }
+
+    .monitor {
+        height: 100%;
+        min-height: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .sidePanel {
+        display: none;
+    }
+
+    .mobileToolsButton {
+        position: fixed;
+        top: calc(env(safe-area-inset-top, 0px) + 12px);
+        right: 16px;
+        z-index: 30;
+        width: 44px;
+        height: 44px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--ivg-icon-float-border);
+        border-radius: 999px;
+        background: var(--ivg-icon-float-bg);
+        color: var(--ivg-icon-float-text);
+        box-shadow: none;
+        filter: none;
+        backdrop-filter: none;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .mobileToolsButton svg {
+        font-size: 23px;
+    }
+
+    .header .iconButton svg,
+    .mobileToolsButton svg,
+    .treeCloseButton svg {
+        display: block;
+    }
+
+    .mobileToolsButton span {
+        display: none;
+    }
+
+    .mobileToolsOverlay {
+        position: fixed;
+        inset: 0;
+        z-index: 34;
+        display: block;
+        background: var(--ivg-scrim);
+    }
+
+    .mobileToolsSheet {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        max-height: min(72dvh, 620px);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid var(--ivg-border);
+        border-bottom: 0;
+        border-radius: 18px 18px 0 0;
+        background: var(--ivg-surface);
+        box-shadow: var(--ivg-sheet-shadow);
+    }
+
+    .mobileToolsHeader {
+        min-height: 54px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--ivg-border);
+    }
+
+    .mobileToolsHeaderActions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .mobileToolsHeader strong {
+        color: var(--ivg-text);
+        font-size: 15px;
+    }
+
+    .mobileRestartButton {
+        min-height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border: 1px solid var(--ivg-border-strong);
+        border-radius: 8px;
+        background: var(--ivg-accent-soft);
+        color: var(--ivg-text);
+        padding: 0 10px;
+        font-size: 13px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .mobileToolsClose {
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--ivg-border);
+        border-radius: 8px;
+        background: var(--ivg-control-bg);
+        color: var(--ivg-control-text);
+        font-size: 18px;
+        cursor: pointer;
+    }
+
+    .mobileToolsTabs {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        padding: 12px 14px 0;
+    }
+
+    .mobileToolsTabs button {
+        min-height: 36px;
+        border: 1px solid var(--ivg-border);
+        border-radius: 8px;
+        background: var(--ivg-control-bg);
+        color: var(--ivg-muted);
+        font-size: 13px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .mobileToolsTabs .mobileToolsTabActive {
+        border-color: var(--ivg-border-strong);
+        background: var(--ivg-accent-soft);
+        color: var(--ivg-text);
+    }
+
+    .mobileToolsContent {
+        min-height: 0;
+        overflow-y: auto;
+        padding: 2px 16px 18px;
+    }
+
+    .mobileToolsContent .panelSection {
+        padding-bottom: 0;
+        border-bottom: 0;
+    }
+
+    .mobileToolsContent .openTreeButton {
+        min-height: 76px;
+    }
+
+    .mobileToolsContent .historyList {
+        max-height: min(44dvh, 360px);
+    }
+
+    .treeOverlay {
+        place-items: stretch;
+        padding: 0;
+    }
+
+    .treeDialog {
+        position: relative;
+        width: 100vw;
+        height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
+        border: 0;
+        border-radius: 0;
+    }
+
+    .treeDialogHeader {
+        position: absolute;
+        top: calc(env(safe-area-inset-top, 0px) + 10px);
+        left: 10px;
+        right: 10px;
+        z-index: 6;
+        height: auto;
+        min-height: 0;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 0;
+        border-bottom: 0;
+        background: transparent;
+        pointer-events: none;
+    }
+
+    .treeDialogTitle {
+        width: fit-content;
+        max-width: 34vw;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 10px;
+        border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+        color: color-mix(in srgb, var(--color-text) 94%, transparent);
+        box-shadow: none;
+        backdrop-filter: blur(12px);
+    }
+
+    .treeDialogTitle span {
+        display: none;
+    }
+
+    .treeDialogTitle h2 {
+        margin: 0;
+        overflow: hidden;
+        font-size: 13px;
+        line-height: 1.1;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .treeDialogActions {
+        align-items: flex-start;
+        gap: 8px;
+        pointer-events: auto;
+    }
+
+    .treeProgress {
+        max-width: 132px;
+        padding: 7px 9px;
+        border-radius: 999px;
+        border-color: color-mix(in srgb, var(--color-text) 14%, transparent);
+        background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+        box-shadow: none;
+        backdrop-filter: blur(12px);
+    }
+
+    .treeProgressFull {
+        display: none;
+    }
+
+    .treeProgressCompact {
+        display: inline-block;
+    }
+
+    .treeCloseButton {
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+        background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+        box-shadow: none;
+        color: color-mix(in srgb, var(--color-text) 94%, transparent);
+        filter: none;
+        backdrop-filter: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .endingOverlay,
+    .restartConfirmOverlay,
+    .unlockOverlay {
+        inset: 0;
+        padding: 12px;
+        border-radius: 0;
+    }
+
+    .endingModal,
+    .restartConfirmModal,
+    .unlockModal,
+    .messagePanel,
+    .loadingPanel {
+        width: min(560px, calc(100vw - 24px));
+        max-height: calc(100dvh - 24px);
+        overflow: auto;
+    }
+}
+
+@media (max-width: 980px) and (orientation: portrait) {
+    .nonVideoControlDock .videoControlDock {
+        top: calc(env(safe-area-inset-top, 0px) + 14px);
+        bottom: auto;
+        width: min(360px, calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 96px));
+        min-height: 54px;
+    }
+
+    .nonVideoControlDock .videoControlButton {
+        min-height: 52px;
+        padding: 6px 4px;
+        font-size: 11px;
+    }
+
+    .landscapeVideoPage .stage {
+        display: flex;
+        align-items: flex-start;
+    }
+
+    .landscapeVideoPage .monitor {
+        height: auto;
+        min-height: 0;
+        aspect-ratio: 16 / 9;
+    }
+}
+
+@media (max-width: 980px) and (orientation: landscape), (max-height: 720px) and (max-width: 1280px) and (orientation: landscape) {
+    .stage {
+        padding: 10px 12px;
+    }
+
+    .monitor {
+        height: calc(100dvh - 20px);
+        min-height: 0;
+    }
+
+    .mobileToolsButton {
+        top: calc(env(safe-area-inset-top, 0px) + 12px);
+        right: 14px;
+    }
+
+    .mobileToolsSheet {
+        max-height: 88dvh;
+    }
+}
+
+@media (max-width: 640px) {
+    .header {
+        padding: 0;
+    }
+
+    .headerButton {
+        padding: 0 10px;
+    }
+
+    .textScene {
+        padding: 28px;
+    }
+
+    .textScene h1,
+    .endingModal h1,
+    .restartConfirmModal h1 {
+        font-size: 24px;
+    }
+
+    .choiceDock {
+        width: calc(100% - 24px);
+        bottom: 24px;
+    }
+
+    .treeOverlay {
+        place-items: stretch;
+        padding: 0;
+    }
+
+    .treeDialog {
+        width: 100vw;
+        height: 100dvh;
+        min-height: 0;
+        border: 0;
+        border-radius: 0;
+    }
+
+    .treeDialogHeader {
+        top: calc(env(safe-area-inset-top, 0px) + 8px);
+        height: auto;
+        padding: 0;
+    }
+
+    .treeDialogTitle {
+        max-width: 32vw;
+        padding: 6px 9px;
+    }
+
+    .treeDialogTitle h2 {
+        font-size: 12px;
+    }
+
+    .treeDialogActions {
+        gap: 8px;
+    }
+
+    .treeProgress {
+        max-width: 112px;
+        padding: 6px 8px;
+        font-size: 11px;
+    }
+
+    .treeProgressFull {
+        display: none;
+    }
+
+    .treeProgressCompact {
+        display: inline-block;
+    }
+
+    .treeCloseButton {
+        width: 44px;
+        height: 44px;
+    }
+
+    .mobileToolsButton {
+        top: calc(env(safe-area-inset-top, 0px) + 12px);
+        right: 12px;
+    }
+
+    .mobileToolsSheet {
+        max-height: 76dvh;
+    }
+
+    .treePlotButton,
+    .treeChoiceCard {
+        width: 214px;
+    }
+}
+
+@media (max-width: 980px), (max-height: 720px) and (max-width: 1280px) and (orientation: landscape) {
+    .choiceDock {
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+        width: min(420px, calc(100% - 28px));
+        max-height: min(48dvh, 360px);
+        gap: 8px;
+        overscroll-behavior: contain;
+    }
+
+    .choiceDockLandscape {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: min(660px, calc(100% - 44px));
+        max-height: min(46dvh, 260px);
+    }
+
+    .choiceDockPortrait {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .choiceDockLandscape.choiceDockOne {
+        grid-template-columns: minmax(180px, 320px);
+        justify-content: center;
+    }
+
+    .choiceDockLandscape.choiceDockThree .choiceButton:nth-child(3),
+    .choiceDockLandscape.choiceDockFive .choiceButton:nth-child(5) {
+        grid-column: 1 / -1;
+        justify-self: center;
+        width: min(320px, 100%);
+    }
+
+    .choiceDockPortrait.choiceDockOne .choiceButton {
+        width: min(320px, 100%);
+    }
+
+    .choiceButton {
+        min-height: 44px;
+        padding: 6px 34px;
+        touch-action: manipulation;
+    }
+
+    .mobileThemeButton {
+        flex-shrink: 0;
+    }
+}
+
+@media (max-width: 980px) and (orientation: portrait) {
+    .landscapeVideoPage {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        width: 100dvh;
+        height: 100vw;
+        min-height: 0;
+        overflow: hidden;
+        transform: translate(-50%, -50%) rotate(90deg);
+        transform-origin: center;
+    }
+
+    .landscapeVideoPage .playerGrid,
+    .landscapeVideoPage .stage,
+    .landscapeVideoPage .monitor {
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+    }
+
+    .landscapeVideoPage .stage {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+
+    .landscapeVideoPage .monitor {
+        aspect-ratio: auto;
+        border-radius: 0;
+    }
+
+    .portraitVideoPage .choiceDock,
+    .choiceDockPortrait {
+        grid-template-columns: minmax(0, 1fr);
+        width: min(420px, calc(100% - 28px));
+    }
+
+    .treeDialogHeader {
+        position: relative;
+        top: auto;
+        right: auto;
+        left: auto;
+        z-index: 6;
+        min-height: calc(env(safe-area-inset-top, 0px) + 64px);
+        align-items: center;
+        gap: 12px;
+        padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px;
+        border-bottom: 1px solid var(--ivg-border);
+        background: var(--ivg-surface);
+        pointer-events: auto;
+    }
+
+    .treeDialogTitle {
+        width: auto;
+        max-width: none;
+        flex: 1;
+        display: grid;
+        gap: 2px;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        backdrop-filter: none;
+    }
+
+    .treeDialogTitle span {
+        display: block;
+    }
+
+    .treeDialogTitle h2 {
+        font-size: 16px;
+        line-height: 1.2;
+        white-space: normal;
+    }
+
+    .treeDialogActions {
+        align-items: center;
+    }
+
+    .treeProgress {
+        max-width: 128px;
+        border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+        background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+        box-shadow: none;
+        backdrop-filter: none;
+    }
+
+    .treeCloseButton {
+        border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+        color: color-mix(in srgb, var(--color-text) 94%, transparent);
+        box-shadow: none;
+    }
+
+    .treePlotButton,
+    .treeChoiceCard {
+        width: min(236px, calc(100vw - 64px));
+    }
+}
+
+@media (max-width: 640px) {
+    .choiceDock {
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+        width: min(420px, calc(100% - 24px));
+    }
+
+    .choiceDockLandscape {
+        width: min(620px, calc(100% - 32px));
+    }
+}
+
+@media (max-width: 980px) and (orientation: landscape), (max-height: 720px) and (max-width: 1280px) and (orientation: landscape) {
+    .choiceDock,
+    .choiceDockPortrait,
+    .choiceDockLandscape {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: min(760px, calc(100% - 160px));
+        max-height: min(44dvh, 240px);
+        bottom: calc(env(safe-area-inset-bottom, 0px) + clamp(38px, 7dvh, 54px));
+        gap: 10px;
+    }
+
+    .choiceDockOne,
+    .choiceDockLandscape.choiceDockOne {
+        grid-template-columns: minmax(220px, 340px);
+        justify-content: center;
+        width: min(420px, calc(100% - 120px));
+    }
+
+    .choiceDockThree .choiceButton:nth-child(3),
+    .choiceDockFive .choiceButton:nth-child(5),
+    .choiceDockLandscape.choiceDockThree .choiceButton:nth-child(3),
+    .choiceDockLandscape.choiceDockFive .choiceButton:nth-child(5) {
+        grid-column: 1 / -1;
+        justify-self: center;
+        width: min(360px, 100%);
+    }
+
+    .choiceDockFour,
+    .choiceDockFive,
+    .choiceDockLandscape.choiceDockFour,
+    .choiceDockLandscape.choiceDockFive {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .choiceButton {
+        min-height: 44px;
+        padding: 5px 28px;
+    }
+
+    .choiceButton strong {
+        font-size: clamp(14px, 2.8vw, 18px);
+        line-height: 1.08;
+    }
+}
+
+.portalRootMobilePortraitVideo .portalViewportFrame,
+.portalRootMobileLandscapeVideo .portalViewportFrame {
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100dvh;
+}
+
+.portalRootMobileLandscapeVideo.portalRootViewportPortrait .portalViewportFrame {
+    top: 0;
+    right: auto;
+    bottom: auto;
+    left: 0;
+    width: 100vw;
+    height: 100dvh;
+    transform: none;
+    transform-origin: center;
+}
+
+.portalRootLandscapeRotated.portalRootMobileLandscapeVideo.portalRootViewportPortrait .portalViewportFrame {
+    top: 50%;
+    left: 50%;
+    width: 100dvh;
+    height: 100vw;
+    transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.portalRootMobilePortraitVideo .mobileToolsOverlay,
+.portalRootMobileLandscapeVideo .mobileToolsOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: 34;
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: var(--ivg-scrim);
+}
+
+.portalRootMobilePortraitVideo .treeOverlay,
+.portalRootMobileLandscapeVideo .treeOverlay,
+.portalRootMobilePortraitVideo .variableBoardOverlay,
+.portalRootMobileLandscapeVideo .variableBoardOverlay,
+.portalRootMobilePortraitVideo .endingOverlay,
+.portalRootMobileLandscapeVideo .endingOverlay,
+.portalRootMobilePortraitVideo .restartConfirmOverlay,
+.portalRootMobileLandscapeVideo .restartConfirmOverlay,
+.portalRootMobilePortraitVideo .unlockOverlay,
+.portalRootMobileLandscapeVideo .unlockOverlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.portalRootMobilePortraitVideo .variableBoardModal {
+    width: min(420px, calc(100% - 28px));
+    max-height: min(78%, 560px);
+}
+
+.portalRootMobileLandscapeVideo .variableBoardModal {
+    width: min(520px, calc(100% - 40px));
+    max-height: min(82%, 420px);
+}
+
+.portalRootMobilePortraitVideo .mobileToolsSheet,
+.portalRootMobileLandscapeVideo .mobileToolsSheet {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--ivg-border);
+    border-bottom: 0;
+    border-radius: 18px 18px 0 0;
+    background: var(--ivg-surface);
+    box-shadow: var(--ivg-sheet-shadow);
+}
+
+.portalRootMobilePortraitVideo .mobileToolsSheet {
+    max-height: min(72%, 620px);
+}
+
+.portalRootMobileLandscapeVideo .mobileToolsSheet {
+    max-height: min(58%, 340px);
+}
+
+.portalRootMobilePortraitVideo .treeOverlay,
+.portalRootMobileLandscapeVideo .treeOverlay {
+    place-items: stretch;
+    padding: 0;
+}
+
+.portalRootMobilePortraitVideo .treeDialog,
+.portalRootMobileLandscapeVideo .treeDialog {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+}
+
+.portalRootMobilePortraitVideo .treeDialogHeader,
+.portalRootMobileLandscapeVideo .treeDialogHeader {
+    position: relative;
+    top: auto;
+    right: auto;
+    left: auto;
+    z-index: 6;
+    min-height: calc(env(safe-area-inset-top, 0px) + 60px);
+    align-items: center;
+    gap: 12px;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    background: color-mix(in srgb, var(--color-surface) 98%, transparent);
+    pointer-events: auto;
+}
+
+.portalRootMobilePortraitVideo .treeDialogTitle,
+.portalRootMobileLandscapeVideo .treeDialogTitle {
+    width: auto;
+    max-width: none;
+    flex: 1;
+    display: grid;
+    gap: 2px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+}
+
+.portalRootMobilePortraitVideo .treeDialogTitle span,
+.portalRootMobileLandscapeVideo .treeDialogTitle span {
+    display: block;
+}
+
+.portalRootMobilePortraitVideo .treeDialogTitle h2,
+.portalRootMobileLandscapeVideo .treeDialogTitle h2 {
+    margin: 2px 0 0;
+    font-size: 16px;
+    line-height: 1.2;
+    white-space: normal;
+}
+
+.portalRootMobilePortraitVideo .treeDialogActions,
+.portalRootMobileLandscapeVideo .treeDialogActions {
+    align-items: center;
+    gap: 8px;
+}
+
+.portalRootMobilePortraitVideo .treeProgress,
+.portalRootMobileLandscapeVideo .treeProgress {
+    max-width: 128px;
+    border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+    background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+    box-shadow: none;
+    backdrop-filter: none;
+}
+
+.portalRootMobilePortraitVideo .treeCloseButton,
+.portalRootMobileLandscapeVideo .treeCloseButton {
+    width: 44px;
+    height: 44px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+    color: color-mix(in srgb, var(--color-text) 94%, transparent);
+    box-shadow: none;
+}
+
+.portalRootMobilePortraitVideo .treePlotButton,
+.portalRootMobilePortraitVideo .treeChoiceCard {
+    width: min(236px, calc(100vw - 64px));
+}
+
+.portalRootMobileLandscapeVideo .treeDialogHeader {
+    min-height: 54px;
+    padding: 8px 14px;
+}
+
+.portalRootMobileLandscapeVideo .treeDialogTitle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.portalRootMobileLandscapeVideo .treeDialogTitle h2 {
+    margin: 0;
+    font-size: 15px;
+    white-space: nowrap;
+}
+
+.portalRootMobileLandscapeVideo .treeProgressFull {
+    display: none;
+}
+
+.portalRootMobileLandscapeVideo .treeProgressCompact {
+    display: inline-block;
+}
+
+.portalRootMobileLandscapeVideo .treePlotButton,
+.portalRootMobileLandscapeVideo .treeChoiceCard {
+    width: 238px;
+}

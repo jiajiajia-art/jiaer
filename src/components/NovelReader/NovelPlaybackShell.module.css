@@ -1,0 +1,116 @@
+/**
+ * 严格对齐 Galgame 回放层级：
+ * 背景 0 < 立绘 120 < 对话区 150 < 顶栏/场景名 100 < 进度条 3090 < 底栏 3100
+ */
+.root {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.textModeBackdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--color-surface);
+}
+
+.sceneHeader {
+  position: absolute;
+  top: 3.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-shadow) 45%, transparent);
+  color: var(--color-on-media);
+  font-size: 0.85rem;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
+.characterSlot {
+  position: absolute;
+  inset: 0;
+  z-index: 120;
+  pointer-events: none;
+}
+
+/*
+ * 对齐 Galgame.gameContentWrapper：贴底 + 渐变 + z-index:150
+ * NormalModeDisplay 自带 padding-bottom:5rem 给底栏留空
+ */
+.content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: auto;
+  min-height: 12.5rem;
+  z-index: 150;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--color-shadow) 85%, transparent) 0%,
+    color-mix(in srgb, var(--color-shadow) 82%, transparent) 8%,
+    color-mix(in srgb, var(--color-shadow) 75%, transparent) 18%,
+    color-mix(in srgb, var(--color-shadow) 70%, transparent) 32%,
+    color-mix(in srgb, var(--color-shadow) 60%, transparent) 50%,
+    color-mix(in srgb, var(--color-shadow) 55%, transparent) 82%,
+    color-mix(in srgb, var(--color-shadow) 30%, transparent) 92%,
+    transparent 100%
+  );
+}
+
+.contentTextMode {
+  top: 0;
+  bottom: 4.875rem;
+  height: auto;
+  min-height: 0;
+  justify-content: flex-start;
+  background: none;
+}
+
+.content > * {
+  pointer-events: auto;
+}
+
+.dialogueWrap {
+  position: relative;
+  width: 100%;
+  min-height: 10rem;
+}
+
+.textModeWrap {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 小说页无侧栏拖动手势预留，五键铺满 */
+.novelButtonBar {
+  padding-right: 1rem !important;
+}

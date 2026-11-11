@@ -1,0 +1,1234 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: grid;
+    place-items: center;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    padding: 24px;
+    box-sizing: border-box;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--color-surface) 78%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    animation: overlayIn 180ms ease-out;
+}
+
+.embeddedRoot {
+    width: 100%;
+}
+
+.content.embeddedContent {
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+    color: inherit;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    animation: none;
+}
+
+.content.embeddedContent::before {
+    display: none;
+}
+
+.embeddedContent .scrollArea {
+    padding: 0;
+    overflow: visible;
+}
+
+.embeddedContent .feedbackPanel {
+    min-height: 140px;
+}
+
+.content {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    width: min(760px, calc(100vw - 48px));
+    max-height: min(780px, calc(100dvh - 48px));
+    overflow: hidden;
+    color: var(--color-text);
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+    border-radius: 24px;
+    background:
+        radial-gradient(circle at 88% 12%, color-mix(in srgb, var(--color-primary) 18%, transparent), transparent 34%),
+        linear-gradient(145deg, color-mix(in srgb, var(--color-surface) 98%, transparent), color-mix(in srgb, var(--color-surface) 98%, transparent));
+    box-shadow: 0 30px 90px color-mix(in srgb, var(--color-shadow) 52%, transparent), inset 0 1px 0 color-mix(in srgb, var(--color-text) 8%, transparent);
+    animation: modalIn 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.content::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(115deg, color-mix(in srgb, var(--color-text) 6%, transparent), transparent 38%);
+}
+
+.contentExpanded {
+    max-height: calc(100dvh - 32px);
+}
+
+.closeButton {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    z-index: 5;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    color: color-mix(in srgb, var(--color-text) 78%, transparent);
+    font-size: 28px;
+    font-weight: 300;
+    line-height: 1;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    background: transparent;
+    -webkit-tap-highlight-color: transparent;
+    appearance: none;
+    transition: color 160ms ease, transform 160ms ease;
+}
+
+/* 功能注释：关闭钮禁止任何焦点/点击方框（含 focus-visible），避免打开弹窗自动 focus 时出现粉框 */
+.closeButton:focus,
+.closeButton:focus-visible,
+.closeButton:active {
+    outline: none;
+    border: none;
+    box-shadow: none;
+}
+
+.closeButton:hover {
+    color: var(--color-text);
+    transform: rotate(4deg);
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 26px 78px 18px 28px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.title {
+    margin: 0;
+    font-size: 25px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.headerReward {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.headerReward strong {
+    color: var(--color-primary-fg);
+    font-size: 28px;
+    font-variant-numeric: tabular-nums;
+}
+
+.scrollArea {
+    min-height: 0;
+    padding: 22px 28px 18px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--color-text) 18%, transparent) transparent;
+}
+
+.feedbackPanel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 280px;
+    gap: 14px;
+    color: var(--color-text-secondary);
+    text-align: center;
+}
+
+.feedbackPanel p {
+    margin: 0;
+}
+
+.secondaryButton {
+    min-width: 120px;
+    min-height: 42px;
+    padding: 0 20px;
+    color: var(--color-text);
+    cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 9%, transparent);
+}
+
+.weekSection {
+    padding: 18px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--color-text) 3.5%, transparent);
+}
+
+.embeddedCalendarSection {
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.sectionHeading,
+.monthHeading,
+.rewardProgressTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.sectionHeading {
+    margin-bottom: 14px;
+}
+
+.sectionHeading h3,
+.monthHeading h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 650;
+}
+
+.sectionHeading p {
+    margin: 4px 0 0;
+    color: var(--color-text-muted);
+    font-size: 12px;
+}
+
+.makeupCardBalance {
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    border: 1px solid color-mix(in srgb, var(--color-primary-light) 24%, transparent);
+    border-radius: 999px;
+    color: var(--color-primary-fg);
+    background: color-mix(in srgb, var(--color-primary) 9%, transparent);
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.weekGrid,
+.monthWeekdays,
+.monthGrid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.weekGrid {
+    gap: 8px;
+}
+
+.weekDay {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+    min-height: 126px;
+    padding: 11px 5px 9px;
+    box-sizing: border-box;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--color-text) 4.5%, transparent);
+    color: inherit;
+    font: inherit;
+    cursor: default;
+}
+
+.weekDay:disabled,
+.monthDay:disabled {
+    color: inherit;
+}
+
+.weekDay[data-can-makeup="true"],
+.monthDay[data-can-makeup="true"] {
+    cursor: pointer;
+    opacity: 1;
+    border-color: color-mix(in srgb, var(--color-primary-light) 40%, transparent);
+}
+
+.weekDay[data-can-makeup="true"]:hover,
+.monthDay[data-can-makeup="true"]:hover {
+    background: color-mix(in srgb, var(--color-primary) 13%, transparent);
+}
+
+.weekday {
+    color: color-mix(in srgb, var(--color-text) 86%, transparent);
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.weekDate {
+    margin-top: 3px;
+    color: var(--color-text-muted);
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+}
+
+.coinMark {
+    position: relative;
+    display: block;
+    width: 26px;
+    height: 26px;
+    margin: 10px 0 4px;
+    border: 2px solid var(--color-highlight);
+    border-radius: 50%;
+    background: linear-gradient(145deg, var(--color-highlight), var(--color-highlight));
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-highlight) 20%, transparent), inset 0 0 0 3px color-mix(in srgb, var(--color-text) 32%, transparent);
+}
+
+.coinMark::after {
+    content: '';
+    position: absolute;
+    inset: 7px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-surface) 55%, transparent);
+}
+
+.dayReward {
+    color: var(--color-text);
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+}
+
+.dayState {
+    min-height: 14px;
+    margin-top: 3px;
+    color: var(--color-text-muted);
+    font-size: 9px;
+    white-space: nowrap;
+}
+
+.daySigned {
+    border-color: color-mix(in srgb, var(--color-primary) 42%, transparent);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 24%, transparent), color-mix(in srgb, var(--color-primary) 8%, transparent));
+}
+
+.daySigned .dayState {
+    color: var(--color-primary-fg);
+}
+
+.dayMadeUp {
+    border-color: color-mix(in srgb, var(--color-primary-light) 38%, transparent);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary-light) 17%, transparent), color-mix(in srgb, var(--color-text) 3.5%, transparent));
+}
+
+.dayMadeUp .dayState,
+.monthDay.dayMadeUp small {
+    color: var(--color-primary-fg);
+}
+
+.dayToday {
+    border-color: color-mix(in srgb, var(--color-text) 65%, transparent);
+    background: linear-gradient(180deg, var(--color-primary-light), var(--color-primary));
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--color-primary) 24%, transparent);
+}
+
+.dayToday .weekDate,
+.dayToday .dayState {
+    color: color-mix(in srgb, var(--color-text) 78%, transparent);
+}
+
+.dayMissed {
+    border-style: dashed;
+    opacity: 0.5;
+}
+
+.dayMissed[data-can-makeup="true"] {
+    opacity: 1;
+}
+
+.dayMissed .coinMark {
+    filter: grayscale(1);
+}
+
+.dayUpcoming {
+    background: color-mix(in srgb, var(--color-text) 2.5%, transparent);
+}
+
+.bonusDay::after {
+    content: '';
+    position: absolute;
+    top: -14px;
+    right: -14px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    box-shadow: 0 0 22px color-mix(in srgb, var(--color-primary) 48%, transparent);
+}
+
+.weekRule {
+    margin: 13px 0 0;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.expandButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 44px;
+    margin: 10px 0 0;
+    padding: 0;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    border: 0;
+    background: transparent;
+}
+
+.chevronDown,
+.chevronUp {
+    width: 7px;
+    height: 7px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+}
+
+.chevronDown {
+    transform: rotate(45deg) translateY(-2px);
+}
+
+.chevronUp {
+    transform: rotate(225deg) translate(-2px, -1px);
+}
+
+.monthSection {
+    margin-top: 0;
+    padding: 18px 0 2px;
+    border: 0;
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 0;
+    animation: monthIn 180ms ease-out;
+}
+
+.embeddedContent .monthSection {
+    padding: 14px;
+    border: 0;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
+    animation: none;
+}
+
+.monthHeading {
+    margin-bottom: 14px;
+}
+
+.monthWeekdays,
+.monthGrid {
+    gap: 6px;
+}
+
+.monthWeekdays {
+    margin-bottom: 6px;
+}
+
+.monthWeekdays span {
+    color: var(--color-text-muted);
+    font-size: 10px;
+    text-align: center;
+}
+
+.monthDay,
+.monthEmpty {
+    aspect-ratio: 1;
+}
+
+.monthDay {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    border: 1px solid color-mix(in srgb, var(--color-text) 7%, transparent);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--color-text) 3.5%, transparent);
+    color: inherit;
+    font: inherit;
+    cursor: default;
+}
+
+.monthDay > span {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.monthDay small {
+    min-height: 10px;
+    color: var(--color-text-muted);
+    font-size: 8px;
+}
+
+.monthDay.dayToday {
+    color: var(--color-text);
+    box-shadow: none;
+}
+
+.monthDay.daySigned small {
+    color: var(--color-primary-fg);
+}
+
+.embeddedContent .monthDay {
+    border-color: transparent;
+    background: color-mix(in srgb, var(--color-text) 3.5%, transparent);
+}
+
+.embeddedSummary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.embeddedSummary span {
+    padding: 4px 8px;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    line-height: 1.4;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 5.5%, transparent);
+}
+
+.monthReward {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 14px;
+    padding: 16px 18px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 18px;
+    background: linear-gradient(110deg, color-mix(in srgb, var(--color-primary) 10%, transparent), color-mix(in srgb, var(--color-text) 3%, transparent));
+}
+
+.rewardBadge {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    flex: 0 0 68px;
+    height: 54px;
+    color: var(--color-on-primary);
+    font-size: 22px;
+    font-weight: 750;
+    line-height: 54px;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+    font-variant-numeric: tabular-nums;
+}
+
+.rewardBadge span {
+    margin-right: 1px;
+    color: var(--color-primary-fg);
+    font-size: 13px;
+}
+
+.rewardProgress {
+    flex: 1;
+    min-width: 0;
+}
+
+.rewardProgressTop strong {
+    font-size: 13px;
+}
+
+.rewardProgressTop p {
+    margin: 4px 0 0;
+    color: var(--color-text-muted);
+    font-size: 10px;
+}
+
+.rewardProgressTop > span {
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+
+.progressTrack {
+    height: 5px;
+    margin-top: 11px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 9%, transparent);
+}
+
+.progressTrack span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
+    transition: width 240ms ease;
+}
+
+.footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 18px 28px 22px;
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    background: color-mix(in srgb, var(--color-surface) 48%, transparent);
+}
+
+.footer.embeddedFooter {
+    display: block;
+    padding: 14px 0 0;
+    border: 0;
+    background: transparent;
+}
+
+.signInButton.embeddedSignInButton {
+    width: auto;
+    min-width: 144px;
+    min-height: 44px;
+    padding: 0 16px;
+    font-size: 13px;
+    border-radius: 8px;
+    box-shadow: none;
+}
+
+.embeddedRewardInfo {
+    width: 100%;
+    min-width: 0;
+    padding: 2px 0;
+    text-align: left;
+}
+
+.embeddedRewardInfo strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
+}
+
+.embeddedRewardInfo p {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+.embeddedRewardInfo p + p {
+    margin-top: 3px;
+}
+
+.breakdown {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.breakdown span {
+    padding: 5px 8px;
+    color: var(--color-text-secondary);
+    font-size: 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 5%, transparent);
+}
+
+.signInButton {
+    min-width: 220px;
+    min-height: 48px;
+    padding: 0 24px;
+    color: var(--color-on-primary);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--color-text) 28%, transparent);
+    border-radius: 999px;
+    background: linear-gradient(100deg, var(--color-primary), var(--color-primary));
+    box-shadow: 0 10px 30px color-mix(in srgb, var(--color-primary) 20%, transparent);
+    transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+}
+
+.signInButton:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 34px color-mix(in srgb, var(--color-primary) 30%, transparent);
+}
+
+.signInButton:disabled {
+    color: var(--color-text-secondary);
+    cursor: not-allowed;
+    border-color: color-mix(in srgb, var(--color-text) 8%, transparent);
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    box-shadow: none;
+}
+
+.makeupDialogBackdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: color-mix(in srgb, var(--color-surface) 72%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.makeupDialog {
+    width: min(360px, 100%);
+    padding: 22px;
+    box-sizing: border-box;
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+    border-radius: 18px;
+    background: linear-gradient(145deg, var(--color-surface-2), var(--color-surface));
+    box-shadow: 0 22px 64px color-mix(in srgb, var(--color-shadow) 46%, transparent);
+    text-align: center;
+}
+
+.makeupDialog h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.makeupDialog p {
+    margin: 10px 0 18px;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.makeupDialogActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.makeupDialog button {
+    min-height: 42px;
+    padding: 0 16px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 7%, transparent);
+    color: var(--color-text);
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.makeupDialog button:disabled {
+    cursor: wait;
+    opacity: 0.58;
+}
+
+.makeupDialog .makeupDialogPrimary {
+    border-color: transparent;
+    background: linear-gradient(100deg, var(--color-primary), var(--color-primary));
+}
+
+.makeupRewardList {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin: 0 0 18px;
+}
+
+.makeupRewardList span {
+    padding: 6px 9px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    color: var(--color-primary-fg);
+    font-size: 11px;
+}
+
+.buttonLoading {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    box-sizing: border-box;
+    border: 2px solid color-mix(in srgb, var(--color-text) 22%, transparent);
+    border-top-color: var(--color-text);
+    border-radius: 50%;
+    animation: spin 700ms linear infinite;
+}
+
+.secondaryButton:focus-visible,
+.expandButton:focus-visible,
+.signInButton:focus-visible,
+.weekDay:focus-visible,
+.monthDay:focus-visible,
+.makeupDialog button:focus-visible {
+    outline: 2px solid var(--color-primary-light);
+    outline-offset: 3px;
+}
+
+@keyframes overlayIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes modalIn {
+    from { opacity: 0; transform: translateY(14px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes monthIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (max-width: 600px) {
+    .overlay {
+        padding: 8px;
+    }
+
+    .content,
+    .contentExpanded {
+        width: calc(100vw - 16px);
+        max-height: calc(100dvh - 16px - env(safe-area-inset-bottom));
+        border-radius: 20px;
+    }
+
+    .closeButton {
+        top: 12px;
+        right: 12px;
+    }
+
+    .header {
+        padding: 18px 62px 14px 16px;
+    }
+
+    .title {
+        font-size: 20px;
+    }
+
+    .headerReward {
+        gap: 5px;
+        font-size: 9px;
+    }
+
+    .headerReward strong {
+        font-size: 20px;
+    }
+
+    .scrollArea {
+        padding: 14px 12px 12px;
+    }
+
+    .weekSection {
+        padding: 12px 8px;
+        border-radius: 14px;
+    }
+
+    .monthSection {
+        padding: 14px 0 2px;
+        border-radius: 0;
+    }
+
+    .embeddedContent .monthSection {
+        padding: 10px;
+        border-radius: 10px;
+    }
+
+    .embeddedContent .monthHeading {
+        margin-bottom: 10px;
+    }
+
+    .embeddedContent .monthHeading h3 {
+        font-size: 13px;
+    }
+
+    .sectionHeading {
+        padding: 0 3px;
+        margin-bottom: 10px;
+    }
+
+    .weekGrid {
+        gap: 3px;
+    }
+
+    .weekDay {
+        min-height: 105px;
+        padding: 8px 1px 7px;
+        border-radius: 9px;
+    }
+
+    .weekday {
+        font-size: 10px;
+    }
+
+    .weekDate {
+        font-size: 8px;
+    }
+
+    .coinMark {
+        width: 20px;
+        height: 20px;
+        margin: 8px 0 3px;
+    }
+
+    .coinMark::after {
+        inset: 5px;
+    }
+
+    .dayReward {
+        font-size: 11px;
+    }
+
+    .dayState {
+        font-size: 7px;
+        letter-spacing: -0.02em;
+    }
+
+    .weekRule {
+        margin-top: 10px;
+        font-size: 9px;
+    }
+
+    .monthWeekdays,
+    .monthGrid {
+        gap: 4px;
+    }
+
+    .monthDay {
+        border-radius: 7px;
+    }
+
+    .monthDay > span {
+        font-size: 10px;
+    }
+
+    .embeddedContent .monthDay {
+        border-radius: 6px;
+    }
+
+    .embeddedSummary {
+        gap: 6px;
+        margin-top: 8px;
+    }
+
+    .embeddedSummary span {
+        padding: 3px 7px;
+        font-size: 11px;
+    }
+
+    .monthReward {
+        gap: 10px;
+        margin-top: 10px;
+        padding: 12px;
+        border-radius: 14px;
+    }
+
+    .rewardBadge {
+        flex-basis: 54px;
+        height: 46px;
+        font-size: 18px;
+        line-height: 46px;
+    }
+
+    .rewardProgressTop p {
+        max-width: 190px;
+        font-size: 9px;
+    }
+
+    .footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+    }
+
+    .footer.embeddedFooter {
+        padding: 10px 0 0;
+    }
+
+    .breakdown {
+        justify-content: center;
+    }
+
+    .signInButton {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .embeddedSignInButton {
+        width: auto;
+        min-width: 132px;
+        min-height: 44px;
+        padding: 0 12px;
+        font-size: 12px;
+    }
+
+    .embeddedRewardInfo strong {
+        font-size: 11px;
+    }
+
+    .embeddedRewardInfo p {
+        font-size: 10px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .overlay,
+    .content,
+    .monthSection,
+    .spinner {
+        animation: none;
+    }
+
+    .progressTrack span,
+    .closeButton,
+    .signInButton {
+        transition: none;
+    }
+}
+
+/* 功能注释：紧凑版签到弹窗 —— 缩小尺寸、奖励数字置于金币右上角、连续签到奖励高亮 */
+.content:not(.embeddedContent) {
+    width: min(480px, calc(100vw - 32px));
+}
+
+.header {
+    padding: 18px 64px 12px 20px;
+    border-bottom: 0;
+}
+
+.title {
+    font-size: 20px;
+}
+
+.closeButton {
+    top: 10px;
+    right: 10px;
+}
+
+.scrollArea {
+    padding: 4px 20px 14px;
+}
+
+.weekSection {
+    margin-top: 12px;
+    padding: 14px 12px 12px;
+}
+
+.headingInline {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.sectionHeading {
+    margin-bottom: 10px;
+}
+
+.sectionHeading p {
+    margin: 0;
+}
+
+.weekGrid {
+    gap: 6px;
+}
+
+.weekDay {
+    min-height: 0;
+    padding: 8px 2px 8px;
+    overflow: visible;
+}
+
+.coinWrap {
+    position: relative;
+    display: block;
+    margin: 8px 0 0;
+}
+
+.coinWrap .coinMark {
+    margin: 0;
+}
+
+.coinWrap .dayReward {
+    position: absolute;
+    top: -9px;
+    left: 14px;
+    padding: 1px 5px;
+    color: var(--color-on-primary);
+    font-size: 10px;
+    font-weight: 750;
+    line-height: 14px;
+    white-space: nowrap;
+    border-radius: 999px;
+    background: var(--color-primary);
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.dayToday .coinWrap .dayReward {
+    color: var(--color-primary);
+    background: var(--color-surface);
+}
+
+.dayState {
+    min-height: 0;
+    margin-top: 4px;
+    font-size: 10px;
+}
+
+.bonusDay::after {
+    display: none;
+}
+
+.bonusDay .coinWrap .dayReward {
+    background: linear-gradient(100deg, var(--color-highlight), var(--color-primary));
+}
+
+.monthReward {
+    gap: 14px;
+    margin-top: 0;
+    padding: 12px 14px;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 55%, transparent);
+    background: linear-gradient(110deg, var(--color-primary) 0%, var(--color-primary) 55%, var(--color-highlight) 100%);
+    box-shadow: 0 10px 28px color-mix(in srgb, var(--color-primary) 35%, transparent), inset 0 1px 0 color-mix(in srgb, var(--color-text) 35%, transparent);
+}
+
+.rewardProgressTop strong {
+    color: var(--color-text);
+    font-size: 14px;
+}
+
+.rewardProgressTop > span {
+    color: color-mix(in srgb, var(--color-text) 85%, transparent);
+    font-size: 12px;
+}
+
+.rewardProgressTop > span b {
+    color: var(--color-text);
+    font-size: 16px;
+}
+
+.monthReward .progressTrack {
+    height: 6px;
+    margin-top: 8px;
+    background: color-mix(in srgb, var(--color-text) 22%, transparent);
+}
+
+.monthReward .progressTrack span {
+    background: linear-gradient(90deg, var(--color-highlight), var(--color-surface));
+}
+
+.monthReward .rewardBadge {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    height: auto;
+    padding: 6px 12px 6px 6px;
+    line-height: 1;
+    border: 0;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 22%, transparent);
+}
+
+.monthReward .rewardBadge .coinMark {
+    margin: 0;
+}
+
+.monthReward .rewardBadge strong {
+    color: var(--color-text);
+    font-size: 20px;
+    text-shadow: 0 2px 6px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.footer {
+    padding: 0 20px 18px;
+    border-top: 0;
+    background: transparent;
+}
+
+.footer:not(.embeddedFooter) .signInButton {
+    width: 100%;
+    min-height: 46px;
+    font-size: 16px;
+}
+
+@media (max-width: 600px) {
+    .content:not(.embeddedContent) {
+        width: calc(100vw - 16px);
+    }
+
+    .scrollArea {
+        padding: 2px 12px 12px;
+    }
+
+    .weekDay {
+        min-height: 0;
+    }
+
+    .coinWrap .dayReward {
+        left: 10px;
+        font-size: 9px;
+        padding: 0 4px;
+    }
+
+    .footer {
+        padding: 0 12px calc(12px + env(safe-area-inset-bottom));
+    }
+}
+
+/* ================= 统一弹窗风格（与会员/确认弹窗一致） ================= */
+.overlay { background: color-mix(in srgb, var(--color-shadow) 60%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.content:not(.embeddedContent) {
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 20px;
+    background: var(--color-surface);
+    box-shadow: 0 24px 64px color-mix(in srgb, var(--color-shadow) 50%, transparent);
+}
+.content:not(.embeddedContent)::before { display: none; }
+.weekDay { border-radius: 12px; }
+.daySigned {
+    border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+.dayToday {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+}
+.signInButton, .embeddedSignInButton, .makeupDialogPrimary {
+    border: 0;
+    border-radius: 12px;
+    background: var(--color-primary);
+    box-shadow: none;
+    color: var(--color-on-primary);
+}
+.signInButton:hover:not(:disabled), .embeddedSignInButton:hover:not(:disabled), .makeupDialogPrimary:hover:not(:disabled) {
+    background: var(--color-primary-bold);
+    color: var(--color-on-primary);
+}
+.secondaryButton { border-radius: 12px; border-color: transparent; background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.makeupDialog { border-color: color-mix(in srgb, var(--color-text) 8%, transparent); background: var(--color-surface); }

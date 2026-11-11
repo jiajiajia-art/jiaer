@@ -1,0 +1,674 @@
+.grid4 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    width: 100%;
+}
+
+.gridHomeWide {
+    width: 100%;
+}
+
+/* 功能注释：效果图整卡容器——封面顶圆角 + 深灰信息底一体圆角 */
+.goodsCard {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    position: relative;
+    background: var(--color-surface);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.goodsCardSelectable {
+    user-select: none;
+}
+
+.goodsCardSelected .goodsTitle {
+    color: var(--color-primary-fg);
+}
+
+.goodsImg {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    position: relative;
+    border-radius: 0;
+    overflow: hidden;
+    background: var(--color-surface);
+}
+
+.goodsImg > img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* 海报标题在画面上方，裁切时保住顶边，不要从中间切掉标题 */
+    object-position: top center;
+    display: block;
+}
+
+/* 功能注释：生命周期角标放右上、题材标签下方，避免与 ROMANCE 等题材抢左上 */
+.workStatusTag {
+    position: absolute;
+    top: 42px;
+    right: 10px;
+    left: auto;
+    z-index: 5;
+    border-radius: 999px;
+    padding: 5px 10px;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.goodsImg:not(:has(.goodsTypeTag)) .workStatusTag {
+    top: 10px;
+}
+
+/* 功能注释：无封面暗色占位，避免白底 welcome 图破坏 funloom 夜色卡面 */
+.goodsImgPlaceholder {
+    width: 100%;
+    height: 100%;
+    background:
+        radial-gradient(ellipse at 50% 42%, color-mix(in srgb, var(--color-primary) 22%, transparent) 0%, transparent 58%),
+        linear-gradient(160deg, var(--color-surface-2) 0%, var(--color-surface) 55%, var(--color-bg) 100%);
+}
+
+.goodsImg::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 0;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.selectionMask {
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--color-text) 28%, transparent);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 1;
+}
+
+.selectionMaskActive {
+    opacity: 1;
+    background: color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.selectionToggle {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    border: 2px solid color-mix(in srgb, var(--color-text) 96%, transparent);
+    background: color-mix(in srgb, var(--color-surface) 36%, transparent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    z-index: 4;
+    transition: background-color 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.selectionToggle:hover {
+    transform: scale(1.05);
+}
+
+.selectionToggleActive {
+    background: var(--color-primary-bold);
+    border-color: var(--color-primary-bold);
+}
+
+.selectionToggleInner {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--color-surface);
+    opacity: 0;
+    transform: scale(0.6);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.selectionToggleActive .selectionToggleInner {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.incentiveTag {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    border: 1px solid var(--color-primary);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    z-index: 3;
+}
+
+.incentiveFinished {
+    background: color-mix(in srgb, var(--color-success) 95%, transparent);
+    color: var(--color-on-media);
+    border-color: var(--color-success);
+}
+
+.goodsTypeTag {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    max-width: 68%;
+    border: none;
+    border-radius: 999px;
+    color: var(--color-on-media);
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 1px color-mix(in srgb, var(--color-shadow) 25%, transparent);
+    box-shadow: none;
+    z-index: 3;
+}
+
+.goodsInfo {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-end;
+    gap: 10px;
+    padding: 40px 12px 12px;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-surface) 70%, transparent) 70%, var(--color-surface) 100%);
+    z-index: 3;
+    pointer-events: none;
+}
+
+.goodsTheme {
+    max-width: 60%;
+    color: var(--color-text);
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.goodsInfoStats,
+.goodsInfoRight {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.goodsInfoItem {
+    display: inline-flex;
+    align-items: center;
+    gap: 3.6px;
+    color: var(--color-on-media);
+    /* 功能注释：封面角标统计条整体相对原尺寸放大 20% */
+    font-size: 13.2px;
+    font-weight: 500;
+    line-height: 1;
+    min-width: 0;
+    text-shadow: 0 1px 2px color-mix(in srgb, var(--color-shadow) 55%, transparent);
+}
+
+.goodsInfoItem svg,
+.goodsInfoIcon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    flex-shrink: 0;
+    color: var(--color-text);
+    opacity: 0.96;
+}
+
+/* 功能注释：火焰/心形在统计条基准上再保持辨识度（随整体 +20%） */
+.goodsInfoFlame {
+    width: 15.12px;
+    height: 20.16px;
+    flex-shrink: 0;
+    color: var(--color-text);
+    opacity: 0.96;
+}
+
+.goodsInfoHeart {
+    width: 16.8px;
+    height: 15.12px;
+    flex-shrink: 0;
+    color: var(--color-text);
+    opacity: 0.96;
+}
+
+.goodsInfoValue {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 功能注释：效果图信息区贴合封面底部，深灰底 + 内边距 */
+.goodsBody {
+    width: 100%;
+    margin-top: 0;
+    padding: 12px 12px 14px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1 1 auto;
+    background: var(--color-surface);
+}
+
+.goodsTitleWrap,
+.goodsTitleRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+/* 功能注释：左作者署名、右收藏徽标，同一行左右分布 */
+.goodsMetaRow {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+}
+
+.goodsTitle {
+    flex: none;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-text);
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* 功能注释：效果图收藏徽标——酒红半透明底 + 浅粉字，非实心白字按钮 */
+.goodsCollectBadge {
+    /* 功能注释：对齐收藏夹效果图——实心酒红胶囊白字，非半透明粉字 */
+    flex: 0 0 auto;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 22px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+/* Byline Credit：左侧作者署名（头像+昵称），可收缩避免挤占右侧收藏 */
+.goodsAuthor {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 0;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.goodsAuthorAvatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--color-surface-2);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--color-text) 18%, transparent),
+      0 0 0 2px color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.goodsAuthorName {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+
+.goodsCard:hover .goodsAuthorAvatar {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--color-text) 28%, transparent),
+      0 0 0 2px color-mix(in srgb, var(--color-primary) 60%, transparent);
+}
+
+.goodsDesc {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--color-text-muted);
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.goodsTagRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+/* 功能注释：效果图题材标签——#333 深灰底、白字、小圆角（非胶囊） */
+.goodsTagPill {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    min-height: 24px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: var(--color-surface-2);
+    color: var(--color-text);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.goodsSubtitle {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.emptyState {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 50px;
+}
+
+.emptyStateText {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--color-text-muted);
+}
+
+@media (min-width: 769px) {
+    .grid4 {
+        gap: 24px;
+        align-items: start;
+    }
+
+    .goodsCard {
+        min-width: 0;
+    }
+
+    .gridHomeWide {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 24px;
+        align-items: start;
+    }
+
+    .goodsCardHomeWide {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .goodsImg {
+        aspect-ratio: 3 / 4;
+        border-radius: 0;
+    }
+
+    .goodsTitle {
+        font-size: 17px;
+    }
+
+    .goodsBody {
+        padding: 14px 14px 16px;
+    }
+
+    .goodsTagPill {
+        min-height: 30px;
+        padding: 6px 14px;
+        font-size: 13px;
+    }
+}
+
+@media (min-width: 1280px) {
+    .grid4 {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1440px) {
+    .gridHomeWide {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .grid4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .goodsCard {
+        width: 100%;
+        border-radius: 14px;
+    }
+
+    .goodsImg {
+        aspect-ratio: 3 / 4;
+        border-radius: 0;
+    }
+
+    .goodsImg::after {
+        height: var(--mobile-content-image-guard-height);
+        background: var(--mobile-content-image-guard-dark-gradient);
+    }
+
+    .goodsImg > img {
+        /* 封面标题贴在顶部，禁止沿用上移放大（会把第一行字裁出卡片） */
+        transform: none;
+    }
+
+    .goodsTypeTag {
+        max-width: 72%;
+        font-size: 11px;
+        padding: 4px 10px;
+        min-height: 22px;
+    }
+
+    .selectionToggle {
+        top: 8px;
+        left: 8px;
+        width: 22px;
+        height: 22px;
+    }
+
+    .selectionToggleInner {
+        width: 9px;
+        height: 9px;
+    }
+
+    .goodsInfo {
+        padding: 26px 10px 10px;
+    }
+
+    .goodsTheme {
+        max-width: 56%;
+        font-size: 11px;
+        padding: 3px 8px;
+    }
+
+    .goodsInfoStats,
+    .goodsInfoRight {
+        gap: 10.8px;
+    }
+
+    .goodsInfoItem {
+        font-size: 13.2px;
+        gap: 3.6px;
+    }
+
+    .goodsInfoItem svg,
+    .goodsInfoIcon {
+        width: 15px;
+        height: 15px;
+    }
+
+    .goodsInfoFlame {
+        width: 13.44px;
+        height: 18.48px;
+    }
+
+    .goodsInfoHeart {
+        width: 15.12px;
+        height: 13.44px;
+    }
+
+    .goodsBody {
+        padding: 10px 10px 12px;
+        gap: 7px;
+    }
+
+    .goodsTitle {
+        font-size: 15px;
+    }
+
+    /* 功能注释：移动端保持效果图比例——半透明收藏徽标 + 浅灰题材胶囊 */
+    .goodsCollectBadge {
+        min-height: 22px;
+        font-size: 11px;
+        padding: 3px 9px;
+        background: var(--color-primary);
+        color: var(--color-on-primary);
+    }
+
+    .goodsDesc {
+        font-size: 12px;
+    }
+
+    .goodsTagPill {
+        min-height: 24px;
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        background: var(--color-surface-2);
+        color: var(--color-text);
+    }
+
+    .goodsAuthor {
+        gap: 6px;
+        margin-top: 0;
+    }
+
+    .goodsAuthorAvatar {
+        width: 16px;
+        height: 16px;
+        box-shadow:
+          0 0 0 1px color-mix(in srgb, var(--color-text) 25%, transparent),
+          0 0 0 2px color-mix(in srgb, var(--color-primary) 50%, transparent);
+    }
+
+    .goodsAuthorName {
+        font-size: 11px;
+    }
+
+    .goodsSubtitle {
+        font-size: 11px;
+    }
+}
+
+/* 功能注释：卡片对齐——正文固定结构：标题恒占两行、作者行固定高、标签行恒占一行，
+   且网格拉伸等高，避免标题长短/有无标签导致卡片参差 */
+.grid4,
+.gridHomeWide { align-items: stretch !important; }
+.goodsCard { height: 100%; }
+.goodsTitle { min-height: calc(1.35em * 2); }
+.goodsMetaRow { height: 22px; }
+.goodsTagRow {
+    margin-top: auto;
+    height: 24px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+}
+.goodsTagPill { flex: 0 1 auto; min-width: 0; }
+
+/* ===== 功能注释：卡片视觉精修 =====
+   层级：封面（数据角标）→ 标题 → 作者 → 题材；统一 12px 内边距与 8px 节奏 */
+.goodsCard {
+    border: 1px solid color-mix(in srgb, var(--color-text) 7%, transparent);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.goodsImg > img { transition: transform 0.5s ease; }
+@media (hover: hover) {
+    .goodsCard:hover {
+        transform: translateY(-3px);
+        border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+        box-shadow: 0 12px 28px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+    }
+    .goodsCard:hover .goodsImg > img { transform: scale(1.04); }
+}
+/* 收藏：封面右下半透明玻璃胶囊，与左侧火焰/心形数据同一基线，不再抢正文视线 */
+.goodsInfo .goodsCollectBadge {
+    min-height: 22px;
+    padding: 2px 9px;
+    font-size: 11.5px;
+    font-weight: 600;
+    background: color-mix(in srgb, var(--color-primary) 82%, transparent);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 35%, transparent);
+}
+.goodsBody { padding: 10px 12px 12px; gap: 8px; }
+.goodsTitle { font-size: 15px; letter-spacing: 0.01em; }
+.goodsTagPill {
+    min-height: 22px;
+    padding: 2px 8px;
+    font-size: 11.5px;
+    color: var(--color-text-muted);
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+.goodsTagRow { height: 22px; gap: 6px; }
+.goodsInfoBookmark {
+    width: 14px;
+    height: 15px;
+    flex-shrink: 0;
+    color: var(--color-primary-fg, var(--color-primary));
+}

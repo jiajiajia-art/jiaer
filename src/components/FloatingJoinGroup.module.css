@@ -1,0 +1,364 @@
+.floatingButton {
+    position: fixed;
+    top: auto;
+    right: clamp(10px, 2vw, 28px);
+    /* 实现避让轮播切换按钮 */
+    bottom: clamp(96px, 12vh, 164px);
+    transform: none;
+    z-index: 1200;
+    width: 72px;
+    min-height: 244px;
+    padding: 18px 12px 16px;
+    border: none;
+    border-radius: 24px;
+    background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg) 100%);
+    box-shadow: 0 12px 32px color-mix(in srgb, var(--color-shadow) 14%, transparent);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    cursor: pointer;
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* 英文横向布局 */
+.floatingButtonHorizontal {
+    flex-direction: row;
+    width: auto;
+    min-height: auto;
+    padding: 14px 16px;
+    gap: 10px;
+}
+
+.floatingButton:hover {
+    transform: translateX(-2px);
+    box-shadow: 0 16px 40px color-mix(in srgb, var(--color-shadow) 18%, transparent);
+}
+
+.floatingButton:focus {
+    outline: none;
+}
+
+.floatingButton:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-info) 80%, transparent);
+    outline-offset: 3px;
+}
+
+.floatingButton:active {
+    transform: translateX(0);
+}
+
+.floatingButtonDragging {
+    box-shadow: 0 18px 42px color-mix(in srgb, var(--color-shadow) 22%, transparent);
+}
+
+.label {
+    color: var(--color-text);
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.1;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    letter-spacing: 3px;
+}
+
+/* 英文横向布局 */
+.labelHorizontal {
+    writing-mode: horizontal-tb;
+    text-orientation: mixed;
+    letter-spacing: 0;
+    font-size: 14px;
+    text-align: center;
+    line-height: 1.3;
+}
+
+.iconStack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+/* 英文横向布局 */
+.iconStackHorizontal {
+    flex-direction: row;
+    gap: 6px;
+}
+
+.mobileEntryIconWrap {
+    display: none;
+}
+
+.iconWrap {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-success) 12%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* 英文横向布局 - 图标缩小 */
+.iconWrapHorizontal {
+    width: 32px;
+    height: 32px;
+}
+
+.qqIconWrap {
+    background: color-mix(in srgb, var(--color-info) 14%, transparent);
+}
+
+.wechatIcon {
+    width: 26px;
+    height: 26px;
+    fill: var(--color-success);
+    display: block;
+}
+
+/* 英文横向布局 - 图标缩小 */
+.wechatIconHorizontal {
+    width: 20px;
+    height: 20px;
+}
+
+.qqPenguinIcon {
+    width: 26px;
+    height: 26px;
+    display: block;
+}
+
+/* 英文横向布局 - 图标缩小 */
+.qqPenguinIconHorizontal {
+    width: 20px;
+    height: 20px;
+}
+
+.mobileEntryIcon {
+    width: 30px;
+    height: 30px;
+    display: block;
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    background: color-mix(in srgb, var(--color-surface) 48%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    box-sizing: border-box;
+}
+
+.modal {
+    width: min(92vw, 560px);
+    padding: 28px 24px 24px;
+    border-radius: 24px;
+    background: var(--color-surface);
+    box-shadow: 0 24px 60px color-mix(in srgb, var(--color-shadow) 22%, transparent);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.modalTitle {
+    margin: 0;
+    font-size: 22px;
+    line-height: 1.4;
+    font-weight: 600;
+    color: var(--color-text);
+    text-align: center;
+}
+
+.qrGrid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.qrFrame {
+    width: 100%;
+    padding: 14px;
+    border-radius: 20px;
+    background: linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg) 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    box-sizing: border-box;
+}
+
+.qrImage {
+    width: min(100%, 250px);
+    aspect-ratio: 1 / 1;
+    object-fit: contain;
+    display: block;
+    border-radius: 14px;
+    background: var(--color-surface);
+}
+
+.qrLabel {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+.promotionHintButton {
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--color-info);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.6;
+    text-align: center;
+    cursor: pointer;
+    transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.promotionHintButton:hover {
+    color: var(--color-info);
+    opacity: 0.92;
+}
+
+.promotionHintButton:active {
+    opacity: 1;
+}
+
+.closeButton {
+    min-width: 120px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 999px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.closeButton:hover {
+    opacity: 0.92;
+    transform: translateY(-1px);
+}
+
+.closeButton:active {
+    transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+    /* 移动端版本暂缓，当前先只保留 PC 端入口。 */
+    .floatingButton,
+    .overlay {
+        display: none;
+    }
+
+    .floatingButton {
+        right: auto;
+        top: auto;
+        width: 72px;
+        min-height: 88px;
+        padding: 10px 8px 12px;
+        border-radius: 22px;
+        background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(10px);
+        gap: 8px;
+        justify-content: center;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        transition: box-shadow 0.18s ease, opacity 0.18s ease;
+    }
+
+    .floatingButton:hover {
+        transform: none;
+    }
+
+    .floatingButton:active {
+        transform: none;
+    }
+
+    .floatingButtonDragging {
+        opacity: 0.96;
+    }
+
+    .label {
+        font-size: 12px;
+        letter-spacing: 0;
+        line-height: 1;
+        writing-mode: horizontal-tb;
+        text-orientation: mixed;
+    }
+
+    .iconWrap {
+        width: 36px;
+        height: 36px;
+    }
+
+    .iconStack {
+        display: none;
+    }
+
+    .mobileEntryIconWrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+    }
+
+    .mobileEntryIcon {
+        width: 28px;
+        height: 28px;
+    }
+
+    .overlay {
+        padding: 16px;
+    }
+
+    .modal {
+        width: min(100%, 420px);
+        padding: 22px 18px 20px;
+        border-radius: 20px;
+        gap: 16px;
+    }
+
+    .qrGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .qrFrame {
+        padding: 10px;
+        gap: 10px;
+    }
+
+    .qrLabel {
+        font-size: 13px;
+    }
+
+    .modalTitle {
+        font-size: 18px;
+    }
+
+    .promotionHintButton {
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .closeButton {
+        min-width: 110px;
+        font-size: 15px;
+    }
+}

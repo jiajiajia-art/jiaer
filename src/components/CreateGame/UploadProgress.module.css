@@ -1,0 +1,284 @@
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+/* 功能注释：居中上传遮罩对齐 funloom 墨黑片，进度与按钮跟创作弹窗同系 */
+.uploadOverlay {
+    --dock-surface: var(--color-surface);
+    --dock-input: var(--color-surface);
+    --dock-accent: var(--color-primary-bold);
+    --dock-accent-hot: var(--color-primary);
+    --dock-ok: var(--color-success);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: all;
+}
+
+.uploadOverlayContent {
+    background: var(--dock-surface);
+    border-radius: 18px;
+    padding: 28px 28px 22px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    box-shadow: 0 20px 48px color-mix(in srgb, var(--color-shadow) 55%, transparent);
+    text-align: center;
+    min-width: 360px;
+    max-width: 90%;
+    color: var(--color-text);
+    animation: fadeInUp 0.3s ease-out;
+}
+
+.uploadOverlayContentDone {
+    border-color: color-mix(in srgb, var(--color-success) 35%, transparent);
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.uploadOverlayTitle {
+    color: var(--color-text);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0 0 22px 0;
+}
+
+.uploadProgressContainer {
+    margin-bottom: 16px;
+}
+
+.uploadProgressBar {
+    width: 100%;
+    /* 功能注释：相对原先 10px 缩一半，避免进度条过粗抢视觉 */
+    height: 5px;
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 14px;
+    box-shadow: inset 0 1px 2px color-mix(in srgb, var(--color-shadow) 35%, transparent);
+}
+
+.uploadProgressBarDone {
+    background: color-mix(in srgb, var(--color-success) 18%, transparent);
+}
+
+.uploadProgressFill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--dock-accent-hot) 0%, var(--color-primary) 55%, var(--dock-accent) 100%);
+    border-radius: 999px;
+    transition: width 0.28s ease;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 12px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.uploadProgressFillDone {
+    background: linear-gradient(90deg, var(--color-success) 0%, var(--dock-ok) 100%);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--color-success) 35%, transparent);
+}
+
+.uploadProgressFill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        color-mix(in srgb, var(--color-text) 28%, transparent),
+        transparent
+    );
+    animation: shimmer 1.6s ease-in-out infinite;
+}
+
+.uploadProgressFillDone::after {
+    animation: none;
+    opacity: 0;
+}
+
+.uploadProgressPercent {
+    color: var(--color-text);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.uploadOverlayText {
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    margin: 8px 0 22px 0;
+    line-height: 1.5;
+    min-height: 20px;
+}
+
+.uploadOverlayTextDone {
+    color: var(--color-success);
+    font-weight: 600;
+}
+
+/* 功能注释：取消对齐创作弹窗通栏次要按钮，禁止红描边胶囊 */
+.btnLabel {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.btnIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 1em;
+    height: 1em;
+    font-size: 1.05em;
+}
+
+.btnIcon svg {
+    width: 1em;
+    height: 1em;
+}
+
+.cancelUploadBtn {
+    width: 100%;
+    min-height: 44px;
+    padding: 12px 16px;
+    box-sizing: border-box;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    background: var(--dock-input);
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.16s ease;
+}
+
+.cancelUploadBtn:hover {
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    color: var(--color-text);
+    border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.cancelUploadBtn:active {
+    transform: translateY(1px);
+}
+
+.cancelUploadBtn:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 80%, transparent);
+    outline-offset: 2px;
+}
+
+.autoCloseHint {
+    height: 8px;
+}
+
+.actionRow {
+    display: flex;
+    gap: 10px;
+    justify-content: stretch;
+    align-items: center;
+    width: 100%;
+}
+
+.primaryBtn,
+.secondaryBtn {
+    flex: 1;
+    min-height: 44px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.16s ease;
+}
+
+.primaryBtn {
+    background: linear-gradient(135deg, var(--dock-accent-hot) 0%, var(--dock-accent) 100%);
+    color: var(--color-text);
+    border: 1px solid var(--dock-accent-hot);
+}
+
+.primaryBtn:hover {
+    filter: brightness(1.05);
+}
+
+.secondaryBtn {
+    background: var(--dock-input);
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    font-weight: 600;
+}
+
+.secondaryBtn:hover {
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    color: var(--color-text);
+}
+
+.primaryBtn:active,
+.secondaryBtn:active {
+    transform: translateY(1px);
+}
+
+@media (max-width: 768px) {
+    .uploadOverlay {
+        padding: 10px;
+    }
+
+    .uploadOverlayContent {
+        min-width: 90vw;
+        max-width: 90vw;
+        padding: 24px 18px 18px;
+        border-radius: 20px;
+    }
+
+    .uploadOverlayTitle {
+        font-size: 17px;
+        margin: 0 0 18px 0;
+    }
+
+    .uploadProgressContainer {
+        margin-bottom: 14px;
+    }
+
+    .uploadProgressBar {
+        height: 5px;
+        margin-bottom: 12px;
+    }
+
+    .uploadProgressPercent {
+        font-size: 20px;
+    }
+
+    .uploadOverlayText {
+        font-size: 13px;
+        margin: 6px 0 18px 0;
+    }
+
+    .cancelUploadBtn {
+        min-height: 48px;
+        font-size: 15px;
+    }
+}

@@ -1,0 +1,13 @@
+.historyCard {
+  width: 100%;
+}
+
+.description {
+  margin-bottom: 16px;
+}
+
+.paginationRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}

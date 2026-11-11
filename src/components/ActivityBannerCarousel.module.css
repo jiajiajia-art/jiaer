@@ -1,0 +1,166 @@
+.root {
+    width: 100%;
+    margin-bottom: 22px;
+}
+
+.viewport {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    border-radius: 18px;
+    background: var(--color-surface);
+    box-shadow: 0 18px 46px color-mix(in srgb, var(--color-shadow) 28%, transparent);
+    touch-action: pan-y;
+}
+
+.track {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    transition: transform 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+    will-change: transform;
+}
+
+.slide {
+    position: relative;
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.clickable {
+    cursor: pointer;
+}
+
+.image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.copy {
+    position: absolute;
+    inset: auto 0 0;
+    z-index: 1;
+    padding: 54px 52px 34px 24px;
+    background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-shadow) 82%, transparent) 100%);
+    pointer-events: none;
+}
+
+.title {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    color: var(--color-on-media);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.25;
+    text-shadow: 0 2px 12px color-mix(in srgb, var(--color-shadow) 50%, transparent);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+}
+
+.description {
+    display: -webkit-box;
+    margin: 7px 0 0;
+    overflow: hidden;
+    color: color-mix(in srgb, var(--color-text) 82%, transparent);
+    font-size: 13px;
+    line-height: 1.45;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.navButton {
+    position: absolute;
+    top: 50%;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 46px;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--color-text) 18%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--color-shadow) 38%, transparent);
+    color: var(--color-on-media);
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    transform: translateY(-50%);
+    backdrop-filter: blur(8px);
+}
+
+.previous {
+    left: 10px;
+}
+
+.next {
+    right: 10px;
+}
+
+.indicators {
+    position: absolute;
+    right: 18px;
+    bottom: 16px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.indicator {
+    width: 7px;
+    height: 7px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 48%, transparent);
+    cursor: pointer;
+    transition: width 180ms ease, background 180ms ease;
+}
+
+.indicatorActive {
+    width: 20px;
+    background: var(--color-surface);
+}
+
+@media (max-width: 768px) {
+    .viewport {
+        border-radius: 16px;
+    }
+
+    .copy {
+        padding: 44px 44px 26px 18px;
+    }
+
+    .title {
+        font-size: 19px;
+    }
+
+    .description {
+        font-size: 12px;
+        -webkit-line-clamp: 1;
+    }
+
+    .navButton {
+        display: none;
+    }
+
+    .indicators {
+        right: 14px;
+        bottom: 12px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .track,
+    .indicator {
+        transition: none;
+    }
+}

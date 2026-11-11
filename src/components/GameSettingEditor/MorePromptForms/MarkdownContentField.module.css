@@ -1,0 +1,118 @@
+/* 功能注释：Markdown 内容井对齐 #1C1C1E 输入，禁止白底粉 hover */
+
+.wrapper {
+  width: 100%;
+}
+
+.textarea,
+.preview {
+  width: 100%;
+  min-height: 220px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: var(--color-surface);
+  box-sizing: border-box;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--color-text);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.textarea {
+  padding: 16px 18px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: var(--color-primary-bold);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 16px 18px;
+  text-align: left;
+  cursor: text;
+  font-family: inherit;
+  font-weight: inherit;
+}
+
+.preview:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  background: var(--color-surface);
+}
+
+.preview:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.previewEmpty {
+  color: var(--color-text-muted);
+}
+
+.placeholder {
+  font-size: 0.92rem;
+}
+
+.markdownBody {
+  width: 100%;
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
+}
+
+.markdownBody :global(> *:first-child) {
+  margin-top: 0;
+}
+
+.markdownBody :global(p) {
+  margin: 0 0 0.75em;
+}
+
+.markdownBody :global(p:last-child) {
+  margin-bottom: 0;
+}
+
+.markdownBody :global(ul),
+.markdownBody :global(ol) {
+  margin: 0 0 0.75em;
+  padding-left: 1.25em;
+}
+
+.markdownBody :global(h1),
+.markdownBody :global(h2),
+.markdownBody :global(h3) {
+  margin: 0 0 0.5em;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.markdownBody :global(h1) {
+  font-size: 1.35rem;
+}
+
+.markdownBody :global(h2) {
+  font-size: 1.2rem;
+}
+
+.markdownBody :global(h3) {
+  font-size: 1.05rem;
+}
+
+.markdownBody :global(code) {
+  background: color-mix(in srgb, var(--color-shadow) 40%, transparent);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.markdownBody :global(pre) {
+  background: color-mix(in srgb, var(--color-shadow) 40%, transparent);
+  padding: 12px;
+  border-radius: 10px;
+  overflow-x: auto;
+}

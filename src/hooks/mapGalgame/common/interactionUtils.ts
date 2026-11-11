@@ -1,0 +1,264 @@
+import { getImageUrl, getPlayerImageUrl } from '../../../utils/constants';
+import { sanitizeVisualStepText } from '../../../utils/textUtils';
+
+
+// ==================== 图片处理 ====================
+
+export const getImageUrls = (image: string | undefined): string | undefined => {
+    if (!image) return undefined;
+    if (image.startsWith('http')) return image;
+    if (image.includes('data/assets')) return image;
+    return getImageUrl(image) || undefined;
+};
+
+export { getImageUrl, getPlayerImageUrl };
+
+/** 获取玩家图片（支持字符串或对象格式） */
+export const getPlayerImage = (playerImages: string | { [variant: string]: string } | undefined): string | undefined => {
+    if (!playerImages) return undefined;
+    const image = typeof playerImages === 'string' ? playerImages : (playerImages as any)?.base || '';
+    return image ? getImageUrls(image) : undefined;
+};
+
+/** 获取玩家图片的统一兜底函数（支持 imagePath、image、images 三个字段） */
+export const getPlayerImageWithFallback = (player: any, defaultImage?: string): string | undefined => {
+    const imageUrl = getPlayerImageUrl(player, defaultImage);
+    return imageUrl ? getImageUrls(imageUrl) : undefined;
+};
+
+export interface ModalState {
+    visible: boolean;
+    message: string;
+}
+
+// ==================== 步骤转换 ====================
+
+// Message type for mapGalgame context — kept in sync with useGalgameMessage's Message
+export interface Message {
+    id: number;
+    type: 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
+    message: string;
+    characterName?: string;
+    characterImage?: string;
+    characterPosition?: 'left' | 'right';
+    portraitScale?: number;
+    portraitOffsetX?: number;
+    portraitOffsetY?: number;
+    options?: Array<{ id: number; text: string; optionId?: string }>;
+    npcId?: string;
+}
+
+/** 将原始步骤转换为 Message 格式 */
+export const convertStepToMessage = (
+    step: any,
+    worldSetting: any | null
+): Message | null => {
+    if (!step) return null;
+
+    // 统一取文案的兜底字段，避免后端有时用 text/message
+    const stepText = sanitizeVisualStepText(step.content || step.text || step.message || '');
+    if (typeof step.description === 'string') {
+        step = { ...step, description: sanitizeVisualStepText(step.description) };
+    }
+
+    if (step.type === 'narration') {
+        return {
+            id: Date.now(),
+            type: 'narration',
+            message: stepText,
+        };
+    } else if (step.type === 'transition') {
+        return {
+            id: Date.now(),
+            type: 'transition',
+            message: stepText,
+        };
+    } else if (step.type === 'dialogue') {
+        const isPlayer = step.npcId === worldSetting?.player?.name;
+        const characterName = step.speakerName || step.npcId || step.speakerId || '未知角色';
+        const characterImage = isPlayer 
+            ? getPlayerImage(worldSetting?.player?.images)
+            : getImageUrls(step.activeImage || step.npcImages?.base);
+        const portraitScale = isPlayer 
+            ? worldSetting?.player?.portraitScale 
+            : undefined;
+        const portraitOffsetX = isPlayer 
+            ? worldSetting?.player?.portraitOffsetX 
+            : undefined;
+        const portraitOffsetY = isPlayer 
+            ? worldSetting?.player?.portraitOffsetY 
+            : undefined;
+        
+        return {
+            id: Date.now(),
+            type: 'dialogue',
+            message: stepText,
+            characterName,
+            characterImage,
+            characterPosition: isPlayer ? 'right' : 'left',
+            portraitScale,
+            portraitOffsetX,
+            portraitOffsetY,
+            npcId: isPlayer ? undefined : (step.npcId || step.speakerId),
+        };
+    } else if (step.type === 'choice') {
+        const options = step.options?.map((opt: any, index: number) => {
+            if (typeof opt === 'string') {
+                return { id: index + 1, text: opt };
+            }
+            return {
+                id: index + 1,
+                text: opt.text || opt,
+                optionId: opt.optionId ? String(opt.optionId) : undefined,
+            };
+        }) || [];
+
+        const message = step.title
+            ? (step.description ? `${step.title}\n${step.description}` : step.title)
+            : (step.description || '请选择你的行动');
+
+        return {
+            id: Date.now(),
+            type: 'choice',
+            message,
+            options,
+            characterImage: getPlayerImage(worldSetting?.player?.images),
+            characterPosition: 'right',
+            portraitScale: worldSetting?.player?.portraitScale,
+            portraitOffsetX: worldSetting?.player?.portraitOffsetX,
+            portraitOffsetY: worldSetting?.player?.portraitOffsetY,
+        };
+    } else if (step.type === 'scene_change') {
+        return {
+            id: Date.now(),
+            type: 'scene_change',
+            // 不再自动输出场景 description，scene_change 仅用于更新场景或背景
+            message: '',
+        };
+    }
+
+    return null;
+};
+
+/** 转换步骤为文本模式格式（与回放文本模式同源） */
+export const convertStepsToTextModalFormat = (
+    steps: any[],
+    worldSetting: any | null
+): any[] => {
+    return steps
+        .filter(step => step != null && step.type)
+        .map((step, index) => {
+            const stableId = step.id || `step-${step.type}-${index}-${(step.content || '').substring(0, 20)}`;
+            const baseStep = {
+                id: stableId,
+                type: step.type,
+                content: sanitizeVisualStepText(step.content || step.text || step.message || ''),
+            };
+
+            if (step.type === 'dialogue') {
+                const isPlayer = step.isPlayer || step.npcId === worldSetting?.player?.name;
+                return {
+                    ...baseStep,
+                    speakerName: step.speakerName || step.npcId || step.speakerId,
+                    characterName: step.speakerName || step.npcId || step.speakerId || '未知角色',
+                    isPlayer: Boolean(isPlayer),
+                };
+            }
+
+            if (step.type === 'choice') {
+                const rawMainOptions = Array.isArray(step.mainOptions)
+                    ? step.mainOptions
+                    : (step.mainOption ? [step.mainOption] : []);
+
+                const mainOptions = rawMainOptions.map((opt: any, idx: number) => ({
+                    id: idx + 1,
+                    text: sanitizeVisualStepText(String(typeof opt === 'string' ? opt : (opt.text || opt))),
+                    isMain: true as const,
+                }));
+
+                const startId = mainOptions.length + 1;
+                const options = [
+                    ...mainOptions,
+                    ...(step.options?.map((opt: any, idx: number) => {
+                        if (typeof opt === 'string') {
+                            return { id: startId + idx, text: sanitizeVisualStepText(opt) };
+                        }
+                        return {
+                            id: startId + idx,
+                            text: sanitizeVisualStepText(opt.text || opt),
+                            optionId: opt.optionId ? String(opt.optionId) : undefined,
+                        };
+                    }) || []),
+                ];
+
+                return {
+                    ...baseStep,
+                    title: step.title,
+                    description: sanitizeVisualStepText(step.description || ''),
+                    options,
+                };
+            }
+
+            return baseStep;
+        });
+};
+
+// ==================== localStorage 工具 ====================
+
+/** 获取 localStorage 的 key */
+export const getStorageKeys = (sessionId: string | null, eventId: string | null) => ({
+    allSteps: sessionId && eventId ? `world-allsteps-${sessionId}-${eventId}` : null,
+    incomplete: sessionId && eventId ? `world-allsteps-incomplete-${sessionId}-${eventId}` : null,
+    pendingRequest: sessionId && eventId ? `world-pending-request-${sessionId}-${eventId}` : null,
+});
+
+/** 安全读取 localStorage */
+export const safeGetLocalStorage = (key: string | null): string | null => {
+    if (!key || typeof window === 'undefined') return null;
+    try {
+        return window.localStorage.getItem(key);
+    } catch {
+        return null;
+    }
+};
+
+/** 安全写入 localStorage */
+export const safeSetLocalStorage = (key: string | null, value: string): boolean => {
+    if (!key || typeof window === 'undefined') return false;
+    try {
+        window.localStorage.setItem(key, value);
+        return true;
+    } catch {
+        return false;
+    }
+};
+
+/** 安全删除 localStorage */
+export const safeRemoveLocalStorage = (key: string | null): boolean => {
+    if (!key || typeof window === 'undefined') return false;
+    try {
+        window.localStorage.removeItem(key);
+        return true;
+    } catch {
+        return false;
+    }
+};
+
+// ==================== 步骤截断工具 ====================
+
+/**
+ * 截断 choice 之后的步骤
+ * 当遇到 choice 类型的步骤时，返回包含 choice 在内的步骤，但不包含 choice 之后的步骤
+ */
+export const truncateStepsAfterChoice = (steps: any[]): any[] => {
+    if (!Array.isArray(steps) || steps.length === 0) {
+        return steps;
+    }
+    
+    const choiceIndex = steps.findIndex((step: any) => step?.type === 'choice');
+    if (choiceIndex === -1) {
+        return steps;
+    }
+    
+    return steps.slice(0, choiceIndex + 1);
+};

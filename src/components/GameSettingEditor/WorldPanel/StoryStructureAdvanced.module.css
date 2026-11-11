@@ -1,0 +1,617 @@
+.advancedContent {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 8px 8px 24px;
+}
+
+.advancedContentGenerating {
+    max-height: calc(100vh - 200px);
+    overflow: hidden;
+}
+
+.advancedHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px 22px 16px;
+    border-radius: 12px;
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 12%, transparent);
+    box-shadow: 0 2px 12px color-mix(in srgb, var(--color-shadow) 5%, transparent);
+    margin: 4px;
+}
+
+.advancedTitle {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-text);
+    letter-spacing: -0.02em;
+    position: relative;
+    padding-left: 12px;
+}
+
+.advancedTitle::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 20px;
+    background: linear-gradient(to bottom, var(--color-primary), var(--color-primary-light));
+    border-radius: 2px;
+}
+
+.advancedSubtitle {
+    margin: 8px 0 0;
+    font-size: 0.87rem;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+    max-width: 700px;
+}
+
+.storyPromptBox {
+    padding: 0 8px 8px;
+}
+
+.storyPromptBox textarea {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1.5px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    background: var(--color-surface);
+    transition: all 0.2s ease;
+    resize: vertical;
+    min-height: 90px;
+}
+
+.storyPromptBox textarea:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--color-primary) 50%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.sectionDivider {
+    height: 1px;
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    margin: 12px 0 16px;
+}
+
+.phaseHeaderRow {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 12px;
+}
+
+.sectionHeaderRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.storyMetaRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
+    padding: 16px 20px;
+    background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    margin: 8px 0;
+}
+
+.storyMetaItem {
+    flex: 1;
+    min-width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.storyMetaItem input {
+    padding: 10px 14px;
+    border: 1.5px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background: var(--color-surface);
+    transition: all 0.2s ease;
+}
+
+.storyMetaItem input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.storyMetaToggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.87rem;
+    font-weight: 500;
+    color: color-mix(in srgb, var(--color-text) 80%, transparent);
+    padding: 8px 12px;
+    background: var(--color-surface);
+    border-radius: 8px;
+    border: 1.5px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    user-select: none;
+}
+
+.storyMetaToggle:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
+}
+
+.storyMetaToggle input[type="checkbox"] {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 2px solid color-mix(in srgb, var(--color-text) 20%, transparent);
+    background: var(--color-surface);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+.storyMetaToggle input[type="checkbox"]:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.storyMetaToggle input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 8px;
+    height: 4px;
+    border-left: 2px solid var(--color-text);
+    border-bottom: 2px solid var(--color-text);
+    transform: translate(-50%, -60%) rotate(-45deg);
+}
+
+.advancedSection {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 0 8px 8px;
+}
+
+.phaseList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.phaseCard {
+    border-radius: 12px;
+    border: 1.5px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    background: var(--color-surface);
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 4%, transparent);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.phaseCard:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.phaseMetaRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+.phaseIdPill {
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    letter-spacing: 0.02em;
+}
+
+.phaseToggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: color-mix(in srgb, var(--color-text) 75%, transparent);
+}
+
+.phaseToggle input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 2px solid color-mix(in srgb, var(--color-text) 20%, transparent);
+    background: var(--color-surface);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.phaseToggle input[type="checkbox"]:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.phaseFields {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 8px;
+}
+
+.phaseFields label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.phaseFields input,
+.phaseFields textarea {
+    padding: 12px 16px;
+    border: 1.5px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    background: var(--color-surface);
+    transition: all 0.2s ease;
+}
+
+.phaseFields input:focus,
+.phaseFields textarea:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--color-primary) 60%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.phaseFlagsRow {
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.dynamicList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.dynamicCard {
+    border-radius: 12px;
+    border: 1.5px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    background: var(--color-surface);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 3%, transparent);
+    transition: all 0.2s ease;
+}
+
+.dynamicCard:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.dynamicHeader {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 5%, transparent);
+}
+
+.emptyHint {
+    color: var(--color-text-muted);
+    font-style: italic;
+    padding: 24px;
+    text-align: center;
+    background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+    border-radius: 12px;
+    border: 1.5px dashed color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.subTabRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 8px 12px 0;
+    padding: 8px 0;
+}
+
+.subTabGroup {
+    display: inline-flex;
+    border-radius: 10px;
+    padding: 4px;
+    background: color-mix(in srgb, var(--color-text) 3%, transparent);
+    gap: 2px;
+}
+
+.subTab {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    background: transparent;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    transition: all 0.2s ease;
+}
+
+.subTab:hover {
+    background: color-mix(in srgb, var(--color-text) 3%, transparent);
+}
+
+.subTabActive {
+    background: var(--color-surface);
+    color: var(--color-primary);
+    font-weight: 600;
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--color-shadow) 10%, transparent);
+}
+
+.phaseActions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.inlineModalOverlay {
+    position: fixed;
+    inset: 0;
+    background: color-mix(in srgb, var(--color-shadow) 50%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.inlineModal {
+    width: 560px;
+    max-width: 90vw;
+    max-height: 80vh;
+    border-radius: 16px;
+    background: var(--color-surface);
+    box-shadow: 0 20px 50px color-mix(in srgb, var(--color-shadow) 15%, transparent);
+    padding: 24px 28px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow: hidden;
+}
+
+.inlineModal::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
+}
+
+.inlineModalTitle {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-text);
+    letter-spacing: -0.01em;
+}
+
+.inlineModalBody {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-right: 8px;
+    padding-top: 4px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.inlineModalBody label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.inlineModalBody input,
+.inlineModalBody textarea {
+    padding: 12px 16px;
+    border: 1.5px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    background: var(--color-surface);
+    transition: all 0.2s ease;
+}
+
+.inlineModalBody input:focus,
+.inlineModalBody textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.inlineModalBody textarea {
+    min-height: 100px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.inlineModalActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 8px;
+    padding-top: 16px;
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.inlineCheckboxRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    font-size: 0.87rem;
+    font-weight: 500;
+    color: color-mix(in srgb, var(--color-text) 75%, transparent);
+    padding: 8px 0;
+}
+
+.inlineCheckboxRow input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 2px solid color-mix(in srgb, var(--color-text) 20%, transparent);
+    background: var(--color-surface);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.inlineCheckboxRow input[type="checkbox"]:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.transitionList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.transitionCard {
+    border-radius: 12px;
+    border: 1.5px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    padding: 16px;
+    background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+    position: relative;
+}
+
+.transitionMetaRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 5%, transparent);
+}
+
+.dynamicNumberRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+.dynamicNumberRow label {
+    flex: 1;
+    min-width: 150px;
+}
+
+.inlineTwoCol {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: flex-start;
+}
+
+/* 表单字段标签样式 */
+label span[class*="fieldLabel"] {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: color-mix(in srgb, var(--color-text) 80%, transparent);
+    letter-spacing: 0.01em;
+}
+
+label span[class*="fieldHint"] {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    line-height: 1.4;
+}
+
+/* 生成进度显示 */
+.generationProgress {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 40px 20px;
+    background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 12%, transparent);
+    margin: 0 8px;
+}
+
+.progressSpinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.spinnerCircle {
+    width: 48px;
+    height: 48px;
+    border: 4px solid color-mix(in srgb, var(--color-primary) 10%, transparent);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spinnerRotate 1s linear infinite;
+}
+
+@keyframes spinnerRotate {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.progressInfo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.progressText {
+    font-size: 0.95rem;
+    color: color-mix(in srgb, var(--color-text) 75%, transparent);
+    font-weight: 500;
+    text-align: center;
+}
+
+.progressPercent {
+    font-size: 1.1rem;
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.storyPromptBox textarea:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: color-mix(in srgb, var(--color-text) 2%, transparent);
+}

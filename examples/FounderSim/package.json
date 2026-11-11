@@ -1,0 +1,10 @@
+{
+  "name": "foundersim",
+  "version": "1.0.0",
+  "private": true,
+  "description": "轻量级 Web 创业模拟器游戏（纯前端静态页面）。",
+  "scripts": {
+    "start": "npx serve ."
+  }
+}
+

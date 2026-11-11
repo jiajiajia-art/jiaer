@@ -1,0 +1,1262 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+.headActions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.profileCard {
+  --dossier-ink: color-mix(in srgb, var(--color-on-media) 94%, transparent);
+  --dossier-mute: color-mix(in srgb, var(--color-primary-lighter) 52%, transparent);
+  --dossier-line: color-mix(in srgb, var(--color-primary-light) 22%, transparent);
+  --dossier-ember: color-mix(in srgb, var(--color-primary) 90%, transparent);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 0.95rem 0.95rem 0.95rem 1.05rem;
+  border-radius: 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  background:
+    radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, var(--color-primary) 14%, transparent), transparent 55%),
+    linear-gradient(165deg, color-mix(in srgb, var(--color-surface) 92%, transparent), color-mix(in srgb, var(--color-surface) 96%, transparent));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 5%, transparent),
+    0 12px 28px color-mix(in srgb, var(--color-shadow) 28%, transparent);
+  overflow: hidden;
+}
+
+.profileCard::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.7rem;
+  bottom: 0.7rem;
+  width: 0.18rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--color-primary-light), var(--color-primary) 55%, color-mix(in srgb, var(--color-primary) 25%, transparent));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.dossierHero {
+  display: flex;
+  align-items: stretch;
+  gap: 0.85rem;
+}
+
+.avatarHit {
+  position: relative;
+  flex-shrink: 0;
+  width: 8.6rem;
+  height: 8.6rem;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 22%, transparent);
+  border-radius: 0.95rem;
+  overflow: hidden;
+  background:
+    radial-gradient(80% 70% at 50% 20%, color-mix(in srgb, var(--color-primary) 18%, transparent), transparent 70%),
+    color-mix(in srgb, var(--color-shadow) 45%, transparent);
+  cursor: pointer;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  isolation: isolate;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+
+.avatarHit:hover {
+  border-color: color-mix(in srgb, var(--color-primary-light) 55%, transparent);
+  transform: translateY(-1px);
+}
+
+.avatarHit:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-primary-light) 75%, transparent);
+  outline-offset: 2px;
+}
+
+.avatarHitPoster {
+  align-items: center;
+  background: color-mix(in srgb, var(--color-shadow) 55%, transparent);
+}
+
+.avatarStageGlow {
+  pointer-events: none;
+  position: absolute;
+  inset: auto 8% -18% 8%;
+  height: 45%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--color-primary) 28%, transparent), transparent 70%);
+  z-index: 0;
+}
+
+.avatarImg {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+}
+
+.avatarImgPoster {
+  object-fit: contain;
+  object-position: center center;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+.avatarEmpty {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  color: color-mix(in srgb, var(--color-primary-lighter) 40%, transparent);
+}
+
+.avatarZoomCue {
+  position: absolute;
+  right: 0.4rem;
+  bottom: 0.4rem;
+  z-index: 2;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 18%, transparent);
+  background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
+  color: color-mix(in srgb, var(--color-on-media) 88%, transparent);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  pointer-events: none;
+}
+
+.avatarMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  justify-content: center;
+}
+
+.identityLine {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.identityName {
+  font-size: 1.05rem;
+  font-weight: 780;
+  letter-spacing: 0.02em;
+  color: var(--dossier-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identityGender {
+  flex-shrink: 0;
+  padding: 0.08rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 28%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: color-mix(in srgb, var(--color-primary-fg) 90%, transparent);
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.avatarHint {
+  margin: 0;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: var(--dossier-mute);
+}
+
+.avatarActionRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: stretch;
+  margin-top: 0.1rem;
+}
+
+.avatarGenBtn {
+  width: 100%;
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 45%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 98%, transparent), color-mix(in srgb, var(--color-primary) 98%, transparent));
+  color: color-mix(in srgb, var(--color-text) 98%, transparent);
+  font-size: 0.74rem;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
+.avatarGenBtn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.avatarGenBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.avatarUploadBtn {
+  width: 100%;
+  padding: 0.42rem 0.7rem;
+  border-radius: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 22%, transparent);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+  color: color-mix(in srgb, var(--color-text) 92%, transparent);
+  font-size: 0.74rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.avatarUploadBtn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-primary-light) 40%, transparent);
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+
+.avatarUploadBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.dossierMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding-top: 0.15rem;
+  border-top: 1px solid var(--dossier-line);
+}
+
+.profileRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.profileKey {
+  flex-shrink: 0;
+  min-width: 2.5rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dossier-mute);
+}
+
+.profileVal {
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--dossier-ink);
+}
+
+.profileBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.profilePersona {
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  background: color-mix(in srgb, var(--color-text) 28%, transparent);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--color-text) 90%, transparent);
+  white-space: pre-wrap;
+}
+
+.fieldAiBtnSecondary {
+  margin-left: 0.35rem;
+  padding: 0.18rem 0.45rem;
+  border-radius: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 28%, transparent);
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  color: color-mix(in srgb, var(--color-text) 90%, transparent);
+  font-size: 0.68rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.fieldAiBtnSecondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hiddenFileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.confirmMsgStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.confirmMsgText {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.promptCueBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+  background: color-mix(in srgb, var(--color-text) 28%, transparent);
+  color: color-mix(in srgb, var(--color-text) 92%, transparent);
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+  text-align: left;
+}
+
+.promptCueBtn:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.promptCueBtnActive {
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+.promptCueChevron {
+  opacity: 0.75;
+  font-size: 0.7rem;
+}
+
+.promptCuePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.15rem;
+  padding: 0.7rem 0.75rem;
+  border-radius: 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  background: color-mix(in srgb, var(--color-text) 28%, transparent);
+}
+
+.promptCueSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.promptCueLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.promptCueLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
+}
+
+.promptCueHint {
+  font-size: 0.66rem;
+  color: color-mix(in srgb, var(--color-primary-lighter) 50%, transparent);
+}
+
+.promptCueReadonly,
+.promptCueInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.55rem;
+  border-radius: 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: color-mix(in srgb, var(--color-shadow) 35%, transparent);
+  color: color-mix(in srgb, var(--color-on-media) 92%, transparent);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.promptCueReadonly {
+  opacity: 0.85;
+  cursor: default;
+  max-height: 7.5rem;
+  overflow: auto;
+}
+
+.promptCueInput:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+}
+
+/* 功能注释：确认弹窗内 A–D 画风点选，用户无需手写风格句 */
+.styleChipRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.styleChip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.12rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+  background: color-mix(in srgb, var(--color-text) 28%, transparent);
+  color: color-mix(in srgb, var(--color-text) 90%, transparent);
+  text-align: left;
+  cursor: pointer;
+}
+
+.styleChip:hover {
+  border-color: color-mix(in srgb, var(--color-primary-light) 40%, transparent);
+}
+
+.styleChipActive {
+  border-color: color-mix(in srgb, var(--color-primary) 75%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+.styleChipId {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--color-primary-fg) 95%, transparent);
+}
+
+.styleChipLabel {
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.avatarPreviewOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
+}
+
+.avatarPreviewCard {
+  width: min(92vw, 26rem);
+  max-height: min(92vh, 40rem);
+  display: flex;
+  flex-direction: column;
+  border-radius: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+  overflow: hidden;
+  box-shadow: 0 18px 48px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+}
+
+.avatarPreviewChrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: 0.65rem 0.8rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--color-primary-fg) 92%, transparent);
+}
+
+.avatarPreviewClose {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 22%, transparent);
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* 功能注释：大图预览必须等比例完整可见，禁止 cover 裁切 */
+.avatarPreviewStage {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 12rem;
+  max-height: min(72vh, 32rem);
+  padding: 0.55rem 0.65rem;
+  background:
+    radial-gradient(70% 60% at 50% 40%, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 70%),
+    color-mix(in srgb, var(--color-shadow) 45%, transparent);
+}
+
+.avatarPreviewImg {
+  display: block;
+  max-width: 100%;
+  max-height: min(68vh, 30rem);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: center center;
+}
+
+.avatarPreviewName {
+  margin: 0;
+  flex-shrink: 0;
+  padding: 0.7rem 0.85rem 0.95rem;
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: color-mix(in srgb, var(--color-text) 96%, transparent);
+}
+
+.profileAttrList {
+  list-style: none;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem 0.55rem;
+}
+
+.profileAttrItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, var(--color-text) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  font-size: 0.75rem;
+  color: color-mix(in srgb, var(--color-text) 78%, transparent);
+}
+
+.profileAttrItem strong {
+  font-size: 0.88rem;
+  font-weight: 750;
+  color: var(--color-primary-fg);
+}
+
+.dynHint {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+/* —— 编辑档案弹层 —— */
+.modalForm {
+  --dossier-ink: var(--color-text);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  flex: 1;
+  min-height: 0;
+  margin: 0 -0.15rem;
+  padding: 0.85rem 0.85rem 0;
+  border-radius: 1rem;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 98%, transparent) 0%, var(--dossier-ink) 55%);
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  box-shadow:
+    0 16px 40px color-mix(in srgb, var(--color-shadow) 45%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-primary-light) 6%, transparent);
+}
+
+.modalTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/* 功能注释：编辑页头像区复用总览 dossier 舞台语言，避免表单感挤成一行小按钮 */
+.editAvatarBlock {
+  --dossier-ink: color-mix(in srgb, var(--color-on-media) 94%, transparent);
+  --dossier-mute: color-mix(in srgb, var(--color-primary-lighter) 52%, transparent);
+  --dossier-line: color-mix(in srgb, var(--color-primary-light) 22%, transparent);
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 0.85rem;
+  margin: 0.15rem 0 0.35rem;
+  padding: 0.85rem 0.85rem 0.85rem 1rem;
+  border-radius: 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  background:
+    radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, var(--color-primary) 14%, transparent), transparent 55%),
+    linear-gradient(165deg, color-mix(in srgb, var(--color-surface) 92%, transparent), color-mix(in srgb, var(--color-surface) 96%, transparent));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 5%, transparent),
+    0 10px 22px color-mix(in srgb, var(--color-shadow) 22%, transparent);
+  overflow: hidden;
+}
+
+.editAvatarBlock::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.65rem;
+  bottom: 0.65rem;
+  width: 0.18rem;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--color-primary-light), var(--color-primary) 55%, color-mix(in srgb, var(--color-primary) 25%, transparent));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.editAvatarHit {
+  position: relative;
+  flex-shrink: 0;
+  width: 9.8rem;
+  height: 9.8rem;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 22%, transparent);
+  border-radius: 0.95rem;
+  overflow: hidden;
+  background:
+    radial-gradient(80% 70% at 50% 20%, color-mix(in srgb, var(--color-primary) 18%, transparent), transparent 70%),
+    color-mix(in srgb, var(--color-shadow) 45%, transparent);
+  cursor: pointer;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  isolation: isolate;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+
+.editAvatarHit:hover {
+  border-color: color-mix(in srgb, var(--color-primary-light) 55%, transparent);
+  transform: translateY(-1px);
+}
+
+.editAvatarHit:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-primary-light) 75%, transparent);
+  outline-offset: 2px;
+}
+
+.editAvatarImg {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+}
+
+.editAvatarEmpty {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  color: color-mix(in srgb, var(--color-primary-lighter) 40%, transparent);
+}
+
+.editAvatarMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  justify-content: center;
+}
+
+.editAvatarTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.editAvatarTitle {
+  font-size: 0.92rem;
+  font-weight: 780;
+  letter-spacing: 0.04em;
+  color: var(--dossier-ink);
+}
+
+.editAvatarHint {
+  margin: 0;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: var(--dossier-mute);
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.modalClose {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 20%, transparent);
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  color: var(--color-text);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modalClose:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-primary-light) 50%, transparent);
+  color: var(--color-primary-fg);
+}
+
+.modalClose:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.labelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-weight: 650;
+  color: color-mix(in srgb, var(--color-text) 85%, transparent);
+}
+
+.labelWithAiLeft {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.fieldAiBtn {
+  flex-shrink: 0;
+  min-height: 1.65rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 75%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary-fg);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.fieldAiBtn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary-light) 95%, transparent);
+  color: var(--color-primary-fg);
+}
+
+.fieldAiBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.fieldAiBusyBadge {
+  flex-shrink: 0;
+  padding: 0.12rem 0.45rem;
+  border-radius: 0.3rem;
+  background: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  color: var(--color-primary-fg);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.counter {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.field input,
+.field textarea,
+.search {
+  width: 100%;
+  border-radius: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+  background: color-mix(in srgb, var(--color-shadow) 38%, transparent);
+  color: var(--color-on-media);
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 6rem;
+  line-height: 1.45;
+  overflow-y: auto;
+}
+
+/** 档案「人设」：默认更高、可纵向拖拽、内容溢出出滚动条 */
+.personaGrowWrap {
+  position: relative;
+}
+
+.personaTextarea {
+  /* 在 7.8rem 基础上再 +50% → 11.7rem */
+  min-height: 11.7rem;
+  height: 11.7rem;
+  max-height: min(55vh, 26rem);
+  resize: vertical;
+  overflow-x: hidden;
+  overflow-y: auto;
+  line-height: 1.45;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-primary-light) 50%, transparent) color-mix(in srgb, var(--color-text) 28%, transparent);
+}
+
+.personaTextarea::-webkit-scrollbar {
+  width: 0.45rem;
+}
+
+.personaTextarea::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--color-text) 22%, transparent);
+  border-radius: 999px;
+}
+
+.personaTextarea::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-primary) 50%, transparent);
+  border-radius: 999px;
+}
+
+.personaTextarea::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-primary-light) 70%, transparent);
+}
+
+/* 右下角拖拽暗示（不拦截原生 resize 命中区） */
+.personaGrowWrap::after {
+  content: '';
+  position: absolute;
+  right: 0.4rem;
+  bottom: 0.35rem;
+  width: 0.72rem;
+  height: 0.72rem;
+  pointer-events: none;
+  opacity: 0.8;
+  background:
+    linear-gradient(
+      -45deg,
+      transparent 0 38%,
+      color-mix(in srgb, var(--color-primary-light) 75%, transparent) 38% 46%,
+      transparent 46% 62%,
+      color-mix(in srgb, var(--color-primary-light) 55%, transparent) 62% 70%,
+      transparent 70%
+    );
+}
+
+.field input:focus,
+.field textarea:focus,
+.search:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 16%, transparent);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip {
+  min-height: 2rem;
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 18%, transparent);
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
+  font-size: 0.8rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.chipActive {
+  border-color: color-mix(in srgb, var(--color-primary) 70%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  color: var(--color-primary-fg);
+}
+
+.modalActions {
+  display: flex;
+  gap: 0.55rem;
+  justify-content: stretch;
+  margin-top: auto;
+  padding-bottom: 0.35rem;
+}
+
+.secondaryBtn,
+.primaryBtn {
+  flex: 1;
+  min-height: 2.55rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.secondaryBtn {
+  border: 1px solid color-mix(in srgb, var(--color-text) 22%, transparent);
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  color: color-mix(in srgb, var(--color-text) 92%, transparent);
+}
+
+.secondaryBtn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-primary-light) 45%, transparent);
+  color: var(--color-primary-fg);
+}
+
+.primaryBtn {
+  border: 1px solid color-mix(in srgb, var(--color-primary) 75%, transparent);
+  background: linear-gradient(165deg, var(--primary-light) 0%, var(--primary) 52%, var(--primary-dark) 100%);
+  color: var(--color-text);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary) 30%, transparent);
+}
+
+.primaryBtn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.secondaryBtn:disabled,
+.primaryBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: none;
+  box-shadow: none;
+}
+
+/* —— 导入列表 —— */
+.importPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-height: 0;
+}
+
+.search {
+  margin-bottom: 0.15rem;
+}
+
+.importRow {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+.importAvatar {
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.45rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 35%, transparent);
+  color: var(--color-primary-fg);
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.importAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  display: block;
+}
+
+.previewAvatarWrap {
+  width: 5.5rem;
+  aspect-ratio: 1 / 1;
+  border-radius: 0.55rem;
+  overflow: hidden;
+  margin: 0 0 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.previewAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  display: block;
+}
+
+.importBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.importName {
+  font-size: 0.9rem;
+  font-weight: 750;
+  color: var(--color-text);
+}
+
+.importMeta {
+  font-weight: 550;
+  color: color-mix(in srgb, var(--color-primary-lighter) 55%, transparent);
+  font-size: 0.78rem;
+}
+
+.importPersona {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.selectBtn {
+  flex-shrink: 0;
+  min-height: 2rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 65%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  color: var(--color-primary-fg);
+  font-size: 0.78rem;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.selectBtn:hover {
+  background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+  color: var(--color-on-primary);
+}
+
+/* —— 导入预览 —— */
+.previewPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.previewCard {
+  padding: 0.85rem 0.9rem;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+.previewSectionTitle {
+  margin: 0 0 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
+}
+
+.previewName {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.previewMeta {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: color-mix(in srgb, var(--color-primary-lighter) 70%, transparent);
+}
+
+.previewPersona {
+  margin: 0.55rem 0 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
+  white-space: pre-wrap;
+}
+
+.previewMuted {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.previewAttrGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.previewAttrCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0.5rem;
+  border-radius: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: color-mix(in srgb, var(--color-text) 25%, transparent);
+  text-align: center;
+}
+
+/* UE 示意绿 → 主题红高亮「将变化的导入值」 */
+.previewAttrChanged {
+  border-color: color-mix(in srgb, var(--color-primary) 65%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.previewAttrLabel {
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: color-mix(in srgb, var(--color-primary-lighter) 70%, transparent);
+}
+
+.previewAttrValue {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.previewAttrChanged .previewAttrValue {
+  color: var(--color-primary-fg);
+}
+
+.previewAttrHint {
+  font-size: 0.62rem;
+  color: var(--color-text-muted);
+}
+
+.infoBanner {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.infoBanner p {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--color-primary-lighter) 88%, transparent);
+}
+
+.infoIcon {
+  flex-shrink: 0;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  font-style: italic;
+  background: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  color: var(--color-primary-fg);
+}
+
+@media (max-width: 380px) {
+  .dossierHero,
+  .editAvatarBlock {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .avatarHit,
+  .editAvatarHit {
+    width: 100%;
+    max-width: 11rem;
+    height: 11rem;
+    align-self: center;
+  }
+
+  .previewAttrGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .headActions {
+    justify-content: stretch;
+  }
+
+  .headActions > * {
+    flex: 1;
+  }
+}

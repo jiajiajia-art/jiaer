@@ -1,0 +1,455 @@
+/* Funloom Ink Warehouse — 与首页同色：墨黑舞台 + 酒红强调 */
+/* 功能注释：禁止 fonts.googleapis.com，国内会超时拖慢首屏 */
+
+.pageRoot {
+  /* 功能注释：仓库壳对齐首页 Home 色板，禁止浅灰纸质 Studio Catalog */
+  --wh-ink: var(--color-text);
+  --wh-muted: var(--color-text-muted);
+  --wh-line: color-mix(in srgb, var(--color-text) 12%, transparent);
+  --wh-paper: var(--color-surface);
+  --wh-stage: var(--color-bg);
+  --wh-coral: var(--color-primary);
+  --wh-coral-deep: var(--color-primary-bold);
+  --wh-coral-soft: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  --wh-chip: var(--color-surface);
+  --wh-hover: var(--color-surface-2);
+  --wh-display: 'Songti SC', 'STSong', 'Source Han Serif SC', 'Noto Serif SC', serif;
+  --wh-radius: 16px;
+
+  width: 100%;
+  min-height: 100vh;
+  max-width: none;
+  margin: 0;
+  background: var(--wh-stage);
+  color: var(--wh-ink);
+}
+
+.shell {
+  display: flex;
+  width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
+  margin: var(--app-desktop-navbar-height) auto 0;
+  min-height: calc(100vh - var(--app-desktop-navbar-height));
+  padding: 20px 0 130px;
+  box-sizing: border-box;
+  gap: 16px;
+}
+
+.sidebar {
+  width: 228px;
+  flex-shrink: 0;
+  background: var(--wh-paper);
+  border: 1px solid var(--wh-line);
+  border-radius: var(--wh-radius);
+  padding: 16px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-self: flex-start;
+  position: sticky;
+  top: calc(var(--app-desktop-navbar-height) + 16px);
+  max-height: calc(100vh - var(--app-desktop-navbar-height) - 32px);
+  overflow: auto;
+}
+
+.groupTitle {
+  margin: 12px 12px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--wh-muted);
+  letter-spacing: 0.12em;
+}
+
+.groupTitle:first-child {
+  margin-top: 4px;
+}
+
+.navBtn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.navBtn:hover {
+  background: var(--wh-hover);
+  color: var(--wh-ink);
+}
+
+.navBtnActive {
+  /* 效果图选中：实心珊瑚白字，非浅粉底 */
+  background: var(--wh-coral);
+  color: var(--color-on-primary);
+  font-weight: 700;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.soon {
+  font-size: 10px;
+  color: var(--wh-muted);
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--wh-chip);
+  flex-shrink: 0;
+}
+
+.navBtnActive .soon {
+  background: color-mix(in srgb, var(--color-text) 22%, transparent);
+  color: var(--color-text);
+}
+
+.uploadCard {
+  margin-top: 14px;
+  padding: 14px 12px;
+  border-radius: 12px;
+  background: linear-gradient(160deg, var(--color-surface-2) 0%, var(--color-surface) 100%);
+  color: var(--color-text);
+}
+
+.uploadCard p {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+}
+
+.uploadBtn {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 9px 12px;
+  background: var(--wh-coral);
+  color: var(--color-on-primary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.uploadBtn:hover {
+  background: var(--wh-coral-deep);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  background: var(--wh-paper);
+  border: 1px solid var(--wh-line);
+  border-radius: var(--wh-radius);
+  padding: 26px 28px 30px;
+  box-sizing: border-box;
+  min-height: 620px;
+}
+
+/* —— 手机书架索引（默认隐藏，≤980 显示） —— */
+.mobileChrome {
+  display: none;
+}
+
+.mobileTop {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 2px 0;
+}
+
+.mobileCurrent {
+  min-width: 0;
+  flex: 1;
+}
+
+.mobileEyebrow {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--wh-muted);
+  margin-bottom: 4px;
+}
+
+.mobileTitle {
+  margin: 0;
+  font-family: var(--wh-display);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--wh-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobileCatalogBtn {
+  flex-shrink: 0;
+  border: 1px solid var(--wh-line);
+  background: var(--wh-chip);
+  color: var(--color-text);
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.mobileRail {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 2px 0 4px;
+  margin: 0 -2px;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+.mobileRail::-webkit-scrollbar {
+  display: none;
+}
+
+.railChip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  border: 1px solid transparent;
+  background: var(--wh-chip);
+  color: var(--color-text-secondary);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.railChipActive {
+  border-color: transparent;
+  background: var(--wh-coral);
+  color: var(--color-on-primary);
+  font-weight: 700;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--color-primary) 38%, transparent);
+}
+
+.mobileUploadStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  border: none;
+  border-radius: 14px;
+  padding: 12px 14px;
+  background:
+    linear-gradient(105deg, color-mix(in srgb, var(--color-primary) 18%, transparent) 0%, transparent 42%),
+    linear-gradient(160deg, var(--color-surface-2) 0%, var(--color-surface) 100%);
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.mobileUploadCopy {
+  font-size: 13px;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
+  min-width: 0;
+  font-weight: 500;
+}
+
+.mobileUploadCta {
+  /* 效果图：立即上传为胶囊珊瑚 CTA */
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-on-primary);
+  background: var(--wh-coral);
+  border-radius: 999px;
+  padding: 7px 14px;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 40%, transparent);
+}
+
+/* —— 底栏目录 sheet（仅手机挂载时出现） —— */
+.sheetRoot {
+  display: none;
+}
+
+@media (max-width: 980px) {
+  .shell {
+    flex-direction: column;
+    padding: 10px 12px 100px;
+    width: 100%;
+    gap: 10px;
+    overflow-x: clip;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .mobileChrome {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: sticky;
+    top: var(--app-desktop-navbar-height);
+    z-index: 30;
+    width: 100%;
+    margin: 0;
+    padding: 8px 0 10px;
+    isolation: isolate;
+  }
+
+  /* 功能注释：不透明底 + 底边阴影，避免下方白卡片滚入时透出/压住标题区 */
+  .mobileChrome::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--wh-stage);
+    box-shadow: 0 6px 14px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+    pointer-events: none;
+  }
+
+  .content {
+    /* 效果图：舞台露灰底，工具区与卡面各自成卡，禁止整页白纸套壳 */
+    position: relative;
+    z-index: 0;
+    padding: 0;
+    min-height: auto;
+    border-radius: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+
+  .sheetRoot {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    background: color-mix(in srgb, var(--color-surface) 48%, transparent);
+    animation: whSheetFade 0.2s ease both;
+  }
+
+  .sheetPanel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: min(78vh, 640px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    background: var(--wh-paper);
+    border-radius: 20px 20px 0 0;
+    padding: 10px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -18px 48px color-mix(in srgb, var(--color-shadow) 18%, transparent);
+    animation: whSheetUp 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .sheetHandle {
+    width: 36px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--color-surface-2);
+    margin: 2px auto 12px;
+  }
+
+  .sheetHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .sheetTitle {
+    margin: 0;
+    font-family: var(--wh-display);
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  .sheetClose {
+    border: none;
+    background: var(--wh-hover);
+    color: var(--color-text-secondary);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .sheetGroup {
+    margin-top: 14px;
+  }
+
+  .sheetGroupTitle {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: var(--wh-muted);
+    margin-bottom: 8px;
+  }
+
+  .sheetLinks {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .sheetLink {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-decoration: none;
+    padding: 12px 14px;
+    border-radius: 12px;
+    color: var(--color-text-secondary);
+    font-size: 15px;
+    background: var(--wh-chip);
+    border: 1px solid transparent;
+  }
+
+  .sheetLinkActive {
+    background: var(--wh-coral);
+    border-color: transparent;
+    color: var(--color-on-primary);
+    font-weight: 700;
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary) 35%, transparent);
+  }
+
+  .sheetUpload {
+    margin-top: 18px;
+    width: 100%;
+    border: none;
+    border-radius: 12px;
+    padding: 13px 16px;
+    background: var(--wh-coral);
+    color: var(--color-on-primary);
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+}
+
+@keyframes whSheetFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes whSheetUp {
+  from { transform: translateY(18%); opacity: 0.85; }
+  to { transform: none; opacity: 1; }
+}

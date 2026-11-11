@@ -1,0 +1,218 @@
+
+.placedSubScene {
+    position: absolute;
+    cursor: move;
+    z-index: 20;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    pointer-events: auto;
+    transform: translateZ(0);
+    animation: fadeIn 0.3s ease;
+    will-change: transform, opacity;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.placedSubScene:hover {
+    transform: scale(1.1);
+}
+
+.subSceneIcon {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 2px solid color-mix(in srgb, var(--color-text) 90%, transparent);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 20%, transparent);
+    background: var(--color-surface);
+    flex-shrink: 0;
+}
+
+.subSceneLabel {
+    background: color-mix(in srgb, var(--color-surface) 95%, transparent);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--color-shadow) 15%, transparent);
+    border: 1px solid var(--border-light);
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    line-height: 1.2;
+}
+
+/* 场景列表样式 */
+.sceneItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    background: var(--color-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-light);
+    transition: all 0.15s ease;
+    margin-bottom: 8px;
+}
+
+.sceneItem:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+    background: var(--color-surface);
+}
+
+.sceneItemActive {
+    border-color: color-mix(in srgb, var(--color-primary) 70%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 25%, transparent);
+    background: var(--color-bg);
+}
+
+.expandIcon {
+    color: var(--text-muted);
+    font-size: 12px;
+    width: 16px;
+    text-align: center;
+    transition: transform 0.2s ease;
+    cursor: pointer;
+    user-select: none;
+}
+
+.expandIcon:hover {
+    color: var(--primary);
+}
+
+.sceneName {
+    flex: 1;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.subSceneCount {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.subScenesList {
+    margin-left: 24px;
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* 子场景编辑表单 */
+.subSceneEditForm {
+    background: var(--color-surface);
+    border-radius: 14px;
+    border: 1px solid var(--border-light);
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+}
+
+.subSceneEditForm h4 {
+    color: var(--text-primary);
+    margin: 0 0 16px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.formField {
+    margin-bottom: 16px;
+}
+
+.formField label {
+    display: block;
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.formValue {
+    color: var(--text-secondary);
+    font-size: 13px;
+    padding: 8px 12px;
+    background: var(--color-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+}
+
+.formSelect {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+    background: var(--color-surface);
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.formSelect:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.formSelect:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.formActions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.formBtn {
+    flex: 1;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: var(--color-text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.formBtn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+.formBtnCancel {
+    flex: 1;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+    background: var(--color-surface);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.formBtnCancel:hover {
+    background: var(--color-bg);
+    border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+

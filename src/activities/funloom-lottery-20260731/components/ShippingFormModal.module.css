@@ -1,0 +1,85 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1210;
+  background: color-mix(in srgb, var(--color-accent) 78%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  backdrop-filter: blur(2px);
+}
+
+.card {
+  width: min(400px, 100%);
+  background: linear-gradient(165deg, var(--color-accent) 0%, var(--color-accent) 100%);
+  border-radius: 16px;
+  border: 2px solid color-mix(in srgb, var(--color-highlight) 55%, transparent);
+  padding: 20px;
+  color: var(--color-text);
+  box-shadow: 0 16px 36px color-mix(in srgb, var(--color-accent) 40%, transparent);
+}
+
+.title {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-highlight);
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--color-text) 90%, transparent);
+}
+
+.input,
+.textarea {
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 28%, transparent);
+  background: color-mix(in srgb, var(--color-text) 12%, transparent);
+  color: var(--color-text);
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.primary,
+.secondary {
+  flex: 1;
+  border: none;
+  border-radius: 999px;
+  padding: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary {
+  background: linear-gradient(180deg, var(--color-highlight), var(--color-highlight));
+  color: var(--color-highlight);
+}
+
+.secondary {
+  background: color-mix(in srgb, var(--color-text) 16%, transparent);
+  color: var(--color-text);
+}
+
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

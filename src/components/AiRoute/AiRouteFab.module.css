@@ -1,0 +1,90 @@
+/* 功能注释：AI 线路悬浮球——深色磨砂圆 + 主题色光环；可拖动、贴边、收起成半隐藏小标签 */
+.fab {
+  --ar-accent: var(--color-primary, #e2577a);
+  position: fixed;
+  z-index: 2147483000;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: left 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2), right 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2), top 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2), opacity 0.2s;
+}
+
+.dragging {
+  cursor: grabbing;
+  transition: none;
+}
+
+.ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 210deg, var(--ar-accent), color-mix(in srgb, var(--ar-accent) 30%, #8c7cff), var(--ar-accent));
+  opacity: 0.9;
+  box-shadow: 0 8px 24px rgba(10, 8, 16, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.core {
+  position: absolute;
+  inset: 2px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(120% 120% at 30% 20%, rgba(58, 52, 70, 0.96), rgba(20, 18, 26, 0.96));
+  color: #fff;
+  backdrop-filter: blur(10px);
+  transition: transform 0.18s;
+}
+
+.fab:hover .core,
+.fab:focus-visible .core {
+  transform: scale(1.04);
+}
+
+.fab:focus-visible {
+  outline: 2px solid var(--ar-accent);
+  outline-offset: 3px;
+}
+
+.dragging .ring {
+  box-shadow: 0 14px 34px rgba(10, 8, 16, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+/* 收起：大半藏到屏幕外，只露出带握把的一截 */
+.docked {
+  opacity: 0.82;
+}
+
+.docked .core svg {
+  opacity: 0;
+}
+
+.peekGrip {
+  position: absolute;
+  top: 50%;
+  width: 3px;
+  height: 18px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.7);
+  transform: translateY(-50%);
+}
+
+.right .peekGrip {
+  left: 9px;
+}
+
+.left .peekGrip {
+  right: 9px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fab {
+    transition: none;
+  }
+}

@@ -1,0 +1,473 @@
+.root {
+  --usage-surface: var(--color-surface);
+  --usage-border: var(--color-border);
+  --usage-text: var(--color-primary);
+  --usage-muted: var(--color-text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: var(--usage-text);
+}
+
+.filterCard,
+.metric,
+.chartCard,
+.tableCard {
+  border: 1px solid var(--usage-border);
+  box-shadow: none;
+}
+
+.filterCard {
+  background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-surface) 100%);
+}
+
+.aggregateFilterCard {
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.sectionHead,
+.sectionTitle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.sectionHead {
+  margin-bottom: 20px;
+}
+
+.sectionHead h3,
+.sectionTitle h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.sectionHead p,
+.sectionTitle span,
+.tableHint,
+.muted {
+  color: var(--usage-muted);
+}
+
+.sectionHead p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(150px, 1fr) minmax(190px, 1.2fr) minmax(190px, 1.2fr) minmax(180px, 1fr);
+  gap: 16px;
+  align-items: end;
+}
+
+.filters > :nth-child(1) {
+  grid-column: span 2;
+}
+
+.modelFilterField {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.statusFilterField {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.billedFilterField {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.currencyFilterField {
+  grid-column: 4;
+  grid-row: 2;
+  max-width: 220px;
+}
+
+.detailQueryButton {
+  grid-column: 5;
+  grid-row: 2;
+}
+
+.aggregateFilters {
+  grid-template-columns: minmax(300px, 1.2fr) minmax(220px, .8fr) auto;
+}
+
+.aggregateFilters .timeField {
+  grid-column: auto;
+}
+
+.timeField {
+  grid-column: span 2;
+}
+
+.field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Prevent the admin shell's generic input border from creating nested Ant Design control frames. */
+.root :global(.ant-input),
+.root :global(.ant-select-input),
+.root :global(.ant-select-selection-search-input),
+.root :global(.ant-picker-input > input) {
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.root :global(.ant-select) :global(input:not([type='checkbox']):not([type='radio']):not([type='file'])) {
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.root :global(.ant-select-content-has-value) {
+  color: var(--usage-text) !important;
+  opacity: 1 !important;
+}
+
+.root :global(.ant-select-content-has-search-value > *:not(.ant-select-input)) {
+  color: var(--usage-text) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.queryButton {
+  min-width: 88px;
+  width: fit-content;
+  padding-inline: 24px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.metric {
+  height: 100%;
+  border-left: 4px solid var(--color-accent);
+}
+
+.warningMetric {
+  border-left-color: var(--color-highlight);
+  background: var(--color-bg);
+}
+
+.chartGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.chartCard {
+  min-width: 0;
+}
+
+.chart {
+  width: 100%;
+  min-height: 280px;
+}
+
+.cellStack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 120px;
+}
+
+.cellStack span {
+  color: var(--usage-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.statusStack {
+  min-width: 0;
+}
+
+.statusDetail {
+  overflow: hidden;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tableCard :global(.ant-table-cell),
+.metric :global(.ant-statistic-content) {
+  font-variant-numeric: tabular-nums;
+}
+
+.tableCard :global(.ant-pagination-item),
+.tableCard :global(.ant-pagination-prev),
+.tableCard :global(.ant-pagination-next),
+.tableCard :global(.ant-select-selector) {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.tableCard :global(.ant-pagination) {
+  flex-wrap: wrap;
+  row-gap: 12px;
+}
+
+.tableCard :global(.ant-pagination-options-size-changer) {
+  width: 116px;
+}
+
+@media (max-width: 1280px) {
+  .filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filters > :nth-child(1) {
+    grid-column: 1 / -1;
+  }
+
+  .modelFilterField {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .statusFilterField,
+  .billedFilterField,
+  .currencyFilterField,
+  .detailQueryButton {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .aggregateFilters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chartGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chartGrid > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .sectionHead,
+  .sectionTitle {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filters,
+  .chartGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .filters > :nth-child(1),
+  .modelFilterField,
+  .statusFilterField,
+  .billedFilterField,
+  .currencyFilterField,
+  .detailQueryButton {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .filters > :nth-child(6),
+  .filters > :nth-child(7) {
+    max-width: none;
+  }
+
+  .queryButton {
+    width: 100%;
+  }
+
+  .aggregateFilters {
+    grid-template-columns: 1fr;
+  }
+
+  .timeField {
+    grid-column: auto;
+  }
+
+  .chartGrid > :first-child {
+    grid-column: auto;
+  }
+
+  .filterCard :global(.ant-card-body),
+  .tableCard :global(.ant-card-body),
+  .chartCard :global(.ant-card-body) {
+    padding: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root *,
+  .root *::before,
+  .root *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}
+
+/* 功能注释：未扣费原因拆分 + 下钻入口 */
+.reasonList {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+}
+
+.reasonList li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+  color: var(--color-text-secondary);
+}
+
+.metricLink {
+  margin-top: 6px;
+  padding: 0;
+}
+
+/* 功能注释：按用途拆分卡片 */
+.sceneGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.sceneCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: 12px;
+  background: var(--card-bg, var(--color-surface));
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.sceneCard:hover,
+.sceneCard:focus-visible {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 14%, transparent);
+  outline: none;
+}
+
+.sceneName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.sceneCost {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sceneBar {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  overflow: hidden;
+}
+
+.sceneBar span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--color-primary);
+}
+
+.sceneMeta {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* 功能注释：明细下钻条 */
+.detailAnchor {
+  scroll-margin-top: 72px;
+}
+
+.drillBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.drillLabel {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.drillTag {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* 功能注释：明细展开行——溯源字段 */
+.traceGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px 20px;
+  padding: 4px 8px;
+}
+
+.traceField {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.traceLabel {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.traceValue,
+.traceMono {
+  font-size: 13px;
+  color: var(--color-text);
+  word-break: break-all;
+}
+
+.traceMono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+}
+
+.traceMissing {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+  opacity: 0.7;
+}

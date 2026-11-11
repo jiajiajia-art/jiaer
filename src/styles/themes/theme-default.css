@@ -1,0 +1,16 @@
+/* 默认主题 · 酒红 */
+[data-theme="default"] {
+  --color-primary: #d63848;
+  --color-primary-bold: #b02a39;
+  --color-primary-light: #e8606d;
+  --color-primary-lighter: #fdecee;
+  --main-background: linear-gradient(135deg, #d63848 0%, #e8606d 100%);
+}
+
+[data-theme="default"][data-mode="dark"] {
+  --color-primary: #e03d4b;
+  --color-primary-bold: #c42d3a;
+  --color-primary-light: #ff5a67;
+  --color-primary-lighter: #3a1a1f;
+  --main-background: linear-gradient(135deg, #c0304a 0%, #e0485f 100%);
+}

@@ -1,0 +1,586 @@
+.overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 3050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--color-shadow) 50%, transparent);
+    backdrop-filter: blur(0.5rem);
+    animation: fadeIn 0.2s ease;
+    border-radius: inherit;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  .modal {
+    width: min(22rem, calc(100% - 1.5rem));
+    max-width: calc(25.875rem - 2rem);
+    max-height: calc(100% - 3rem);
+    border-radius: 1rem;
+    background: color-mix(in srgb, var(--color-text) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 25%, transparent);
+    backdrop-filter: blur(1rem);
+    box-shadow: 0 0.5rem 2rem color-mix(in srgb, var(--color-shadow) 30%, transparent);
+    overflow: hidden;
+    color: color-mix(in srgb, var(--color-text) 95%, transparent);
+    animation: slideUp 0.25s ease;
+  }
+  
+  @keyframes slideUp {
+    from {
+      transform: translateY(0.5rem);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  .header {
+    padding: 1rem 1.25rem;
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--color-shadow) 60%, transparent), transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  }
+  
+  .title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+  
+  .title::before {
+    content: '';
+    width: 3px;
+    height: 0.875rem;
+    background: var(--primary);
+    border-radius: 1px;
+  }
+  
+  .body {
+    padding: 1.25rem 1.5rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: min(70vh, 28rem);
+    overflow: auto;
+  }
+  
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.875rem 1.25rem;
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 15%, transparent);
+    backdrop-filter: blur(0.5rem);
+    transition: all 0.2s ease;
+  }
+  
+  .row:hover {
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-color: color-mix(in srgb, var(--color-text) 25%, transparent);
+  }
+  
+  .rowLabel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    flex: 1;
+  }
+  
+  .rowTitle {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: color-mix(in srgb, var(--color-text) 95%, transparent);
+  }
+  
+  .rowDesc {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+  }
+  
+  .toggle {
+    position: relative;
+    display: inline-block;
+    width: 2.75rem;
+    height: 1.375rem;
+    flex-shrink: 0;
+  }
+  
+  .toggle input {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    cursor: pointer;
+  }
+
+  .toggle input:disabled {
+    cursor: not-allowed;
+  }
+
+  .toggle input:disabled + .toggleSlider {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .rowDisabled {
+    opacity: 0.72;
+  }
+  
+  .toggle input:checked + .toggleSlider {
+    background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+    border-color: color-mix(in srgb, var(--color-text) 95%, transparent);
+  }
+  
+  .toggle input:checked + .toggleSlider::before {
+    transform: translate(1.375rem, -50%);
+  }
+  
+  .toggleSlider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: color-mix(in srgb, var(--color-text) 20%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 30%, transparent);
+    border-radius: 1.375rem;
+    transition: all 0.3s ease;
+  }
+  
+  .toggleSlider::before {
+    position: absolute;
+    content: '';
+    height: 1rem;
+    width: 1rem;
+    left: 0.1875rem;
+    top: 50%;
+    background: var(--color-surface);
+    border-radius: 50%;
+    transition: transform 0.3s ease;
+    box-shadow: 0 0.125rem 0.25rem color-mix(in srgb, var(--color-shadow) 20%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 18.8%, transparent);
+    transform: translateY(-50%);
+  }
+  
+  .sliderWrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 11rem;
+  }
+  
+  .slider {
+    flex: 1;
+    height: 0.375rem;
+    border-radius: 0.1875rem;
+    background: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-surface) 95%, transparent) 0%,
+      color-mix(in srgb, var(--color-surface) 95%, transparent) var(--percent, 50%),
+      color-mix(in srgb, var(--color-text) 20%, transparent) var(--percent, 50%),
+      color-mix(in srgb, var(--color-text) 20%, transparent) 100%
+    );
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    min-width: 0;
+  }
+
+  /* —— 叙事玻璃台：长度/音量仪表（上下分层，避免长文案挤滑条） —— */
+  .meterRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.7rem;
+    padding: 0.95rem 1.1rem 1rem;
+  }
+
+  .meterRowAccent {
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 12%, transparent) 0%, transparent 42%),
+      color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary-light) 28%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 6%, transparent);
+  }
+
+  .meterRowAccent:hover {
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 16%, transparent) 0%, transparent 48%),
+      color-mix(in srgb, var(--color-text) 11%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary-light) 38%, transparent);
+  }
+
+  .meterHead {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .meterValue {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.12rem;
+    min-width: 3.4rem;
+    justify-content: flex-end;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+    font-size: 1.35rem;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--color-on-media);
+    text-shadow: 0 1px 8px color-mix(in srgb, var(--color-shadow) 35%, transparent);
+  }
+
+  .meterUnit {
+    font-size: 0.68rem;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    color: var(--color-text-secondary);
+    transform: translateY(-0.05rem);
+  }
+
+  .meterRange {
+    margin-left: 0.35rem;
+    padding: 0.08rem 0.38rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+    background: color-mix(in srgb, var(--color-text) 22%, transparent);
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+  }
+
+  .meterTrack {
+    width: 100%;
+  }
+
+  .meterSlider {
+    width: 100%;
+    height: 0.45rem;
+    border-radius: 999px;
+    background: linear-gradient(
+      to right,
+      var(--primary-light, var(--color-primary-light)) 0%,
+      var(--primary, var(--color-primary)) var(--percent, 50%),
+      color-mix(in srgb, var(--color-text) 16%, transparent) var(--percent, 50%),
+      color-mix(in srgb, var(--color-text) 16%, transparent) 100%
+    );
+    box-shadow: inset 0 1px 2px color-mix(in srgb, var(--color-shadow) 28%, transparent);
+  }
+
+  .meterRow:not(.meterRowAccent) .meterSlider {
+    background: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-surface) 92%, transparent) 0%,
+      color-mix(in srgb, var(--color-surface) 92%, transparent) var(--percent, 50%),
+      color-mix(in srgb, var(--color-text) 16%, transparent) var(--percent, 50%),
+      color-mix(in srgb, var(--color-text) 16%, transparent) 100%
+    );
+  }
+
+  .meterSlider::-webkit-slider-thumb {
+    width: 1.15rem;
+    height: 1.15rem;
+    border: 2px solid color-mix(in srgb, var(--color-text) 95%, transparent);
+    background: linear-gradient(160deg, var(--color-surface) 0%, var(--color-bg) 100%);
+    box-shadow:
+      0 2px 8px color-mix(in srgb, var(--color-shadow) 35%, transparent),
+      0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+  }
+
+  .meterRow:not(.meterRowAccent) .meterSlider::-webkit-slider-thumb {
+    box-shadow:
+      0 2px 8px color-mix(in srgb, var(--color-shadow) 35%, transparent),
+      0 0 0 3px color-mix(in srgb, var(--color-text) 12%, transparent);
+  }
+
+  .meterSlider::-moz-range-thumb {
+    width: 1.15rem;
+    height: 1.15rem;
+    border: 2px solid color-mix(in srgb, var(--color-text) 95%, transparent);
+    background: linear-gradient(160deg, var(--color-surface) 0%, var(--color-bg) 100%);
+    box-shadow:
+      0 2px 8px color-mix(in srgb, var(--color-shadow) 35%, transparent),
+      0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+  }
+
+  .meterRow:not(.meterRowAccent) .meterSlider::-moz-range-thumb {
+    box-shadow:
+      0 2px 8px color-mix(in srgb, var(--color-shadow) 35%, transparent),
+      0 0 0 3px color-mix(in srgb, var(--color-text) 12%, transparent);
+  }
+
+  .meterSlider::-moz-range-progress {
+    background: var(--primary, var(--color-primary));
+    border-radius: 999px;
+  }
+
+  .meterRow:not(.meterRowAccent) .meterSlider::-moz-range-progress {
+    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  }
+
+  .slider::-moz-range-track {
+    height: 0.375rem;
+    border-radius: 0.1875rem;
+    background: color-mix(in srgb, var(--color-text) 20%, transparent);
+  }
+
+  .slider::-moz-range-progress {
+    height: 0.375rem;
+    border-radius: 0.1875rem;
+    background: color-mix(in srgb, var(--color-surface) 95%, transparent);
+  }
+  
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: var(--color-surface);
+    cursor: pointer;
+    box-shadow: 0 0.125rem 0.375rem color-mix(in srgb, var(--color-shadow) 30%, transparent);
+    transition: all 0.2s ease;
+  }
+  
+  .slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0.125rem 0.5rem color-mix(in srgb, var(--color-text) 50%, transparent);
+  }
+  
+  .slider::-moz-range-thumb {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: var(--color-surface);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0.125rem 0.375rem color-mix(in srgb, var(--color-shadow) 30%, transparent);
+  }
+  
+  .slider::-moz-range-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0.125rem 0.5rem color-mix(in srgb, var(--color-text) 50%, transparent);
+  }
+  
+  .value {
+    flex-shrink: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: color-mix(in srgb, var(--color-text) 90%, transparent);
+    white-space: nowrap;
+    text-align: right;
+  }
+  
+  .buttonContainer {
+    display: flex;
+    gap: 0.65rem;
+    width: 100%;
+    margin-top: 0.35rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid color-mix(in srgb, var(--color-primary-light) 16%, transparent);
+  }
+
+  .btnIcon {
+    display: inline-flex;
+    width: 0.9rem;
+    height: 0.9rem;
+    flex-shrink: 0;
+    opacity: 0.92;
+  }
+
+  .btnIcon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* 次要：重新开始 — 描边漆红，不抢主行动 */
+  .restartButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    flex: 1;
+    min-width: 0;
+    min-height: 2.55rem;
+    padding: 0.55rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-primary-light) 42%, transparent);
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--color-text) 6%, transparent) 0%, transparent 55%),
+      color-mix(in srgb, var(--color-surface) 45%, transparent);
+    color: var(--color-primary-fg);
+    font-size: 0.84rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition:
+      transform 0.14s ease,
+      border-color 0.14s ease,
+      background 0.14s ease,
+      color 0.14s ease,
+      box-shadow 0.14s ease;
+  }
+
+  .restartButton:hover {
+    border-color: color-mix(in srgb, var(--color-primary-light) 70%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+    color: var(--color-on-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--color-shadow) 28%, transparent);
+  }
+
+  .restartButton:active {
+    transform: translateY(0);
+  }
+
+  /* 主行动：完成 — 落盘设置并关弹窗，不离开游戏 */
+  .doneButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.38rem;
+    flex: 1.35;
+    min-width: 0;
+    min-height: 2.55rem;
+    padding: 0.55rem 1rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-primary-light) 32%, transparent);
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--color-text) 16%, transparent) 0%, transparent 42%),
+      linear-gradient(165deg, var(--primary-light, var(--color-primary-light)) 0%, var(--primary, var(--color-primary)) 52%, var(--primary-dark, var(--color-primary)) 100%);
+    color: var(--color-on-primary);
+    font-size: 0.84rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    box-shadow:
+      0 8px 20px color-mix(in srgb, var(--color-primary) 35%, transparent),
+      inset 0 1px 0 color-mix(in srgb, var(--color-text) 18%, transparent);
+    transition:
+      transform 0.14s ease,
+      filter 0.14s ease,
+      box-shadow 0.14s ease;
+  }
+
+  .doneButton:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+    box-shadow:
+      0 10px 24px color-mix(in srgb, var(--color-primary) 42%, transparent),
+      inset 0 1px 0 color-mix(in srgb, var(--color-text) 22%, transparent);
+  }
+
+  .doneButton:active {
+    transform: translateY(0);
+    filter: brightness(0.98);
+  }
+
+  /* 兼容旧类名：与 doneButton 同形，避免外部残留引用断裂 */
+  .exitButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.38rem;
+    flex: 1.35;
+    min-width: 0;
+    min-height: 2.55rem;
+    padding: 0.55rem 1rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-primary-light) 32%, transparent);
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--color-text) 16%, transparent) 0%, transparent 42%),
+      linear-gradient(165deg, var(--primary-light, var(--color-primary-light)) 0%, var(--primary, var(--color-primary)) 52%, var(--primary-dark, var(--color-primary)) 100%);
+    color: var(--color-on-primary);
+    font-size: 0.84rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+  }
+
+  .exitGameLink {
+    display: block;
+    width: 100%;
+    margin-top: 0.15rem;
+    padding: 0.35rem 0.5rem;
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-align: center;
+    cursor: pointer;
+    transition: color 0.14s ease;
+  }
+
+  .exitGameLink:hover {
+    color: color-mix(in srgb, var(--color-primary-fg) 92%, transparent);
+  }
+
+  .exitGameLink:focus-visible {
+    outline: 2px solid var(--primary-light, var(--color-primary-light));
+    outline-offset: 2px;
+    border-radius: 0.35rem;
+  }
+
+  .restartButton:focus-visible,
+  .doneButton:focus-visible,
+  .exitButton:focus-visible {
+    outline: 2px solid var(--primary-light, var(--color-primary-light));
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .restartButton:hover,
+    .doneButton:hover,
+    .exitButton:hover,
+    .restartButton:active,
+    .doneButton:active,
+    .exitButton:active {
+      transform: none;
+    }
+  }
+
+  .actionRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.875rem 1.25rem;
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 15%, transparent);
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .actionRow:hover {
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-color: color-mix(in srgb, var(--color-text) 25%, transparent);
+  }

@@ -1,0 +1,19 @@
+.pageRoot { min-height: 100vh; display: flex; flex-direction: column; padding-top: 0; background: var(--color-surface); }
+.main { flex: 1; display: flex; flex-direction: column; padding: 0 12px; max-width: 900px; margin: 0 auto; width: 100%; }
+.chat { flex: 1; overflow-y: auto; padding: 12px 4px 90px; }
+.msgUser { display: flex; justify-content: flex-end; margin: 8px 0; }
+.msgAi { display: flex; justify-content: flex-start; margin: 8px 0; position: relative; z-index: 1; }
+.userBubble { background: color-mix(in srgb, var(--color-info) 68%, var(--color-shadow)); color: var(--color-on-primary); padding: 10px 12px; border-radius: 12px; max-width: 80%; white-space: pre-wrap; }
+.aiBubble { background: var(--color-bg); color: var(--color-text); padding: 10px 12px; border-radius: 12px; max-width: 80%; white-space: pre-wrap; position: relative; z-index: 1; opacity: 1; }
+.aiBubble > :first-child { margin-top: 0; }
+.aiBubble > :last-child { margin-bottom: 0; }
+.inputBar { display: flex; gap: 8px; padding: 12px 0 16px; border-top: 1px solid var(--color-border); position: sticky; bottom: 0; background: var(--color-surface); }
+.text { flex: 1; border: 1px solid var(--color-border); background: var(--color-surface-2); color: var(--color-text); border-radius: 8px; padding: 10px 12px; outline: none; }
+.send { padding: 0 16px; border: none; background: var(--color-surface); color: var(--color-text); border-radius: 8px; }
+.st-embed { width: 100%; border: 0; min-height: 0; display: block; }
+
+@media (max-width: 768px) {
+  .pageRoot { padding-top: 0; }
+}
+
+.text::placeholder { color: var(--color-text-secondary); }

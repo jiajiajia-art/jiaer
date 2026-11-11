@@ -1,0 +1,274 @@
+/* Hero 区距顶部（Navbar 下）留白 100px */
+.heroSection {
+  margin: 100px 0 28px !important;
+}
+
+/* 覆盖创作中心 mainContent 的 248px 底边距，列表到页脚仅留 10px */
+.mainContent {
+  margin-bottom: 10px !important;
+}
+
+.heroCard {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+  padding: 32px 32px 28px !important;
+}
+
+.heroTopBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.heroTitle {
+  margin: 0 0 10px !important;
+  font-size: 34px !important;
+}
+
+.heroMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+.heroMetaDot {
+  color: var(--color-text-secondary);
+}
+
+.backToCreateButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 18px !important;
+  flex-shrink: 0;
+}
+
+/* 列表整体包在一张卡片里，避免各行散落 */
+.recordsPanel {
+  width: 100%;
+  margin: 0 auto 10px;
+  padding: 8px 28px 24px;
+  border-radius: 18px;
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--color-shadow) 5%, transparent);
+  box-sizing: border-box;
+}
+
+.panelState {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 15px;
+}
+
+.tableHead,
+.itemRow {
+  display: grid;
+  /* 五列铺满：备注固定 40%，前四列分剩余空间 */
+  width: 100%;
+  grid-template-columns: minmax(110px, 1.2fr) minmax(72px, 0.75fr) minmax(64px, 0.6fr) minmax(88px, 0.9fr) 40%;
+  column-gap: 20px;
+  row-gap: 8px;
+  align-items: center;
+}
+
+.tableHead {
+  padding: 18px 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+/* 备注列表头居中；单元格内容仍右对齐 */
+.tableHead > span:last-child {
+  text-align: center;
+  justify-self: stretch;
+}
+
+.itemRow > span:last-child {
+  text-align: right;
+  justify-self: stretch;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  padding: 18px 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+.itemRow {
+  font-size: 15px;
+  color: var(--color-text-secondary);
+}
+
+.amount {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.cny {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.time {
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.statusText {
+  font-weight: 700;
+}
+
+.statusPending {
+  color: var(--color-highlight);
+}
+
+.statusApproved {
+  color: var(--color-success);
+}
+
+.statusRejected {
+  color: var(--color-primary);
+}
+
+.remark {
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+/* PC 有「备注」列表头，单元格内不再重复「备注：」 */
+.remarkLabel {
+  display: none;
+}
+
+.remarkText {
+  flex: 1;
+  min-width: 0;
+  color: var(--color-primary);
+  text-align: right;
+}
+
+.remarkEmpty {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  text-align: right;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.pagerButton {
+  box-sizing: border-box;
+  min-width: 108px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pagerButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--color-shadow) 8%, transparent);
+}
+
+.pagerButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pagerInfo {
+  min-width: 72px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .heroCard {
+    padding: 24px 20px 22px !important;
+  }
+
+  .heroTitle {
+    font-size: 26px !important;
+  }
+
+  .recordsPanel {
+    padding: 4px 12px 20px;
+  }
+
+  .tableHead {
+    display: none;
+  }
+
+  .itemRow {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 12px;
+  }
+
+  .remark,
+  .remarkEmpty {
+    grid-column: 1 / -1;
+  }
+
+  /* 移动端无表头，需显示「备注：」前缀 */
+  .remark {
+    justify-content: space-between;
+  }
+
+  .remarkLabel {
+    display: inline;
+    flex-shrink: 0;
+    color: var(--color-text-secondary);
+    font-weight: 600;
+  }
+
+  .heroTopBar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .backToCreateButton {
+    width: 100%;
+    justify-content: center;
+  }
+}

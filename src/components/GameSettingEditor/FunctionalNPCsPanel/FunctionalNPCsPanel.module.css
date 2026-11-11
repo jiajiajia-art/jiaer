@@ -1,0 +1,154 @@
+/* 主面板样式 */
+.panelContent {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.panelHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.75rem;
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.panelHeader h2 {
+    margin: 4px 0 0;
+    font-size: 1.6rem;
+    color: var(--color-text);
+    font-weight: 700;
+}
+
+.subtitle {
+    margin: 4px 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+}
+
+/* 布局 */
+.npcLayout {
+    display: grid;
+    grid-template-columns: minmax(280px, 360px) 1fr;
+    gap: 20px;
+}
+
+/* 按钮样式 */
+.ghost {
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    padding: 10px 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: var(--color-text);
+    background: var(--color-surface);
+}
+
+.ghost:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.ghost:disabled {
+    background: var(--color-bg);
+    color: var(--color-text-secondary);
+    border-color: var(--color-border);
+    cursor: not-allowed;
+}
+
+.ghost:disabled:hover {
+    border-color: var(--color-border);
+    color: var(--color-text-secondary);
+}
+
+/* AI生成按钮样式 */
+.generateButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.priceIcon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.buttonTextContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    line-height: 1.2;
+}
+
+.buttonMainText {
+    line-height: 1.2;
+}
+
+.buttonSubText {
+    font-size: 0.7rem;
+    color: var(--color-text-secondary);
+    line-height: 1;
+    font-weight: 400;
+}
+
+/* 一键生成全部图片加载遮罩 */
+.plusLoadingOverlay {
+    position: fixed;
+    top: 0;
+    left: 280px;
+    right: 0;
+    bottom: 0;
+    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    pointer-events: auto;
+    min-width: 0;
+    min-height: 0;
+    will-change: opacity;
+}
+
+@keyframes plusSpin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.plusLoadingSpinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--color-text);
+    border-top: 3px solid var(--primary);
+    border-radius: 50%;
+    animation: plusSpin 1s linear infinite;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+
+.plusLoadingText {
+    color: var(--color-text);
+    font-size: 14px;
+    font-weight: 500;
+    flex-shrink: 0;
+    white-space: nowrap;
+}

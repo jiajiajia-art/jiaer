@@ -1,0 +1,208 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3055; /* 略高于设置弹窗(3050) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--color-shadow) 50%, transparent);
+  backdrop-filter: blur(0.5rem);
+  animation: fadeIn 0.2s ease;
+  border-radius: inherit;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  width: min(22rem, calc(100% - 1.5rem));
+  max-width: calc(25.875rem - 2rem); /* 与游戏画布比例一致 */
+  max-height: calc(100% - 3rem);
+  border-radius: 1rem;
+  background: var(--color-surface);
+  box-shadow: 0 0.5rem 2rem color-mix(in srgb, var(--color-shadow) 30%, transparent);
+  overflow: hidden;
+  color: var(--color-text);
+  animation: slideUp 0.25s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(0.5rem);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.header {
+  padding: 0.75rem 1.25rem;
+  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 100%);
+  color: var(--color-on-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.closeButton {
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.body {
+  padding: 1.5rem 1.75rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  overflow: auto;
+}
+
+.messageBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.message {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.buttons {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.btn {
+  min-width: 7rem;
+  padding: 0.55rem 1.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-primary-light);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btnPrimary {
+  background: var(--color-primary-light);
+  color: var(--color-on-primary);
+}
+
+.btnPrimary:hover {
+  filter: brightness(1.05);
+}
+
+.btnSecondary {
+  background: var(--color-surface);
+  color: var(--color-primary-fg);
+}
+
+.btnSecondary:hover {
+  background: var(--color-bg);
+}
+
+/* —— dossier：对齐局内设置 / 人物笺 —— */
+.modalDossier {
+  background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg) 100%);
+  border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+  box-shadow:
+    0 20px 48px color-mix(in srgb, var(--color-shadow) 55%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--color-primary) 18%, transparent);
+  color: color-mix(in srgb, var(--color-text) 92%, transparent);
+}
+
+.headerDossier {
+  padding: 0.7rem 1rem 0.65rem 1.1rem;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 95%, transparent) 0%, color-mix(in srgb, var(--color-surface) 88%, transparent) 100%);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-primary-light) 14%, transparent);
+}
+
+.titleDossier {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-text);
+}
+
+.titleDossier::before {
+  content: '';
+  width: 3px;
+  height: 0.85rem;
+  border-radius: 1px;
+  background: var(--primary, var(--color-primary));
+}
+
+.closeButtonDossier {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 18%, transparent);
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
+  font-size: 1.15rem;
+}
+
+.closeButtonDossier:hover {
+  border-color: color-mix(in srgb, var(--color-primary-light) 45%, transparent);
+  color: var(--color-primary-fg);
+}
+
+.bodyDossier {
+  padding: 1.1rem 1.15rem 1.15rem;
+  gap: 1rem;
+}
+
+.messageDossier {
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.btnDossierPrimary {
+  border-color: transparent;
+  background: linear-gradient(165deg, var(--primary-light, var(--color-primary-light)), var(--primary, var(--color-primary)) 50%, var(--primary-dark, var(--color-primary)));
+  color: var(--color-on-primary);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
+.btnDossierPrimary:hover {
+  filter: brightness(1.06);
+}
+
+.btnDossierSecondary {
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  border-color: color-mix(in srgb, var(--color-text) 20%, transparent);
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
+}
+
+.btnDossierSecondary:hover {
+  background: color-mix(in srgb, var(--color-primary-light) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary-light) 40%, transparent);
+  color: var(--color-primary-fg);
+}
+
+

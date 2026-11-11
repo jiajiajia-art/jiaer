@@ -1,0 +1,1684 @@
+/* 功能注释：世界观面板对齐 funloom 暗色创作壳（与 TXT 创建一致） */
+/* 功能注释：禁止 fonts.googleapis.com，国内会 ERR_CONNECTION_TIMED_OUT */
+
+.panelContent {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.panelHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.75rem;
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.panelHeader h2 {
+    margin: 4px 0 0;
+    font-size: 1.6rem;
+    color: var(--color-text);
+    font-weight: 700;
+}
+
+.subtitle {
+    margin: 4px 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+}
+
+/* 按钮样式 */
+.primary {
+    border-radius: 12px;
+    border: none;
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--color-text);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--color-primary) 35%, transparent);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 0%, color-mix(in srgb, var(--color-text) 10%, transparent) 100%);
+    opacity: 0;
+    transition: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.primary:hover:not(:disabled)::before {
+    opacity: 1;
+}
+
+.primary:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ghost {
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    padding: 10px 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: var(--color-text);
+    background: var(--color-surface);
+}
+
+.ghost:hover {
+    border-color: var(--primary);
+    color: var(--color-on-primary);
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+
+.ghostSmall {
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: var(--color-text);
+    background: var(--color-surface);
+    flex-shrink: 0;
+}
+
+.ghostSmall:hover {
+    border-color: var(--primary);
+    color: var(--color-on-primary);
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+
+.ghostSmall:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    color: var(--color-text-muted);
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
+    border-color: color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.ghostTiny {
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: var(--color-text-secondary);
+    background: transparent;
+    align-self: flex-end;
+}
+
+.ghostTiny:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* 功能注释：仅保留一层外框卡（对齐效果图），分区内部不再套描边盒 */
+.formContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    border-radius: 20px;
+    padding: 22px 20px 24px;
+    box-shadow: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.cardHead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.cardTitle {
+    font-size: 1rem;
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+.formBody {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+.sectionTitleRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.sectionTitleCentered {
+    justify-content: center;
+    text-align: center;
+}
+
+.sectionTitleCentered > div {
+    width: 100%;
+}
+
+.sectionTitle {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.sectionDescription {
+    margin: 6px 0 0;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+}
+
+.detailBlock {
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: transparent;
+}
+
+.detailBlock + .detailBlock {
+    padding-top: 8px;
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.formGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.formGrid label,
+.detailBlock label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.formStack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* 表单行 */
+.formRow {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.fieldHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.fieldTopRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.fieldMeta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.fieldBlock {
+    width: 100%;
+}
+
+.fieldLabel {
+    font-size: 0.9rem;
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+.required {
+    color: var(--primary);
+    margin-left: 4px;
+}
+
+.fieldHint {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    line-height: 1.4;
+}
+
+/* 功能注释：「作用于…」徽章，让世界观/前情/开场白/开场剧情一眼分清消费方 */
+.fieldActsOn {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    max-width: 100%;
+    margin-top: 2px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-primary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.fieldHintItalic {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    font-style: italic;
+    line-height: 1.4;
+}
+
+/* 功能注释：电脑一行至少 6 个胶囊；手机再收成 3 列 */
+.themeTagsWrap {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.themeTagsWrap > * {
+    position: relative;
+    z-index: 1;
+}
+
+.themeTagsWrapError::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border: 1px solid var(--color-primary-bold);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
+    z-index: 0;
+    pointer-events: none;
+}
+
+.themeTagChip {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid color-mix(in srgb, var(--color-text) 22%, transparent);
+    background: var(--color-surface);
+    color: color-mix(in srgb, var(--color-text) 92%, transparent);
+    /* 功能注释：六列宽钮禁止 999px 胶囊，否则四角点不中 */
+    border-radius: 14px;
+    padding: 12px 8px;
+    min-height: 48px;
+    font-size: 13px;
+    line-height: 1.2;
+    cursor: pointer;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    position: relative;
+    z-index: 2;
+    touch-action: manipulation;
+    user-select: none;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+    -webkit-tap-highlight-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .themeTagChip:hover {
+        color: var(--color-text);
+        border-color: color-mix(in srgb, var(--color-primary) 75%, transparent);
+        background: var(--color-surface-2);
+    }
+}
+
+.themeTagChip:active {
+    background: var(--color-surface-2);
+    border-color: var(--color-primary-bold);
+}
+
+.themeTagChipDisabled {
+    opacity: 0.72;
+    border-style: dashed;
+}
+.themeTagChipActive {
+    border-color: var(--color-primary-bold);
+    background: var(--color-primary-bold);
+    color: var(--color-on-primary);
+    font-weight: 600;
+}
+
+.themeTagChipActive:hover {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.wordCounter {
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+/* 字数限制表单容器 */
+.outputLengthContainer {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.outputLengthGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.outputLengthGrid label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 功能注释：字数输入用短圆角方盒，与底部胶囊按钮形成刻意对比（效果图） */
+.outputLengthGrid input {
+    border-radius: 8px;
+    text-align: left;
+}
+
+.outputLengthField {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.outputLengthLabel {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 4px;
+}
+
+.errorText {
+    color: var(--primary);
+    font-size: 0.85rem;
+    margin-top: 8px;
+    display: block;
+}
+
+/* 输入框样式 - 限定在 formContainer 内 */
+.formContainer input,
+.formContainer textarea,
+.storylineRow input,
+.storylineRow textarea {
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    padding: 12px 14px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.formContainer input:focus,
+.formContainer textarea:focus,
+.storylineRow input:focus,
+.storylineRow textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+/* 禁用输入框样式 */
+.formContainer input:disabled,
+.formContainer textarea:disabled {
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
+    color: var(--color-text-muted);
+    cursor: not-allowed;
+    border-color: color-mix(in srgb, var(--color-text) 8%, transparent);
+    opacity: 0.7;
+}
+
+.formContainer input:disabled:focus,
+.formContainer textarea:disabled:focus {
+    border-color: color-mix(in srgb, var(--color-text) 8%, transparent);
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
+    box-shadow: none;
+}
+
+.disabledInput {
+    background: var(--color-surface) !important;
+    color: var(--color-text) !important;
+    cursor: not-allowed !important;
+    border-color: color-mix(in srgb, var(--color-text) 12%, transparent) !important;
+    opacity: 1;
+    min-height: 48px;
+    padding: 14px 16px !important;
+}
+
+.formContainer textarea,
+.storylineRow textarea {
+    resize: vertical;
+    min-height: 100px;
+    line-height: 1.6;
+}
+
+/* 错误样式 */
+.errorInput {
+    border-color: var(--color-primary-bold) !important;
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent) !important;
+}
+
+.errorInput:focus {
+    border-color: var(--color-primary-bold) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 25%, transparent) !important;
+}
+
+.errorMessage {
+    margin-top: 6px;
+    font-size: 0.8rem;
+    color: var(--primary);
+    line-height: 1.4;
+}
+
+/* 故事线 / 文风：效果图设置行手风琴 */
+.storylineSection {
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    padding-top: 4px;
+    margin-top: 4px;
+}
+
+.accordionTrigger {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0;
+    padding: 14px 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+}
+
+.accordionTitle {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text);
+    line-height: 1.35;
+}
+
+.accordionRequiredHint {
+    color: var(--primary);
+    font-weight: 600;
+    margin-left: 6px;
+}
+
+.accordionChevron {
+    flex: 0 0 auto;
+    color: var(--color-text-secondary);
+    transition: transform 0.2s ease;
+}
+
+.accordionChevronOpen {
+    transform: rotate(180deg);
+}
+
+.accordionBody {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 0 0 12px;
+}
+
+.accordionBody .ghostSmall {
+    align-self: flex-start;
+}
+
+.storylineHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.storylineList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+.storylineRow {
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    border-radius: 16px;
+    padding: 16px;
+    background: var(--color-surface);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all 0.25s ease;
+    position: relative;
+}
+
+.storylineRow:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+}
+
+.storylineMeta {
+    display: flex;
+    gap: 12px;
+}
+
+.storylineMeta label {
+    flex: 1;
+}
+
+.wide {
+    grid-column: 1 / -1;
+    width: 100%;
+}
+
+.storylineRow label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.storylineRow label span {
+    font-size: 0.82rem;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.emptyHint {
+    color: var(--color-text-muted);
+}
+
+.emptyHintRequired {
+    color: var(--primary);
+    font-weight: 500;
+    padding: 16px;
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    border: 1px dashed color-mix(in srgb, var(--color-primary) 40%, transparent);
+    border-radius: 12px;
+    text-align: center;
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.collapseIcon {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    transition: transform 0.2s ease;
+    user-select: none;
+}
+
+/* 封面上传区域 */
+.uploadCover {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.coverHeaderRow {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.uploadCover h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--color-text);
+}
+
+.coverDualHint {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.82rem;
+}
+
+/* 功能注释：64:27 列宽让 16:9 与 3:4 同高，避免横图撑满、竖图缩成邮票 */
+.coverSlots {
+    display: grid;
+    grid-template-columns: 64fr 27fr;
+    grid-template-rows: auto auto;
+    column-gap: 14px;
+    row-gap: 8px;
+    align-items: start;
+    width: 100%;
+}
+
+.coverSlot {
+    display: contents;
+}
+
+.uploadCoverCompact {
+    gap: 10px;
+}
+
+.uploadCoverCompact .coverDualHint {
+    font-size: 0.75rem;
+    line-height: 1.4;
+}
+
+.uploadCoverCompact .coverAiBtn {
+    padding: 5px 10px;
+    font-size: 0.72rem;
+}
+
+.coverSlotTitle {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.coverSlotHint {
+    margin: 4px 0 0;
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.coverAiBtn {
+    flex-shrink: 0;
+    border: none;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+}
+
+.coverAiBtn:hover:not(:disabled) {
+    background: var(--color-primary-bold);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.coverAiBtn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* —— AI 海报企划笺（独立于删除确认弹窗） —— */
+.coverBriefOverlay {
+    --brief-ink: var(--color-on-media);
+    --brief-muted: color-mix(in srgb, var(--color-on-media) 55%, transparent);
+    --brief-line: color-mix(in srgb, var(--color-text) 10%, transparent);
+    --brief-paper: var(--color-surface);
+    --brief-panel: var(--color-surface);
+    --brief-coral: var(--color-primary);
+    --brief-coral-deep: var(--color-primary-bold);
+    --brief-stage: var(--color-surface);
+    --brief-display: 'Songti SC', 'STSong', 'Noto Serif SC', 'PingFang SC', serif;
+
+    position: fixed;
+    inset: 0;
+    z-index: 11000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+    background:
+        radial-gradient(ellipse 80% 60% at 50% 40%, color-mix(in srgb, var(--color-primary) 22%, transparent), transparent 55%),
+        color-mix(in srgb, var(--color-shadow) 78%, transparent);
+    backdrop-filter: blur(8px);
+    animation: coverBriefFade 0.22s ease both;
+}
+
+@keyframes coverBriefFade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.coverBriefSheet {
+    width: min(440px, calc(100vw - 40px));
+    background: var(--brief-paper);
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    box-shadow:
+        0 1px 0 color-mix(in srgb, var(--color-text) 6%, transparent) inset,
+        0 24px 64px color-mix(in srgb, var(--color-shadow) 55%, transparent);
+    animation: coverBriefRise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+    position: relative;
+}
+
+@keyframes coverBriefRise {
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.coverBriefSheet::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--brief-coral), var(--color-primary-light) 55%, transparent);
+    pointer-events: none;
+}
+
+.coverBriefTop {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px 0 22px;
+}
+
+.coverBriefEyebrow {
+    margin: 0;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--brief-coral);
+    font-weight: 700;
+}
+
+.coverBriefHeading {
+    margin: 4px 0 0;
+    font-family: var(--brief-display);
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--brief-ink);
+    letter-spacing: 0.02em;
+    line-height: 1.25;
+}
+
+.coverBriefClose {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    color: var(--brief-ink);
+    font-size: 1.15rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.coverBriefClose:hover {
+    background: color-mix(in srgb, var(--color-text) 14%, transparent);
+}
+
+.coverBriefClose:active {
+    transform: scale(0.94);
+}
+
+.coverBriefBody {
+    padding: 14px 20px 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.coverBriefStage {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    border-radius: 12px;
+    overflow: hidden;
+    background:
+        radial-gradient(ellipse 70% 80% at 30% 40%, color-mix(in srgb, var(--color-primary) 40%, transparent), transparent 55%),
+        radial-gradient(ellipse 50% 60% at 80% 70%, color-mix(in srgb, var(--color-primary) 20%, transparent), transparent 50%),
+        linear-gradient(160deg, var(--color-surface) 0%, var(--color-surface) 100%);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 20px;
+    text-align: center;
+}
+
+.coverBriefStageGrain {
+    position: absolute;
+    inset: 0;
+    opacity: 0.22;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+    mix-blend-mode: overlay;
+}
+
+.coverBriefStageLabel {
+    position: relative;
+    z-index: 1;
+    margin: 0 0 8px;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+.coverBriefStageTitle {
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    font-family: var(--brief-display);
+    font-size: clamp(1rem, 3.6vw, 1.25rem);
+    font-weight: 700;
+    color: var(--color-on-media);
+    line-height: 1.35;
+    text-shadow: 0 2px 18px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+    max-width: 92%;
+}
+
+.coverBriefStageTitleCheese {
+    font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    font-weight: 400;
+    color: var(--color-highlight);
+    -webkit-text-stroke: 1.5px var(--color-info);
+    paint-order: stroke fill;
+    text-shadow: 0 0 14px color-mix(in srgb, var(--color-highlight) 85%, transparent);
+}
+
+.coverBriefStyleRow {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.coverBriefStyleLabel {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+.coverBriefStyleChips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.coverBriefStyleChip {
+    appearance: none;
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+    background: var(--color-surface);
+    color: color-mix(in srgb, var(--color-text) 82%, transparent);
+    border-radius: 999px;
+    min-height: 34px;
+    padding: 0 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.coverBriefStyleChip:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+}
+
+.coverBriefStyleChipActive {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+    color: var(--color-on-primary);
+}
+
+.coverBriefStyleChipCheese {
+    font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+.coverBriefStyleChipCheese.coverBriefStyleChipActive {
+    color: var(--color-highlight);
+    border-color: var(--color-info);
+    background: color-mix(in srgb, var(--color-info) 18%, transparent);
+}
+
+.coverBriefStyleChipMuted {
+    opacity: 0.55;
+}
+
+.coverBriefStyleOverrideHint {
+    margin: 0;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    color: color-mix(in srgb, var(--color-highlight) 88%, transparent);
+}
+
+.coverBriefMetaRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.coverBriefHint {
+    margin: 0;
+    flex: 1;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--brief-muted);
+}
+
+.coverBriefCost {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+    color: var(--brief-coral);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.coverBriefField {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.coverBriefLabelRow {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.coverBriefLabel {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--brief-ink);
+}
+
+.coverBriefOptional {
+    font-size: 0.72rem;
+    color: var(--brief-muted);
+    font-weight: 500;
+}
+
+.coverBriefTextarea {
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+    min-height: 88px;
+    max-height: 160px;
+    border: 1px solid var(--brief-line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    font-family: inherit;
+    color: var(--brief-ink);
+    background: var(--brief-panel);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.coverBriefTextarea::placeholder {
+    color: var(--color-text-muted);
+}
+
+.coverBriefTextarea:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.coverBriefCount {
+    align-self: flex-end;
+    font-size: 0.72rem;
+    color: var(--brief-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.coverBriefActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--brief-line);
+}
+
+.coverBriefGhost {
+    flex: 0 0 auto;
+    min-width: 96px;
+    height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+    background: var(--color-surface);
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.coverBriefGhost:hover {
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+    color: var(--color-on-primary);
+}
+
+.coverBriefGhost:active {
+    transform: translateY(1px) scale(0.985);
+}
+
+.coverBriefPrimary {
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--brief-coral) 0%, var(--brief-coral-deep) 100%);
+    color: var(--color-text);
+    font-size: 0.92rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--color-primary) 35%, transparent);
+    transition: transform 0.12s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.coverBriefPrimary:hover {
+    filter: brightness(1.04);
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.coverBriefPrimary:active {
+    transform: translateY(1px) scale(0.985);
+}
+
+@media (max-width: 480px) {
+    .coverBriefSheet {
+        width: calc(100vw - 28px);
+        border-radius: 14px;
+    }
+
+    .coverBriefTop,
+    .coverBriefBody {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    /* 功能注释：手机保持横排「取消 + 生成」，禁止双全宽胶囊竖叠（丑且占高） */
+    .coverBriefActions {
+        flex-direction: row;
+        gap: 10px;
+        margin-top: 12px;
+        padding: 12px 0 calc(4px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .coverBriefGhost {
+        flex: 0 0 auto;
+        width: auto;
+        min-width: 88px;
+        height: 48px;
+        padding: 0 16px;
+    }
+
+    .coverBriefPrimary {
+        flex: 1 1 auto;
+        width: auto;
+        height: 48px;
+        font-size: 0.95rem;
+    }
+}
+
+.coverUploadArea {
+    width: 100%;
+    min-height: 0;
+    box-sizing: border-box;
+    border: 1px dashed color-mix(in srgb, var(--color-text) 20%, transparent);
+    border-radius: 10px;
+    padding: 0;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-surface);
+    position: relative;
+    overflow: hidden;
+}
+
+.coverUploadAreaLandscape {
+    aspect-ratio: 16 / 9;
+    min-width: 0;
+}
+
+.coverUploadAreaPortrait {
+    aspect-ratio: 3 / 4;
+    width: 100%;
+    min-width: 0;
+}
+
+.coverUploadArea:hover {
+    border-color: var(--primary);
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.coverUploadArea:has(input:disabled) {
+    cursor: not-allowed !important;
+    opacity: 0.6;
+}
+
+.coverPlaceholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px;
+    pointer-events: none;
+    text-align: center;
+}
+
+.coverUploadIcon {
+    color: var(--color-text-muted);
+}
+
+.coverUploadText {
+    margin: 0;
+    color: color-mix(in srgb, var(--color-text) 85%, transparent);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.coverUploadHint {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.68rem;
+    line-height: 1.35;
+}
+
+.coverUploadAreaPortrait .coverUploadIcon {
+    width: 22px;
+    height: 22px;
+}
+
+.coverPreviewContainer {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.coverUploadAreaPreview {
+    cursor: default;
+    border-style: solid;
+    border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+    padding: 0;
+    background: var(--color-surface);
+}
+
+.coverUploadAreaPreview:hover {
+    background: var(--color-surface);
+    border-color: color-mix(in srgb, var(--color-text) 20%, transparent);
+}
+
+/* 仅图区可点预览；「更换」绝对定位叠在上层，不在此 button 内 */
+.coverPreviewHit {
+    display: block;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: zoom-in;
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    font: inherit;
+    color: inherit;
+}
+
+.coverPreviewHit:disabled {
+    cursor: wait;
+}
+
+.coverPreviewHit:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* 编辑预览完整等比显示，避免 cover 裁顶把叠字标题切掉 */
+.coverPreview {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+    border-radius: 8px;
+    pointer-events: none;
+}
+
+.coverPreviewHint {
+    position: absolute;
+    left: 50%;
+    bottom: 10px;
+    transform: translateX(-50%);
+    margin: 0;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-shadow) 55%, transparent);
+    color: color-mix(in srgb, var(--color-on-media) 92%, transparent);
+    font-size: 0.75rem;
+    font-weight: 500;
+    pointer-events: none;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.coverPreviewHit:hover .coverPreviewHint {
+    opacity: 1;
+}
+
+.coverGeneratingOverlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--color-shadow) 48%, transparent);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--color-on-media);
+    font-size: 0.9rem;
+    font-weight: 500;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.coverGeneratingSpinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid color-mix(in srgb, var(--color-text) 35%, transparent);
+    border-top-color: var(--color-text);
+    border-radius: 50%;
+    animation: coverSpin 0.8s linear infinite;
+}
+
+@keyframes coverSpin {
+    to { transform: rotate(360deg); }
+}
+
+.coverActions {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 8px;
+    z-index: 12;
+}
+
+.removeCoverBtn {
+    padding: 6px 12px;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 60px;
+}
+
+.removeCoverBtn:hover:not(:disabled) {
+    background: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.removeCoverBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.coverErrorText {
+    color: var(--primary);
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+
+@keyframes progressBarShine {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+/* 故事线排序控件 - 使用表单样式 */
+.storylineOrderLabel {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.storylineOrderLabel span {
+    font-size: 0.82rem;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.orderInput {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    padding: 12px 14px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: 0.2s ease;
+    /* 隐藏number input的spinner */
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.orderInput::-webkit-outer-spin-button,
+.orderInput::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.orderInput:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+/* 弹窗样式 - 简单表单 */
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: color-mix(in srgb, var(--color-shadow) 50%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modalContent {
+    background: var(--color-surface);
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.modalHeader h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.modalCloseBtn {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.modalCloseBtn:hover {
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    color: var(--color-text);
+}
+
+.modalBody {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modalFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.formGroup:last-child {
+    margin-bottom: 0;
+}
+
+.formGroup label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.formGroup label span {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.formGroup input,
+.formGroup textarea {
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    padding: 12px 14px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.formGroup input:focus,
+.formGroup textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.formGroup textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
+/* 响应式布局 */
+@media (max-width: 720px) {
+    .coverSlots {
+        grid-template-columns: 64fr 27fr;
+        column-gap: 10px;
+    }
+
+    .panelHeader {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .panelHeader h2 {
+        font-size: 1.4rem;
+    }
+
+    .formContainer {
+        gap: 0;
+        padding: 0;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+        overflow: visible;
+    }
+
+    .formBody {
+        gap: 12px;
+    }
+
+    .cardHead {
+        align-items: flex-start;
+        padding-bottom: 14px;
+    }
+
+    /* 功能注释：手机每个分区独立墨黑卡，禁止再挤在同一外框里 */
+    .detailBlock,
+    .storylineSection {
+        background: var(--color-surface);
+        border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+        border-radius: 20px;
+        padding: 16px 16px 18px;
+        margin-top: 0;
+    }
+
+    .detailBlock + .detailBlock {
+        padding-top: 16px;
+        border-top: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    }
+
+    .sectionTitleRow {
+        justify-content: center;
+        text-align: center;
+        padding-bottom: 12px;
+        border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    }
+
+    .sectionTitleRow > div {
+        width: 100%;
+    }
+
+    .formContainer input,
+    .formContainer textarea,
+    .storylineRow input,
+    .storylineRow textarea,
+    .accordionBody textarea {
+        background: var(--color-surface);
+    }
+
+    .formGrid,
+    .outputLengthGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .fieldTopRow {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .themeTagsWrap {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .themeTagChip {
+        font-size: 12px;
+        padding: 10px 6px;
+        min-height: 44px;
+        border-radius: 12px;
+    }
+}

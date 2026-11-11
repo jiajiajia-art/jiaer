@@ -1,0 +1,1472 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  /* 须高于 Galgame 底栏 (.buttonContainer z-index: 3100)，否则「返回」点不到 */
+  z-index: 3200;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  /* 全不透明遮罩，避免对白/选项透到档案表单上（UE 全屏面板） */
+  background: var(--color-bg);
+}
+
+.panel {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: var(--color-text);
+  padding: 1.25rem 1rem 1rem;
+  box-sizing: border-box;
+}
+
+.header {
+  flex-shrink: 0;
+  margin-bottom: 1rem;
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+.headerText {
+  flex: 1;
+  min-width: 0;
+}
+
+.headerBack {
+  flex-shrink: 0;
+  width: 2.2rem;
+  height: 2.2rem;
+  margin-top: 0.05rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 20%, transparent);
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  color: var(--color-text);
+  font-size: 1.45rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.headerBack:hover {
+  border-color: color-mix(in srgb, var(--color-primary-light) 45%, transparent);
+  color: var(--color-primary-fg);
+}
+
+.headerRight {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding-top: 0.15rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+.body {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.footer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.7rem;
+  padding-top: 0.85rem;
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  position: relative;
+  z-index: 1;
+}
+
+.footerActions {
+  display: flex;
+  flex: 1;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.backButton {
+  min-width: 5rem;
+  min-height: 2.45rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 22%, transparent);
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  color: color-mix(in srgb, var(--color-text) 95%, transparent);
+  font-size: 0.875rem;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 6%, transparent);
+  transition:
+    background 0.14s ease,
+    border-color 0.14s ease,
+    transform 0.14s ease;
+}
+
+.backButton:hover {
+  background: color-mix(in srgb, var(--color-text) 11%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary-light) 50%, transparent);
+  color: var(--color-primary-fg);
+}
+
+.backButton:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
+}
+
+.backButton:active {
+  transform: translateY(1px);
+}
+
+/** 主操作（添加角色 / 保存等）——站点主题红 */
+.primaryButton {
+  min-width: 5rem;
+  min-height: 2.45rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 70%, transparent);
+  background: linear-gradient(165deg, var(--primary-light) 0%, var(--primary) 48%, var(--primary-dark) 100%);
+  color: var(--color-text);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary) 32%, transparent);
+  transition:
+    background 0.14s ease,
+    border-color 0.14s ease,
+    transform 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.primaryButton:hover {
+  background: linear-gradient(165deg, var(--color-primary-light) 0%, var(--color-primary) 48%, var(--color-primary) 100%);
+  border-color: color-mix(in srgb, var(--color-primary-light) 85%, transparent);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-primary) 40%, transparent);
+}
+
+.primaryButton:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
+}
+
+.primaryButton:active {
+  transform: translateY(1px);
+}
+
+.card {
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  padding: 0.85rem 0.9rem;
+}
+
+.cardActive {
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-primary) 18%, transparent),
+    0 10px 28px color-mix(in srgb, var(--color-shadow) 28%, transparent);
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--color-primary) 10%, transparent) 0%,
+    color-mix(in srgb, var(--color-text) 4%, transparent) 55%
+  );
+}
+
+.cardTitle {
+  margin: 0 0 0.35rem;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.cardTitleName {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardTitleTrail {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.cardTitleMeta {
+  font-size: 0.68rem;
+  font-weight: 550;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+/* 笺角印：右上轻描边，不抢姓名 */
+.customBadge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0.08rem 0.38rem;
+  border-radius: 0.2rem;
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 38%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 35%, transparent);
+  color: color-mix(in srgb, var(--color-primary-fg) 92%, transparent);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1.25;
+  writing-mode: horizontal-tb;
+}
+
+.detailName .customBadge {
+  letter-spacing: 0.1em;
+  font-size: 0.65rem;
+  padding: 0.1rem 0.42rem;
+}
+
+.cardMeta {
+  margin: 0.25rem 0;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.cardBody {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--color-text) 85%, transparent);
+  word-break: break-word;
+}
+
+.cardBodyTruncate {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  overflow: hidden;
+}
+
+.empty {
+  margin: 2rem auto;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.attrSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.attrSectionTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+.attrGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 420px) {
+  .attrGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.attrCard {
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  padding: 0.85rem 0.9rem;
+  min-height: 5.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.attrValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-primary-fg);
+}
+
+.tabRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+
+.tab {
+  border: 1px solid color-mix(in srgb, var(--color-text) 20%, transparent);
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  color: color-mix(in srgb, var(--color-text) 80%, transparent);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.tabActive {
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  color: var(--color-primary-fg);
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+
+.contentText {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  border-radius: 0.5rem;
+  padding: 0.85rem 0.9rem;
+}
+
+.charRow {
+  display: flex;
+  flex-direction: row;
+  /* 头像｜介绍（吃满剩余）｜箭头贴右 */
+  gap: 0.55rem;
+  align-items: flex-start;
+  /* 右侧收紧内边距，介绍区按蓝框加宽、箭头贴卡片右缘 */
+  padding: 0.85rem 0.3rem 0.85rem 0.85rem;
+}
+
+.charAside {
+  flex-shrink: 0;
+  width: 7.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+}
+
+.charCardButton {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+}
+
+.charText {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  /* 介绍吃到箭头前，不再留大块空白 */
+  padding-right: 0.1rem;
+}
+
+.charChevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+  font-weight: 300;
+  padding-right: 0.15rem;
+}
+
+.charChevronBtn {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  align-self: center;
+  width: 1.2rem;
+  height: 2.4rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 1.35rem;
+  font-weight: 300;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.charChevronBtn:hover {
+  color: var(--color-primary-fg);
+}
+
+.listHeaderActions {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.ghostButton {
+  min-height: 2.2rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 22%, transparent);
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  color: color-mix(in srgb, var(--color-text) 92%, transparent);
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ghostButton:hover {
+  border-color: color-mix(in srgb, var(--color-primary-light) 45%, transparent);
+  color: var(--color-primary-fg);
+}
+
+.importPanel {
+  --import-cinnabar: var(--color-primary);
+  --import-petal: var(--color-primary-light);
+  --import-ink: var(--color-text);
+  --import-mute: color-mix(in srgb, var(--color-surface) 58%, transparent);
+  --import-display: 'Songti SC', 'STSong', 'Source Han Serif SC', 'Noto Serif SC', serif;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: 0;
+}
+
+.importSearchWrap {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  padding: 0 0.1rem 0.55rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
+.importSearchLabel {
+  flex-shrink: 0;
+  font-family: var(--import-display);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  color: var(--import-petal);
+}
+
+.importSearch {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--import-ink);
+  padding: 0.2rem 0;
+  font: inherit;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.importSearch::placeholder {
+  color: var(--color-text-muted);
+}
+
+.importCard {
+  --import-i: 0;
+  display: grid;
+  grid-template-columns: 6.8rem minmax(0, 1fr);
+  align-items: stretch;
+  width: 100%;
+  min-height: 8.6rem;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--color-primary) 16%, transparent) 0, color-mix(in srgb, var(--color-primary) 16%, transparent) 3px, transparent 3px),
+    linear-gradient(105deg, color-mix(in srgb, var(--color-text) 20%, transparent) 0%, color-mix(in srgb, var(--color-surface) 72%, transparent) 42%, color-mix(in srgb, var(--color-surface) 55%, transparent) 100%);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-primary-light) 10%, transparent);
+  animation: importCardIn 0.42s ease both;
+  animation-delay: calc(var(--import-i) * 55ms);
+}
+
+.importCard:hover,
+.importCard:focus-visible {
+  background:
+    linear-gradient(90deg, var(--import-cinnabar) 0, var(--import-cinnabar) 3px, transparent 3px),
+    linear-gradient(105deg, color-mix(in srgb, var(--color-surface) 45%, transparent) 0%, color-mix(in srgb, var(--color-surface) 82%, transparent) 48%, color-mix(in srgb, var(--color-surface) 60%, transparent) 100%);
+}
+
+.importCard:focus-visible {
+  outline: 2px solid var(--import-petal);
+  outline-offset: 3px;
+}
+
+.importCard:hover .importPortrait,
+.importCard:focus-visible .importPortrait {
+  transform: translateY(-0.12rem);
+  filter: brightness(1.06);
+}
+
+@keyframes importCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(0.55rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .importCard {
+    animation: none;
+  }
+  .importCard:hover .importPortrait,
+  .importCard:focus-visible .importPortrait {
+    transform: none;
+  }
+}
+
+.importPortrait {
+  position: relative;
+  width: 6.8rem;
+  height: 9.05rem;
+  margin-top: -0.35rem;
+  margin-bottom: -0.35rem;
+  align-self: center;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse 90% 46% at 50% 8%, color-mix(in srgb, var(--color-primary) 28%, transparent), transparent 58%),
+    var(--color-surface);
+  box-shadow:
+    8px 0 18px color-mix(in srgb, var(--color-shadow) 35%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--color-primary-light) 22%, transparent);
+}
+
+.importPortraitImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  display: block;
+}
+
+.importPortraitSeal {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-family: var(--import-display);
+  color: var(--import-petal);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.importGenderSeal {
+  position: absolute;
+  right: -0.28rem;
+  bottom: 0.7rem;
+  z-index: 2;
+  min-width: 1.35rem;
+  padding: 0.18rem 0.12rem;
+  background: var(--import-cinnabar);
+  color: var(--color-on-primary);
+  font-family: var(--import-display);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  writing-mode: vertical-rl;
+  transform: rotate(-8deg);
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.importCopy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.85rem 0.85rem 0.85rem 0.95rem;
+}
+
+.importName {
+  margin: 0;
+  font-family: var(--import-display);
+  font-size: 1.18rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--import-ink);
+  line-height: 1.25;
+}
+
+.importBio {
+  margin: 0;
+  max-width: 22em;
+  padding-left: 0.55rem;
+  border-left: 1px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--import-mute);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.importCue {
+  align-self: flex-start;
+  margin-top: 0.1rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: color-mix(in srgb, var(--color-primary-fg) 55%, transparent);
+}
+
+.chatBtn {
+  width: 100%;
+  min-height: 1.85rem;
+  padding: 0.28rem 0.2rem;
+  border-radius: 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 28%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-text) 14%, transparent) 0%, transparent 40%),
+    linear-gradient(165deg, var(--primary-light) 0%, var(--primary) 52%, var(--primary-dark) 100%);
+  color: var(--color-text);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  box-shadow:
+    0 4px 12px color-mix(in srgb, var(--color-primary) 28%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 16%, transparent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.22rem;
+}
+
+.chatBtnIcon {
+  width: 0.78rem;
+  height: 0.78rem;
+  flex-shrink: 0;
+  opacity: 0.95;
+}
+
+.chatBtnIconLg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  opacity: 0.95;
+}
+
+.chatBtn:hover {
+  filter: brightness(1.06);
+}
+
+.chatBtn:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
+}
+
+.avatar {
+  width: 7.5rem;
+  height: 7.5rem;
+  border-radius: 0.35rem;
+  object-fit: cover;
+  /* 立绘多为全身：顶对齐裁切，露出头部作为「头像」 */
+  object-position: top center;
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin: 0;
+  display: block;
+}
+
+/* 用户上传图：整图等比装入，禁止再 cover/头顶裁切 */
+.avatarPoster {
+  object-fit: contain;
+  object-position: center center;
+  background: var(--color-surface);
+}
+
+/* 头像 ensure 中：墨室余烬占位（非通用 spinner） */
+.avatarLoading {
+  --avatar-ember: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  position: relative;
+  width: 7.5rem;
+  height: 7.5rem;
+  border-radius: 0.35rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 18%, color-mix(in srgb, var(--color-primary) 22%, transparent), transparent 62%),
+    linear-gradient(165deg, color-mix(in srgb, var(--color-surface) 95%, transparent), color-mix(in srgb, var(--color-surface) 98%, transparent));
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 14%, transparent);
+  display: grid;
+  place-items: center;
+}
+
+.avatarLoading::before {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    color-mix(in srgb, var(--color-primary-lighter) 14%, transparent) 48%,
+    transparent 62%
+  );
+  animation: avatarInkSweep 1.55s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.avatarLoadingPulse {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--color-primary-light) 22%, transparent);
+  border-top-color: var(--avatar-ember);
+  border-right-color: color-mix(in srgb, var(--color-primary-light) 55%, transparent);
+  animation: avatarEmberSpin 0.85s linear infinite;
+  position: relative;
+  z-index: 1;
+}
+
+.charAside .avatarLoading {
+  width: 100%;
+  height: 7.5rem;
+  align-self: stretch;
+}
+
+@keyframes avatarInkSweep {
+  0% { transform: translateX(-35%) rotate(12deg); opacity: 0.35; }
+  50% { opacity: 0.9; }
+  100% { transform: translateX(35%) rotate(12deg); opacity: 0.35; }
+}
+
+@keyframes avatarEmberSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatarLoading::before,
+  .avatarLoadingPulse {
+    animation: none;
+  }
+  .avatarLoadingPulse {
+    border-color: color-mix(in srgb, var(--color-primary-light) 45%, transparent);
+    opacity: 0.85;
+  }
+}
+
+.charAside .avatar {
+  width: 100%;
+  height: 7.5rem;
+  align-self: stretch;
+}
+
+.avatarHit {
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 0.35rem;
+  line-height: 0;
+}
+
+.avatarHit:hover .avatar {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.avatarHit:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
+}
+
+.detailIdentity {
+  color: var(--color-info);
+  font-size: 0.875rem;
+  margin: 0.25rem 0 0.75rem;
+}
+
+.sectionBox {
+  border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+  border-radius: 0.45rem;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.sectionLabel {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.35rem;
+}
+
+/* —— UE 屏② 角色详情 —— */
+.detailPage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.detailHero {
+  display: flex;
+  gap: 0.85rem;
+  align-items: stretch;
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, var(--color-shadow) 35%, transparent);
+  color: inherit;
+}
+
+.detailPortraitBtn {
+  position: relative;
+  flex-shrink: 0;
+  width: 6.75rem;
+  padding: 0;
+  border: none;
+  border-radius: 0.55rem;
+  overflow: hidden;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.detailPortrait {
+  display: block;
+  width: 6.75rem;
+  height: 8.5rem;
+  object-fit: cover;
+  object-position: top center;
+  border-radius: 0.55rem;
+}
+
+.detailPortraitPoster {
+  object-fit: contain;
+  object-position: center center;
+  background: var(--color-surface);
+}
+
+.detailPortraitEmpty {
+  width: 6.75rem;
+  height: 8.5rem;
+  border-radius: 0.55rem;
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--color-primary) 18%, transparent), color-mix(in srgb, var(--color-surface) 90%, transparent));
+}
+
+.detailPortraitLoading {
+  --avatar-ember: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  position: relative;
+  width: 6.75rem;
+  height: 8.5rem;
+  border-radius: 0.55rem;
+  overflow: hidden;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(ellipse 65% 45% at 50% 22%, color-mix(in srgb, var(--color-primary) 20%, transparent), transparent 58%),
+    linear-gradient(165deg, color-mix(in srgb, var(--color-surface) 95%, transparent), color-mix(in srgb, var(--color-surface) 98%, transparent));
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 14%, transparent);
+}
+
+.detailPortraitLoading::before {
+  content: '';
+  position: absolute;
+  inset: -45%;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    color-mix(in srgb, var(--color-primary-lighter) 12%, transparent) 48%,
+    transparent 62%
+  );
+  animation: avatarInkSweep 1.55s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.detailPortraitLoading .avatarLoadingPulse {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.detailHeroInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0;
+}
+
+.detailName {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.detailMeta {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.45rem;
+  font-size: 0.78rem;
+  color: color-mix(in srgb, var(--color-primary-lighter) 78%, transparent);
+}
+
+.detailGender {
+  color: color-mix(in srgb, var(--color-text) 85%, transparent);
+}
+
+.detailRoleTag {
+  display: inline-flex;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 40%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  color: var(--color-primary-fg);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.detailRelationLine {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.detailChatHint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.35rem 0.2rem;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--color-shadow) 88%, transparent));
+  font-size: 0.62rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  color: var(--color-primary-fg);
+  text-align: center;
+}
+
+.detailSection {
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  border-radius: 0.7rem;
+  padding: 0.75rem 0.85rem;
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+.detailSectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.45rem;
+}
+
+.detailSectionTitle {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--color-text) 90%, transparent);
+}
+
+.detailSectionBody {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
+}
+
+.detailSectionMuted {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.personaTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.45rem;
+}
+
+.personaTag {
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 35%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary-fg);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.favorBadge {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 750;
+  color: var(--color-primary-fg);
+  letter-spacing: 0.02em;
+}
+
+.favorRow {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0.55rem;
+}
+
+.favorTrack {
+  flex: 1;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 12%, transparent);
+  overflow: hidden;
+}
+
+.favorFill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--color-primary-light), var(--primary, var(--color-primary)));
+}
+
+.favorNum {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-primary-fg);
+  min-width: 1.6rem;
+  text-align: right;
+}
+
+.editPersonaBtn {
+  flex-shrink: 0;
+  min-height: 1.85rem;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 55%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  color: var(--color-primary-fg);
+  font-size: 0.75rem;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.editPersonaBtn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-primary) 26%, transparent);
+  color: var(--color-on-primary);
+}
+
+.editPersonaBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.editPersonaBtn:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
+}
+
+.chatBtnWide {
+  min-width: 5.5rem;
+  min-height: 2.45rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 28%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-text) 12%, transparent) 0%, transparent 40%),
+    linear-gradient(165deg, var(--primary-light) 0%, var(--primary) 52%, var(--primary-dark) 100%);
+  color: var(--color-text);
+  font-size: 0.875rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  box-shadow:
+    0 6px 16px color-mix(in srgb, var(--color-primary) 30%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 16%, transparent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.chatBtnWide:hover {
+  filter: brightness(1.06);
+}
+
+.chatBtnWide:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
+}
+
+.detailCard {
+  background: color-mix(in srgb, var(--color-surface) 72%, transparent);
+  border-color: color-mix(in srgb, var(--color-text) 14%, transparent);
+}
+
+/* UE「目前选择路线」 */
+.routeList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.routeChip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+  color: color-mix(in srgb, var(--color-text) 92%, transparent);
+  cursor: pointer;
+}
+
+.routeChip:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-text) 28%, transparent);
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+
+.routeChip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.routeChipActive {
+  border-color: color-mix(in srgb, var(--color-primary-light) 55%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+
+.routeChipTitle {
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.routeChipSummary {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  line-height: 1.35;
+}
+
+/* 角色头像放大预览：档案卷轴 + 底部固定漆红操作栏 */
+.avatarPreviewOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.avatarPreviewCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 22rem);
+  max-height: min(88vh, 36rem);
+  overflow: hidden;
+  padding: 0;
+  border-radius: 1.05rem;
+  border: 1px solid color-mix(in srgb, var(--color-primary-lighter) 14%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 8%, transparent) 0%, transparent 28%),
+    linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg) 100%);
+  box-shadow:
+    0 24px 56px color-mix(in srgb, var(--color-shadow) 58%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--color-primary) 22%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+/* 顶栏独立放关闭钮，不压立绘 */
+.avatarPreviewChrome {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem 0.55rem 1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-primary-light) 14%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 95%, transparent) 0%, color-mix(in srgb, var(--color-surface) 88%, transparent) 100%);
+}
+
+.avatarPreviewChromeLabel {
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+  color: color-mix(in srgb, var(--color-primary-fg) 78%, transparent);
+}
+
+.avatarPreviewClose {
+  position: static;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 22%, transparent);
+  background: color-mix(in srgb, var(--color-shadow) 35%, transparent);
+  color: var(--color-on-media);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.avatarPreviewClose:hover {
+  border-color: color-mix(in srgb, var(--color-primary-light) 55%, transparent);
+  color: var(--color-primary-fg);
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+.avatarPreviewScroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.85rem 1rem 0.35rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.avatarPreviewPortraitWrap {
+  width: 100%;
+  margin-bottom: 0.9rem;
+  border-radius: 0.8rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: color-mix(in srgb, var(--color-shadow) 35%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+.avatarPreviewPortrait {
+  display: block;
+  width: 100%;
+  max-height: 14.5rem;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.avatarPreviewPortraitPoster {
+  object-fit: contain;
+  object-position: center center;
+  height: auto;
+  max-height: min(68vh, 16rem);
+  background: var(--color-surface);
+}
+
+.avatarPreviewPortraitEmpty {
+  width: 100%;
+  height: 11rem;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary) 20%, transparent), color-mix(in srgb, var(--color-surface) 95%, transparent));
+}
+
+.avatarPreviewHead {
+  margin-bottom: 0.15rem;
+}
+
+.avatarPreviewName {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+}
+
+.avatarPreviewMeta {
+  margin: 0.4rem 0 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--color-primary-lighter) 68%, transparent);
+}
+
+.avatarPreviewIntro {
+  margin-top: 0.85rem;
+  padding: 0.8rem 0 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-primary-light) 16%, transparent);
+}
+
+.avatarPreviewIntroTitle {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: none;
+  color: var(--color-primary-fg);
+}
+
+.avatarPreviewIntroBody {
+  margin: 0 0 0.7rem;
+  font-size: 0.84rem;
+  line-height: 1.62;
+  color: color-mix(in srgb, var(--color-text) 90%, transparent);
+  white-space: pre-wrap;
+}
+
+.avatarPreviewIntroBody:last-child {
+  margin-bottom: 0;
+}
+
+.avatarPreviewIntroLabel {
+  display: block;
+  margin-bottom: 0.28rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--color-primary-fg) 78%, transparent);
+}
+
+.avatarPreviewIntroMuted {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.avatarPreviewDock {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.85rem 1rem 1.05rem;
+  background:
+    linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-surface) 92%, transparent) 28%, var(--color-bg) 100%);
+  border-top: 1px solid color-mix(in srgb, var(--color-primary) 28%, transparent);
+  box-shadow: 0 -12px 28px color-mix(in srgb, var(--color-shadow) 35%, transparent);
+}
+
+.avatarPreviewDock::before {
+  content: '';
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--color-primary-light) 55%, transparent) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.avatarPreviewChatBtn {
+  width: 100%;
+  min-height: 2.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 28%, transparent);
+  border-radius: 0.85rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-text) 12%, transparent) 0%, transparent 42%),
+    linear-gradient(165deg, var(--primary-light) 0%, var(--primary) 52%, var(--primary-dark) 100%);
+  color: var(--color-text);
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-indent: 0;
+  cursor: pointer;
+  box-shadow:
+    0 10px 24px color-mix(in srgb, var(--color-primary) 38%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 18%, transparent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.avatarPreviewChatBtn:hover {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+}
+
+.avatarPreviewChatBtn:active {
+  transform: translateY(0);
+  filter: brightness(0.98);
+}
+
+.avatarPreviewChatBtn:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatarPreviewChatBtn:hover,
+  .avatarPreviewChatBtn:active {
+    transform: none;
+  }
+}

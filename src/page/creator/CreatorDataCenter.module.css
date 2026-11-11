@@ -1,0 +1,147 @@
+.heroCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin: 24px 0 32px;
+  padding: 24px 28px;
+  border-radius: 16px;
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.heroEyebrow {
+  margin: 0 0 8px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.heroTitle {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  font-size: 28px;
+  color: var(--color-text);
+}
+
+.heroDesc {
+  margin: 8px 0 0;
+  color: var(--color-text-muted);
+}
+
+.linkButton {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 18px;
+  background: var(--color-primary-bold);
+  color: var(--color-on-primary);
+  cursor: pointer;
+}
+
+.loadingBox,
+.emptyState {
+  padding: 32px;
+  text-align: center;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border-radius: 12px;
+}
+
+.worksSection {
+  margin-top: 24px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 20px;
+  color: var(--color-text);
+}
+
+.workList {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.workCard {
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  border-radius: 12px;
+  padding: 16px 18px;
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.workCard:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+}
+
+.workTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.workMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.detailHeader {
+  margin: 24px 0;
+}
+
+.commentList {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.commentItem {
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+}
+
+.commentMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.hourGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.hourCell {
+  padding: 10px 8px;
+  border-radius: 8px;
+  background: var(--color-surface);
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 768px) {
+  .heroCard {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .hourGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

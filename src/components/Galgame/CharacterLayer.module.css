@@ -1,0 +1,46 @@
+/* 功能注释：进场动画播完后去掉 slide，防止同人换图或重渲染再次从侧边淡入 */
+.enterSettled {
+    animation: none !important;
+}
+
+/* 可拖拽状态 */
+.draggable {
+    cursor: grab;
+    user-select: none;
+    pointer-events: auto !important;
+}
+
+.draggable:active {
+    cursor: grabbing;
+}
+
+/* 拖拽中状态 */
+.dragging {
+    cursor: grabbing;
+    opacity: 0.9;
+    pointer-events: auto !important;
+}
+
+/* 拖拽提示图标（可选） */
+.draggable::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    background: color-mix(in srgb, var(--color-shadow) 40%, transparent);
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    /* 使用伪元素显示拖拽指示器 */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='white' viewBox='0 0 24 24'%3E%3Cpath d='M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z'/%3E%3C/svg%3E");
+    background-size: 16px;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.draggable:hover::after {
+    opacity: 1;
+}

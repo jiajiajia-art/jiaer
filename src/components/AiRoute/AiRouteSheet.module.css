@@ -1,0 +1,546 @@
+/* 功能注释：AI 线路弹窗——自带深色磨砂配色，叠在任何游戏画面上都清晰；手机底部弹出，≥640px 居中 */
+.overlay {
+  --ar-bg: rgba(20, 18, 26, 0.96);
+  --ar-card: rgba(255, 255, 255, 0.045);
+  --ar-card-hover: rgba(255, 255, 255, 0.075);
+  --ar-line: rgba(255, 255, 255, 0.08);
+  --ar-text: #f5f2f7;
+  --ar-muted: rgba(245, 242, 247, 0.58);
+  --ar-faint: rgba(245, 242, 247, 0.38);
+  --ar-accent: var(--color-primary, #e2577a);
+  --ar-good: #4fd1a1;
+  --ar-warn: #ff8f70;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483001;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(8, 6, 12, 0.55);
+  backdrop-filter: blur(6px);
+  animation: fadeIn 0.2s ease-out;
+  font-family: inherit;
+}
+
+.overlayOut {
+  animation: fadeOut 0.18s ease-in forwards;
+}
+
+.sheet {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 480px;
+  max-height: min(88vh, 760px);
+  border-radius: 22px 22px 0 0;
+  background: var(--ar-bg);
+  color: var(--ar-text);
+  box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  animation: slideUp 0.28s cubic-bezier(0.2, 0.9, 0.3, 1);
+  overflow: hidden;
+}
+
+.sheetOut {
+  animation: slideDown 0.18s ease-in forwards;
+}
+
+@media (min-width: 640px) {
+  .overlay {
+    align-items: center;
+  }
+
+  .sheet {
+    border-radius: 22px;
+    animation-name: popIn;
+  }
+
+  .sheetOut {
+    animation-name: popOut;
+  }
+
+  .grabber {
+    display: none;
+  }
+}
+
+.grabber {
+  align-self: center;
+  width: 38px;
+  height: 4px;
+  margin-top: 8px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px 4px;
+}
+
+.title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.subtitle {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: var(--ar-muted);
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: var(--ar-card);
+  color: var(--ar-muted);
+  cursor: pointer;
+}
+
+.close:hover {
+  background: var(--ar-card-hover);
+  color: var(--ar-text);
+}
+
+/* 余额卡 */
+.wallet {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 14px 20px 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background:
+    radial-gradient(140% 160% at 0% 0%, color-mix(in srgb, var(--ar-accent) 26%, transparent), transparent 60%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  box-shadow: inset 0 0 0 1px var(--ar-line);
+}
+
+.balance {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.balanceLabel {
+  font-size: 11.5px;
+  color: var(--ar-muted);
+}
+
+.balanceValue {
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.walletDivider {
+  width: 1px;
+  height: 30px;
+  background: var(--ar-line);
+}
+
+.topup {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1a1720;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.topup:hover {
+  background: #fff;
+}
+
+/* 正在使用 */
+.current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 20px 0;
+  font-size: 13px;
+}
+
+.currentDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ar-good);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ar-good) 22%, transparent);
+}
+
+.currentLabel {
+  color: var(--ar-muted);
+}
+
+.currentName {
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.currentMult {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--ar-muted);
+}
+
+/* 扣费方式 */
+.modes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 4px;
+  margin: 14px 20px 0;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--ar-card);
+}
+
+.mode {
+  height: 34px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ar-muted);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modeOn {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--ar-text);
+}
+
+/* 线路列表 */
+.list {
+  flex: 1;
+  min-height: 0;
+  margin-top: 14px;
+  padding: 0 20px 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.group {
+  margin-bottom: 8px;
+  border-radius: 16px;
+  background: var(--ar-card);
+  overflow: hidden;
+}
+
+.groupHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  background: transparent;
+  color: var(--ar-text);
+  font-size: 14.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.groupHead:hover {
+  background: var(--ar-card-hover);
+}
+
+.groupIcon,
+.groupMono {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  object-fit: cover;
+}
+
+.groupMono {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, hsl(var(--hue) 70% 58%), hsl(calc(var(--hue) + 40) 70% 46%));
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.groupName {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.groupPicked {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ar-accent);
+}
+
+.groupCount {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ar-muted);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.chev {
+  color: var(--ar-faint);
+  transition: transform 0.2s;
+}
+
+.groupOpen .chev {
+  transform: rotate(180deg);
+}
+
+.groupBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 8px 8px;
+}
+
+.route {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.035);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.route:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.route:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.routeOn {
+  border-color: color-mix(in srgb, var(--ar-accent) 70%, transparent);
+  background: color-mix(in srgb, var(--ar-accent) 12%, transparent);
+}
+
+.radio {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  border-radius: 50%;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.routeOn .radio {
+  border-color: var(--ar-accent);
+  box-shadow: inset 0 0 0 3px var(--ar-bg), inset 0 0 0 9px var(--ar-accent);
+}
+
+.routeMain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.routeTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.routeName {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.routeDesc {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ar-muted);
+}
+
+.prices {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.mult,
+.price {
+  padding: 3px 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.price small {
+  font-weight: 500;
+  color: var(--ar-muted);
+}
+
+.mult_down {
+  background: color-mix(in srgb, var(--ar-good) 16%, transparent);
+  color: var(--ar-good);
+}
+
+.mult_up {
+  background: color-mix(in srgb, var(--ar-warn) 16%, transparent);
+  color: var(--ar-warn);
+}
+
+.chipAccent,
+.chipSoft,
+.chipMuted {
+  padding: 0 7px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.chipAccent {
+  background: color-mix(in srgb, var(--ar-accent) 22%, transparent);
+  color: color-mix(in srgb, var(--ar-accent) 60%, #fff);
+}
+
+.chipSoft {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ar-muted);
+}
+
+.chipMuted {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ar-faint);
+}
+
+.note {
+  margin: 10px 2px 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--ar-faint);
+}
+
+.linkBtn {
+  margin-left: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ar-muted);
+  font-size: 11.5px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px max(16px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--ar-line);
+  background: rgba(20, 18, 26, 0.98);
+}
+
+.footHint {
+  font-size: 12px;
+  color: var(--ar-faint);
+}
+
+.ghost {
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--ar-line);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--ar-muted);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.ghost:hover {
+  color: var(--ar-text);
+}
+
+.primary {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--ar-accent), color-mix(in srgb, var(--ar-accent) 70%, #8c7cff));
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--ar-accent) 35%, transparent);
+}
+
+.primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes slideDown { from { transform: translateY(0); } to { transform: translateY(100%); } }
+@keyframes popIn { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes popOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(8px) scale(0.98); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .sheet,
+  .overlayOut,
+  .sheetOut {
+    animation-duration: 0.01ms;
+  }
+}

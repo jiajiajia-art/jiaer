@@ -1,0 +1,598 @@
+.panelStack {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.heroCard,
+.card {
+    border-radius: 24px;
+    border: 1px solid var(--admin-border, color-mix(in srgb, var(--color-highlight) 22%, transparent));
+    box-shadow: 0 20px 56px var(--admin-shadow, color-mix(in srgb, var(--color-highlight) 10%, transparent));
+    backdrop-filter: blur(14px);
+}
+
+.heroCard {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 28px 30px;
+    background: var(--color-surface);
+}
+
+.sectionBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: var(--admin-accent-soft, var(--color-bg));
+    color: var(--admin-accent-strong, var(--color-highlight));
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.heroTitle {
+    margin: 18px 0 0;
+    color: var(--admin-text, var(--color-text));
+    font-size: 30px;
+    line-height: 1.2;
+}
+
+.audienceTabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.audienceTab {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 15px 18px;
+    border: 1px solid var(--admin-border, color-mix(in srgb, var(--color-highlight) 22%, transparent));
+    border-radius: 16px;
+    background: var(--color-surface);
+    color: var(--admin-text, var(--color-text));
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.audienceTab:hover {
+    transform: translateY(-1px);
+    border-color: var(--admin-border-strong, color-mix(in srgb, var(--color-highlight) 34%, transparent));
+}
+
+.audienceTab:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    transform: none;
+}
+
+.audienceTabActive {
+    border-color: var(--admin-border-strong, color-mix(in srgb, var(--color-highlight) 34%, transparent));
+    background: var(--color-bg);
+    color: var(--admin-accent-strong, var(--color-highlight));
+}
+
+.audienceTabCount {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.audienceHint {
+    margin-top: -10px;
+    color: var(--admin-text-soft, var(--color-text-secondary));
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.primaryGhostButton,
+.primaryButton,
+.secondaryButton,
+.linkButton,
+.iconButton {
+    border: none;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.primaryGhostButton,
+.primaryButton,
+.secondaryButton {
+    padding: 13px 18px;
+    border-radius: 16px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.primaryGhostButton,
+.secondaryButton,
+.iconButton {
+    color: var(--admin-text, var(--color-text));
+    background: var(--color-surface);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-highlight) 32%, transparent);
+}
+
+.primaryButton {
+    color: var(--color-on-primary);
+    background: var(--color-primary);
+    box-shadow: 0 14px 28px color-mix(in srgb, var(--color-highlight) 20%, transparent);
+}
+
+.linkButton {
+    padding: 0;
+    background: transparent;
+    color: var(--admin-accent-strong, var(--color-highlight));
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.iconButton {
+    min-width: 52px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.primaryGhostButton:hover,
+.primaryButton:hover,
+.secondaryButton:hover,
+.iconButton:hover {
+    transform: translateY(-1px);
+}
+
+.primaryGhostButton:disabled,
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.linkButton:disabled,
+.iconButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    transform: none;
+}
+
+.bannerPanelGrid {
+    display: grid;
+    grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
+    gap: 22px;
+    align-items: start;
+}
+
+.card {
+    background: var(--color-surface);
+    padding: 24px;
+    min-width: 0;
+}
+
+.cardHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.cardTitle {
+    margin: 0;
+    color: var(--admin-text, var(--color-text));
+    font-size: 24px;
+}
+
+.counter {
+    color: var(--admin-accent-strong, var(--color-highlight));
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.statusGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.statusCard {
+    padding: 16px;
+    border-radius: 16px;
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 22%, transparent);
+}
+
+.statusLabel {
+    color: var(--admin-accent-strong, var(--color-highlight));
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.statusValue {
+    margin-top: 10px;
+    color: var(--admin-text, var(--color-text));
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.statusMeta {
+    margin-top: 8px;
+    color: var(--admin-text-soft, var(--color-text-secondary));
+    font-size: 13px;
+}
+
+.listBlock {
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.listTitle {
+    color: var(--admin-text, var(--color-text));
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.switchItem {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 24%, transparent);
+    border-radius: 16px;
+    background: var(--color-surface);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.switchItem:hover {
+    transform: translateY(-1px);
+    border-color: var(--admin-border-strong, color-mix(in srgb, var(--color-highlight) 34%, transparent));
+    background: var(--color-bg);
+}
+
+.switchItemActive {
+    border-color: var(--admin-border-strong, color-mix(in srgb, var(--color-highlight) 34%, transparent));
+    background: var(--color-surface);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-highlight) 8%, transparent);
+}
+
+.switchTitle {
+    color: var(--admin-text, var(--color-text));
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.workflowStatus {
+    margin-left: auto;
+    color: var(--admin-muted, var(--color-text-muted));
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.editorList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.editorListRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: stretch;
+}
+
+.orderActions {
+    display: flex;
+    gap: 8px;
+}
+
+.emptyState {
+    padding: 18px;
+    border-radius: 18px;
+    background: var(--color-surface);
+    color: var(--admin-text-soft, var(--color-text-secondary));
+    font-size: 14px;
+    line-height: 1.75;
+}
+
+.bannerEditorCard {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 18px;
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 22%, transparent);
+    background: var(--color-surface);
+}
+
+.bannerEditorHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.bannerEditorTitle {
+    color: var(--admin-text, var(--color-text));
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.bannerEditorBody {
+    display: grid;
+    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.previewBox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+    border-radius: 18px;
+    background: var(--color-surface);
+    overflow: hidden;
+}
+
+.previewImage {
+    width: 100%;
+    height: 100%;
+    min-height: 180px;
+    object-fit: cover;
+}
+
+.previewEmpty {
+    padding: 18px;
+    color: var(--admin-text-soft, var(--color-text-secondary));
+    font-size: 14px;
+    text-align: center;
+}
+
+.bannerForm {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.fieldLabel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--admin-text, var(--color-text));
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.textInput,
+.textArea,
+.fileInput {
+    width: 100%;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 34%, transparent);
+    border-radius: 16px;
+    padding: 13px 14px;
+    background: var(--color-surface);
+    color: var(--admin-text, var(--color-text));
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.textArea {
+    min-height: 108px;
+    resize: vertical;
+}
+
+.uploadHint {
+    margin-top: -4px;
+    color: var(--admin-text-soft, var(--color-text-secondary));
+    font-size: 12px;
+}
+
+.searchField {
+    position: relative;
+}
+
+.searchPanel {
+    position: absolute;
+    z-index: 6;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 240px;
+    padding: 10px;
+    border-radius: 18px;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 22%, transparent);
+    background: var(--color-surface);
+    box-shadow: 0 16px 36px color-mix(in srgb, var(--color-highlight) 12%, transparent);
+    overflow-y: auto;
+}
+
+.searchEmpty {
+    padding: 10px 12px;
+    color: var(--admin-text-soft, var(--color-text-secondary));
+    font-size: 13px;
+}
+
+.searchResultButton {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 24%, transparent);
+    border-radius: 14px;
+    background: var(--color-surface);
+    cursor: pointer;
+    text-align: left;
+}
+
+.searchResultButton:hover {
+    border-color: var(--admin-border-strong, color-mix(in srgb, var(--color-highlight) 34%, transparent));
+    background: var(--color-bg);
+}
+
+.searchResultTitle {
+    color: var(--admin-text, var(--color-text));
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.searchResultMeta {
+    color: var(--admin-text-soft, var(--color-text-secondary));
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.actionRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.managerStack {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.placementTabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 10px;
+    border-radius: 20px;
+    border: 1px solid var(--admin-border, color-mix(in srgb, var(--color-highlight) 22%, transparent));
+    background: var(--color-surface);
+}
+
+.placementTab {
+    min-height: 48px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    background: transparent;
+    color: var(--admin-text-soft, var(--color-text-secondary));
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.placementTabActive {
+    border-color: var(--admin-border-strong, color-mix(in srgb, var(--color-highlight) 34%, transparent));
+    background: var(--color-bg);
+    color: var(--admin-accent-strong, var(--color-highlight));
+}
+
+.heroDescription,
+.cardHint {
+    margin: 8px 0 0;
+    color: var(--admin-text-soft, var(--color-text-secondary));
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.scheduleGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.scheduleHint {
+    color: var(--admin-text-soft, var(--color-text-secondary));
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.historyBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 26px;
+    padding-top: 22px;
+    border-top: 1px solid color-mix(in srgb, var(--color-highlight) 22%, transparent);
+}
+
+.historyItem {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 24%, transparent);
+    border-radius: 16px;
+    background: var(--color-surface);
+}
+
+.historyInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    color: var(--admin-text, var(--color-text));
+    font-size: 13px;
+}
+
+.historyInfo span {
+    color: var(--admin-text-soft, var(--color-text-secondary));
+}
+
+.historyActions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.historyActions .secondaryButton {
+    padding: 9px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+@media (max-width: 1100px) {
+    .bannerPanelGrid,
+    .bannerEditorBody {
+        grid-template-columns: 1fr;
+    }
+
+    .editorListRow {
+        grid-template-columns: 1fr;
+    }
+
+    .scheduleGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .heroCard {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .orderActions {
+        justify-content: flex-start;
+    }
+
+    .audienceTabs {
+        grid-template-columns: 1fr;
+    }
+
+    .placementTabs {
+        grid-template-columns: 1fr;
+    }
+}

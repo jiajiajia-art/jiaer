@@ -1,0 +1,134 @@
+/**
+ * 作者预览顶栏 · Studio Tally 美学：贴顶全宽控制条 + REC 指示灯。
+ * 功能注释：占文档流（非 fixed），下方预览区用剩余高度自适应，避免挡住游戏顶栏/底栏。
+ */
+import { useSyncExternalStore, type CSSProperties } from "react";
+import {
+  getAuthorPreviewSession,
+  requestAuthorPreviewClearSave,
+  requestAuthorPreviewEnd,
+  requestAuthorPreviewRestart,
+  subscribeAuthorPreview,
+} from "../lib/authorPreview";
+
+export default function AuthorPreviewChrome() {
+  const session = useSyncExternalStore(subscribeAuthorPreview, getAuthorPreviewSession, () => null);
+  if (!session) return null;
+
+  const title = (session.mod.name || session.mod.id || "未命名模组").trim();
+
+  return (
+    <>
+      <style>{`
+        @keyframes apc-rec-blink {
+          0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.55); }
+          50% { opacity: 0.55; box-shadow: 0 0 0 6px rgba(255, 59, 48, 0); }
+        }
+        .apc-root {
+          --apc-ink: #f4efe6;
+          --apc-mute: #9a9288;
+          --apc-line: rgba(244, 239, 230, 0.14);
+          --apc-rec: #ff3b30;
+          --apc-warn: #e8b84a;
+          --apc-panel: #141210;
+          --apc-panel-2: #1c1916;
+          font-family: "IBM Plex Mono", "SF Mono", "Cascadia Code", "Consolas", ui-monospace, monospace;
+        }
+      `}</style>
+      <div
+        className="apc-root relative z-[80] w-full shrink-0"
+        role="region"
+        aria-label="作者测试控制条"
+        data-author-preview-chrome="1"
+      >
+        <div
+          className="pointer-events-auto border-b"
+          style={{
+            background: "linear-gradient(180deg, var(--apc-panel) 0%, var(--apc-panel-2) 100%)",
+            borderColor: "var(--apc-line)",
+            boxShadow: "0 12px 28px -18px rgba(0,0,0,0.65)",
+          }}
+        >
+          <div className="mx-auto flex h-12 w-full max-w-[1200px] items-center gap-3 px-3 sm:px-4">
+            <div className="flex shrink-0 items-center gap-2" title="独立测试存档，不会写入正式玩家数据">
+              <span
+                aria-hidden
+                className="h-2.5 w-2.5 rounded-full"
+                style={{
+                  background: "var(--apc-rec)",
+                  animation: "apc-rec-blink 1.4s ease-in-out infinite",
+                }}
+              />
+              <span
+                className="text-[11px] font-bold uppercase tracking-[0.22em]"
+                style={{ color: "var(--apc-rec)" }}
+              >
+                Rec
+              </span>
+              <span
+                className="hidden rounded-sm px-1.5 py-0.5 text-[10.5px] font-bold tracking-[0.16em] sm:inline"
+                style={{ background: "var(--apc-rec)", color: "#fff" }}
+              >
+                作者测试中
+              </span>
+            </div>
+
+            <span aria-hidden className="h-4 w-px shrink-0" style={{ background: "var(--apc-line)" }} />
+
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12.5px] font-semibold tracking-wide" style={{ color: "var(--apc-ink)" }}>
+                {title}
+              </p>
+              <p className="truncate text-[10px] tracking-[0.08em]" style={{ color: "var(--apc-mute)" }}>
+                STUDIO PREVIEW · 独立测试存档
+                <span className="ml-2" style={{ color: "#6dbf8a" }}>
+                  · 配置可玩
+                </span>
+              </p>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-1.5">
+              <ApcBtn onClick={() => requestAuthorPreviewRestart()} label="重新开局" />
+              <ApcBtn onClick={() => requestAuthorPreviewClearSave()} label="清空测试存档" tone="warn" />
+              <ApcBtn onClick={() => requestAuthorPreviewEnd()} label="返回编辑器" tone="primary" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ApcBtn({
+  label,
+  onClick,
+  tone = "ghost",
+}: {
+  label: string;
+  onClick: () => void;
+  tone?: "ghost" | "warn" | "primary";
+}) {
+  const base: CSSProperties = {
+    border: "1px solid var(--apc-line)",
+    color: "var(--apc-ink)",
+    background: "transparent",
+  };
+  if (tone === "primary") {
+    base.background = "var(--apc-ink)";
+    base.color = "#141210";
+    base.border = "1px solid var(--apc-ink)";
+  } else if (tone === "warn") {
+    base.border = "1px solid rgba(232,184,74,0.45)";
+    base.color = "var(--apc-warn)";
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-md px-2.5 py-1 text-[11px] font-bold tracking-wide transition hover:brightness-110 active:scale-[0.98]"
+      style={base}
+    >
+      {label}
+    </button>
+  );
+}

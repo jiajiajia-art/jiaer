@@ -1,0 +1,946 @@
+/* 功能注释：场景面板对齐 funloom 暗色创作壳（与 TXT 创建一致） */
+
+/* 主组件布局 */
+.panelContent {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.panelHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.75rem;
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.panelHeader h2 {
+    margin: 4px 0 0;
+    font-size: 1.6rem;
+    color: var(--color-text);
+    font-weight: 700;
+}
+
+.subtitle {
+    margin: 4px 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+}
+
+/* 功能注释：与 GenerationActionBar 积分胶囊统一为全圆角胶囊 */
+.ghost {
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    min-height: 44px;
+    padding: 9px 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: var(--color-text);
+    background: var(--color-surface);
+}
+
+.ghost:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* AI生成按钮样式优化 */
+.generateButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.priceIcon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.buttonTextContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    line-height: 1.2;
+}
+
+.buttonMainText {
+    line-height: 1.2;
+}
+
+.buttonSubText {
+    font-size: 0.7rem;
+    color: var(--color-text-secondary);
+    line-height: 1;
+    font-weight: 400;
+}
+
+/* 会员折扣价格样式（顶部一键生成按钮） */
+.discountPrice {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    margin-left: 4px;
+    margin-right: 4px;
+}
+
+.discountPriceBlack {
+    color: color-mix(in srgb, var(--color-text) 85%, transparent);
+}
+
+.originalPrice {
+    text-decoration: line-through;
+    color: var(--color-text-muted);
+    font-size: 0.85em;
+    font-weight: 400;
+}
+
+/* 布局 */
+.sceneLayout {
+    display: grid;
+    grid-template-columns: minmax(280px, 400px) 1fr;
+    gap: 20px;
+}
+
+.stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* 卡片样式（主组件右侧详情卡片） */
+.card {
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    padding: 16px 16px 20px;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    /* 功能注释：确认修改与场景大图贴紧，避免 16px×2 的空洞 */
+    gap: 8px;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 25%, transparent);
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+/* 加载遮罩层 */
+.plusLoadingOverlay {
+    position: fixed;
+    top: 0;
+    left: 280px;
+    right: 0;
+    bottom: 0;
+    background: color-mix(in srgb, var(--color-shadow) 75%, transparent);
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    pointer-events: auto;
+    min-width: 0;
+    min-height: 0;
+    will-change: opacity;
+}
+
+.plusLoadingDialog {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-width: 240px;
+}
+
+@keyframes plusSpin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.plusLoadingSpinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-top: 3px solid var(--primary);
+    border-radius: 50%;
+    animation: plusSpin 1s linear infinite;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+
+.plusLoadingText {
+    color: var(--color-text);
+    font-size: 14px;
+    font-weight: 500;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.plusLoadingHint {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-text-secondary);
+    text-align: center;
+}
+
+.plusLoadingCancelBtn {
+    margin-top: 8px;
+    min-width: 120px;
+    border-radius: 12px;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+    background: var(--color-surface);
+    color: var(--primary);
+    transition: all 0.2s ease;
+}
+
+.plusLoadingCancelBtn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+/* 响应式布局 */
+@media (max-width: 1080px) {
+    .sceneLayout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    /* 适配小程序端一键生成圆角弹层。 */
+    .plusLoadingOverlay {
+        left: 0;
+        right: 0;
+        bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+        padding: 20px;
+        background: transparent;
+        backdrop-filter: none;
+    }
+
+    .plusLoadingDialog {
+        width: min(100%, 340px);
+        min-height: min(52vh, 360px);
+        padding: 28px 24px;
+        border-radius: 28px;
+        background: var(--color-surface);
+        border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+        box-shadow: 0 18px 48px color-mix(in srgb, var(--color-shadow) 12%, transparent);
+        gap: 14px;
+    }
+
+    .plusLoadingSpinner {
+        width: 42px;
+        height: 42px;
+        margin-bottom: 4px;
+    }
+
+    .plusLoadingText {
+        max-width: 240px;
+        white-space: normal;
+        text-align: center;
+        line-height: 1.5;
+        font-size: 16px;
+    }
+
+    .plusLoadingHint {
+        max-width: 240px;
+        font-size: 13px;
+    }
+
+    .panelHeader {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .panelHeader h2 {
+        font-size: 1.4rem;
+    }
+
+    .card {
+        padding: 18px;
+        border-radius: 18px;
+    }
+}
+
+
+/* === batch board (aligned with CharactersPanel) === */
+.plusLoadingOverlay{
+    --atelier-ink: var(--color-on-media);
+    --atelier-mute: color-mix(in srgb, var(--color-surface) 55%, transparent);
+    --atelier-soft: var(--color-text-muted);
+    --atelier-paper: var(--color-surface);
+    --atelier-card: var(--color-surface);
+    --atelier-line: color-mix(in srgb, var(--color-primary) 25%, transparent);
+    --atelier-glow: color-mix(in srgb, var(--color-primary) 22%, transparent);
+    position: fixed;
+    top: 0;
+    left: 280px;
+    right: 0;
+    bottom: 0;
+    background:
+        radial-gradient(ellipse 70% 50% at 50% 42%, color-mix(in srgb, var(--color-primary) 18%, transparent), transparent 62%),
+        linear-gradient(165deg, color-mix(in srgb, var(--color-shadow) 85%, transparent), color-mix(in srgb, var(--color-surface) 92%, transparent));
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    pointer-events: auto;
+    min-width: 0;
+    min-height: 0;
+    will-change: opacity;
+}
+
+.plusLoadingDialog {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 14px;
+    width: min(100% - 48px, 460px);
+    max-height: min(88vh, 720px);
+    overflow: auto;
+    padding: 20px 20px 16px;
+    border-radius: 22px;
+    background:
+        linear-gradient(180deg, var(--color-surface), var(--atelier-card)),
+        var(--atelier-paper);
+    border: 1px solid var(--atelier-line);
+    box-shadow:
+        0 1px 0 color-mix(in srgb, var(--color-text) 6%, transparent) inset,
+        0 24px 60px color-mix(in srgb, var(--color-shadow) 45%, transparent),
+        0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
+    animation: plusDialogIn 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes plusDialogIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes plusSpin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes plusLivePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+@keyframes plusRowIn {
+    from {
+        opacity: 0;
+        transform: translateX(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.plusLoadingHero {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 16px;
+    align-items: center;
+}
+
+.plusLoadingRing {
+    --batch-progress: 0;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background:
+        conic-gradient(
+            from -90deg,
+            var(--primary) calc(var(--batch-progress) * 1turn),
+            color-mix(in srgb, var(--color-primary) 12%, transparent) 0
+        );
+    display: grid;
+    place-items: center;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 6%, transparent), 0 10px 24px var(--atelier-glow);
+    position: relative;
+}
+
+.plusLoadingRing::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 1px dashed color-mix(in srgb, var(--color-primary) 28%, transparent);
+    animation: plusSpin 12s linear infinite;
+}
+
+.plusLoadingRingInner {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--color-surface);
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 1px;
+    box-shadow: inset 0 1px 2px color-mix(in srgb, var(--color-shadow) 4%, transparent);
+}
+
+.plusLoadingRingValue {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--atelier-ink);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.plusLoadingRingUnit {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--atelier-soft);
+}
+
+.plusLoadingHeroCopy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.plusLoadingSplitStats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.plusLoadingSplitStatsSingle {
+    grid-template-columns: 1fr;
+}
+
+.plusLoadingStatCard {
+    border-radius: 14px;
+    padding: 12px 12px 10px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    background: var(--color-surface);
+}
+
+.plusLoadingStatGen {
+    box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.plusLoadingStatCut {
+    box-shadow: inset 3px 0 0 var(--color-info);
+}
+
+.plusLoadingStatTitle {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--atelier-soft);
+}
+
+.plusLoadingStatValue {
+    margin-top: 4px;
+    font-size: 22px;
+    font-weight: 750;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+    color: var(--atelier-ink);
+    line-height: 1.1;
+}
+
+.plusLoadingStatMeta {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--atelier-mute);
+    line-height: 1.4;
+}
+
+.plusLoadingStatTrack {
+    margin-top: 8px;
+    height: 4px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    overflow: hidden;
+}
+
+.plusLoadingStatTrackFill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--color-primary-light), var(--primary));
+    transition: width 0.35s ease;
+}
+
+.plusLoadingStatTrackFillCut {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--color-info), var(--color-info));
+    transition: width 0.35s ease;
+}
+
+.plusLoadingStuck {
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--color-primary-bold);
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 16%, transparent);
+    border-radius: 10px;
+    padding: 8px 10px;
+}
+
+.plusLoadingBoardShell {
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    background: var(--color-surface);
+    overflow: hidden;
+}
+
+.plusLoadingBoard {
+    max-height: 168px;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.plusLoadingBoardItem {
+    border-radius: 10px;
+    padding: 8px 10px;
+    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.plusLoadingBoardTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.plusLoadingBoardName {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--atelier-ink);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.plusLoadingBoardStage {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--atelier-mute);
+}
+
+.plusLoadingBoardElapsed {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--atelier-mute);
+}
+
+.plusLoadingItemGen .plusLoadingBoardStage {
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-primary);
+}
+
+.plusLoadingItemCut .plusLoadingBoardStage {
+    background: color-mix(in srgb, var(--color-info) 12%, transparent);
+    color: var(--color-info);
+}
+
+.plusLoadingItemDone .plusLoadingBoardStage {
+    background: color-mix(in srgb, var(--color-success) 12%, transparent);
+    color: var(--color-success);
+}
+
+.plusLoadingItemFail .plusLoadingBoardStage {
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-primary-bold);
+}
+
+.plusLoadingItemPending .plusLoadingBoardStage {
+    background: color-mix(in srgb, var(--color-text) 5%, transparent);
+    color: var(--atelier-soft);
+}
+
+.plusLoadingItemGen.plusLoadingBoardItem {
+    border-color: color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+.plusLoadingItemCut.plusLoadingBoardItem {
+    border-color: color-mix(in srgb, var(--color-info) 20%, transparent);
+}
+
+.plusLoadingText {
+    color: var(--atelier-ink);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.35;
+    white-space: normal;
+}
+
+.plusLoadingHint {
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--atelier-mute);
+    text-align: left;
+}
+
+.plusLoadingTrack {
+    height: 4px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    overflow: hidden;
+}
+
+.plusLoadingTrackFill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--color-primary-light), var(--primary));
+    transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.plusLoadingLogShell {
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-text) 4%, transparent), color-mix(in srgb, var(--color-text) 20%, transparent)),
+        var(--color-surface);
+    overflow: hidden;
+}
+
+.plusLoadingLogHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px 8px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.plusLoadingLogEyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--atelier-soft);
+}
+
+.plusLoadingLogLive {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--primary);
+    animation: plusLivePulse 1.6s ease-in-out infinite;
+}
+
+.plusLoadingLog {
+    max-height: 168px;
+    overflow-y: auto;
+    padding: 8px 10px 10px;
+    text-align: left;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+}
+
+.plusLoadingLogRow,
+.plusLoadingLogRowActive {
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    gap: 8px;
+    align-items: start;
+    padding: 7px 8px;
+    border-radius: 10px;
+    animation: plusRowIn 0.28s ease both;
+}
+
+.plusLoadingLogRow {
+    color: var(--atelier-mute);
+}
+
+.plusLoadingLogRowActive {
+    background: var(--color-surface);
+    color: var(--atelier-ink);
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--color-text) 6%, transparent) inset;
+}
+
+.plusLoadingLogBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 20px;
+    padding: 0 6px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--atelier-mute);
+    white-space: nowrap;
+}
+
+.plusLoadingLogRowGen .plusLoadingLogBadge {
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-primary);
+}
+
+.plusLoadingLogRowCut .plusLoadingLogBadge {
+    background: color-mix(in srgb, var(--color-info) 12%, transparent);
+    color: var(--color-info);
+}
+
+.plusLoadingLogRowDone .plusLoadingLogBadge {
+    background: color-mix(in srgb, var(--color-success) 12%, transparent);
+    color: var(--color-success);
+}
+
+.plusLoadingLogRowFail .plusLoadingLogBadge {
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-primary-bold);
+}
+
+.plusLoadingLogMessage {
+    font-size: 12px;
+    line-height: 1.5;
+    min-width: 0;
+    word-break: break-word;
+}
+
+.plusLoadingLogRowActive .plusLoadingLogMessage {
+    font-weight: 600;
+}
+
+.plusLoadingFoot {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
+
+.plusLoadingWarn {
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--atelier-soft);
+    text-align: center;
+}
+
+.plusLoadingFootActions {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+}
+
+.plusLoadingFootActionsEnd {
+    grid-template-columns: 1fr;
+    justify-items: end;
+}
+
+.plusLoadingFootSpacer {
+    display: none;
+}
+
+.plusLoadingContinueBtn {
+    justify-self: start;
+    position: relative;
+    min-width: 0;
+    max-width: 100%;
+    border-radius: 14px;
+    padding: 10px 18px 10px 22px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
+    background:
+        linear-gradient(135deg, var(--color-surface) 0%, color-mix(in srgb, var(--color-primary) 15%, transparent) 100%);
+    color: var(--color-text);
+    box-shadow:
+        inset 0 0 0 1px color-mix(in srgb, var(--color-text) 60%, transparent),
+        0 1px 0 color-mix(in srgb, var(--color-info) 6%, transparent);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    animation: plusContinueIn 0.45s ease both;
+}
+
+.plusLoadingContinueBtn::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    width: 3px;
+    height: 58%;
+    transform: translateY(-50%);
+    border-radius: 99px;
+    background: linear-gradient(180deg, var(--color-primary), var(--color-primary-bold));
+    opacity: 0.85;
+}
+
+.plusLoadingContinueBtn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--color-info) 16%, transparent);
+    background:
+        linear-gradient(135deg, var(--color-surface) 0%, color-mix(in srgb, var(--color-info) 98%, transparent) 100%);
+}
+
+.plusLoadingContinueBtn:active {
+    transform: translateY(0);
+}
+
+@keyframes plusContinueIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.plusLoadingCancelBtn {
+    justify-self: end;
+    min-width: 132px;
+    border-radius: 14px;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+    background: var(--color-surface);
+    color: var(--primary);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.plusLoadingCancelBtn:hover {
+    transform: translateY(-1px);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .plusLoadingDialog,
+    .plusLoadingLogRow,
+    .plusLoadingLogRowActive,
+    .plusLoadingRing::after,
+    .plusLoadingLogLive,
+    .plusLoadingTrackFill,
+    .plusLoadingContinueBtn {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* 兼容旧 spinner 类名（其他面板可能复用） */
+.plusLoadingSpinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-top: 3px solid var(--primary);
+    border-radius: 50%;
+    animation: plusSpin 1s linear infinite;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+
+.plusLoadingLogItem,
+.plusLoadingLogItemActive {
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--color-text-muted);
+}
+
+.plusLoadingLogItemActive {
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
+    font-weight: 500;
+}
+
+/* 差分生成加载效果 */
+.loadingOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+    backdrop-filter: blur(2px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: 8px;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loadingSpinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-top: 2px solid var(--color-primary-light);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 8px;
+}
+
+.loadingText {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.loadingHint {
+    margin-top: 6px;
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    line-height: 1.5;
+    text-align: center;
+}

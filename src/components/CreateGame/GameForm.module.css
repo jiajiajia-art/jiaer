@@ -1,0 +1,496 @@
+.formSection {
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+}
+
+.formGroup {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    height: 1/6;
+}
+
+.formGroup label {
+    width: 150px;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    line-height: 1.2;
+    margin-bottom: 10px !important;
+}
+
+/* 为必填字段添加红色*号 */
+.formGroup:has(input[required]) label::after,
+.formGroup:has(textarea[required]) label::after,
+.formGroup.requiredField label::after {
+    content: '*';
+    color: var(--color-primary-fg);
+    margin-left: 4px;
+    font-weight: 700;
+}
+
+.formGroup input[type="text"],
+.formGroup textarea {
+    padding: 12px;
+    background-color: transparent;
+    border-radius: 8px;
+    font-size: 16px;
+    font-family: inherit;
+    color: var(--color-text);
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+}
+
+.formGroup input[type="text"]:focus,
+.formGroup textarea:focus {
+    outline: none;
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
+}
+
+.formGroup input[type="text"] {
+    width: 380px;
+    height: 30px;
+}
+
+.descriptionEditor {
+    flex: 1;
+    min-width: 0;
+}
+
+.formGroup textarea {
+    width: 800px;
+    height: 130px;
+    overflow-y: auto;
+}
+
+.documentUploadArea {
+    width: 800px;
+    height: 180px;
+    background: var(--color-bg);
+    border-radius: 8px;
+    padding: 10px 20px;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    position: relative;
+    gap: 6px;
+}
+
+.coverUploadArea {
+    width: 800px;
+    height: 230px;
+    background: var(--color-bg);
+    border-radius: 8px;
+    padding: 10px;
+    box-sizing: border-box;
+    border: 1px dashed color-mix(in srgb, var(--color-text) 30%, transparent);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.dragActive {
+    background: var(--color-surface-2);
+    border-color: var(--color-primary-light);
+    box-shadow: 0 6px 30px color-mix(in srgb, var(--color-primary-light) 20%, transparent);
+}
+
+.coverPreviewContainer {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.coverPreviewContainer .removeFileBtn {
+    position: absolute !important;
+    top: 10px !important;
+    right: 10px !important;
+    z-index: 10;
+}
+
+.coverPreviewImage {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.uploadPlaceholder {
+    pointer-events: none;
+    padding: 20px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding-bottom: 10px;
+}
+
+.uploadIcon {
+    font-size: 36px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.uploadText {
+    color: var(--color-text-secondary);
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    font-size: 14px;
+}
+
+.uploadHint {
+    color: var(--color-primary-fg);
+    font-size: 12px;
+    margin: 0;
+    font-weight: 600;
+}
+
+.uploadInfo {
+    width: 100%;
+    height: 100px;
+    background: var(--color-surface);
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--color-shadow) 5%, transparent);
+}
+
+.fileMeta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+
+.fileIcon {
+    font-size: 28px;
+    flex-shrink: 0;
+}
+
+.fileName {
+    flex: 1;
+    text-align: left;
+    color: var(--color-text-secondary);
+    font-weight: 600;
+    font-size: 14px;
+    word-break: break-all;
+    line-height: 1.4;
+    min-width: 0;
+}
+
+.fileSize {
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    flex-shrink: 0;
+    font-weight: 500;
+}
+
+.removeFileBtn {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    background: var(--color-primary-light);
+    color: var(--color-on-primary);
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    flex-grow: 0;
+    transition: all 0.3s ease;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    position: static;
+    border: none;
+}
+
+.removeFileBtn:hover {
+    transform: scale(1.1);
+}
+
+.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.noImageModeContainer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.noImageModeCheckbox {
+    margin-left: 0;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--color-primary-light);
+    flex-shrink: 0;
+}
+
+.noImageModeCheckbox:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.noImageModeText {
+    font-size: 14px;
+    color: var(--color-highlight);
+    font-weight: 500;
+    line-height: 1;
+}
+
+.noImageModeLabel {
+    width: 150px;
+    flex-shrink: 0;
+}
+
+
+.gameBtn{
+    width: 800px;
+    height: 50px;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+    text-align: center;
+    line-height: 50px;
+}
+
+.createGameBtn {
+    background-image: url('/data/assets/create/测试体验框.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    /* background-color: #FB5B67; */
+    color: var(--color-on-media);
+}
+
+.createGameBtn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary-light) 30%, transparent);
+}
+
+.createGameBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.publishGameBtn {
+    border: 1px solid var(--color-primary-light);
+    color: var(--color-primary-fg);
+    background-color: var(--color-surface);
+}
+
+/* 减小两个按钮之间的间距 */
+.formGroup:has(.publishGameBtn) {
+    margin-top: -16px;
+}
+
+.downloadFileBtn {
+    width: 120px;
+    height: 36px;
+    background: var(--color-primary-light);
+    color: var(--color-on-primary);
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    margin-left: auto;
+    margin-right: 16px;
+}
+
+.downloadFileBtn:hover {
+    background: var(--color-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary-light) 30%, transparent);
+}
+
+.downloadFileBtn:active {
+    transform: translateY(0);
+}
+
+/* 移动端适配 (768px以下) */
+@media (max-width: 768px) {
+    .formSection {
+        gap: 10px;
+        padding: 0px;
+    }
+
+    .formGroup {
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+    .formGroup label {
+        font-size: 14px;
+        margin-top: 6px !important;
+    }
+
+    .formGroup input[type="text"],
+    .formGroup textarea {
+        width: 100%;
+        max-width: 100%;
+        font-size: 12px;
+        padding: 0px 10px;
+    }
+
+    .formGroup input[type="text"] {
+        height: 40px;
+    }
+
+    .formGroup textarea {
+        height: 100px;
+    }
+
+    .documentUploadArea {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        min-height: 140px;
+        padding: 8px 16px;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .coverUploadArea {
+        width: 100%;
+        max-width: 100%;
+        height: 180px;
+        padding: 0px;
+    }
+
+    .uploadIcon {
+        font-size: 28px;
+        margin-bottom: 8px;
+    }
+
+    .uploadText {
+        font-size: 12px;
+    }
+
+    .uploadHint {
+        font-size: 11px;
+    }
+
+    .uploadInfo {
+        width: 100%;
+        height: 80px;
+        padding: 12px 16px;
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+
+    .fileIcon {
+        font-size: 24px;
+    }
+
+    .fileName {
+        font-size: 12px;
+    }
+
+    .fileSize {
+        font-size: 12px;
+    }
+
+    .removeFileBtn {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 16px;
+    }
+
+    .uploadPlaceholder {
+        width: 100%;
+    }
+
+    .noImageModeContainer {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .noImageModeCheckbox {
+        width: 16px;
+        height: 16px;
+        margin-left: 0;
+        margin-right: 0;
+        flex-shrink: 0;
+    }
+
+    .noImageModeLabel {
+        width: 100px !important;
+        font-size: 14px;
+        margin-bottom: 0 !important;
+        flex-shrink: 0;
+    }
+
+    .noImageModeText {
+        font-size: 13px;
+        line-height: 1;
+    }
+
+    .gameBtn {
+        width: 100%;
+        max-width: 100%;
+        height: 44px;
+        font-size: 14px;
+        line-height: 44px;
+    }
+
+    .downloadFileBtn {
+        width: auto;
+        min-width: 100px;
+        height: 32px;
+        font-size: 12px;
+        padding: 0 12px;
+        margin-left: auto;
+        margin-right: 0;
+        align-self: flex-end;
+    }
+
+    /* 调整按钮间距 */
+    .formGroup:has(.publishGameBtn) {
+        margin-top: 0px;
+    }
+    
+    .createGameBtnLabel {
+        width: 0!important;
+    }
+}

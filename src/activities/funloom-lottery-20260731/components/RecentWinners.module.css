@@ -1,0 +1,121 @@
+.wrap {
+  margin: 28px auto 0;
+  max-width: 520px;
+}
+
+.title {
+  margin: 0 0 12px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-text);
+  text-shadow: 0 2px 8px color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+
+.empty {
+  margin: 0;
+  padding: 16px;
+  text-align: center;
+  color: var(--color-accent);
+  font-size: 13px;
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  border-radius: 14px;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
+
+/* 功能注释：固定视口高度；内容自动向上轮播，悬停/按住时暂停便于阅读 */
+.viewport {
+  max-height: 196px;
+  overflow: hidden;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    var(--color-bg) 8px,
+    var(--color-bg) calc(100% - 8px),
+    transparent 100%
+  );
+}
+
+.staticList,
+.marqueeTrack {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.marqueeTrack {
+  animation: recentWinnersMarquee var(--marquee-seconds, 14s) linear infinite;
+  will-change: transform;
+}
+
+.viewport:hover .marqueeTrack,
+.viewport:active .marqueeTrack {
+  animation-play-state: paused;
+}
+
+@keyframes recentWinnersMarquee {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    /* 列表复制了一份，滚到一半无缝接上 */
+    transform: translateY(-50%);
+  }
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--color-accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-info) 45%, transparent);
+  flex-shrink: 0;
+}
+
+.thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--color-accent) 70%, transparent);
+}
+
+.text strong {
+  font-size: 13px;
+  color: var(--color-accent);
+}
+
+.time {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marqueeTrack {
+    animation: none;
+  }
+
+  .viewport {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    mask-image: none;
+  }
+}

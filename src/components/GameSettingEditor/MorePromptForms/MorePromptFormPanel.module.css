@@ -1,0 +1,238 @@
+/* 功能注释：提示词编辑表单对齐墨黑账本输入井，主按钮为酒红胶囊 */
+
+.panel {
+  --prompt-surface: var(--color-surface);
+  --prompt-input: var(--color-surface);
+  --prompt-accent: var(--color-primary-bold);
+  --prompt-accent-hot: var(--color-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 760px;
+  color: var(--color-text);
+}
+
+.header h2 {
+  margin: 0 0 4px;
+  font-size: 1.6rem;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field > span {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.fieldLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.required {
+  color: var(--prompt-accent-hot);
+  margin-left: 4px;
+}
+
+.field input[type='text'] {
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: var(--prompt-input);
+  color: var(--color-text);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.field input[type='text']::placeholder {
+  color: var(--color-text-muted);
+}
+
+.field input[type='text']:focus {
+  outline: none;
+  border-color: var(--prompt-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.field input[type='text']:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.fieldCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  color: var(--color-text);
+}
+
+.constantRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fieldCheckbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--prompt-accent);
+}
+
+.tipWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tipBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: help;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.tipBtn:hover:not(:disabled),
+.tipBtn:focus-visible {
+  color: var(--prompt-accent-hot);
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  outline: none;
+}
+
+.tipBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tipBubble {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  width: max-content;
+  max-width: 280px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+.tipWrap:hover .tipBubble,
+.tipWrap:focus-within .tipBubble {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (max-width: 720px) {
+  .tipBubble {
+    left: auto;
+    right: 0;
+    top: calc(100% + 8px);
+    transform: none;
+  }
+}
+
+.descHint {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.descOver {
+  color: var(--prompt-accent-hot);
+  font-size: 0.8rem;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.confirmBtn,
+.cancelBtn {
+  min-height: 48px;
+  border-radius: 999px;
+  padding: 0 22px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+}
+
+.confirmBtn {
+  background: var(--prompt-accent);
+  color: var(--color-on-primary);
+  border-color: transparent;
+  min-width: 108px;
+}
+
+.cancelBtn {
+  background: var(--prompt-input);
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-text) 16%, transparent);
+  min-width: 108px;
+}
+
+.confirmBtn:hover:not(:disabled) {
+  background: var(--prompt-accent-hot);
+}
+
+.cancelBtn:hover:not(:disabled) {
+  border-color: var(--prompt-accent-hot);
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+
+.confirmBtn:active:not(:disabled),
+.cancelBtn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+}
+
+.confirmBtn:disabled,
+.cancelBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}

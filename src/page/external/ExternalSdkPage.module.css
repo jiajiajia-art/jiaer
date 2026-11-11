@@ -1,0 +1,1277 @@
+.shell {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--color-info) 14%, transparent), transparent 34%),
+    linear-gradient(135deg, var(--color-bg) 0%, var(--color-bg) 46%, var(--color-bg) 100%);
+  color: var(--color-info);
+}
+
+.panel {
+  width: min(100%, 760px);
+  border: 1px solid color-mix(in srgb, var(--color-info) 10%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  box-shadow: 0 24px 70px color-mix(in srgb, var(--color-info) 16%, transparent);
+  padding: clamp(24px, 4vw, 40px);
+}
+
+.rechargePanel {
+  width: min(100%, 920px);
+}
+
+.brandRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.brandName {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.heroBlock {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-info);
+}
+
+.heroBlock h1 {
+  margin: 0;
+  font-size: clamp(26px, 4vw, 40px);
+  line-height: 1.16;
+  color: var(--color-text);
+}
+
+.lead {
+  max-width: 680px;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+}
+
+.summary {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.summary > div {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+
+.summary span {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.summary strong {
+  overflow-wrap: anywhere;
+  font-size: 16px;
+  color: var(--color-info);
+}
+
+.noticeError,
+.noticeSuccess,
+.loadingBlock,
+.statusStrip {
+  border-radius: 8px;
+  padding: 14px 16px;
+  line-height: 1.6;
+}
+
+.noticeError {
+  border: 1px solid var(--color-primary-light);
+  background: var(--color-bg);
+  color: var(--color-primary-bold);
+}
+
+.noticeSuccess {
+  border: 1px solid var(--color-success);
+  background: var(--color-bg);
+  color: var(--color-success);
+}
+
+.loadingBlock {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+}
+
+.statusStrip {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 16px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+}
+
+.statusStrip strong {
+  color: var(--color-info);
+}
+
+.statusStrip[data-state='paid'] {
+  border-color: var(--color-success);
+  background: var(--color-bg);
+  color: var(--color-success);
+}
+
+.statusStrip[data-state='expired'],
+.statusStrip[data-state='failed'],
+.statusStrip[data-state='missing'] {
+  border-color: var(--color-primary-light);
+  background: var(--color-bg);
+  color: var(--color-primary-bold);
+}
+
+.checkoutGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
+  gap: 20px;
+  align-items: start;
+}
+
+.checkoutDetails {
+  display: grid;
+  gap: 16px;
+}
+
+.planPicker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.planChoice {
+  display: grid;
+  gap: 4px;
+  min-height: 96px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-info);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.planChoice:hover {
+  border-color: var(--color-info);
+  background: var(--color-surface);
+}
+
+.planChoiceActive {
+  border-color: var(--color-info);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-info) 14%, transparent);
+}
+
+.planChoice span {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.planChoice strong {
+  font-size: 18px;
+  color: var(--color-info);
+}
+
+.planChoice em {
+  font-size: 14px;
+  font-style: normal;
+  color: var(--color-info);
+}
+
+.planChoice:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-info) 28%, transparent);
+  outline-offset: 2px;
+}
+
+.planChoice:disabled {
+  cursor: not-allowed;
+  opacity: 0.64;
+}
+
+.qrBox {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+}
+
+.qrImage,
+.qrPlaceholder {
+  width: min(100%, 260px);
+  aspect-ratio: 1;
+  border-radius: 8px;
+}
+
+.qrImage {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.qrPlaceholder {
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.primaryButton,
+.secondaryButton,
+.ghostButton {
+  min-height: 46px;
+  border-radius: 8px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, opacity 180ms ease;
+}
+
+.primaryButton {
+  background: color-mix(in srgb, var(--color-info) 68%, var(--color-shadow));
+  color: var(--color-on-primary);
+}
+
+.primaryButton:hover {
+  background: var(--color-info);
+}
+
+.secondaryButton {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-info);
+}
+
+.secondaryButton:hover {
+  border-color: var(--color-info);
+  background: var(--color-bg);
+}
+
+.ghostButton {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-info);
+}
+
+.ghostButton:hover {
+  background: var(--color-bg);
+  border-color: var(--color-border);
+}
+
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible,
+.ghostButton:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-info) 28%, transparent);
+  outline-offset: 2px;
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.ghostButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+
+@media (max-width: 720px) {
+  .shell {
+    place-items: stretch;
+    padding: 12px;
+  }
+
+  .panel,
+  .rechargePanel {
+    width: 100%;
+    min-height: calc(100dvh - 24px);
+    padding: 22px 18px;
+  }
+
+  .brandRow {
+    margin-bottom: 22px;
+  }
+
+  .checkoutGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .primaryButton,
+  .secondaryButton,
+  .ghostButton {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primaryButton,
+  .secondaryButton,
+  .ghostButton {
+    transition: none;
+  }
+}
+
+.rechargeShell {
+  --recharge-bg: var(--color-bg);
+  --recharge-panel: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  --recharge-panel-strong: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  --recharge-gold: var(--color-highlight);
+  --recharge-gold-strong: var(--color-highlight);
+  --recharge-gold-deep: var(--color-highlight);
+  --recharge-ink: var(--color-highlight);
+  --recharge-muted: var(--color-highlight);
+  --recharge-line: color-mix(in srgb, var(--color-highlight) 26%, transparent);
+  --recharge-cyan: var(--color-info);
+  min-height: 100dvh;
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: clamp(10px, 1.8vh, 18px) clamp(12px, 2.5vw, 32px);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-highlight) 6%, transparent), transparent 28%),
+    linear-gradient(120deg, var(--color-bg) 0%, var(--color-surface) 38%, var(--color-bg) 100%);
+  color: var(--recharge-ink);
+}
+
+.rechargeShell,
+.paymentDialog {
+  scrollbar-width: none;
+}
+
+.rechargeShell::-webkit-scrollbar,
+.paymentDialog::-webkit-scrollbar {
+  display: none;
+}
+
+.rechargeShell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, color-mix(in srgb, var(--color-highlight) 46%, transparent) 0 1px, transparent 1.6px),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-highlight) 8%, transparent), transparent 24%, transparent 76%, color-mix(in srgb, var(--color-info) 6%, transparent));
+  background-size: 170px 150px, 100% 100%;
+  opacity: 0.2;
+}
+
+.rechargeBackdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.rechargeBackdrop span {
+  position: absolute;
+  display: block;
+  opacity: 0.56;
+}
+
+.rechargeBackdrop span:nth-child(1) {
+  width: 72vw;
+  height: 1px;
+  left: 14vw;
+  top: 12vh;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-highlight) 62%, transparent), transparent);
+}
+
+.rechargeBackdrop span:nth-child(2) {
+  width: 1px;
+  height: 70vh;
+  left: 12vw;
+  top: 10vh;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--color-highlight) 30%, transparent), transparent);
+}
+
+.rechargeBackdrop span:nth-child(3) {
+  width: 1px;
+  height: 64vh;
+  right: 9vw;
+  top: 16vh;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--color-info) 24%, transparent), transparent);
+}
+
+.rechargeStage {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 1120px);
+  display: grid;
+  gap: clamp(10px, 1.6vh, 16px);
+  overflow: visible;
+  padding: clamp(16px, 2.2vh, 22px);
+  border: 1px solid var(--recharge-line);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-highlight) 80%, transparent), color-mix(in srgb, var(--color-surface) 96%, transparent)),
+    var(--recharge-panel);
+  box-shadow:
+    0 28px 80px color-mix(in srgb, var(--color-shadow) 46%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-highlight) 18%, transparent);
+}
+
+.rechargeStage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--color-highlight) 8%, transparent), transparent 24%),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--color-text) 3%, transparent) 0 1px, transparent 1px 84px);
+  opacity: 0.7;
+}
+
+.rechargeTopbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 34px;
+}
+
+.rechargeBrand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--color-highlight);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.rechargeLogo {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--color-highlight) 38%, transparent));
+}
+
+.rechargePill {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 34%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-highlight) 11%, transparent);
+  color: var(--color-highlight);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rechargeHero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 340px);
+  gap: clamp(14px, 2.6vw, 30px);
+  align-items: stretch;
+}
+
+.rechargeHeroCopy {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rechargeEyebrow {
+  margin: 0;
+  color: var(--recharge-cyan);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.rechargeHeroCopy h1 {
+  margin: 0;
+  color: var(--color-highlight);
+  font-size: clamp(30px, 3.8vw, 46px);
+  line-height: 1.04;
+  font-weight: 900;
+  text-shadow: 0 0 24px color-mix(in srgb, var(--color-highlight) 24%, transparent);
+}
+
+.rechargeHeroCopy p {
+  max-width: 560px;
+  margin: 0;
+  color: var(--color-highlight);
+  font-size: clamp(13px, 1.15vw, 15px);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.rechargeBalanceCard {
+  min-height: 104px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 34%, transparent);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--color-highlight) 78%, transparent), color-mix(in srgb, var(--color-surface) 86%, transparent)),
+    color-mix(in srgb, var(--color-text) 28%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-highlight) 10%, transparent);
+}
+
+.balanceMedal {
+  width: clamp(52px, 6vw, 70px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 38% 28%, var(--color-highlight) 0 12%, var(--color-highlight) 26%, var(--color-highlight) 58%, var(--color-surface) 100%);
+  box-shadow:
+    0 0 26px color-mix(in srgb, var(--color-highlight) 36%, transparent),
+    inset 0 0 0 2px color-mix(in srgb, var(--color-text) 18%, transparent);
+}
+
+.balanceMedal span {
+  width: 42%;
+  aspect-ratio: 1;
+  display: block;
+  transform: rotate(45deg);
+  border-radius: 4px;
+  background:
+    linear-gradient(135deg, var(--color-surface) 0%, var(--color-info) 34%, var(--color-info) 68%, var(--color-bg) 100%);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--color-info) 72%, transparent);
+}
+
+.balanceLabel,
+.rechargeBalanceCard small {
+  display: block;
+  color: var(--recharge-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.rechargeBalanceCard strong {
+  display: block;
+  margin: 4px 0;
+  color: var(--color-highlight);
+  font-size: clamp(26px, 3.2vw, 38px);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.rechargeLoading,
+.rechargeStatusStrip,
+.rechargeError {
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
+.rechargeLoading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 24%, transparent);
+  background: color-mix(in srgb, var(--color-highlight) 8%, transparent);
+  color: var(--color-highlight);
+}
+
+.rechargeLoading span,
+.paymentQrPlaceholder span {
+  width: 18px;
+  height: 18px;
+  border: 2px solid color-mix(in srgb, var(--color-highlight) 18%, transparent);
+  border-top-color: var(--recharge-gold-strong);
+  border-radius: 50%;
+  animation: rechargeSpin 760ms linear infinite;
+}
+
+.rechargeStatusStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 14px;
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 22%, transparent);
+  background: color-mix(in srgb, var(--color-highlight) 7%, transparent);
+  color: var(--color-highlight);
+}
+
+.rechargeStatusStrip strong {
+  color: var(--color-highlight);
+  white-space: nowrap;
+}
+
+.rechargeStatusStrip span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.rechargeStatusStrip[data-state='paid'] {
+  border-color: color-mix(in srgb, var(--color-success) 40%, transparent);
+  background: color-mix(in srgb, var(--color-success) 22%, transparent);
+  color: var(--color-success);
+}
+
+.rechargeStatusStrip[data-state='expired'],
+.rechargeStatusStrip[data-state='failed'],
+.rechargeStatusStrip[data-state='missing'] {
+  border-color: color-mix(in srgb, var(--color-primary-light) 45%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  color: var(--color-primary-lighter);
+}
+
+.rechargeError,
+.paymentError {
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 46%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 24%, transparent);
+  color: var(--color-primary-lighter);
+}
+
+.rechargeError {
+  padding: 10px 14px;
+}
+
+.rechargePackages {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 24%, transparent);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-highlight) 4%, transparent), transparent 42%),
+    color-mix(in srgb, var(--color-surface) 62%, transparent);
+}
+
+.packageHeader {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+}
+
+.packageHeader span {
+  display: block;
+  color: var(--recharge-cyan);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.packageHeader h2 {
+  margin: 3px 0 0;
+  color: var(--color-highlight);
+  font-size: clamp(18px, 1.8vw, 22px);
+  line-height: 1.2;
+}
+
+.packageHeader small {
+  min-width: 0;
+  color: var(--recharge-muted);
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.packageGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.packageCard {
+  position: relative;
+  min-height: 206px;
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  align-items: end;
+  gap: 5px;
+  padding: 14px 10px 10px;
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 24%, transparent);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-highlight) 8%, transparent), color-mix(in srgb, var(--color-highlight) 3%, transparent) 48%, color-mix(in srgb, var(--color-surface) 86%, transparent)),
+    color-mix(in srgb, var(--color-surface) 92%, transparent);
+  color: var(--color-highlight);
+  text-align: center;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 8%, transparent);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+.packageCard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-highlight) 12%, transparent), transparent 28%, color-mix(in srgb, var(--color-highlight) 10%, transparent));
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.packageCard:hover:not(:disabled),
+.packageCard:focus-visible {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--color-highlight) 88%, transparent);
+  box-shadow:
+    0 14px 34px color-mix(in srgb, var(--color-shadow) 34%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--color-highlight) 10%, transparent);
+}
+
+.packageCard:hover:not(:disabled)::before,
+.packageCard:focus-visible::before {
+  opacity: 1;
+}
+
+.packageCardActive {
+  border-color: color-mix(in srgb, var(--color-highlight) 92%, transparent);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--color-highlight) 16%, transparent),
+    0 18px 42px color-mix(in srgb, var(--color-shadow) 38%, transparent);
+}
+
+.packageCard:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-info) 32%, transparent);
+  outline-offset: 2px;
+}
+
+.packageCard:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.packageBadge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-bottom-left-radius: 8px;
+  background: linear-gradient(180deg, var(--color-highlight), var(--color-highlight));
+  color: var(--color-highlight);
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--color-shadow) 24%, transparent);
+}
+
+.packageArtwork {
+  display: block;
+  width: clamp(108px, 9.4vw, 138px);
+  max-width: 100%;
+  aspect-ratio: 1;
+  justify-self: center;
+  align-self: center;
+  background-repeat: no-repeat;
+  background-size: 300% 200%;
+  background-color: transparent;
+  filter: drop-shadow(0 12px 16px color-mix(in srgb, var(--color-shadow) 48%, transparent));
+}
+
+.packageName {
+  color: var(--recharge-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.packageCard strong {
+  color: var(--color-highlight);
+  font-size: clamp(17px, 1.55vw, 21px);
+  line-height: 1.08;
+  font-variant-numeric: tabular-nums;
+}
+
+.packagePrice {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: stretch;
+  margin-top: 5px;
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 32%, transparent);
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--color-highlight), var(--color-highlight));
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.packageBonusCopy {
+  min-height: 34px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.rechargeFooterBar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 18%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-highlight) 16%, transparent);
+}
+
+.rechargeFooterBar span {
+  min-height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 0 12px;
+  background: color-mix(in srgb, var(--color-surface) 86%, transparent);
+  color: var(--color-highlight);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.rechargeActions,
+.paymentDialogActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.rechargeActions {
+  justify-content: center;
+}
+
+.rechargePrimaryButton,
+.rechargeSecondaryButton,
+.rechargeGhostButton {
+  min-height: 46px;
+  border-radius: 8px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease;
+}
+
+.rechargePrimaryButton {
+  background: linear-gradient(180deg, var(--color-highlight), var(--color-highlight));
+  color: var(--color-text);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--color-highlight) 24%, transparent);
+}
+
+.rechargeSecondaryButton {
+  border-color: color-mix(in srgb, var(--color-highlight) 32%, transparent);
+  background: color-mix(in srgb, var(--color-highlight) 8%, transparent);
+  color: var(--color-highlight);
+}
+
+.rechargeGhostButton {
+  border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: transparent;
+  color: var(--color-highlight);
+}
+
+.rechargePrimaryButton:hover,
+.rechargeSecondaryButton:hover,
+.rechargeGhostButton:hover {
+  transform: translateY(-1px);
+}
+
+.rechargePrimaryButton:focus-visible,
+.rechargeSecondaryButton:focus-visible,
+.rechargeGhostButton:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-info) 34%, transparent);
+  outline-offset: 2px;
+}
+
+.rechargePrimaryButton:disabled,
+.rechargeSecondaryButton:disabled,
+.rechargeGhostButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+
+.paymentOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--color-shadow) 66%, transparent);
+  backdrop-filter: blur(16px);
+}
+
+.paymentDialog {
+  position: relative;
+  width: min(100%, 460px);
+  max-height: calc(100dvh - 36px);
+  overflow: auto;
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 36%, transparent);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 96%, transparent), color-mix(in srgb, var(--color-surface) 98%, transparent)),
+    var(--color-bg);
+  color: var(--color-highlight);
+  box-shadow:
+    0 30px 90px color-mix(in srgb, var(--color-shadow) 62%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 9%, transparent);
+}
+
+.paymentCloseButton {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 22%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-highlight) 8%, transparent);
+  color: var(--color-highlight);
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.paymentDialogHeader {
+  padding-right: 44px;
+}
+
+.paymentDialogHeader span {
+  display: block;
+  color: var(--recharge-cyan);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.paymentDialogHeader h2 {
+  margin: 5px 0;
+  color: var(--color-highlight);
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.paymentDialogHeader p {
+  margin: 0;
+  color: var(--color-highlight);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.paymentDialogBody {
+  display: grid;
+  grid-template-columns: 1fr 190px;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.paymentPlanCard,
+.paymentQrFrame {
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 24%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-highlight) 7%, transparent);
+}
+
+.paymentPlanCard {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+}
+
+.paymentPlanArt {
+  width: 96px;
+  height: 96px;
+  background-repeat: no-repeat;
+  background-size: 300% 200%;
+  filter: drop-shadow(0 12px 14px color-mix(in srgb, var(--color-shadow) 45%, transparent));
+}
+
+.paymentPlanCard span {
+  display: block;
+  color: var(--recharge-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.paymentPlanCard strong {
+  display: block;
+  margin: 5px 0;
+  color: var(--color-highlight);
+  font-size: 24px;
+  line-height: 1.08;
+}
+
+.paymentPlanCard small {
+  color: var(--recharge-gold-strong);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.paymentQrFrame {
+  min-height: 190px;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+}
+
+.paymentQrFrame[data-state='paid'] {
+  border-color: color-mix(in srgb, var(--color-success) 42%, transparent);
+  background: color-mix(in srgb, var(--color-success) 18%, transparent);
+}
+
+.paymentQrImage {
+  width: 100%;
+  aspect-ratio: 1;
+  display: block;
+  border-radius: 8px;
+  background: var(--color-surface);
+  box-shadow: 0 0 0 8px var(--color-shadow);
+}
+
+.paymentQrPlaceholder {
+  width: 100%;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  border: 1px dashed color-mix(in srgb, var(--color-highlight) 34%, transparent);
+  border-radius: 8px;
+  color: var(--color-highlight);
+  font-size: 13px;
+  text-align: center;
+}
+
+.paymentSuccessMark {
+  width: 98px;
+  height: 98px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--color-success), var(--color-success));
+  color: var(--color-text);
+  font-size: 54px;
+  font-weight: 900;
+  box-shadow: 0 0 26px color-mix(in srgb, var(--color-success) 34%, transparent);
+}
+
+.paymentError {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.paymentDialogActions {
+  justify-content: flex-end;
+}
+
+@keyframes rechargeSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1080px) {
+  .rechargeShell {
+    overflow-y: auto;
+  }
+
+  .rechargeStage {
+    overflow: visible;
+  }
+
+  .packageGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .rechargeShell {
+    place-items: stretch;
+    padding: 10px;
+    overflow-y: auto;
+  }
+
+  .rechargeStage {
+    width: 100%;
+    min-height: calc(100dvh - 20px);
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .rechargePackages {
+    grid-template-rows: none;
+  }
+
+  .rechargeTopbar,
+  .packageHeader,
+  .rechargeStatusStrip {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .rechargePill {
+    align-self: start;
+  }
+
+  .rechargeHero {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .rechargeBalanceCard {
+    min-height: 96px;
+    padding: 14px;
+  }
+
+  .rechargeHeroCopy h1 {
+    font-size: clamp(28px, 10vw, 36px);
+  }
+
+  .packageHeader small {
+    text-align: left;
+  }
+
+  .packageGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .packageCard {
+    min-height: 198px;
+    padding: 10px 8px;
+  }
+
+  .packageArtwork {
+    width: min(100%, 116px);
+  }
+
+  .rechargeFooterBar {
+    grid-template-columns: 1fr;
+  }
+
+  .rechargeActions,
+  .paymentDialogActions {
+    flex-direction: column;
+  }
+
+  .rechargePrimaryButton,
+  .rechargeSecondaryButton,
+  .rechargeGhostButton {
+    width: 100%;
+  }
+
+  .paymentOverlay {
+    align-items: end;
+    padding: 12px;
+  }
+
+  .paymentDialog {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    padding: 20px;
+  }
+
+  .paymentDialogBody {
+    grid-template-columns: 1fr;
+  }
+
+  .paymentQrFrame {
+    width: min(100%, 260px);
+    justify-self: center;
+  }
+}
+
+@media (max-width: 390px) {
+  .packageGrid {
+    gap: 8px;
+  }
+
+  .packageArtwork {
+    width: min(100%, 104px);
+  }
+
+  .packageCard strong {
+    font-size: 17px;
+  }
+
+  .packagePrice {
+    font-size: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rechargeLoading span,
+  .paymentQrPlaceholder span {
+    animation: none;
+  }
+
+  .packageCard,
+  .rechargePrimaryButton,
+  .rechargeSecondaryButton,
+  .rechargeGhostButton {
+    transition: none;
+  }
+}

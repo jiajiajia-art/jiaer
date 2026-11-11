@@ -1,0 +1,1124 @@
+/* 管理/运营「公共头像」：对齐 AdminPanel 暖色浅底，避免暗色胶囊碎片感 */
+
+.root {
+  --av-ink: var(--color-highlight);
+  --av-muted: var(--color-text-muted);
+  --av-line: color-mix(in srgb, var(--color-highlight) 22%, transparent);
+  --av-line-strong: color-mix(in srgb, var(--color-highlight) 42%, transparent);
+  --av-surface: color-mix(in srgb, var(--color-surface) 96%, transparent);
+  --av-surface-soft: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  --av-accent: var(--color-highlight);
+  --av-accent-strong: var(--color-highlight);
+  --av-accent-soft: color-mix(in srgb, var(--color-highlight) 12%, transparent);
+  --av-danger: var(--color-primary);
+  --av-danger-soft: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  --av-warn: var(--color-highlight);
+  --av-warn-soft: color-mix(in srgb, var(--color-highlight) 12%, transparent);
+
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--av-ink);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: 1px solid var(--av-line);
+  background: var(--av-surface);
+}
+
+.breadcrumb {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--av-muted);
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--av-ink);
+}
+
+.mainTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-bottom: 1px solid var(--av-line);
+  padding: 0 4px;
+}
+
+.mainTab,
+.mainTabActive {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 650;
+  font-family: inherit;
+  color: var(--av-muted);
+  position: relative;
+}
+
+.mainTab:hover {
+  color: var(--av-ink);
+}
+
+.mainTabActive {
+  color: var(--av-accent-strong);
+}
+
+.mainTabActive::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--av-accent);
+}
+
+.filterCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--av-line);
+  background: var(--color-surface);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-highlight) 4%, transparent);
+}
+
+.filterTop {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.searchInput {
+  box-sizing: border-box;
+  height: 40px;
+  flex: 1 1 220px;
+  min-width: 160px;
+  padding: 0 12px;
+  border: 1px solid var(--av-line-strong);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--av-ink);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--av-accent);
+  box-shadow: 0 0 0 3px var(--av-accent-soft);
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.listSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cropGateHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  pointer-events: none;
+}
+
+.uploadOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  background: color-mix(in srgb, var(--color-surface) 45%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.uploadDrawer {
+  width: min(440px, 100%);
+  height: 100%;
+  overflow: auto;
+  background: var(--color-bg);
+  border-left: 1px solid var(--av-line);
+  box-shadow: -12px 0 40px color-mix(in srgb, var(--color-shadow) 18%, transparent);
+  padding: 20px 20px 28px;
+  box-sizing: border-box;
+  color: var(--av-ink);
+}
+
+.uploadDrawerHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.uploadDrawerTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.uploadDrawerHint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--av-muted);
+}
+
+.uploadClose {
+  appearance: none;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--av-muted);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.uploadClose:hover {
+  background: var(--av-accent-soft);
+  color: var(--av-ink);
+}
+
+.uploadPickBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px dashed var(--av-line-strong);
+  background: color-mix(in srgb, var(--color-surface) 70%, transparent);
+}
+
+.uploadPickTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.uploadPickSub {
+  margin: 0;
+  font-size: 12px;
+  color: var(--av-muted);
+}
+
+.editMeta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--av-muted);
+}
+
+.cardSummary {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--av-muted);
+  line-height: 1.4;
+}
+
+.cardOwner {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--av-muted);
+}
+
+.thumbSquare {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--av-surface-soft);
+}
+
+.thumbSquare > * {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--av-muted);
+  line-height: 1.55;
+  max-width: 56rem;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--av-line);
+  background: var(--av-surface);
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--av-muted);
+  letter-spacing: 0.04em;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--av-surface-soft);
+  border: 1px solid var(--av-line);
+}
+
+.tab,
+.tabActive {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.tab {
+  background: transparent;
+  color: var(--av-muted);
+}
+
+.tab:hover {
+  color: var(--av-ink);
+  background: color-mix(in srgb, var(--color-surface) 70%, transparent);
+}
+
+.tabActive {
+  background: var(--color-surface);
+  color: var(--av-accent-strong);
+  border-color: var(--av-line-strong);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-highlight) 6%, transparent);
+}
+
+.input {
+  box-sizing: border-box;
+  height: 40px;
+  min-width: 160px;
+  width: min(280px, 100%);
+  flex: 1 1 180px;
+  padding: 0 12px;
+  border: 1px solid var(--av-line-strong);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--av-ink);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--av-accent);
+  box-shadow: 0 0 0 3px var(--av-accent-soft);
+}
+
+.input::placeholder {
+  color: var(--color-text-secondary);
+}
+
+/* 上传表单：竖排字段，禁止标题输入在横向 flex 里被撑成超高框 */
+.uploadForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.uploadMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: flex-start;
+}
+
+.titleField {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  max-width: 420px;
+}
+
+.titleInput {
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--av-line-strong);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--av-ink);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.titleInput:focus {
+  outline: none;
+  border-color: var(--av-accent);
+  box-shadow: 0 0 0 3px var(--av-accent-soft);
+}
+
+.titleInput::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: flex-end;
+}
+
+.segBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.segLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--av-muted);
+  letter-spacing: 0.06em;
+}
+
+.segRow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--color-surface);
+  border: 1px solid var(--av-line-strong);
+}
+
+.seg,
+.segActive {
+  appearance: none;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  background: transparent;
+  color: var(--av-muted);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.seg:hover {
+  color: var(--av-ink);
+  background: var(--av-accent-soft);
+}
+
+.segActive {
+  background: var(--av-accent-soft);
+  color: var(--av-accent-strong);
+}
+
+.fieldLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--av-muted);
+  letter-spacing: 0.06em;
+}
+
+.actionsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.primaryBtn,
+.secondaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.primaryBtn {
+  background: color-mix(in srgb, var(--av-accent) 68%, var(--color-shadow));
+  color: var(--color-on-primary);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-highlight) 28%, transparent);
+}
+
+.primaryBtn:hover {
+  background: var(--av-accent-strong);
+}
+
+.primaryBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.secondaryBtn {
+  background: var(--color-surface);
+  color: var(--av-ink);
+  border: 1px solid var(--av-line-strong);
+}
+
+.secondaryBtn:hover {
+  border-color: var(--av-accent);
+  color: var(--av-accent-strong);
+  background: var(--av-accent-soft);
+}
+
+/*
+ * 批量上传看板：Admin Warm Contact Sheet
+ * portal 挂 body，必须自带色板（禁止依赖 .root 的 --av-*，否则白字叠白底）
+ */
+.batchOverlay {
+  --bb-ink: var(--color-highlight);
+  --bb-muted: var(--color-text-muted);
+  --bb-line: color-mix(in srgb, var(--color-highlight) 28%, transparent);
+  --bb-line-strong: color-mix(in srgb, var(--color-highlight) 50%, transparent);
+  --bb-paper: var(--color-bg);
+  --bb-paper-deep: var(--color-surface-2);
+  --bb-accent: var(--color-highlight);
+  --bb-accent-strong: var(--color-highlight);
+  --bb-display: 'Songti SC', 'STSong', 'Noto Serif SC', 'Source Han Serif SC', serif;
+
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--color-surface) 62%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: bbFadeIn 0.28s ease-out;
+}
+
+@keyframes bbFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.batchBoard {
+  width: min(980px, 100%);
+  max-height: min(88vh, 820px);
+  overflow: auto;
+  border-radius: 18px;
+  border: 1px solid var(--bb-line);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 98%, transparent) 0%, color-mix(in srgb, var(--color-surface) 96%, transparent) 100%);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--color-text) 70%, transparent) inset,
+    0 28px 64px color-mix(in srgb, var(--color-shadow) 35%, transparent);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  color: var(--bb-ink);
+  animation: bbRise 0.32s ease-out;
+}
+
+@keyframes bbRise {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+
+.batchBoardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--bb-line);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-highlight) 10%, transparent) 0%, transparent 42%);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  backdrop-filter: blur(10px);
+}
+
+.batchBoardHeading {
+  min-width: 0;
+  padding-left: 12px;
+  border-left: 3px solid var(--bb-accent);
+}
+
+.batchBoardEyebrow {
+  margin: 0 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bb-accent-strong);
+}
+
+.batchBoardTitle {
+  margin: 0;
+  font-family: var(--bb-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--bb-ink);
+  line-height: 1.25;
+}
+
+.batchBoardSub {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--bb-muted);
+  max-width: 34rem;
+}
+
+.batchBoardHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.batchBoardStat {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--bb-accent-strong);
+  white-space: nowrap;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-highlight) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 28%, transparent);
+}
+
+.batchGhostBtn {
+  appearance: none;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--bb-line-strong);
+  background: var(--color-surface);
+  color: var(--bb-ink);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.batchGhostBtn:hover:not(:disabled) {
+  border-color: var(--bb-accent);
+  color: var(--bb-accent-strong);
+  background: color-mix(in srgb, var(--color-highlight) 10%, transparent);
+}
+
+.batchGhostBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.batchGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 10px;
+  padding: 16px 18px;
+}
+
+/* 联系表式：整卡可点，图面铺满，文案叠在底部渐变上——禁止大块空白底栏 */
+.batchCard {
+  appearance: none;
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--bb-line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--color-surface);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.batchCard:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--color-highlight) 55%, transparent);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--color-highlight) 18%, transparent);
+}
+
+.batchCard:focus-visible {
+  outline: 2px solid var(--bb-accent);
+  outline-offset: 2px;
+}
+
+.batchCardActive {
+  border-color: var(--bb-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-highlight) 28%, transparent);
+}
+
+.batchCardDone {
+  opacity: 0.72;
+}
+
+.batchCardLocked:not(.batchCardDone) {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.batchThumbWrap {
+  position: relative;
+  display: block;
+  /* 待处理保留竖图比例；裁切完成后见 .batchCardDone */
+  aspect-ratio: 3 / 4;
+  width: 100%;
+  background: var(--color-surface);
+}
+
+.batchThumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+/* 裁切完成后：正方框铺满，禁止黑底 letterbox */
+.batchCardDone .batchThumbWrap {
+  aspect-ratio: 1 / 1;
+  background: transparent;
+}
+
+.batchCardDone .batchThumb {
+  object-fit: cover;
+}
+
+.batchThumbEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.batchBadgePass,
+.batchBadgeCrop,
+.batchBadgeBad {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  z-index: 2;
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-text);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 25%, transparent);
+}
+
+.batchBadgePass {
+  background: var(--color-success);
+}
+
+.batchBadgeCrop {
+  background: var(--bb-accent);
+}
+
+.batchBadgeBad {
+  background: var(--color-primary);
+}
+
+.batchCardShade {
+  position: absolute;
+  inset: auto 0 0;
+  height: 58%;
+  z-index: 1;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--color-surface) 55%, transparent) 42%,
+    color-mix(in srgb, var(--color-surface) 92%, transparent) 100%
+  );
+  pointer-events: none;
+}
+
+.batchCardInfo {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 10px 11px;
+  color: var(--color-text);
+}
+
+.batchName {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-text);
+}
+
+.batchMeta {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.batchCardCta {
+  margin-top: 4px;
+  align-self: flex-start;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-highlight) 95%, transparent);
+}
+
+.batchCardDone .batchCardCta {
+  background: color-mix(in srgb, var(--color-success) 95%, transparent);
+}
+
+.batchCardLocked:not(.batchCardDone) .batchCardCta {
+  background: color-mix(in srgb, var(--color-text) 18%, transparent);
+  color: var(--color-text-secondary);
+}
+
+.batchBoardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px 16px;
+  border-top: 1px solid var(--bb-line);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  position: sticky;
+  bottom: 0;
+}
+
+.batchBoardFooterActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.batchSaveBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--av-accent, var(--color-highlight));
+  color: var(--color-text);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-highlight) 28%, transparent);
+}
+
+.batchSaveBtn:hover:not(:disabled) {
+  background: var(--av-accent-strong, var(--color-highlight));
+}
+
+.batchSaveBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.batchBoardFootnote {
+  margin: 0;
+  font-size: 12px;
+  color: var(--bb-muted);
+  text-align: right;
+}
+
+.empty {
+  margin: 0;
+  padding: 28px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--av-muted);
+  border-radius: 12px;
+  border: 1px dashed var(--av-line-strong);
+  background: color-mix(in srgb, var(--color-surface) 55%, transparent);
+}
+
+.grid {
+  display: grid;
+  /* 功能注释：宽屏约 5 列自适应，随宽度换行，避免挤成杂乱列表 */
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 16px;
+}
+
+@media (min-width: 1280px) {
+  .grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--av-line);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-highlight) 4%, transparent);
+}
+
+.thumbBtn {
+  all: unset;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.thumbBtn:focus-visible {
+  outline: 2px solid var(--av-accent);
+  outline-offset: 2px;
+}
+
+.thumbSquare :global(img),
+.thumbSquare img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.meta {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--av-muted);
+  line-height: 1.4;
+}
+
+.cardTitle {
+  margin: 10px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--av-ink);
+  line-height: 1.35;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.warnBtn,
+.dangerBtn {
+  flex: 1;
+  border: 0;
+  border-radius: 7px;
+  padding: 7px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.warnBtn {
+  background: var(--av-warn-soft);
+  color: var(--av-warn);
+}
+
+.warnBtn:hover {
+  filter: brightness(0.97);
+}
+
+.dangerBtn {
+  background: var(--av-danger-soft);
+  color: var(--av-danger);
+}
+
+.dangerBtn:hover {
+  filter: brightness(0.97);
+}
+
+@media (max-width: 720px) {
+  .header,
+  .panel {
+    padding: 14px;
+  }
+
+  .segRow {
+    width: 100%;
+  }
+
+  .seg,
+  .segActive {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+
+  .input {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .titleField {
+    max-width: none;
+  }
+
+  .tabs {
+    width: 100%;
+  }
+
+  .tab,
+  .tabActive {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+
+  .actionsRow .primaryBtn,
+  .actionsRow .secondaryBtn {
+    flex: 1 1 auto;
+  }
+}
+
+.tagEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tagGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tagList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--av-line);
+  background: var(--av-surface-soft);
+}
+
+.tagMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 140px;
+}
+
+.tagMeta {
+  font-size: 12px;
+  color: var(--av-muted);
+}
+
+.tagActions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tagAddRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.tagAddRow .titleInput {
+  flex: 1;
+  min-width: 160px;
+}

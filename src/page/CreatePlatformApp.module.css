@@ -1,0 +1,329 @@
+/* 功能注释：浅色表单页；顶/底避让由 AppPageShell 的 offset 负责，勿再叠死边距 */
+.pageRoot {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.main {
+  /* 功能注释：C2.2 左右分栏需要更宽版心；小屏仍单列 */
+  max-width: 1120px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px 16px 32px;
+  box-sizing: border-box;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+
+.hint {
+  margin: 0 0 20px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.card {
+  background: var(--color-surface);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-shadow) 4%, transparent);
+}
+
+.cardTitle {
+  font-size: 15px;
+  font-weight: 650;
+  margin: 0 0 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.field label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.field input,
+.field textarea,
+.field select {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  background: var(--color-surface);
+}
+
+.field textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+/* 功能注释：kkapp 配置编辑区用等宽字体，便于手改 JSON */
+.field textarea#app-content {
+  min-height: 220px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.fieldHint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.fieldError {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-primary);
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.iconPreview {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  object-fit: cover;
+  background: var(--color-bg);
+}
+
+.previewRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.previewThumb {
+  width: 72px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--color-bg);
+}
+
+.btnPrimary,
+.btnGhost,
+.btnBlue {
+  border: none;
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.btnPrimary {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.btnGhost {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.btnBlue {
+  background: var(--color-bg);
+  color: var(--color-info);
+}
+
+.listItem {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-text);
+}
+
+.listItem:last-child {
+  border-bottom: none;
+}
+
+.meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.metaName {
+  font-size: 14px;
+  font-weight: 650;
+  margin: 0;
+}
+
+.metaSub {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: 2px 0 0;
+}
+
+.badge,
+.badgeOn {
+  font-size: 11px;
+  font-weight: 650;
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.badge {
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+}
+
+.badgeOn {
+  background: var(--color-bg);
+  color: var(--color-success);
+}
+
+.empty {
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  padding: 24px 0;
+}
+
+/* 功能注释：对话生成区，与玩法 Mod 工坊同思路的气泡流 */
+.chatLog {
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 8px;
+  border-radius: 12px;
+  background: var(--color-bg);
+}
+
+.chatUser,
+.chatBot {
+  max-width: 92%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chatUser {
+  align-self: flex-end;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.chatBot {
+  align-self: flex-start;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.chatRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.chatRow input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  background: var(--color-surface);
+}
+
+/* 功能注释：创作区左栏表单 + 右栏吸顶手机预览；窄屏预览落到下方 */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.workspaceMain {
+  min-width: 0;
+}
+
+.previewPane {
+  background: var(--color-surface);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-shadow) 4%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.previewFrame {
+  width: 100%;
+  height: 900px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-bg);
+}
+
+@media (min-width: 960px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr) 380px;
+  }
+
+  .previewPane {
+    position: sticky;
+    top: 16px;
+  }
+}
+
+/* 功能注释：C0.2 适用题材多选 chips */
+.requiredMark {
+  color: var(--color-primary);
+  margin-left: 2px;
+}
+
+.fieldHint {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  margin-left: 6px;
+}
+
+.themeWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.themeChip,
+.themeChipOn {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+}
+
+.themeChipOn {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}

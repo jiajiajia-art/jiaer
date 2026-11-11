@@ -1,0 +1,811 @@
+/* 固定导航条 */
+.navbarContainer {
+    --navbar-inner-max: var(--app-desktop-navbar-max);
+    --navbar-main-gap: clamp(40px, 4vw, 72px);
+    --navbar-link-gap: clamp(12px, 1.1vw, 16px);
+    --navbar-link-min: 96px;
+    --navbar-link-padding-x: 14px;
+    --navbar-search-width: clamp(420px, 30vw, 560px);
+    --navbar-right-gap: 18px;
+    --navbar-surface: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 96%, transparent) 0%, color-mix(in srgb, var(--color-surface) 94%, transparent) 100%);
+    --navbar-border: color-mix(in srgb, var(--color-text) 8%, transparent);
+    --navbar-shadow: 0 12px 30px color-mix(in srgb, var(--color-shadow) 22%, transparent);
+    --navbar-text: color-mix(in srgb, var(--color-text) 78%, transparent);
+    --navbar-text-strong: var(--color-text);
+    --navbar-search-bg: color-mix(in srgb, var(--color-text) 8%, transparent);
+    --navbar-search-border: color-mix(in srgb, var(--color-text) 14%, transparent);
+    --navbar-search-input: color-mix(in srgb, var(--color-surface) 94%, transparent);
+    --navbar-search-placeholder: var(--color-text-muted);
+    --navbar-search-icon-bg: linear-gradient(180deg, color-mix(in srgb, var(--color-text) 18%, transparent) 0%, color-mix(in srgb, var(--color-text) 8%, transparent) 100%);
+    --navbar-search-icon-color: var(--color-text);
+    --navbar-search-panel-bg: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 98%, transparent) 0%, color-mix(in srgb, var(--color-surface) 96%, transparent) 100%);
+    --navbar-search-panel-border: color-mix(in srgb, var(--color-text) 10%, transparent);
+    --navbar-search-panel-shadow: 0 18px 34px color-mix(in srgb, var(--color-shadow) 28%, transparent);
+    --navbar-search-panel-item-hover: color-mix(in srgb, var(--color-text) 8%, transparent);
+    --navbar-search-panel-title: color-mix(in srgb, var(--color-text) 96%, transparent);
+    --navbar-search-panel-meta: color-mix(in srgb, var(--color-surface) 58%, transparent);
+    --navbar-search-panel-empty: color-mix(in srgb, var(--color-surface) 62%, transparent);
+    --navbar-action-bg: color-mix(in srgb, var(--color-text) 8%, transparent);
+    --navbar-action-bg-hover: color-mix(in srgb, var(--color-text) 14%, transparent);
+    --navbar-action-border: color-mix(in srgb, var(--color-text) 14%, transparent);
+    --navbar-action-text: var(--color-text);
+    /* 与首页「立即加入」同色：酒红扁平胶囊，非亮珊瑚外发光 */
+    --navbar-login-bg: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
+    --navbar-login-bg-hover: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
+    --navbar-login-border: transparent;
+    --navbar-login-text: var(--color-on-primary);
+    --navbar-login-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent);
+    --navbar-login-shadow-hover: inset 0 1px 0 color-mix(in srgb, var(--color-text) 16%, transparent);
+    /* 功能注释：头像下拉对齐 funloom 墨黑片 + 白字（与语言弹窗同层级），禁止白底粉条旧稿 */
+    --navbar-menu-bg: var(--color-surface);
+    --navbar-menu-border: color-mix(in srgb, var(--color-text) 10%, transparent);
+    --navbar-menu-shadow: 0 16px 32px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+    --navbar-menu-text: var(--color-text);
+    --navbar-menu-item-hover: color-mix(in srgb, var(--color-text) 8%, transparent);
+    --navbar-menu-logout-bg: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
+    --navbar-menu-logout-bg-hover: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
+    --navbar-menu-logout-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent);
+    /* 功能注释：栏身高度 + 顶部安全区，总高与 --app-navbar-offset 一致，避免内容被刘海/状态栏压住 */
+    height: var(--app-navbar-offset);
+    padding-top: env(safe-area-inset-top, 0px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    margin-bottom: 0;
+    z-index: 1000;
+    background: var(--navbar-surface);
+    border-bottom: 1px solid var(--navbar-border);
+    box-shadow: var(--navbar-shadow);
+    /* 功能注释：顶栏全宽铺底，内容仍由 .navbar 的 inner-max 居中约束 */
+    max-width: none;
+    color: var(--navbar-text);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    transform: none;
+    width: 100%;
+    padding-left: 10px;
+    padding-right: 10px;
+    box-sizing: border-box;
+}
+
+@media (max-width: 1080px) {
+    .navbarContainer {
+        left: 0;
+        transform: none;
+        width: 100%;
+        max-width: none;
+        padding: 0 10px;
+    }
+
+    .navbar {
+        margin: 0;
+        width: 100%;
+        max-width: 1080px;
+    }
+}
+
+@media (min-width: 1081px) {
+    .navbarContainer {
+        padding: 0 var(--app-desktop-gutter);
+    }
+}
+
+.navbar {
+    width: min(var(--navbar-inner-max), 100%);
+    max-width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--navbar-main-gap);
+    margin: 0 auto;
+    min-width: 0;
+}
+
+.logo {
+    width: 160px;
+    height: 86px;
+    flex-shrink: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+.logo img {
+    width: 160px;
+    height: 80%;
+    margin-top: 10px;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+.navLinks {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    gap: var(--navbar-link-gap);
+    min-width: 0;
+}
+
+.navLink {
+    min-width: var(--navbar-link-min);
+    height: 100%;
+    padding: 0 var(--navbar-link-padding-x);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-image: none;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 20px;
+    color: var(--navbar-text);
+}
+
+.navLink:hover {
+    color: var(--navbar-text-strong);
+}
+
+.navLinkDisabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+}
+
+.navLinkDisabled:hover {
+    color: var(--navbar-text);
+}
+
+.navLinkActive {
+    color: var(--navbar-text-strong);
+    border-bottom: 4px solid var(--primary);
+}
+
+.navRight {
+    display: flex;
+    align-items: center;
+    gap: var(--navbar-right-gap);
+    flex: 1;
+    justify-content: flex-end;
+    min-width: 0;
+}
+
+.searchBox {
+    display: flex;
+    align-items: center;
+    position: relative;
+    height: 30px;
+    width: var(--navbar-search-width);
+    max-width: 100%;
+    gap: 8px;
+    border: 1px solid var(--navbar-search-border);
+    border-radius: 18px;
+    margin: 0;
+    padding-right: 0px;
+    padding-left: 10px;
+    background: var(--navbar-search-bg);
+}
+
+.searchIcon {
+    flex-shrink: 0;
+    height: 26px;
+    width: 60px;
+    min-width: 60px;
+    font-size: 18px;
+    border: none;
+    padding: 0;
+    color: var(--navbar-search-icon-color);
+    /* 功能注释：搜索提交键保持原胶囊底，不用圆形按钮切图 */
+    background: var(--navbar-search-icon-bg);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.searchIcon img,
+.messageButton img {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+    display: block;
+    image-rendering: -webkit-optimize-contrast;
+}
+
+.navAssetIcon {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+    image-rendering: -webkit-optimize-contrast;
+}
+
+.searchInput {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 14px;
+    color: var(--navbar-search-input);
+}
+
+.searchInput::placeholder {
+    color: var(--navbar-search-placeholder);
+}
+
+.searchPanel {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px;
+    border: 1px solid var(--navbar-search-panel-border);
+    border-radius: 16px;
+    background: var(--navbar-search-panel-bg);
+    box-shadow: var(--navbar-search-panel-shadow);
+    z-index: 1200;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.searchItem {
+    width: 100%;
+    border: none;
+    border-radius: 12px;
+    padding: 10px 12px;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.searchItem:hover {
+    background: var(--navbar-search-panel-item-hover);
+    transform: translateY(-1px);
+}
+
+.searchItemTitle {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--navbar-search-panel-title);
+}
+
+.searchItemMeta {
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--navbar-search-panel-meta);
+}
+
+.searchEmpty {
+    padding: 12px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--navbar-search-panel-empty);
+}
+
+.avatarContainer {
+    position: relative;
+    overflow: visible;
+}
+
+.userActions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.messageButton {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 50%;
+    /* 功能注释：圆形按钮底来自 assetsv2/home/nav_btn_bg.webp */
+    background-color: transparent;
+    background-image: var(--navbar-btn-circle-bg);
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    color: var(--navbar-action-text);
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.messageButton:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.12);
+    background-color: transparent;
+    background-image: var(--navbar-btn-circle-bg);
+}
+
+.messageBadge {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--color-primary-light);
+    color: var(--color-on-primary);
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 30%, transparent);
+}
+
+.avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.avatarInner {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar:hover {
+    transform: scale(1.05);
+}
+
+.userMenu {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    background: var(--navbar-menu-bg);
+    border: 1px solid var(--navbar-menu-border);
+    border-radius: 14px;
+    box-shadow: var(--navbar-menu-shadow);
+    min-width: 168px;
+    padding: 6px;
+    z-index: 1300;
+    animation: slideDown 0.3s ease-out;
+    overflow: hidden;
+}
+
+.menuBtn {
+    width: 100%;
+    padding: 11px 16px;
+    background: transparent;
+    color: var(--navbar-menu-text);
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, filter 0.2s ease;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.menuBtn:hover {
+    background: var(--navbar-menu-item-hover);
+    color: var(--color-text);
+}
+
+.menuBtn:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 65%, transparent);
+    outline-offset: 1px;
+}
+
+.desktopOnlyMenuBtn {
+    display: block;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 功能注释：退出项复用登录酒红扁平渐变，禁止亮珊瑚 #FB4655 条块 */
+.logoutBtn {
+    margin-top: 4px;
+    background: var(--navbar-menu-logout-bg);
+    color: var(--color-text);
+    box-shadow: var(--navbar-menu-logout-shadow);
+    transition: background 0.2s ease, filter 0.2s ease;
+}
+
+.logoutBtn:hover {
+    background: var(--navbar-menu-logout-bg-hover);
+    color: var(--color-text);
+    filter: brightness(1.06);
+}
+
+.settingIcon {
+    width: 48px;
+    height: 48px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.loginBtn {
+    /* 对齐 home.mobileJoinGroupAction：酒红竖向渐变 + 内高光，无外发光 */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    min-width: 84px;
+    padding: 0 18px !important;
+    margin: 0 !important;
+    flex: none !important;
+    color: var(--navbar-login-text);
+    border: 1px solid var(--navbar-login-border);
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    cursor: pointer;
+    white-space: nowrap;
+    background: var(--navbar-login-bg);
+    box-shadow: var(--navbar-login-shadow);
+    transition:
+        background 0.2s ease,
+        box-shadow 0.2s ease,
+        filter 0.2s ease;
+}
+
+.loginBtn:hover {
+    transform: none;
+    background: var(--navbar-login-bg-hover);
+    box-shadow: var(--navbar-login-shadow-hover);
+    filter: brightness(1.06);
+}
+
+.loginBtn:active {
+    transform: none;
+    filter: brightness(0.96);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.loginBtn:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
+    outline-offset: 3px;
+}
+
+/* 功能注释：顶栏最右语言入口；中文显示「语言」、英文显示 EN，登录无关 */
+.langTrigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    min-width: 44px;
+    padding: 0 12px;
+    flex-shrink: 0;
+    border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: color-mix(in srgb, var(--color-text) 92%, transparent);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s ease, border-color 0.2s ease, filter 0.2s ease;
+}
+
+.langTrigger:hover {
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-color: color-mix(in srgb, var(--color-text) 28%, transparent);
+    filter: brightness(1.05);
+}
+
+.langTrigger:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
+    outline-offset: 3px;
+}
+
+.navbarContainerMobileHome {
+    transition: background 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease, backdrop-filter 0.28s ease, -webkit-backdrop-filter 0.28s ease;
+}
+
+@media (max-width: 768px) {
+    .navbarContainer {
+        /* 功能注释：移动端顶栏对齐暗色 funloom，禁止回退浅色白底 */
+        --navbar-surface: var(--color-bg);
+        --navbar-border: color-mix(in srgb, var(--color-text) 8%, transparent);
+        --navbar-shadow: 0 8px 20px color-mix(in srgb, var(--color-shadow) 35%, transparent);
+        --navbar-text: color-mix(in srgb, var(--color-text) 78%, transparent);
+        --navbar-text-strong: var(--color-text);
+        --navbar-search-bg: var(--color-surface);
+        --navbar-search-border: color-mix(in srgb, var(--color-text) 12%, transparent);
+        --navbar-search-input: color-mix(in srgb, var(--color-surface) 94%, transparent);
+        --navbar-search-placeholder: var(--color-text-muted);
+        --navbar-search-icon-bg: linear-gradient(180deg, var(--color-text-secondary) 0%, var(--color-text) 100%);
+        --navbar-search-icon-color: var(--color-text);
+        --navbar-search-panel-bg: var(--color-surface);
+        --navbar-search-panel-border: color-mix(in srgb, var(--color-text) 10%, transparent);
+        --navbar-search-panel-shadow: 0 14px 28px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+        --navbar-search-panel-item-hover: color-mix(in srgb, var(--color-text) 8%, transparent);
+        --navbar-search-panel-title: var(--color-text);
+        --navbar-search-panel-meta: color-mix(in srgb, var(--color-surface) 58%, transparent);
+        --navbar-search-panel-empty: color-mix(in srgb, var(--color-surface) 62%, transparent);
+        --navbar-action-bg: var(--color-surface);
+        --navbar-action-bg-hover: var(--color-surface-2);
+        --navbar-action-border: color-mix(in srgb, var(--color-text) 12%, transparent);
+        --navbar-action-text: var(--color-text);
+        --navbar-login-bg: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
+        --navbar-login-bg-hover: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
+        --navbar-login-border: transparent;
+        --navbar-login-text: var(--color-on-primary);
+        --navbar-login-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent);
+        --navbar-login-shadow-hover: inset 0 1px 0 color-mix(in srgb, var(--color-text) 16%, transparent);
+        --navbar-menu-bg: var(--color-surface);
+        --navbar-menu-border: color-mix(in srgb, var(--color-text) 10%, transparent);
+        --navbar-menu-shadow: 0 16px 32px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+        --navbar-menu-text: var(--color-text);
+        --navbar-menu-item-hover: color-mix(in srgb, var(--color-text) 8%, transparent);
+        --navbar-menu-logout-bg: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
+        --navbar-menu-logout-bg-hover: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
+        --navbar-menu-logout-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent);
+        width: 100vw;
+        height: var(--app-navbar-offset);
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-left: 12px;
+        padding-right: 12px;
+        left: 0;
+        transform: none;
+    }
+
+    .navbar {
+        width: 100%;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .logo {
+        width: 100px;
+        height: 54px;
+        flex-shrink: 0;
+    }
+
+    .logo img {
+        width: 100px;
+        height: 70%;
+    }
+
+    .navLinks {
+        display: none;
+    }
+
+    .navRight {
+        gap: 8px;
+        margin-right: 0;
+        flex: 1;
+        min-width: 0;
+        justify-content: flex-end;
+    }
+
+    .searchBox {
+        flex: 1;
+        min-width: 0;
+        max-width: 62%;
+        height: 28px;
+        padding-left: 8px;
+        padding-right: 0;
+        box-shadow: none;
+    }
+
+    .searchInput {
+        flex: 1;
+        min-width: 0;
+        font-size: 12px;
+        width: auto;
+    }
+
+    .searchIcon {
+        flex-shrink: 0;
+        height: 24px;
+        width: 40px;
+        min-width: 40px;
+        font-size: 14px;
+        border-radius: 20px;
+    }
+
+    .searchPanel {
+        top: calc(100% + 6px);
+        max-height: 240px;
+        border-radius: 14px;
+    }
+
+    .searchItem {
+        padding: 9px 10px;
+    }
+
+    .searchItemTitle {
+        font-size: 13px;
+    }
+
+    .searchItemMeta,
+    .searchEmpty {
+        font-size: 11px;
+    }
+
+    .userActions {
+        gap: 8px;
+    }
+
+    .messageButton {
+        width: 36px;
+        height: 36px;
+        font-size: 17px;
+        flex-shrink: 0;
+        box-shadow: none;
+    }
+
+    .messageBadge {
+        min-width: 16px;
+        height: 16px;
+        padding: 0 4px;
+        top: -3px;
+        right: -4px;
+        font-size: 10px;
+    }
+
+    .avatar {
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+    }
+
+    .settingIcon {
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+    }
+
+    .loginBtn {
+        width: auto !important;
+        height: 30px !important;
+        min-width: 68px !important;
+        max-width: none !important;
+        min-height: 30px !important;
+        max-height: 30px !important;
+        padding: 0 14px !important;
+        font-size: 13px;
+        flex-shrink: 0;
+        box-shadow: var(--navbar-login-shadow);
+    }
+
+    .langTrigger {
+        height: 30px;
+        min-width: 40px;
+        padding: 0 10px;
+        font-size: 12px;
+    }
+
+    .desktopOnlyMenuBtn {
+        display: none;
+    }
+
+    /* 功能注释：首页 banner 叠加态下导航压在图上，语言按钮跟随压图文字色 */
+    .navbarContainerMobileHomeOverlayActive .langTrigger {
+        border-color: color-mix(in srgb, var(--color-on-media) 28%, transparent);
+        background: color-mix(in srgb, var(--color-on-media) 12%, transparent);
+        color: var(--color-on-media);
+    }
+
+    .navbarContainerMobileHomeOverlayActive {
+        --navbar-surface: color-mix(in srgb, var(--color-shadow) 72%, transparent);
+        --navbar-border: color-mix(in srgb, var(--color-text) 8%, transparent);
+        --navbar-shadow: none;
+        --navbar-text: color-mix(in srgb, var(--color-on-media) 88%, transparent);
+        --navbar-text-strong: var(--color-on-media);
+        --navbar-search-bg: color-mix(in srgb, var(--color-surface) 92%, transparent);
+        --navbar-search-border: color-mix(in srgb, var(--color-text) 14%, transparent);
+        --navbar-search-input: color-mix(in srgb, var(--color-surface) 96%, transparent);
+        --navbar-search-placeholder: color-mix(in srgb, var(--color-surface) 56%, transparent);
+        --navbar-search-icon-bg: linear-gradient(180deg, var(--color-text-secondary) 0%, var(--color-text) 100%);
+        --navbar-search-icon-color: var(--color-text);
+        --navbar-search-panel-bg: var(--color-surface);
+        --navbar-search-panel-border: color-mix(in srgb, var(--color-text) 10%, transparent);
+        --navbar-search-panel-shadow: 0 14px 28px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+        --navbar-search-panel-item-hover: color-mix(in srgb, var(--color-text) 8%, transparent);
+        --navbar-search-panel-title: var(--color-text);
+        --navbar-search-panel-meta: color-mix(in srgb, var(--color-surface) 58%, transparent);
+        --navbar-search-panel-empty: color-mix(in srgb, var(--color-surface) 62%, transparent);
+        --navbar-action-bg: color-mix(in srgb, var(--color-surface) 92%, transparent);
+        --navbar-action-bg-hover: var(--color-surface-2);
+        --navbar-action-border: color-mix(in srgb, var(--color-text) 14%, transparent);
+        --navbar-action-text: var(--color-text);
+        --navbar-login-bg: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
+        --navbar-login-bg-hover: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
+        --navbar-login-border: transparent;
+        --navbar-login-text: var(--color-on-primary);
+        --navbar-login-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent);
+        --navbar-login-shadow-hover: inset 0 1px 0 color-mix(in srgb, var(--color-text) 16%, transparent);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    .navbarContainerMobileHomeOverlayActive .logo img {
+        filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--color-shadow) 38%, transparent));
+    }
+
+    .navbarContainerMobileHomeOverlayActive .searchBox,
+    .navbarContainerMobileHomeOverlayActive .messageButton {
+        box-shadow: none;
+    }
+
+    .navbarContainerMobileHomeOverlayActive .loginBtn {
+        box-shadow: var(--navbar-login-shadow);
+    }
+}
+
+/* 功能注释：平板/窄桌面区间收紧顶栏，避免导航链接与搜索框重叠、排行被挤出 */
+@media (min-width: 769px) and (max-width: 1280px) {
+    .navbarContainer {
+        --navbar-main-gap: 16px;
+        --navbar-link-gap: 2px;
+        --navbar-link-min: 0px;
+        --navbar-link-padding-x: clamp(8px, 1vw, 14px);
+        --navbar-search-width: auto;
+        --navbar-right-gap: 10px;
+    }
+
+    .logo,
+    .logo img {
+        width: clamp(110px, 12vw, 160px);
+    }
+
+    .navLinks {
+        flex-shrink: 0;
+    }
+
+    .navLink {
+        font-size: clamp(15px, 1.6vw, 20px);
+        white-space: nowrap;
+    }
+
+    .searchBox {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: 420px;
+    }
+}

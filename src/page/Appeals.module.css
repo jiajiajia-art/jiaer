@@ -1,0 +1,207 @@
+/* 功能注释：申诉中心对齐墨黑账本 — #1A1A1A 面、酒红操作 */
+
+.pageRoot {
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: calc(var(--app-desktop-navbar-height, 64px) + 20px) 16px 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  gap: 12px;
+}
+
+/* 功能注释：对齐 Messages 返回键 — 描边 chevron，36×36 */
+.backBtn {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.backBtn svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.newBtn,
+.actionBtn,
+.pageBtn {
+  appearance: none;
+  border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+  background: var(--color-surface);
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.newBtn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.newBtn,
+.actionBtn {
+  background: var(--color-primary-bold);
+  border-color: var(--color-primary-bold);
+  color: var(--color-on-primary);
+}
+
+.newBtn:hover,
+.actionBtn:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  text-align: center;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  border-radius: 16px;
+  padding: 16px 16px 14px;
+}
+
+.sectionTitle {
+  margin: 0 0 14px;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: var(--color-text-secondary);
+}
+
+.empty {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.listItem {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 14px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  background: var(--color-surface);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.listItem:hover {
+  background: var(--color-surface-2);
+}
+
+.itemHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.itemTitle {
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.35;
+  color: var(--color-text);
+}
+
+.itemMeta {
+  flex-shrink: 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.itemDesc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.itemFoot {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 2px;
+}
+
+.actionBtn {
+  padding: 7px 16px;
+  font-size: 13px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.pageInfo {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.pageBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

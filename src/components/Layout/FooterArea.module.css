@@ -1,0 +1,154 @@
+/* 功能注释：全站页脚——PC 品牌左+三列右；移动端仅法律一行（见 max-width:768） */
+.footer {
+  --footer-surface: var(--color-bg);
+  --footer-title: var(--color-text);
+  --footer-muted: var(--color-text-secondary);
+  --footer-faint: var(--color-text-muted);
+  width: 100%;
+  flex: 0 0 auto;
+  align-self: stretch;
+  background-color: var(--footer-surface);
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  padding: 48px 0 56px;
+  display: flex;
+  justify-content: center;
+  color: var(--footer-muted);
+  box-sizing: border-box;
+}
+
+.container {
+  width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 40px 64px;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.brandCol {
+  flex: 1 1 240px;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.logo {
+  height: 44px;
+  width: auto;
+  align-self: flex-start;
+}
+
+.tagline {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--footer-muted);
+}
+
+.legal {
+  margin: 8px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-size: 12px;
+  color: var(--footer-faint);
+}
+
+.legalLink {
+  color: var(--footer-faint);
+  text-decoration: none;
+}
+
+.legalLink:hover {
+  color: color-mix(in srgb, var(--color-text) 85%, transparent);
+}
+
+.linkCols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 36px 72px;
+  flex: 1 1 360px;
+  justify-content: flex-end;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 112px;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--footer-title);
+  margin-bottom: 6px;
+}
+
+.item,
+.itemButton {
+  font-size: 14px;
+  color: var(--footer-faint);
+  text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  font-family: inherit;
+}
+
+.item:hover,
+.itemButton:hover {
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
+}
+
+@media screen and (min-width: 769px) and (max-width: 1080px) {
+  .footer {
+    padding: 40px 0 48px;
+  }
+
+  .linkCols {
+    gap: 28px 40px;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  /* 功能注释：有底栏的移动端不再挂完整官网站脚，只留 © + 隐私/协议 */
+  .footer {
+    display: flex;
+    padding: 14px 0 calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .container {
+    width: 100%;
+    max-width: 100%;
+    flex-direction: column;
+    gap: 0;
+    padding: 0 16px;
+  }
+
+  .brandCol {
+    max-width: none;
+    gap: 0;
+    align-items: center;
+  }
+
+  .logo,
+  .tagline,
+  .linkCols {
+    display: none;
+  }
+
+  .legal {
+    margin: 0;
+    justify-content: center;
+    text-align: center;
+    font-size: 11px;
+    gap: 6px 10px;
+  }
+}

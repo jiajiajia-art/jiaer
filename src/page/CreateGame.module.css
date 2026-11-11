@@ -1,0 +1,49 @@
+.pageRoot {
+    min-height: 100vh;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+}
+
+.gameStatsWrapper {
+    min-height: 100vh;
+    margin-bottom: 0;
+    background: var(--color-bg);
+}
+
+.detailLoading,
+.detailError {
+    width: 100%;
+    text-align: center;
+    padding: 120px 16px 40px;
+    color: var(--color-primary-fg);
+    font-size: 18px;
+}
+
+@media (max-width: 768px) {
+    .pageRoot {
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .detailLoading,
+    .detailError {
+        font-size: 14px;
+        padding: 96px 16px 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .pageRoot {
+        width: 100%;
+        min-width: auto;
+        min-height: 100vh;
+        padding-bottom: 90px;
+        margin: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+        position: relative;
+    }
+}

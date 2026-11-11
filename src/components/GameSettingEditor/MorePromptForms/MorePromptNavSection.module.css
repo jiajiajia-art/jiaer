@@ -1,0 +1,157 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionWorldBook {
+  flex: 1;
+  min-height: 0;
+}
+
+.itemRow {
+  position: relative;
+  width: 100%;
+  padding: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+.itemMain {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  padding: 14px 16px;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  display: flex;
+  align-items: flex-start;
+  transition: padding-right 0.2s ease;
+}
+
+.itemRow:hover:not(.disabled) .itemMain,
+.itemRow:focus-within:not(.disabled) .itemMain {
+  padding-right: 36px;
+}
+
+.itemActions {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.itemRow:hover:not(.disabled) .itemActions,
+.itemRow:focus-within:not(.disabled) .itemActions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.iconBtn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--primary);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s ease;
+}
+
+.iconBtn:hover {
+  background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
+/* 功能注释：暗色轨上的虚线补录入口，禁止白底粉渐变 */
+.addBtn {
+  margin-top: 4px;
+  border-radius: 14px;
+  border: 1px dashed color-mix(in srgb, var(--color-primary) 45%, transparent);
+  background: transparent;
+  color: var(--color-text);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.addBtn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--color-primary) 70%, transparent);
+}
+
+.addBtnActive {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+  box-shadow: none;
+}
+
+.addBtnDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.addIcon {
+  font-size: 1.25rem;
+  line-height: 1;
+  font-weight: 400;
+}
+
+@media (max-width: 1080px) {
+  .section:not(.sectionWorldBook) {
+    display: contents;
+  }
+
+  .section:not(.sectionWorldBook) .itemRow {
+    flex: 0 0 auto;
+    min-width: 140px;
+  }
+
+  .section:not(.sectionWorldBook) .addBtn {
+    flex: 0 0 auto;
+    min-width: 92px;
+    margin-top: 0;
+    padding: 10px 14px;
+    width: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .itemMain small {
+    display: block;
+    font-size: 0.68rem;
+  }
+}
+
+@media (hover: none) {
+  .itemRow .itemActions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .itemRow .itemMain {
+    padding-right: 36px;
+  }
+}

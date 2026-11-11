@@ -1,0 +1,94 @@
+/**
+ * Funloom 全局 Toast 皮肤：珊瑚红点缀卡片，替代 react-hot-toast 默认白底红叉。
+ */
+.funloom-toast {
+  --funloom-toast-accent: var(--color-primary-light);
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 12px !important;
+  max-width: min(440px, calc(100vw - 32px)) !important;
+  min-width: 260px !important;
+  padding: 14px 16px 14px 14px !important;
+  border-radius: 12px !important;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 14%, transparent) !important;
+  background:
+    linear-gradient(180deg, var(--color-surface) 0%, var(--color-surface) 42%) padding-box,
+    linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 55%, transparent), color-mix(in srgb, var(--color-primary-light) 25%, transparent)) border-box !important;
+  box-shadow:
+    0 12px 36px color-mix(in srgb, var(--color-primary) 14%, transparent),
+    0 2px 0 color-mix(in srgb, var(--color-surface) 70%, transparent) inset !important;
+  color: var(--color-text) !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  line-height: 1.55 !important;
+  letter-spacing: 0.01em !important;
+  text-align: left !important;
+  animation: funloomToastIn 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.funloom-toast > div {
+  margin: 0 !important;
+}
+
+.funloom-toast [data-content],
+.funloom-toast > div:last-child {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 左侧品牌色竖条 */
+.funloom-toast::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180deg, var(--color-primary-light) 0%, var(--funloom-toast-accent) 100%);
+}
+
+.funloom-toast {
+  position: relative !important;
+  padding-left: 18px !important;
+}
+
+/* 成功 / 错误图标色 */
+.funloom-toast-success {
+  --funloom-toast-accent: var(--color-success);
+  border-color: color-mix(in srgb, var(--color-success) 18%, transparent) !important;
+  background:
+    linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface) 42%) padding-box,
+    linear-gradient(135deg, color-mix(in srgb, var(--color-success) 40%, transparent), color-mix(in srgb, var(--color-success) 20%, transparent)) border-box !important;
+}
+
+.funloom-toast-error {
+  --funloom-toast-accent: var(--color-primary-light);
+}
+
+.funloom-toast-blank,
+.funloom-toast-loading {
+  --funloom-toast-accent: var(--color-highlight);
+  border-color: color-mix(in srgb, var(--color-highlight) 28%, transparent) !important;
+  background:
+    linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface) 42%) padding-box,
+    linear-gradient(135deg, color-mix(in srgb, var(--color-highlight) 45%, transparent), color-mix(in srgb, var(--color-highlight) 20%, transparent)) border-box !important;
+}
+
+@keyframes funloomToastIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 640px) {
+  .funloom-toast {
+    font-size: 14px !important;
+    min-width: 0 !important;
+  }
+}

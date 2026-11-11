@@ -1,0 +1,388 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: var(--color-primary-fg);
+}
+
+.header,
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px;
+}
+
+.header h2,
+.panel h3 {
+  margin: 4px 0 6px;
+}
+
+.header p,
+.panel p {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  color: var(--color-accent);
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px;
+  background: var(--color-bg);
+  border-radius: 12px;
+}
+
+.tabs button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tabs .tabActive {
+  background: var(--color-surface);
+  color: var(--color-accent);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--color-primary) 7.8%, transparent);
+}
+
+.panel {
+  padding: 22px;
+}
+
+.panelHead,
+.modelSectionHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.panelHead {
+  margin-bottom: 20px;
+}
+
+.panelHead > button {
+  flex: none;
+}
+
+.primary,
+.secondary,
+.textButton,
+.remove,
+.tierRemove,
+.error button {
+  min-height: 44px;
+  border-radius: 10px;
+  padding: 0 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary {
+  border: 1px solid var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 68%, var(--color-shadow));
+  color: var(--color-on-primary);
+}
+
+.secondary {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+}
+
+.textButton {
+  border: 0;
+  background: var(--color-bg);
+  color: var(--color-accent);
+}
+
+.remove {
+  border: 0;
+  background: var(--color-bg);
+  color: var(--color-primary);
+}
+
+.tierRemove {
+  border: 1px solid var(--color-primary-light);
+  background: var(--color-surface);
+  color: var(--color-primary);
+}
+
+.primary:disabled,
+.secondary:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.formGrid,
+.routeGrid,
+.filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.routeGrid {
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+}
+
+.formGrid label,
+.routeGrid label,
+.filters label,
+.schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.formGrid input,
+.routeGrid input,
+.filters input,
+.filters select,
+.schedule input,
+.tierRow input {
+  min-height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  padding: 0 12px;
+  background: var(--color-surface);
+  color: var(--color-primary-fg);
+  font: inherit;
+}
+
+.formGrid input:focus,
+.routeGrid input:focus,
+.filters input:focus,
+.filters select:focus,
+.schedule input:focus,
+.tierRow input:focus {
+  outline: 3px solid color-mix(in srgb, var(--color-accent) 14.9%, transparent);
+  border-color: var(--color-accent);
+}
+
+.modelSection {
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid var(--color-border);
+}
+
+.modelSectionHead h4 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.routeCard {
+  margin: 18px 0;
+  padding: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.textRouteCard {
+  border-left: 4px solid var(--color-accent);
+}
+
+.imageRouteCard {
+  border-left: 4px solid var(--color-highlight);
+}
+
+.routeCard legend {
+  padding: 0 8px;
+  font-weight: 700;
+}
+
+.inlineState {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+}
+
+.tierHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 18px 0 10px;
+}
+
+.tierRow {
+  display: grid;
+  grid-template-columns: 140px 1fr 1fr auto;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.versionList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.version {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.version strong {
+  margin-right: 10px;
+}
+
+.version p {
+  font-size: 13px;
+}
+
+.status {
+  display: inline-flex;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--color-bg);
+  color: var(--color-accent);
+  font-size: 12px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.tableWrap table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.tableWrap th,
+.tableWrap td {
+  text-align: left;
+  padding: 13px 12px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+}
+
+.tableWrap th {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+}
+
+.tableWrap td {
+  font-variant-numeric: tabular-nums;
+}
+
+.tableWrap small {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-text-muted);
+}
+
+.state {
+  padding: 36px;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-primary-light);
+  border-radius: 12px;
+  background: var(--color-bg);
+  color: var(--color-primary-bold);
+}
+
+.error button {
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+}
+
+.filters {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+@media (max-width: 900px) {
+  .routeGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tierRow {
+    grid-template-columns: 1fr;
+  }
+
+  .modelSectionHead,
+  .panelHead,
+  .header,
+  .version {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .schedule {
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .root {
+    gap: 14px;
+  }
+
+  .header,
+  .panel {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .formGrid,
+  .routeGrid,
+  .filters {
+    grid-template-columns: 1fr;
+  }
+
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tabs button {
+    padding: 0 10px;
+  }
+}

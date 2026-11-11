@@ -1,0 +1,850 @@
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: color-mix(in srgb, var(--color-shadow) 70%, transparent);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 须高于 Characters/Scenes 批量进度遮罩（9999），否则「重新生成未完成」积分确认会被压住 */
+    z-index: 11000;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modalWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.deleteModal {
+    width: 760px;
+    min-height: 374px;
+    background: var(--color-surface);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--color-shadow) 10%, transparent);
+    min-width: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 红色顶部区域 */
+.modalHeader {
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 100%);
+    padding: 6px 32px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+}
+
+.headerContent {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.titleIcon {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.icon {
+    width: 32px;
+    height: 32px;
+    filter: var(--icon-invert-filter);
+}
+
+.title {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0;
+}
+
+/* 白色内容区域 */
+.modalBody {
+    padding: 20px 32px;
+    flex: 1;
+    gap: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: var(--color-surface);
+}
+
+.messageWrapper {
+    margin-bottom: 40px;
+    text-align: center;
+    max-width: 80%;
+}
+
+.message {
+    font-size: 24px;
+    color: var(--primary);
+    margin: 0;
+    text-align: center;
+    line-height: 1.6;
+    font-weight: 500;
+    /* 实现 弹窗文案换行显示 */
+    white-space: pre-line;
+}
+
+.buttonGroup {
+    display: flex;
+    gap: 24px;
+    width: 100%;
+    max-width: 600px;
+    justify-content: center;
+}
+
+.buttonGroupAlert {
+    max-width: 320px;
+}
+
+.alertModal {
+    width: min(720px, calc(100vw - 40px));
+    min-height: 320px;
+}
+
+.confirmButton,
+.cancelButton {
+    width: 260px;
+    height: 60px;
+    font-size: 18px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    outline: none;
+}
+
+.confirmButton {
+    background: var(--color-surface);
+    color: var(--color-primary-fg);
+    background-image: url('/data/assets/create/确认删除框.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.confirmButton:hover {
+    color: var(--color-on-media);
+    background-image: url('/data/assets/create/我再想想框.png');
+}
+
+.confirmButton:active {
+    transform: scale(0.98);
+}
+
+.cancelButton {
+    color: var(--color-on-media);
+    background-image: url('/data/assets/create/我再想想框.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.cancelButton:active {
+    transform: scale(0.98);
+}
+
+.closeButton {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+.closeButton img {
+    width: 60px;
+    height: 60px;
+    filter: var(--icon-invert-filter);
+}
+
+.closeButton:active {
+    transform: scale(0.95);
+}
+
+.closeButton:hover {
+    opacity: 0.8;
+}
+
+/* 移动端适配 (768px以下) */
+@media (max-width: 768px) {
+    .modalOverlay {
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    .modalWrapper {
+        width: auto;
+        max-width: calc(100vw - 40px);
+        box-sizing: border-box;
+    }
+
+    .deleteModal {
+        width: 95vw;
+        max-width: calc(100vw - 40px);
+        min-height: auto;
+        height: auto;
+        border-radius: 8px;
+        box-sizing: border-box;
+        min-width: 300px;
+    }
+
+    .modalHeader {
+        padding: 16px 20px;
+        min-height: 60px;
+    }
+
+    .titleIcon {
+        gap: 8px;
+    }
+
+    .icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .title {
+        font-size: 20px;
+    }
+
+    .modalBody {
+        padding: 20px 20px;
+        gap: 0px;
+    }
+
+    .messageWrapper {
+        margin-bottom: 30px;
+        max-width: 90%;
+    }
+
+    .message {
+        font-size: 16px;
+        line-height: 1.5;
+    }
+
+    .buttonGroup {
+        gap: 16px;
+        width: 100%;
+        max-width: 280px;
+    }
+
+    .confirmButton,
+    .cancelButton {
+        width: 100%;
+        height: 50px;
+        font-size: 16px;
+    }
+
+    .closeButton {
+        width: 36px;
+        height: 36px;
+    }
+
+    .closeButton img {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+/* 小屏幕手机适配 (480px以下) */
+@media (max-width: 480px) {
+    .deleteModal {
+        width: 90vw;
+        max-width: none;
+    }
+
+    .modalHeader {
+        padding: 14px 16px;
+    }
+
+    .title {
+        font-size: 18px;
+    }
+
+    .icon {
+        width: auto;
+        height: 30px;
+    }
+
+    .modalBody {
+        padding: 24px 16px;
+    }
+
+    .message {
+        font-size: 15px;
+    }
+
+    .buttonGroup {
+        max-width: 100%;
+    }
+
+    .confirmButton,
+    .cancelButton {
+        height: 48px;
+        font-size: 15px;
+    }
+}
+
+/* ========== dark tone：对齐兑换弹窗 / 个人中心墨黑酒红 ========== */
+.darkModal {
+    --confirm-accent: var(--color-primary);
+    --confirm-accent-hover: var(--color-primary);
+    --confirm-accent-deep: var(--color-primary-bold);
+    --confirm-muted: color-mix(in srgb, var(--color-on-media) 55%, transparent);
+    width: min(322px, calc(100vw - 20px));
+    max-width: 322px;
+    min-width: 0;
+    min-height: 0;
+    border-radius: 10px;
+    background:
+        linear-gradient(0deg, color-mix(in srgb, var(--color-text) 15%, transparent), color-mix(in srgb, var(--color-text) 15%, transparent)),
+        linear-gradient(180deg, var(--color-surface-2) 0%, color-mix(in srgb, var(--color-surface) 72%, transparent) 100%);
+    border: 0.68px solid transparent;
+    backdrop-filter: blur(47px);
+    -webkit-backdrop-filter: blur(47px);
+    box-shadow: none;
+    color: var(--color-text);
+    padding: 20px 18px 18px;
+    overflow: hidden;
+    position: relative;
+}
+
+.darkModal::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    padding: 0.68px;
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--color-surface) 55%, transparent) 0%,
+        color-mix(in srgb, var(--color-text) 18%, transparent) 60%,
+        transparent 90%
+    );
+    -webkit-mask:
+        linear-gradient(var(--color-surface) 0 0) content-box,
+        linear-gradient(var(--color-surface) 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.darkHeader {
+    position: relative;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    margin: 0 0 18px;
+    padding: 0;
+}
+
+.darkTitle {
+    margin: 4px 0 0;
+    padding: 0 40px;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--color-text);
+    letter-spacing: 0;
+    line-height: normal;
+    text-align: center;
+}
+
+.darkCloseButton {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--color-text);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+    z-index: 10;
+    transition: opacity 0.2s ease;
+}
+
+.darkCloseButton:hover {
+    opacity: 0.75;
+}
+
+.darkCloseIcon {
+    display: block;
+    width: 10px;
+    height: 10px;
+    border-left: 2px solid var(--color-text);
+    border-bottom: 2px solid var(--color-text);
+    transform: rotate(45deg);
+    margin-left: 4px;
+}
+
+.darkBody {
+    position: relative;
+    z-index: 4;
+    padding: 0;
+    gap: 16px;
+    background: transparent;
+    justify-content: flex-start;
+    align-items: stretch;
+}
+
+.darkMessageWrapper {
+    margin-bottom: 0;
+    max-width: 100%;
+    text-align: left;
+}
+
+.darkMessage {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--confirm-muted);
+    line-height: 1.55;
+    text-align: left;
+}
+
+.amountHighlight {
+    font-weight: 800;
+    color: var(--color-text);
+    letter-spacing: -0.01em;
+}
+
+.darkMessage .amountHighlight {
+    color: var(--color-text);
+}
+
+.darkButtonGroup {
+    max-width: none;
+    width: 100%;
+    gap: 10px;
+    flex-direction: column-reverse;
+    margin-top: 4px;
+}
+
+.darkConfirmButton,
+.darkCancelButton {
+    width: 100%;
+    height: auto;
+    min-height: 44px;
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 600;
+    background-image: none;
+}
+
+.darkConfirmButton {
+    background: var(--confirm-accent);
+    color: var(--color-on-primary);
+}
+
+.darkConfirmButton:hover {
+    background: var(--confirm-accent-hover);
+    color: var(--color-on-primary);
+    background-image: none;
+}
+
+.darkCancelButton {
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: color-mix(in srgb, var(--color-text) 85%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+
+.darkCancelButton:hover {
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
+    color: var(--color-text);
+}
+
+@media (max-width: 768px) {
+    .darkModal {
+        width: min(322px, calc(100vw - 20px));
+        max-width: 322px;
+        min-width: 0;
+        padding: 18px 16px 16px;
+        border-radius: 10px;
+    }
+
+    .darkTitle {
+        font-size: 16px;
+    }
+
+    .darkMessage {
+        font-size: 13px;
+    }
+
+    .darkButtonGroup {
+        max-width: none;
+    }
+
+    .darkConfirmButton,
+    .darkCancelButton {
+        width: 100%;
+        min-height: 44px;
+        font-size: 14px;
+    }
+}
+
+/* 功能注释：磨砂深色单按钮提示，默认确认框不走这套 */
+.glassModal {
+    --notice-accent: var(--color-primary-light);
+    --notice-accent-deep: var(--color-primary);
+    width: min(400px, calc(100vw - 32px));
+    max-width: 400px;
+    min-width: 0;
+    min-height: 0;
+    height: auto;
+    border-radius: 14px;
+    border: 0.68px solid transparent;
+    background:
+        linear-gradient(0deg, color-mix(in srgb, var(--color-text) 15%, transparent), color-mix(in srgb, var(--color-text) 15%, transparent)),
+        linear-gradient(180deg, var(--color-surface-2) 0%, color-mix(in srgb, var(--color-surface) 78%, transparent) 100%);
+    backdrop-filter: blur(47px);
+    -webkit-backdrop-filter: blur(47px);
+    box-shadow: none;
+    color: var(--color-text);
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+}
+
+.glassModal::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    padding: 0.68px;
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--color-surface) 55%, transparent) 0%,
+        color-mix(in srgb, var(--color-text) 18%, transparent) 60%,
+        transparent 90%
+    );
+    -webkit-mask:
+        linear-gradient(var(--color-surface) 0 0) content-box,
+        linear-gradient(var(--color-surface) 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.glassClose {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 4;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+}
+
+.glassClose:hover {
+    color: var(--color-text);
+}
+
+.glassHeader {
+    position: relative;
+    z-index: 1;
+    padding: 20px 48px 14px 20px;
+    text-align: left;
+}
+
+.glassHeader::after {
+    content: '';
+    display: block;
+    margin-top: 14px;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--color-text) 16%, transparent),
+        color-mix(in srgb, var(--color-text) 4%, transparent),
+        transparent
+    );
+}
+
+.glassTitle {
+    margin: 0;
+    color: var(--color-text);
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.35;
+    text-align: left;
+}
+
+.glassBody {
+    position: relative;
+    z-index: 1;
+    padding: 4px 20px 8px;
+    background: transparent;
+    display: block;
+}
+
+.glassMessage {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.7;
+    text-align: left;
+    white-space: pre-line;
+}
+
+.glassFooter {
+    position: relative;
+    z-index: 1;
+    padding: 12px 20px 18px;
+}
+
+.glassConfirm {
+    width: 100%;
+    min-height: 42px;
+    border: none;
+    border-radius: 999px;
+    background: var(--notice-accent-deep);
+    background-image: none;
+    color: var(--color-on-primary);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.glassConfirm:hover {
+    background: var(--color-primary-bold);
+    background-image: none;
+    color: var(--color-on-primary);
+}
+
+.glassClose:focus-visible,
+.glassConfirm:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
+    outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+    .glassModal {
+        width: min(400px, calc(100vw - 32px));
+        max-width: 400px;
+        min-width: 0;
+        min-height: 0;
+        border-radius: 14px;
+    }
+}
+
+/* 功能注释：管理后台暖色确认框，对齐评论 / 举报审核卡片 */
+.adminModal {
+    width: min(420px, calc(100vw - 32px));
+    max-width: 420px;
+    min-width: 0;
+    min-height: 0;
+    height: auto;
+    border-radius: 18px;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 55%, transparent);
+    background: color-mix(in srgb, var(--color-surface) 98%, transparent);
+    box-shadow: 0 18px 40px color-mix(in srgb, var(--color-highlight) 18%, transparent);
+    color: var(--color-text);
+    position: relative;
+    overflow: hidden;
+}
+
+.adminClose {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--color-highlight);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+}
+
+.adminClose:hover {
+    color: var(--color-text);
+}
+
+.adminHeader {
+    padding: 22px 48px 12px 22px;
+}
+
+.adminTitle {
+    margin: 0;
+    color: var(--color-text);
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.35;
+    text-align: left;
+}
+
+.adminBody {
+    padding: 0 22px 8px;
+}
+
+.adminMessage {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.7;
+    text-align: left;
+    white-space: pre-line;
+}
+
+.adminFooter {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding: 14px 22px 20px;
+}
+
+.adminCancel,
+.adminConfirm {
+    min-height: 40px;
+    min-width: 88px;
+    padding: 0 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    background-image: none;
+}
+
+.adminCancel {
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 55%, transparent);
+    background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+    color: var(--color-highlight);
+}
+
+.adminCancel:hover {
+    background: color-mix(in srgb, var(--color-highlight) 12%, transparent);
+    color: var(--color-text);
+}
+
+.adminConfirm {
+    border: none;
+    background: color-mix(in srgb, var(--color-highlight) 68%, var(--color-shadow));
+    color: var(--color-on-primary);
+}
+
+.adminConfirm:hover {
+    background: color-mix(in srgb, var(--color-highlight) 68%, var(--color-shadow));
+    color: var(--color-on-primary);
+    background-image: none;
+}
+
+.adminClose:focus-visible,
+.adminCancel:focus-visible,
+.adminConfirm:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-highlight) 45%, transparent);
+    outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+    .adminModal {
+        width: min(420px, calc(100vw - 32px));
+        max-width: 420px;
+        border-radius: 16px;
+    }
+
+    .adminFooter {
+        flex-direction: column-reverse;
+    }
+
+    .adminCancel,
+    .adminConfirm {
+        width: 100%;
+    }
+}
+
+/* ========== 统一卡片（default / dark / glass） ========== */
+.modalOverlay { padding: 20px; box-sizing: border-box; }
+.card {
+    position: relative;
+    width: min(380px, calc(100vw - 40px));
+    padding: 22px 20px 18px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 18px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    box-shadow: 0 24px 64px color-mix(in srgb, var(--color-shadow) 50%, transparent);
+}
+.cardClose {
+    position: absolute; top: 14px; right: 14px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent); color: var(--color-text-secondary);
+    font-size: 18px; line-height: 1; cursor: pointer;
+}
+.cardClose:hover { background: color-mix(in srgb, var(--color-text) 12%, transparent); color: var(--color-text); }
+.cardTitle { margin: 0 0 10px; padding-right: 36px; font-size: 17px; font-weight: 700; line-height: 1.4; }
+.cardMessage {
+    color: var(--color-text-secondary); font-size: 14px; line-height: 1.65;
+    white-space: pre-line; word-break: break-word;
+}
+.cardMessage .amountHighlight { color: var(--color-text); font-weight: 800; }
+.cardActions { display: flex; gap: 10px; margin-top: 20px; }
+.cardConfirm, .cardCancel {
+    flex: 1; height: 44px; border-radius: 12px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+}
+.cardConfirm { background: var(--color-primary); color: var(--color-on-primary); }
+.cardConfirm:hover { background: var(--color-primary-bold); color: var(--color-on-primary); }
+.cardCancel { background: color-mix(in srgb, var(--color-text) 7%, transparent); color: color-mix(in srgb, var(--color-text) 85%, transparent); }
+.cardCancel:hover { background: color-mix(in srgb, var(--color-text) 12%, transparent); }
+.cardConfirm:active, .cardCancel:active { transform: scale(0.98); }
+.cardConfirm:focus-visible, .cardCancel:focus-visible, .cardClose:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 60%, transparent); outline-offset: 2px;
+}

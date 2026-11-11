@@ -1,0 +1,10 @@
+.overlay { position: fixed; inset: 0; background: color-mix(in srgb, var(--color-shadow) 50%, transparent); z-index: 1001; display:flex; align-items:center; justify-content:center; }
+.modal { width: min(720px,92vw); max-height: 80vh; background:var(--color-surface); border-radius:12px; display:flex; flex-direction:column; }
+.header { padding:16px 20px; border-bottom:1px solid var(--color-border); display:flex; align-items:center; justify-content:space-between; }
+.title { font-weight:600; }
+.closeBtn { background:none; border:none; font-size:20px; cursor:pointer; }
+.body { padding:12px 20px; overflow:auto; }
+.summary { white-space: pre-wrap; color:var(--color-text); }
+.footer { padding:12px 20px 18px; border-top:1px solid var(--color-border); display:flex; gap:8px; justify-content:flex-end; }
+.btn { padding:8px 12px; border-radius:8px; border:1px solid var(--color-border); background:var(--color-surface); cursor:pointer; }
+.btnPrimary { background:var(--color-primary); border-color:var(--color-primary); color:var(--color-on-primary); }

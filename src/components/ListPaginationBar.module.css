@@ -1,0 +1,42 @@
+.paginationBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.pageSizeField {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.select {
+  min-width: 72px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  border-radius: 10px;
+  background: var(--color-surface);
+}
+
+.paginationWrap {
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.paginationSummaryOnly {
+  color: var(--admin-text-soft, var(--color-text-secondary));
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.paginationHint {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}

@@ -1,0 +1,322 @@
+/* 功能注释：举报面板对齐发布设置墨黑面 — #1A1A1A 面板、#1C1C1E 输入、酒红主按钮 */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3300;
+  background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.panel {
+  width: min(100%, 480px);
+  max-height: min(92vh, 720px);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -12px 40px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+  animation: sheetUp 0.28s ease-out;
+}
+
+@keyframes sheetUp {
+  from {
+    transform: translateY(24px);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  flex-shrink: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 650;
+  color: var(--color-text);
+}
+
+.closeBtn {
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.closeBtn:hover {
+  color: var(--color-text);
+}
+
+.closeBtn:focus-visible,
+.reasonItem:focus-visible,
+.addEvidence:focus-visible,
+.evidenceRemove:focus-visible,
+.submitBtn:focus-visible,
+.textarea:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.body {
+  padding: 12px 18px 8px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.hint {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.sectionLabel {
+  margin: 12px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
+}
+
+.specificBlock {
+  margin-top: 14px;
+}
+
+.requiredMark {
+  margin-left: 4px;
+  color: var(--color-primary-fg);
+}
+
+.reasonChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reasonItem {
+  display: inline-flex;
+  width: auto;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  border-radius: 8px;
+  padding: 7px 12px;
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.reasonItem:hover {
+  border-color: color-mix(in srgb, var(--color-text) 22%, transparent);
+}
+
+.reasonItemActive,
+.reasonItemActive:hover {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
+.reasonTitle {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.reasonItemActive .reasonTitle {
+  color: var(--color-primary-fg);
+}
+
+.reasonPreview {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
+.textareaWrap {
+  position: relative;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 72px;
+  resize: vertical;
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  border-radius: 10px;
+  padding: 10px 12px 28px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.charCount {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  margin: 0;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.evidenceRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.evidenceThumb {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.evidenceThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.evidenceRemove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-shadow) 62%, transparent);
+  color: var(--color-on-media);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.addEvidence {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 96px;
+  border: 1px dashed color-mix(in srgb, var(--color-text) 22%, transparent);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 34px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.addEvidenceBusy {
+  font-size: 12px;
+}
+
+.addEvidence:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+.addEvidence:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.footer {
+  padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  flex-shrink: 0;
+}
+
+.submitBtn {
+  width: 100%;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--color-on-primary);
+  background: var(--color-primary-bold);
+  cursor: pointer;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background: var(--color-primary);
+}
+
+.submitBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.loadingReasons {
+  padding: 24px 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+@media (min-width: 768px) {
+  .overlay {
+    align-items: center;
+  }
+
+  .panel {
+    border-radius: 0;
+    max-height: min(86vh, 680px);
+    animation: modalIn 0.22s ease-out;
+  }
+
+  @keyframes modalIn {
+    from {
+      transform: translateY(12px) scale(0.98);
+      opacity: 0.5;
+    }
+    to {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
+}

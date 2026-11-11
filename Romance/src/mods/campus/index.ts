@@ -1,0 +1,225 @@
+/* ═══════════════ 内置示例世界观 · 青藤校园（骨架） ═══════════════
+ * 用来证明「同一个壳可以换世界观」：少量地点 / 人物 / 世界书 / 提示片段 / 术语，
+ * 并通过功能开关关掉娱乐圈专属玩法（娱乐圈页签、周报、演艺事业、舆情）。
+ * 内容槽：八维改叫学科 / 素养、开局零花钱与开学日期、学习项目 / 兼职、
+ * 条件邂逅、支线、开场序章与资料库。未提供 map → 中性底色 + 自动铺点。 */
+import type { Mod } from "../types";
+
+const campusMod: Mod = {
+  id: "campus",
+  name: "青藤校园 · 骨架示例",
+  version: "0.1.0",
+  author: "内置示例",
+  description: "2005 年的重点高中：社团、考试与青涩心事。演示如何用模组替换世界观。",
+  kind: "world",
+  builtin: true,
+  content: {
+    travel: {
+      minutesPerHop: 6, feePerHop: 2, energyPerHop: 3, dayStartMinute: 390, dayEndMinute: 1320, defaultMode: "walk",
+      modes: [
+        { id: "walk", label: "走过去", fareMul: 0, timeMul: 1.6, note: "免费 · 校园不大，慢慢走" },
+        { id: "run", label: "小跑", fareMul: 0, timeMul: 0.9, note: "免费 · 快一点，但会累", icon: "walk" },
+        { id: "bike", label: "共享单车", fareMul: 0.5, timeMul: 0.6, note: "一块钱 · 最快" },
+      ],
+    },
+    startRoom: "dorm",
+    rooms: {
+      dorm: { name: "女生宿舍", desc: "四人间女生宿舍，上铺贴满了明星海报，窗外是梧桐。", exits: { n: "teaching" }, intro: "熄灯铃响过，走廊里还有人在打手电看小说。", items: [{ id: "c_diary", name: "带锁日记本", icon: "📓", desc: "钥匙藏在枕头底下。" }] },
+      teaching: { name: "教学楼", desc: "红砖教学楼，三楼走廊尽头是高二（3）班。", exits: { s: "dorm", e: "library", w: "field" } },
+      library: { name: "图书馆", desc: "安静的图书馆，靠窗那排座位总被同一个人占着。", exits: { w: "teaching" }, hours: "07:00-21:30" },
+      field: { name: "操场", desc: "塑胶操场，傍晚有篮球社在训练。", exits: { e: "teaching" } },
+    },
+    npcs: [
+      { id: "c_linxi", name: "林溪", role: "同桌 · 学习委员", kind: "staff", home: "teaching", roam: ["library"], bio: "成绩永远第一，却总在草稿纸背面画漫画。", gender: "女", age: 17, requires: [] },
+      { id: "c_shenye", name: "沈野", role: "篮球社社长", kind: "roam", home: "field", roam: ["teaching", "library"], bio: "张扬爱笑，被叫去办公室的次数和他的进球一样多。", gender: "男", age: 18, requires: [] },
+    ],
+    worldBook: [
+      { id: "c_wb_school", title: "青藤中学", keywords: [], content: "青藤中学是市重点高中，寄宿制，每月放一次月假。高二下学期分文理科，期末考决定是否进入实验班。", enabled: true, constant: true, order: 10 },
+      { id: "c_wb_club", title: "社团", keywords: ["社团", "篮球", "文学社"], content: "学校有篮球社、文学社、广播站三大社团，每周三下午活动。", enabled: true },
+    ],
+    prompt: {
+      gmIntro: "你是一款名为《青藤校园》的中文沉浸式校园养成模拟器的游戏主持（GM），文风为青春校园小说质感，清新、细腻、带一点遗憾与心动。",
+      worldIntro: "故事发生在 2005 年的一所寄宿制重点高中，主角是高二学生。不存在娱乐圈通告、片酬与经纪合约。",
+      terminology: "「社团活动」取代通告，「人缘」取代粉丝，「口碑」指老师同学的评价，「成绩」是主要事业线。",
+      openingDirective: "游戏开始，请写主角开学第一天的序章：交代她的家庭、为何转来青藤中学，以及第一次走进高二（3）班的场景，最后给出可选行动。",
+    },
+    terms: {
+      city: "青藤中学", industry: "校园", celebrity: "校园名人",
+      tabWorld: "校园", tabIndustry: "社团", tabNpc: "同学", tabPhone: "手机", tabImage: "形象", tabSim: "我",
+      hintWorld: "校园地图 · 四处走走", hintNpc: "同学老师 · 传纸条", hintSim: "属性 · 课表 · 成绩",
+      gig: "社团活动", fans: "人缘", reputation: "口碑", fame: "知名度", money: "零花钱", works: "奖状", advance: "下一天",
+    },
+    stats: {
+      labels: { yanji: "文学", geyi: "音乐", koucai: "表达", yitai: "气质", donggan: "运动", tineng: "体力", caizhi: "理科", zixin: "自信" },
+      base: { yanji: 60, geyi: 40, koucai: 50, yitai: 50, donggan: 50, tineng: 60, caizhi: 60, zixin: 45 },
+      order: ["caizhi", "yanji", "koucai", "geyi", "donggan", "tineng", "yitai", "zixin"],
+    },
+    startMoney: 300,
+    startDate: "2005.09.05",
+    weather: "晴",
+    trainings: [
+      { id: "c_math", name: "刷数学卷", effect: "理科 +3~5 · 自信 +1~2", gain: { caizhi: [3, 5], zixin: [1, 2] }, cost: 0, energy: 8, stress: 3 },
+      { id: "c_essay", name: "练作文", effect: "文学 +3~5 · 表达 +1~2", gain: { yanji: [3, 5], koucai: [1, 2] }, cost: 0, energy: 6, stress: 2 },
+      { id: "c_run", name: "晨跑", effect: "体力 +3~5 · 运动 +1~3", gain: { tineng: [3, 5], donggan: [1, 3] }, cost: 0, energy: 8, stress: -2 },
+      { id: "c_piano", name: "琴房练琴", effect: "音乐 +3~5 · 气质 +1~2", gain: { geyi: [3, 5], yitai: [1, 2] }, cost: 20, energy: 6, stress: 0 },
+      // —— 校园活动：除属性外还带知名度 / 口碑，是校园线「出名」的主要来源 ——
+      { id: "c_club", name: "社团活动", effect: "表达 +1~3 · 自信 +1~2 · 知名度 +1", gain: { koucai: [1, 3], zixin: [1, 2] }, cost: 0, energy: 8, stress: -1, fame: 1 },
+      { id: "c_radio", name: "广播站值班", effect: "表达 +2~3 · 音乐 +1~2 · 知名度 +1", gain: { koucai: [2, 3], geyi: [1, 2] }, cost: 0, energy: 6, stress: 1, fame: 1 },
+      { id: "c_speech", name: "演讲比赛备赛", effect: "表达 +2~4 · 自信 +1~3 · 口碑 +1", gain: { koucai: [2, 4], zixin: [1, 3] }, cost: 0, energy: 8, stress: 3, reputation: 1 },
+      { id: "c_volunteer", name: "班务 · 志愿服务", effect: "气质 +1~2 · 口碑 +1", gain: { yitai: [1, 2] }, cost: 0, energy: 6, stress: 1, reputation: 1 },
+    ],
+    sideJobs: [
+      { id: "c_job1", label: "奶茶店帮工", pay: 40, stress: 3, fameReq: 0, note: "周末下午，校门口那家" },
+      { id: "c_job2", label: "初中生家教", pay: 120, stress: 5, fameReq: 20, note: "成绩好才有人请" },
+    ],
+    encounters: [
+      { id: "c_enc_linxi_comic", personId: "c_linxi", label: "草稿纸背面", once: true, minRel: 15,
+        seed: "晚自习时你瞥见林溪草稿纸背面画着一整页漫画分镜，她慌忙用手捂住，又犹豫着推给你看。请描写这段小秘密被分享的瞬间。",
+        effects: { rel: 6, stress: -4 } },
+      { id: "c_enc_shenye_court", personId: "c_shenye", label: "篮球场边", once: true,
+        requires: [{ metric: "stats.donggan", op: "gte", value: 60, hint: "运动≥60" }],
+        seed: "傍晚操场，沈野把球传给你，起哄着让你投一个。请描写这一投，以及场边的哄笑和他看你的眼神。",
+        effects: { rel: 5, stress: -6 } },
+      { id: "c_enc_linxi_exam", personId: "c_linxi", label: "考前互抽", minRel: 30,
+        requires: [{ metric: "week", op: "gte", value: 4, hint: "第 4 周后" }],
+        seed: "月考前夜，林溪在图书馆拉你互相抽背知识点。请描写两人从紧张到笑场的过程。",
+        effects: { rel: 4, stress: -8 } },
+    ],
+    sideQuests: [
+      { id: "c_sq_club", code: "支线01", title: "社团招新日", condition: "开学第一周，操场摆满社团摊位",
+        scene: ["篮球社的摊位前围满了人，文学社却只有一张桌子和一摞油印社刊。", "「同学，来文学社看看吗？」一个戴眼镜的学姐有些局促地叫住你。"],
+        continuationKind: "自由续接", continuation: "主角可选择加入任一社团或都不加入；加入后每周三下午固定活动，不得同时加入超过两个社团。" },
+      { id: "c_sq_exam", code: "支线02", title: "月考放榜", condition: "第 4 周周五，走廊贴出月考排名",
+        scene: ["红纸黑字的排名表前挤满了人。", "你在名单上找到自己的名字，也看见了紧挨着的那个名字。"],
+        continuationKind: "续接", continuation: "名次由主角当前理科 / 文学数值决定，不得凭空拔高；可引出与同桌或对手的后续互动。" },
+    ],
+    help: {
+      intro: "青藤校园资料库：",
+      docs: [
+        { id: "c_help_attr", title: "属性说明", keywords: ["属性", "成绩", "理科", "文学"], body: "理科、文学决定考试成绩；运动、体力影响体育课与社团；表达、自信影响课堂发言与人缘。" },
+        { id: "c_help_money", title: "零花钱", keywords: ["零花钱", "钱", "兼职"], body: "每月月假家里给一次零花钱；周末可去奶茶店帮工或做家教补贴。" },
+      ],
+    },
+    opening: {
+      kicker: "✦ Prologue · 序章",
+      title: "转学生",
+      paragraphs: [
+        "二〇〇五年九月，{name}拖着行李箱站在青藤中学的校门口。梧桐叶刚开始泛黄，广播里放着走调的校歌。",
+        "这是她第一次离家住校。行李箱夹层里塞着妈妈偷偷放进去的 {money} 块零花钱，和一张写满叮嘱的纸条。",
+        "高二（3）班的门虚掩着，里面传来翻书和笑闹的声音。从推开这扇门开始，新的一年就算真正开始了。",
+      ],
+      waiting: "上课铃快响了。",
+      cta: "推开教室的门",
+    },
+    // —— 建角池 / 养成系统（新内容槽） ——
+    styles: [
+      { id: "c_fresh", name: "清爽马尾", tag: "元气", desc: "清爽利落，走到哪都元气满满", fx: { stats: { donggan: 10, zixin: 5 } } },
+      { id: "c_quiet", name: "文静书卷", tag: "书香", desc: "安静温和，总抱着一本书", fx: { stats: { yanji: 10, yitai: 5 } } },
+      { id: "c_cool", name: "清冷学霸", tag: "高冷", desc: "成绩拔尖，不太好接近", fx: { stats: { caizhi: 10, zixin: 5 } } },
+    ],
+    identities: [
+      { id: "c_transfer", name: "插班转学生", tag: "新面孔", desc: "刚转来的新面孔，大家都对你很好奇", fx: { stats: { zixin: -5 }, metrics: { fame: 5 } } },
+      { id: "c_local", name: "本校直升生", tag: "老熟人", desc: "从初中部直升，老师同学都认识你", fx: { metrics: { reputation: 5 } } },
+    ],
+    backgrounds: [
+      { id: "c_worker", name: "工薪家庭", tag: "踏实", desc: "父母都是上班族，家里踏实朴素", fx: { stats: { tineng: 10 } } },
+      { id: "c_teacher", name: "教师家庭", tag: "书香", desc: "父母是老师，家教严、书很多", fx: { stats: { yanji: 10, caizhi: 5 } } },
+      { id: "c_shop", name: "个体户家庭", tag: "精明", desc: "家里开小店，从小帮忙招呼客人", fx: { stats: { koucai: 10 } } },
+    ],
+    school: "青藤中学",
+    parentJobs: ["中学教师", "工厂技术员", "个体小卖部老板", "医院护士", "公交司机", "公务员", "出租车司机", "会计"],
+    creation: {
+      formIntro: "{year} · {season}，{school}。一页定型——锁住满意的（{lock}），其余随时重掷。",
+      identityLabel: "学籍身份",
+      identityOpts: ["高二（3）班转学生", "住校生", "走读生", "体育特长生", "广播站新人"],
+      backgroundOpts: ["普通工薪家庭", "小城书香门第", "单亲家庭长大", "父母在外地打工"],
+      klassOpts: ["普通家庭", "小康之家", "家境拮据"],
+      fixedAge: "17",
+      parentNote: "父母的职业会影响他们对你成绩与早恋的态度。",
+      cta: "开学报到",
+      seedDescription: "{name}，十七岁，刚转进青藤中学，书包里装着没写完的日记。",
+    },
+    weekendActs: [
+      { id: "freeroam", name: "校园闲逛", effect: "四处走走 · 压力 -6", icon: "", cost: 0, energy: 0, stress: -6 },
+      { id: "recuperate", name: "宿舍补觉", effect: "压力 -16", icon: "", cost: 0, energy: 34, stress: -16 },
+      { id: "c_netbar", name: "偷偷去网吧", effect: "压力 -12 · 口碑 -1", icon: "", cost: 10, energy: -6, stress: -12, reputation: -1 },
+      { id: "c_sports", name: "运动会 / 球赛加油", effect: "知名度 +2 · 压力 -4", icon: "", cost: 0, energy: -8, stress: -4, fame: 2 },
+      { id: "c_show", name: "社团汇演排练", effect: "知名度 +3 · 口碑 +1 · 压力 +2", icon: "", cost: 15, energy: -10, stress: 2, fame: 3, reputation: 1 },
+      { id: "c_study_group", name: "组织周末学习小组", effect: "口碑 +2", icon: "", cost: 0, energy: -8, stress: 2, reputation: 2 },
+    ],
+    fameTiers: [
+      { min: 0, label: "透明人", desc: "班里还有人叫不出你的名字" },
+      { min: 50, label: "班级熟面孔", desc: "同学都认识你" },
+      { min: 150, label: "年级红人", desc: "走廊里有人小声议论你" },
+      { min: 300, label: "校园风云人物", desc: "全校都知道你" },
+    ],
+    titles: [
+      { id: "c_t_known", name: "高二新生", tier: "青铜", req: { fame: 35 }, desc: "知名度 ≥ 35" },
+      { id: "c_t_award", name: "三好学生", tier: "白银", req: { reputation: 70 }, desc: "口碑 ≥ 70" },
+      { id: "c_t_star", name: "校园风云人物", tier: "黄金", req: { fame: 300 }, desc: "知名度 ≥ 300" },
+      { id: "c_t_year", name: "学年标兵", tier: "钻石", req: { fame: 200, reputation: 85 }, desc: "知名度 ≥ 200 且口碑 ≥ 85" },
+    ],
+    // —— 学年大事：到日期且属性达标即触发（AI 演绎），给出一次性的知名度 / 口碑奖励 ——
+    fixedEvents: [
+      { id: "c_fx_sports", name: "秋季运动会", time: { kind: "date", date: "2005.10.20" }, once: true,
+        conds: [{ kind: "stat", key: "donggan", op: "gte", value: 60 }],
+        prompt: "秋季运动会，主角代表高二（3）班出战 800 米。请描写起跑前的紧张、最后一圈全班的呐喊，以及冲线后被同学簇拥的场面。",
+        effects: [{ kind: "metric", key: "fame", delta: 20 }, { kind: "metric", key: "reputation", delta: 3 }] },
+      { id: "c_fx_midterm", name: "期中考试放榜", time: { kind: "date", date: "2005.11.11" }, once: true,
+        conds: [{ kind: "stat", key: "caizhi", op: "gte", value: 75 }],
+        prompt: "期中考试放榜，主角挤进年级前十，名字被写进教学楼一楼的光荣榜。请描写看榜时的心情与同学们的议论。",
+        effects: [{ kind: "metric", key: "fame", delta: 15 }, { kind: "metric", key: "reputation", delta: 4 }] },
+      { id: "c_fx_speech", name: "「青春与责任」演讲比赛", time: { kind: "date", date: "2005.12.02" }, once: true,
+        conds: [{ kind: "stat", key: "koucai", op: "gte", value: 70 }],
+        prompt: "全校演讲比赛决赛在礼堂举行，主角压轴登台。请描写开口前那一秒的空白、渐入佳境的语气和最后的掌声。",
+        effects: [{ kind: "metric", key: "fame", delta: 25 }, { kind: "metric", key: "reputation", delta: 3 }] },
+      { id: "c_fx_newyear", name: "元旦文艺晚会", time: { kind: "date", date: "2005.12.30" }, once: true,
+        conds: [{ kind: "stat", key: "geyi", op: "gte", value: 60 }],
+        prompt: "元旦晚会，主角的节目被排在倒数第二个。请描写后台的慌乱、聚光灯下的演出，以及散场后在走廊被陌生同学叫住的瞬间。",
+        effects: [{ kind: "metric", key: "fame", delta: 25 }] },
+      { id: "c_fx_final1", name: "期末考试", time: { kind: "date", date: "2006.01.18" }, once: true,
+        conds: [{ kind: "stat", key: "caizhi", op: "gte", value: 85 }],
+        prompt: "期末考试结束，主角拿到年级前列，获评「学习之星」。请描写领奖时的心情，以及林溪递过来的那张小纸条。",
+        effects: [{ kind: "metric", key: "fame", delta: 20 }, { kind: "metric", key: "reputation", delta: 5 }] },
+      { id: "c_fx_basket", name: "春季篮球联赛", time: { kind: "date", date: "2006.04.14" }, once: true,
+        conds: [{ kind: "metric", key: "fame", op: "gte", value: 80 }],
+        prompt: "春季篮球联赛决赛，主角被推举为啦啦队领队 / 场边解说。请描写沈野最后一记三分和全场沸腾，以及镜头扫到主角时的起哄。",
+        effects: [{ kind: "metric", key: "fame", delta: 20 }, { kind: "rel", key: "c_shenye", delta: 5 }] },
+      { id: "c_fx_final2", name: "学年期末 · 评优", time: { kind: "date", date: "2006.07.05" }, once: true,
+        conds: [{ kind: "metric", key: "reputation", op: "gte", value: 60 }],
+        prompt: "学年末评优，班主任在班会上念出主角的名字。请描写这一学年的回望，以及即将升入高三的心情。",
+        effects: [{ kind: "metric", key: "fame", delta: 20 }, { kind: "metric", key: "reputation", delta: 5 }] },
+    ],
+    endings: [
+      { id: "c_end_star", title: "青藤之光 · 圆满结局", body: "知名度与口碑兼得，毕业多年后，学弟学妹还在讲你的故事。", minDay: 300,
+        conds: [{ kind: "metric", key: "fame", op: "gte", value: 300 }, { kind: "metric", key: "reputation", op: "gte", value: 70 }] },
+      { id: "c_end_popular", title: "风云人物 · 青春结局", body: "全校都知道你的名字，那是最热闹也最闪亮的两年。", minDay: 300,
+        conds: [{ kind: "metric", key: "fame", op: "gte", value: 300 }] },
+    ],
+    npcPool: {
+      names: ["李想", "王静", "张晓雨", "刘洋", "陈思", "赵磊", "孙悦", "周婷", "吴昊", "郑佳"],
+      randomNames: ["李想", "王静", "张晓雨", "刘洋"],
+      directions: ["理科生", "文科生", "体育生", "艺术生"],
+      personalities: ["学霸", "活泼", "安静", "调皮", "热心"],
+      prefs: ["埋头刷题", "热衷社团", "爱打篮球", "爱看小说"],
+    },
+    /* 父母生活费：家境档位由「家庭背景 / 父母职业」关键词匹配；金额与协商成败全由代码结算，AI 只负责说话 */
+    allowance: {
+      everyWeeks: 4,
+      payer: "family-mother",
+      cooldownWeeks: 2,
+      tiers: [
+        { label: "拮据", match: ["司机", "工薪"], base: 300, negotiate: 0.25, bonus: 50 },
+        { label: "工薪", match: ["工厂", "技术员", "护士"], base: 450, negotiate: 0.4, bonus: 100 },
+        { label: "小康", match: ["教师", "会计", "公务员"], base: 600, negotiate: 0.5, bonus: 150 },
+        { label: "宽裕", match: ["老板", "个体"], base: 900, negotiate: 0.65, bonus: 300 },
+      ],
+    },
+    bills: {
+      weekly: [{ label: "食堂饭卡", amount: 60 }, { label: "校园卡充值", amount: 20 }],
+      monthly: [{ label: "住宿杂费", amount: 80 }] // 家里给的生活费改由 allowance 按家境结算,
+    },
+    features: { industryTab: false, weeklyPaper: false, career: false, imageCrisis: false, phone: true, phoneApps: ["wechat", "sms", "call", "settings", "appstore", "cloudmusic", "notes", "clock", "calculator", "weather", "pomodoro"], cars: false },
+  },
+};
+export default campusMod;

@@ -1,0 +1,231 @@
+/* 功能注释：语言选择弹窗 — 墨黑片 + 酒红选中，对齐 funloom 头像菜单层级 */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
+  backdrop-filter: blur(6px);
+  animation: langFadeIn 0.2s ease-out;
+}
+
+@keyframes langFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.sheet {
+  --lang-surface: var(--color-surface);
+  --lang-input: var(--color-surface);
+  --lang-accent: var(--color-primary-bold);
+  --lang-accent-hot: var(--color-primary);
+  width: min(420px, 100%);
+  margin: 0;
+  border-radius: 18px;
+  background: var(--lang-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  box-shadow: 0 20px 48px color-mix(in srgb, var(--color-shadow) 55%, transparent);
+  color: var(--color-text);
+  animation: langSheetUp 0.22s ease-out;
+  overflow: hidden;
+}
+
+@keyframes langSheetUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 10px;
+}
+
+.title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.closeBtn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  border-radius: 999px;
+  background: var(--lang-input);
+  color: var(--color-text-secondary);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.closeBtn:hover {
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-text) 28%, transparent);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 14px 18px;
+}
+
+.option {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  background: var(--lang-input);
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.option:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+  background: var(--color-surface-2);
+}
+
+.optionActive {
+  border-color: var(--lang-accent);
+  background: linear-gradient(135deg, var(--lang-accent-hot) 0%, var(--lang-accent) 100%);
+  color: var(--color-text);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+
+.optionActive:hover {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--lang-accent-hot) 100%);
+  border-color: var(--lang-accent-hot);
+}
+
+.optionLabel {
+  flex: 1;
+  min-width: 0;
+}
+
+.check {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 18%, transparent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (min-width: 769px) {
+  .overlay {
+    align-items: center;
+  }
+
+  .sheet {
+    margin-bottom: 0;
+    border-radius: 18px;
+  }
+}
+
+/* 功能注释：桌面端锚定在顶栏语言按钮下方的下拉菜单，不压暗整页 */
+.overlayAnchored {
+  display: block;
+  padding: 0;
+  background: transparent;
+  backdrop-filter: none;
+  animation: none;
+}
+
+.popover {
+  position: fixed;
+  width: 220px;
+  margin: 0;
+  border-radius: 14px;
+  animation: langPopIn 0.16s ease-out;
+  transform-origin: top right;
+}
+
+.popover .header {
+  padding: 12px 14px 6px;
+}
+
+.popover .title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.popover .closeBtn {
+  display: none;
+}
+
+.popover .options {
+  gap: 4px;
+  padding: 4px 8px 8px;
+}
+
+.popover .option {
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.popover .option:hover {
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  border-color: transparent;
+}
+
+.popover .optionActive,
+.popover .optionActive:hover {
+  background: linear-gradient(135deg, var(--lang-accent-hot) 0%, var(--lang-accent) 100%);
+}
+
+.popover .check {
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
+}
+
+@keyframes langPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

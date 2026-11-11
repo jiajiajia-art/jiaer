@@ -1,0 +1,6 @@
+/**
+ * Romance 独立 vite 调试：在 index.css（theme+utilities+业务）之上补 preflight。
+ * 嵌入 funloom 只走 index.css（见 virtual:romance-css），避免 preflight 洗主站。
+ */
+@import 'tailwindcss/preflight' layer(base);
+@import './index.css';

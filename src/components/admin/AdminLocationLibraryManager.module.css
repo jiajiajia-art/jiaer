@@ -1,0 +1,193 @@
+/* 运营地点库：暖色浅底，与公共头像管理同系 */
+
+.root {
+  --loc-ink: var(--color-highlight);
+  --loc-muted: var(--color-text-muted);
+  --loc-line: color-mix(in srgb, var(--color-highlight) 22%, transparent);
+  --loc-surface: color-mix(in srgb, var(--color-surface) 96%, transparent);
+  --loc-accent: var(--color-highlight);
+  --loc-danger: var(--color-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--loc-ink);
+}
+
+.header {
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: 1px solid var(--loc-line);
+  background: var(--loc-surface);
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.desc {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--loc-muted);
+  line-height: 1.5;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  border: 1px solid var(--loc-line);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  background: var(--color-surface);
+  color: var(--loc-ink);
+  box-sizing: border-box;
+}
+
+.textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.btn {
+  border: 1px solid var(--loc-line);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: var(--color-surface);
+  color: var(--loc-ink);
+  cursor: pointer;
+}
+
+.btnPrimary {
+  border: 1px solid var(--loc-accent);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--loc-accent) 68%, var(--color-shadow));
+  color: var(--color-on-primary);
+  cursor: pointer;
+}
+
+.btnDanger {
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: var(--color-surface);
+  color: var(--loc-danger);
+  cursor: pointer;
+}
+
+.grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+.card {
+  border: 1px solid var(--loc-line);
+  border-radius: 16px;
+  background: var(--loc-surface);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.thumb {
+  aspect-ratio: 9 / 16;
+  max-height: 180px;
+  width: 100%;
+  object-fit: cover;
+  background: var(--color-surface-2);
+}
+
+.body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--loc-muted);
+  line-height: 1.45;
+}
+
+.badge {
+  display: inline-flex;
+  align-self: flex-start;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--color-highlight) 12%, transparent);
+  color: var(--loc-accent);
+}
+
+.badgeOff {
+  display: inline-flex;
+  align-self: flex-start;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  color: var(--loc-danger);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.form {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--loc-line);
+  background: var(--loc-surface);
+}
+
+.formRow {
+  display: grid;
+  gap: 4px;
+}
+
+.label {
+  font-size: 12px;
+  color: var(--loc-muted);
+  font-weight: 600;
+}
+
+.empty {
+  padding: 28px;
+  text-align: center;
+  color: var(--loc-muted);
+  border: 1px dashed var(--loc-line);
+  border-radius: 16px;
+}

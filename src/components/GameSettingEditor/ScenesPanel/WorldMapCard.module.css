@@ -1,0 +1,134 @@
+.uploadWorldMapCard {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 4%, transparent);
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+/* 卡片头部 */
+.cardHead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.75rem;
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.cardHead h2 {
+    margin: 4px 0 0;
+    font-size: 1.6rem;
+    color: var(--color-text);
+    font-weight: 700;
+}
+
+.subtitle {
+    margin: 4px 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+}
+
+/* 场景大图 */
+.sceneHero {
+    width: 100%;
+    height: 280px;
+    border-radius: 20px;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: color-mix(in srgb, var(--color-text) 2%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.sceneHero.empty {
+    border-style: dashed;
+    background: color-mix(in srgb, var(--color-text) 2%, transparent);
+    color: var(--color-text-muted);
+}
+
+.heroHint {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: color-mix(in srgb, var(--color-shadow) 50%, transparent);
+    color: var(--color-on-media);
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    opacity: 0;
+    transition: 0.2s ease;
+    pointer-events: none;
+}
+
+.sceneHero:hover .heroHint {
+    opacity: 1;
+}
+
+/* 世界大地图操作区域（悬浮在预览盒子右上角） */
+.worldMapActions {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+}
+
+.worldMapActions button {
+    padding: 6px 12px;
+    border-radius: 999px;
+}
+
+/* 按钮样式 */
+.ghostSmall {
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: var(--color-text);
+    background: var(--color-surface);
+}
+
+.ghostSmall:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.ghostSmall:disabled:hover {
+    border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: var(--color-text);
+}
+
+/* AI生成按钮样式优化 */
+.generateButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.priceIcon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+

@@ -1,0 +1,191 @@
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    background-color: color-mix(in srgb, var(--color-shadow) 45%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1100;
+    padding: 16px;
+}
+
+.modal {
+    background-color: var(--color-surface);
+    border-radius: 16px;
+    padding: 20px 22px 16px;
+    min-width: 320px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 18px 45px color-mix(in srgb, var(--color-shadow) 18%, transparent);
+}
+
+.modalHeader {
+    margin-bottom: 16px;
+}
+
+.modalTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.modalBody {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.specialPriceHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.labelIcon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+}
+
+.priceInput {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--color-border);
+    font-size: 14px;
+    outline: none;
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    transition: all 0.2s ease;
+}
+
+.priceInput:focus {
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.priceInput:disabled {
+    background-color: var(--color-bg);
+    color: var(--color-text-secondary);
+    cursor: not-allowed;
+}
+
+.priceInput::placeholder {
+    color: var(--color-text-secondary);
+}
+
+.checkboxLabel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.freeCheckbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--color-primary-light);
+}
+
+.checkboxText {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    user-select: none;
+}
+
+.modalActions {
+    margin-top: 18px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.cancelBtn {
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-surface);
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cancelBtn:hover {
+    background-color: var(--color-bg);
+    border-color: var(--color-border);
+}
+
+.saveBtn {
+    padding: 6px 16px;
+    border-radius: 999px;
+    border: none;
+    background-color: var(--color-primary-light);
+    color: var(--color-on-primary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.saveBtn:hover {
+    background-color: var(--color-primary);
+}
+
+.cancelBtn:disabled,
+.saveBtn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .modalOverlay {
+        padding: 12px;
+    }
+
+    .modal {
+        min-width: 280px;
+        padding: 18px 20px 14px;
+    }
+
+    .modalTitle {
+        font-size: 16px;
+    }
+
+    .modalBody {
+        gap: 14px;
+    }
+
+    .label {
+        font-size: 13px;
+    }
+
+    .priceInput {
+        padding: 7px 11px;
+        font-size: 13px;
+    }
+
+    .modalActions {
+        margin-top: 16px;
+    }
+}

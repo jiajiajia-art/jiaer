@@ -1,0 +1,426 @@
+/* 详情区块 */
+.detailBlock {
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 16px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.collapsibleHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 8px 0;
+}
+
+.collapsibleHeader strong {
+    font-size: 1rem;
+    color: var(--color-text);
+}
+
+/* 按钮样式 */
+.primaryButton {
+    border-radius: 6px;
+    border: 1px solid var(--primary);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+    color: var(--color-text);
+    background: var(--primary);
+    flex-shrink: 0;
+}
+
+.primaryButton:hover {
+    background: color-mix(in srgb, var(--color-primary) 90%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 90%, transparent);
+}
+
+.primaryButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.saveButton {
+    border-radius: 6px;
+    border: 1px solid var(--primary);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+    color: var(--color-text);
+    background: var(--primary);
+    flex-shrink: 0;
+}
+
+.saveButton:hover {
+    background: color-mix(in srgb, var(--color-primary) 90%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 90%, transparent);
+}
+
+.ghostTiny {
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+    color: var(--color-text-secondary);
+    background: transparent;
+}
+
+.ghostTiny:hover:not(:disabled) {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: color-mix(in srgb, var(--color-primary) 5%, transparent);
+}
+
+.ghostTiny:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.ghostSmall {
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+    color: var(--color-text);
+    background: var(--color-surface);
+    flex-shrink: 0;
+}
+
+.ghostSmall:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: color-mix(in srgb, var(--color-primary) 5%, transparent);
+}
+
+.ghostSmall:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 属性列表 */
+.attributeList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mutedSmall {
+    color: var(--color-text-secondary);
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+/* 属性选择器 */
+.attributeSelector {
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 12px;
+    padding: 16px;
+    background: color-mix(in srgb, var(--color-text) 1%, transparent);
+    margin-bottom: 12px;
+}
+
+.attributeSelectorHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+    gap: 12px;
+}
+
+.attributeSelectorTitle {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.attributeSelectorTitle > span:first-child {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.attributeSelectorCount {
+    font-size: 0.8rem;
+    color: var(--primary);
+    font-weight: 500;
+}
+
+.attributeSelectorActions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.attributeSelectorList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+}
+
+.attributeSelectorItem {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s ease;
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    background: var(--color-surface);
+}
+
+.attributeSelectorItem:hover:not(.attributeSelectorItemDisabled) {
+    background: color-mix(in srgb, var(--color-primary) 3%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.attributeSelectorItemSelected {
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent) !important;
+    border-color: var(--primary) !important;
+}
+
+.attributeSelectorItemDisabled {
+    background: color-mix(in srgb, var(--color-text) 2%, transparent);
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.attributeSelectorItem input[type="checkbox"] {
+    margin-top: 2px;
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.attributeSelectorItem input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.attributeSelectorEmpty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--color-text-secondary);
+}
+
+.attributeSelectorEmpty p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.attributeSelectorEmptyHint {
+    margin-top: 8px !important;
+    font-size: 0.8rem !important;
+    color: var(--color-text-muted) !important;
+}
+
+.attributeSelectorItemContent {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.attributeSelectorItemName {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.attributeSelectorItemBadge {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.attributeSelectorItemMeta {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.attributeSelectorItemFormula {
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    background: color-mix(in srgb, var(--color-primary) 5%, transparent);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.attributeSelectorFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+/* 属性行 */
+.attributeRow {
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 14px;
+    padding: 10px;
+    background: color-mix(in srgb, var(--color-text) 1%, transparent);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: 0.2s ease;
+}
+
+.attributeRow:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 2%, transparent);
+}
+
+.attributeRowModified {
+    border-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 4%, transparent);
+}
+
+.attributeRowHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.attributeRowHeader span {
+    font-size: 0.9rem;
+    color: var(--color-text);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.newBadge {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--color-success) 15%, transparent);
+    color: var(--color-success);
+    font-weight: 600;
+}
+
+.modifiedBadge {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--color-highlight) 15%, transparent);
+    color: var(--color-highlight);
+    font-weight: 600;
+}
+
+.attributeRowFields {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.attributeRowField {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.attributeRowField label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.attributeRowField label span {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.attributeRowFieldInput {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.attributeRowField input[type="number"],
+.attributeRowField input[type="text"] {
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    padding: 8px 10px;
+    background: color-mix(in srgb, var(--color-text) 1.5%, transparent);
+    color: var(--color-text);
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: 0.2s ease;
+    flex: 1;
+    box-sizing: border-box;
+}
+
+.attributeRowField input[type="number"]:focus,
+.attributeRowField input[type="text"]:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.attributeRowUnit {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* 响应式布局 */
+@media (max-width: 720px) {
+    .attributeSelector {
+        padding: 12px;
+    }
+
+    .attributeSelectorList {
+        max-height: 200px;
+    }
+
+    .attributeRowFields {
+        gap: 8px;
+    }
+
+    .attributeRowFieldInput {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .attributeRowUnit {
+        text-align: right;
+    }
+}
+

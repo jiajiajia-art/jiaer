@@ -1,0 +1,51 @@
+/* ============================================================
+   ColoredMarkdownText 样式
+   统一的颜色标签和光标样式
+   ============================================================ */
+
+/* 颜色标签样式 */
+.colorRed {
+    color: var(--color-primary-fg) !important;
+    font-weight: 500;
+}
+
+.colorYellow {
+    color: var(--color-highlight) !important;
+    font-weight: 500;
+}
+
+.colorGreen {
+    color: var(--color-success) !important;
+    font-weight: 500;
+}
+
+.colorBlue {
+    color: var(--color-info) !important;
+    font-weight: 500;
+}
+
+.colorPurple {
+    color: var(--color-accent) !important;
+    font-weight: 500;
+}
+
+/* 打字光标样式 */
+.cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1.2em;
+    background-color: currentColor;
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    animation: blink 0.8s infinite;
+}
+
+@keyframes blink {
+    0%, 50% {
+        opacity: 1;
+    }
+    51%, 100% {
+        opacity: 0;
+    }
+}
+

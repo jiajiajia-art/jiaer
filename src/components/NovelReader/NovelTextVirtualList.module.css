@@ -1,0 +1,6 @@
+.scroller {
+  max-height: min(70vh, 52rem);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 1rem;
+}

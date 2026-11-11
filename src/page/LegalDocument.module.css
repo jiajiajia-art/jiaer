@@ -1,0 +1,176 @@
+.page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 48px 20px 72px;
+  color: var(--color-text);
+  background: var(--color-bg);
+  overflow-wrap: anywhere;
+  -webkit-text-size-adjust: 100%;
+}
+
+.document {
+  width: min(920px, 100%);
+  margin: 0 auto;
+  padding: 44px 52px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+  border-radius: 18px;
+  background: var(--color-surface);
+  box-shadow: 0 18px 48px color-mix(in srgb, var(--color-highlight) 8%, transparent);
+  font-size: 16px;
+  line-height: 1.85;
+}
+
+.backBar {
+  display: none;
+  width: min(920px, 100%);
+  margin: 0 auto 8px;
+}
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px 0 6px;
+  border: 0;
+  border-radius: 12px;
+  color: var(--color-highlight);
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.backButton svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+
+.backButton:hover {
+  color: var(--color-highlight);
+  background: color-mix(in srgb, var(--color-highlight) 10%, transparent);
+}
+
+.backButton:active {
+  background: color-mix(in srgb, var(--color-highlight) 16%, transparent);
+}
+
+.backButton:focus-visible {
+  outline: 2px solid var(--color-highlight);
+  outline-offset: 2px;
+}
+
+.document h1,
+.document h2,
+.document h3 {
+  color: var(--color-text);
+  line-height: 1.4;
+}
+
+.document h1 {
+  margin: 0 0 28px;
+  font-size: clamp(28px, 4vw, 38px);
+}
+
+.document h2 {
+  margin: 36px 0 16px;
+  font-size: 24px;
+}
+
+.document h3 {
+  margin: 28px 0 12px;
+  font-size: 19px;
+}
+
+.document p,
+.document ul,
+.document ol {
+  margin: 0 0 16px;
+}
+
+.document ul,
+.document ol {
+  padding-left: 1.45em;
+}
+
+.document li + li {
+  margin-top: 8px;
+}
+
+.document a {
+  color: var(--color-highlight);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.document strong {
+  color: var(--color-text);
+}
+
+@media (max-width: 767px) {
+  .page {
+    padding-block-start: max(16px, env(safe-area-inset-top));
+    padding-inline-end: max(12px, env(safe-area-inset-right));
+    padding-block-end: calc(36px + env(safe-area-inset-bottom));
+    padding-inline-start: max(12px, env(safe-area-inset-left));
+  }
+
+  .backBar {
+    display: block;
+  }
+
+  .document {
+    padding: 24px 20px calc(32px + env(safe-area-inset-bottom));
+    border-radius: 16px;
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--color-highlight) 7%, transparent);
+    font-size: 16px;
+    line-height: 1.75;
+  }
+
+  .document h1 {
+    margin-bottom: 22px;
+    font-size: clamp(26px, 7.2vw, 32px);
+  }
+
+  .document h2 {
+    margin-top: 30px;
+    margin-bottom: 12px;
+    font-size: clamp(20px, 5.7vw, 23px);
+  }
+
+  .document h3 {
+    margin-top: 24px;
+    margin-bottom: 10px;
+    font-size: 18px;
+  }
+
+  .document p,
+  .document ul,
+  .document ol {
+    margin-bottom: 14px;
+  }
+
+  .document li + li {
+    margin-top: 6px;
+  }
+}
+
+@media (max-width: 374px) {
+  .page {
+    padding-inline-end: max(8px, env(safe-area-inset-right));
+    padding-inline-start: max(8px, env(safe-area-inset-left));
+  }
+
+  .document {
+    padding-inline: 16px;
+  }
+
+  .document h1 {
+    font-size: 26px;
+  }
+}

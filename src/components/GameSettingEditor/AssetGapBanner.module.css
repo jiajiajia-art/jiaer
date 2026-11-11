@@ -1,0 +1,271 @@
+/* 功能注释：素材进度账本 — 墨黑底 + 竖脊，禁止浅绿/浅红糖纸卡和折行双列 */
+
+.banner {
+  --gap-surface: var(--color-surface);
+  --gap-input: var(--color-surface);
+  --gap-accent: var(--color-primary-bold);
+  --gap-accent-hot: var(--color-primary);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--gap-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  color: var(--color-text);
+}
+
+.bannerGenerating {
+  background: var(--gap-surface);
+  border-color: color-mix(in srgb, var(--color-text) 10%, transparent);
+  box-shadow: none;
+}
+
+.icon {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  margin-top: 6px;
+  border-radius: 2px;
+  background: var(--gap-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+
+.bannerGenerating .icon {
+  animation: none;
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.percentBadge {
+  flex-shrink: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--color-text);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.message {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.pipeline {
+  margin-top: 14px;
+}
+
+.track {
+  height: 2px;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  overflow: hidden;
+}
+
+.trackFill {
+  height: 100%;
+  border-radius: 0;
+  background: var(--gap-accent-hot);
+  transition: width 0.35s ease;
+}
+
+.steps {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.step {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  min-height: 0;
+}
+
+.stepIndex {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.stepCopy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stepLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--color-text) 78%, transparent);
+}
+
+.stepMeta {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.stepDone .stepIndex {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--color-text) 28%, transparent);
+  color: var(--color-text-secondary);
+}
+
+.stepDone .stepLabel {
+  color: var(--color-text-secondary);
+}
+
+.stepActive {
+  background: var(--gap-input);
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  box-shadow: inset 3px 0 0 var(--gap-accent);
+}
+
+.stepActive .stepIndex {
+  background: var(--gap-accent);
+  border-color: var(--gap-accent);
+  color: var(--color-on-primary);
+}
+
+.stepActive .stepLabel {
+  color: var(--color-text);
+}
+
+.stepActive .stepMeta {
+  color: var(--color-text-secondary);
+}
+
+.stepFailed {
+  background: var(--gap-input);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.stepFailed .stepIndex {
+  background: var(--gap-accent-hot);
+  border-color: var(--gap-accent-hot);
+  color: var(--color-on-primary);
+}
+
+.nowLine {
+  margin: 10px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.linkBtn {
+  border: 1px solid color-mix(in srgb, var(--color-primary) 70%, transparent);
+  background: transparent;
+  color: var(--color-primary-fg);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.linkBtn:hover {
+  background: var(--gap-accent);
+  color: var(--color-on-primary);
+  border-color: var(--gap-accent);
+}
+
+.close {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  border-radius: 999px;
+  background: var(--gap-input);
+  font-size: 20px;
+  line-height: 1;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close:hover {
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-text) 28%, transparent);
+}
+
+@media (max-width: 640px) {
+  .steps {
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: none;
+  }
+
+  .percentBadge {
+    font-size: 16px;
+  }
+}

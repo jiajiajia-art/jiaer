@@ -1,0 +1,386 @@
+/* ============================================
+   Game Settings Editor — funloom 暗色创作壳（对齐 TXT 创建图 2/3）
+   ============================================ */
+
+.appShell {
+    --primary: var(--color-primary);
+    --primary-light: var(--color-primary);
+    --primary-dark: var(--color-primary-bold);
+    --editor-bg: var(--color-bg);
+    --editor-surface: var(--color-surface);
+    --editor-input: var(--color-surface);
+    --editor-border: color-mix(in srgb, var(--color-text) 10%, transparent);
+    --editor-text: var(--color-text);
+    --editor-muted: var(--color-text-secondary);
+    --text-primary: var(--color-text);
+    --text-secondary: var(--color-text-secondary);
+    --text-muted: var(--color-text-muted);
+    --border-light: color-mix(in srgb, var(--color-text) 8%, transparent);
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    /* 功能注释：PC 无全站顶栏，创作壳占满视口；手机再为 Navbar 留高 */
+    height: 100vh;
+    margin-top: 0;
+    background: var(--editor-bg);
+    color: var(--editor-text);
+}
+
+/* 功能注释：PC 隐藏全站 Navbar；≤768 显示（TXT 移动创作仍要统一顶栏） */
+.editorNavbar {
+    display: none;
+}
+
+.main {
+    flex: 1;
+    min-width: 0;
+    /* 功能注释：顶栏 / 素材账本 / 步骤面板按 12px 叠卡，禁止 40+28 的落地页留白 */
+    padding: 16px 48px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+    position: relative;
+    background: var(--editor-bg);
+}
+
+/* 顶部标题栏 — CSS Grid：桌面「标题|按钮 + 轨通栏」；窄屏「标题→轨→按钮」8px 贴紧 */
+.topBar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+        "titles actions"
+        "rail rail";
+    column-gap: 16px;
+    row-gap: 8px;
+    align-items: start;
+    flex: 0 0 auto;
+    height: auto;
+    min-height: 0;
+    padding: 12px 16px 10px;
+    border: 1px solid var(--editor-border);
+    border-radius: 18px;
+    background: var(--editor-surface);
+    position: relative;
+}
+
+.topBar::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 18px;
+    width: 120px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary-dark), transparent);
+    border-radius: 1px;
+}
+
+.topBarTitles {
+    grid-area: titles;
+    min-width: 0;
+}
+
+.topBarRail {
+    grid-area: rail;
+    min-width: 0;
+}
+
+.topBar h1 {
+    margin: 4px 0 0;
+    font-size: clamp(1.75rem, 2.8vw, 2.25rem);
+    color: var(--editor-text);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.subtitle {
+    margin: 10px 0 0;
+    color: var(--editor-muted);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    width: 100%;
+    max-width: none;
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-size: 0.72rem;
+    color: var(--primary);
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.eyebrow::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: var(--primary-dark);
+    border-radius: 2px;
+    transform: rotate(45deg);
+}
+
+/* 顶部操作按钮组 */
+.topActions {
+    grid-area: actions;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    align-self: center;
+    flex-wrap: wrap;
+    margin: 0;
+}
+
+.primary {
+    border-radius: 999px;
+    border: none;
+    padding: 12px 28px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--color-text);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--color-primary) 35%, transparent);
+    position: relative;
+    overflow: hidden;
+}
+
+.primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 0%, color-mix(in srgb, var(--color-text) 10%, transparent) 100%);
+    opacity: 0;
+    transition: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.primary:hover::before {
+    opacity: 1;
+}
+
+.primary:active {
+    transform: translateY(0);
+}
+
+.primary:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none;
+    box-shadow: none;
+}
+
+.ghost {
+    border-radius: 999px;
+    border: 1.5px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+    padding: 11px 22px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--editor-text);
+    background: var(--color-surface);
+    box-shadow: none;
+}
+
+.ghost:hover {
+    border-color: var(--primary);
+    color: var(--color-on-primary);
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+
+.ghost:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none;
+    box-shadow: none;
+}
+
+/* 面板容器 */
+.panel {
+    display: none;
+    flex-direction: column;
+    min-width: 0;
+    gap: 12px;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.panel.active {
+    display: flex;
+}
+
+.miniProgramShell {
+    min-height: 100vh;
+}
+
+.miniProgramMain {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+}
+
+.miniProgramTopBar {
+    gap: 16px;
+}
+
+.miniProgramTopActions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 响应式布局 */
+@media (max-width: 1080px) {
+    .appShell {
+        flex-direction: column;
+    }
+
+    .main {
+        padding: 14px 20px;
+    }
+}
+
+@media (max-width: 720px) {
+    .topBar {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "titles"
+            "rail"
+            "actions";
+        row-gap: 8px;
+        padding: 12px 12px 12px;
+    }
+
+    .topActions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        align-self: stretch;
+    }
+
+    .topActions .ghost,
+    .topActions .primary {
+        width: 100%;
+        min-width: 0;
+        justify-content: center;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .topBar h1 {
+        font-size: 1.45rem;
+    }
+    .main {
+        padding: 12px 16px calc(88px + env(safe-area-inset-bottom));
+        gap: 10px;
+    }
+
+    .miniProgramMain {
+        padding: 18px 14px calc(104px + env(safe-area-inset-bottom));
+    }
+
+    .miniProgramTopBar {
+        padding-bottom: 12px;
+    }
+
+    .miniProgramTopActions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .miniProgramTopActions .ghost,
+    .miniProgramTopActions .primary {
+        width: 100%;
+        min-width: 0;
+        padding-left: 10px;
+        padding-right: 10px;
+        justify-content: center;
+    }
+}
+
+/* TXT 创建移动端：页头 + 圆形步进，隐藏旧侧栏/顶栏（对齐效果图） */
+.txtCreateMobileHeader {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .editorNavbar {
+        display: block;
+    }
+
+    .appShell {
+        height: calc(100vh - var(--app-desktop-navbar-height));
+        margin-top: var(--app-desktop-navbar-height);
+    }
+
+    .txtCreateShell > aside {
+        display: none !important;
+    }
+
+    .txtCreateMobileHeader {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 2px 6px;
+        min-height: 40px;
+    }
+
+    .txtCreateBack {
+        width: 36px;
+        height: 36px;
+        border: none;
+        border-radius: 50%;
+        background: transparent;
+        color: var(--color-text);
+        font-size: 1.75rem;
+        line-height: 1;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 0 2px;
+    }
+
+    .txtCreateTitle {
+        margin: 0;
+        flex: 1;
+        text-align: center;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--color-text);
+        padding-right: 36px;
+    }
+
+    .txtCreateHideOnMobile {
+        display: none !important;
+    }
+
+    .txtCreateMain {
+        padding: 12px 12px calc(24px + env(safe-area-inset-bottom));
+        gap: 10px;
+    }
+
+    .txtCreateShell {
+        flex-direction: column;
+    }
+}

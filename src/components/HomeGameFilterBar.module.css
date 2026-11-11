@@ -1,0 +1,309 @@
+.bar {
+    position: relative;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+    /* 功能注释：筛选条上边距；下边距由首页 shopSection 用一半值承接 */
+    margin-top: var(--home-filter-gap-above, 16px);
+    padding: 10px 16px;
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    background: var(--color-surface);
+    box-shadow: none;
+    overflow: visible;
+}
+
+.group {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.groupWide {
+    min-width: 0;
+    flex: 0 1 auto;
+}
+
+.divider {
+    width: 1px;
+    height: 24px;
+    margin: 0 6px;
+    background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-text) 16%, transparent) 24%, color-mix(in srgb, var(--color-text) 16%, transparent) 76%, transparent 100%);
+    flex: 0 0 auto;
+}
+
+.trigger {
+    min-height: 44px;
+    max-width: 100%;
+    padding: 0 14px;
+    border: none;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    color: var(--color-text);
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}
+
+.trigger:hover {
+    color: var(--color-text);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.triggerOpen,
+.triggerChanged {
+    color: var(--color-text);
+}
+
+.triggerChanged {
+    background: color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.triggerOpen {
+    transform: translateY(-1px);
+}
+
+.triggerText {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.triggerArrow {
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: currentColor;
+    transition: transform 0.2s ease;
+}
+
+.triggerOpen .triggerArrow {
+    transform: rotate(180deg);
+}
+
+.triggerArrow svg {
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.menu {
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 0;
+    min-width: 188px;
+    max-height: min(55vh, 420px);
+    padding: 10px;
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    display: grid;
+    gap: 6px;
+    background: var(--color-surface);
+    box-shadow: 0 20px 44px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+    overflow-y: auto;
+}
+
+.menuWide {
+    /* Let the script clamp the tag menu to the visible viewport. */
+    min-width: min(300px, 76vw);
+    left: 0;
+    right: auto;
+}
+
+.groupWide .trigger {
+    max-width: min(220px, 32vw);
+}
+
+.menuItem {
+    width: 100%;
+    padding: 12px 14px;
+    border: none;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.menuItem:hover {
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--color-text);
+}
+
+.menuItemActive {
+    background: color-mix(in srgb, var(--color-primary) 40%, transparent);
+    color: var(--color-primary-fg);
+}
+
+.menuItemLabel {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.menuItemCheck {
+    flex: 0 0 auto;
+    color: var(--color-primary-fg);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.quickFilter {
+    min-height: 44px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    background: transparent;
+    color: var(--color-text);
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}
+
+.quickFilter:hover {
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.quickFilterActive {
+    color: var(--color-on-primary);
+    background: var(--color-primary-bold);
+}
+
+.trigger:focus-visible,
+.menuItem:focus-visible,
+.quickFilter:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 70%, transparent);
+    outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+    .bar {
+        margin-top: var(--home-filter-gap-above, 16px);
+        padding: 6px 10px;
+        border-radius: 14px;
+        border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+        flex-wrap: nowrap;
+        background: var(--color-surface);
+        box-shadow: none;
+        overflow: visible;
+    }
+
+    .group {
+        flex: 0 1 auto;
+        min-width: 0;
+    }
+
+    .group:last-child {
+        flex: 0 0 auto;
+    }
+
+    .groupWide {
+        flex: 0 1 auto;
+        min-width: 0;
+    }
+
+    .divider {
+        height: 20px;
+        margin: 0 4px;
+        flex: 0 0 auto;
+        background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-text) 14%, transparent) 18%, color-mix(in srgb, var(--color-text) 14%, transparent) 82%, transparent 100%);
+    }
+
+    .trigger {
+        min-height: 38px;
+        max-width: 100%;
+        padding: 0 8px;
+        color: var(--color-text);
+        font-size: 14px;
+        background: transparent;
+    }
+
+    .trigger:hover {
+        color: var(--color-text);
+        background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    }
+
+    .triggerChanged {
+        color: var(--color-primary-fg);
+        background: color-mix(in srgb, var(--color-primary) 40%, transparent);
+    }
+
+    .menu {
+        top: calc(100% + 10px);
+        min-width: 168px;
+        border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+        background: var(--color-surface);
+        box-shadow: 0 16px 32px color-mix(in srgb, var(--color-shadow) 50%, transparent);
+    }
+
+    .menuWide {
+        min-width: min(280px, calc(100vw - 48px));
+        max-width: calc(100vw - 32px);
+    }
+
+    .groupWide .trigger {
+        max-width: min(108px, 28vw);
+    }
+
+    .quickFilter {
+        flex-shrink: 0;
+        min-height: 38px;
+        padding: 0 8px;
+        font-size: 14px;
+    }
+
+    .menuItem {
+        color: var(--color-text-secondary);
+    }
+
+    .menuItem:hover {
+        background: color-mix(in srgb, var(--color-text) 6%, transparent);
+        color: var(--color-text);
+    }
+
+    .menuItemActive {
+        background: color-mix(in srgb, var(--color-primary) 45%, transparent);
+        color: var(--color-primary-fg);
+    }
+
+    .menuItemCheck {
+        color: var(--color-primary-fg);
+    }
+
+    .trigger:focus-visible,
+    .menuItem:focus-visible,
+    .quickFilter:focus-visible {
+        outline: 2px solid color-mix(in srgb, var(--color-primary) 70%, transparent);
+    }
+}

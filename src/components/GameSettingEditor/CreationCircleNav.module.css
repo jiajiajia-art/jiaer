@@ -1,0 +1,108 @@
+/* 功能注释：TXT 移动端步进对齐效果图——横胶囊炭黑内高光 / 当前莓红白标 / 未到莓红图标 */
+
+.nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .nav {
+    /* Stadium Capsule：横排均分，胶囊底与标签垂直节奏固定 */
+    --circle-nav-accent: var(--color-primary);
+    --circle-nav-accent-deep: var(--color-primary);
+    --circle-nav-idle-bg: var(--color-surface);
+    --circle-nav-rim: inset 0 1px 0 color-mix(in srgb, var(--color-text) 14%, transparent);
+    --circle-nav-rim-strong: inset 0 1px 0 color-mix(in srgb, var(--color-text) 22%, transparent);
+
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 4px;
+    width: 100%;
+    padding: 8px 2px 14px;
+    box-sizing: border-box;
+  }
+
+  .item {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--circle-nav-accent);
+  }
+
+  .iconWrap {
+    /* 效果图：宽于高的圆角胶囊，非正圆；炭黑面 + 顶缘内高光 */
+    width: 56px;
+    height: 40px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--circle-nav-idle-bg);
+    box-shadow: var(--circle-nav-rim);
+    border: none;
+    color: var(--circle-nav-accent);
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  }
+
+  .icon {
+    display: block;
+  }
+
+  /* 角色/场景步进：切图等比居中，勿被 currentColor 染色 */
+  .assetIcon,
+  .sceneIcon {
+    display: block;
+    width: 22px;
+    height: auto;
+    object-fit: contain;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--color-text);
+    white-space: nowrap;
+  }
+
+  /* 已走过：略深莓红底 + 白图标，同胶囊形与内高光 */
+  .itemDone .iconWrap {
+    background: var(--circle-nav-accent-deep);
+    color: var(--color-on-primary);
+    box-shadow: var(--circle-nav-rim);
+  }
+
+  /* 当前步：实心莓红 + 内高光，禁止外发光与尺寸跳动 */
+  .itemActive .iconWrap {
+    width: 56px;
+    height: 40px;
+    background: var(--circle-nav-accent);
+    color: var(--color-on-primary);
+    box-shadow: var(--circle-nav-rim-strong);
+    transform: none;
+  }
+
+  .itemActive .label {
+    color: var(--color-text);
+    font-weight: 700;
+  }
+
+  .itemDisabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  .item:not(.itemActive):not(.itemDisabled):hover .iconWrap {
+    filter: brightness(1.1);
+  }
+}

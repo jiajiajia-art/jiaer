@@ -1,0 +1,138 @@
+/**
+ * 局内改名展示层：禁止短别名把已是目标名的正文扩成叠字（白白→白白白白）。
+ */
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { test } from 'node:test';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const overlayPath = join(root, 'src/lib/galgame/npcNameOverlay.ts');
+
+test('rewriteTextByMap_短别名不叠已有目标名', async () => {
+  const { rewriteTextByMap, buildPlayerNameReplacementMap, collapseStackedDisplayNames } = await import(
+    '../src/lib/galgame/npcNameOverlay.ts'
+  );
+  const map = buildPlayerNameReplacementMap({
+    currentName: '白白',
+    aliases: ['白', '玩家'],
+  });
+  assert.equal(
+    rewriteTextByMap('白白白白走到沙发旁坐下', map),
+    '白白走到沙发旁坐下',
+  );
+  assert.equal(
+    rewriteTextByMap('白白走到沙发旁坐下', map),
+    '白白走到沙发旁坐下',
+  );
+  assert.equal(
+    rewriteTextByMap('白走到沙发旁坐下', map),
+    '白白走到沙发旁坐下',
+  );
+  assert.equal(
+    rewriteTextByMap('玩家主动走到张导面前', map),
+    '白白主动走到张导面前',
+  );
+  // 别名不是「白」半字时，LLM 叠写仍应收成单次现用名
+  assert.equal(
+    rewriteTextByMap('白白白白先向大家做个自我介绍', [
+      { from: '玩家', to: '白白' },
+    ]),
+    '白白先向大家做个自我介绍',
+  );
+  assert.equal(
+    collapseStackedDisplayNames('白白白白先向大家做个自我介绍', ['白白']),
+    '白白先向大家做个自我介绍',
+  );
+  assert.equal(
+    collapseStackedDisplayNames('白白先向大家', ['白', '白白']),
+    '白白先向大家',
+  );
+});
+
+test('rewriteDossierTextFields_档案简介随玩家现用名替换', async () => {
+  const { buildPlayerNameReplacementMap, rewriteDossierTextFields } = await import(
+    '../src/lib/galgame/npcNameOverlay.ts'
+  );
+  const map = buildPlayerNameReplacementMap({
+    currentName: '白白',
+    aliases: ['苏晚', '玩家'],
+  });
+  const rewritten = rewriteDossierTextFields({
+    id: 'npc-1',
+    name: '洛辰',
+    summary: '洛辰是苏晚的助理，对苏晚忠心耿耿。',
+    detailedBio: '私下里会叫苏晚「姐」。',
+    attitudeToPlayer: '对苏晚亲近',
+    relationship: '苏晚的助理',
+  }, map);
+  assert.equal(rewritten.name, '洛辰');
+  assert.equal(rewritten.summary, '洛辰是白白的助理，对白白忠心耿耿。');
+  assert.equal(rewritten.detailedBio, '私下里会叫白白「姐」。');
+  assert.equal(rewritten.attitudeToPlayer, '对白白亲近');
+  assert.equal(rewritten.relationship, '白白的助理');
+});
+
+test('CharactersPanel_角色档案展示须接玩家名替换', () => {
+  const panel = readFileSync(
+    join(root, 'src/components/Galgame/panels/CharactersPanel.tsx'),
+    'utf8',
+  );
+  const galgame = readFileSync(join(root, 'src/page/Galgame.tsx'), 'utf8');
+  assert.match(panel, /rewriteDossierText|applyDisplayNameRewrites/);
+  assert.match(panel, /displayNameMap/);
+  assert.match(galgame, /displayNameMap=\{displayNameMap\}/);
+  assert.match(galgame, /<CharactersPanel[\s\S]*displayNameMap=\{displayNameMap\}/);
+});
+
+test('rewriteTextByMap_实现须先保护to再替换from并收束叠名', () => {
+  const src = readFileSync(overlayPath, 'utf8');
+  assert.match(src, /先保护已是目标名/);
+  assert.match(src, /split\(to\)\.join\(guard\)/);
+  assert.match(src, /collapseStackedDisplayNames/);
+  assert.doesNotMatch(src, /out\.replace\(new RegExp\(escapeRegExp\(from\), 'g'\), to\);\n {2}return out;/);
+});
+
+test('Galgame_展示层空映射也要收束现用叠名', () => {
+  const galgame = readFileSync(join(root, 'src/page/Galgame.tsx'), 'utf8');
+  assert.match(galgame, /applyDisplayNameRewrites/);
+  assert.match(galgame, /displayNameCollapseList/);
+});
+
+test('Galgame_文本模式仍渲染场景背景', () => {
+  const galgame = readFileSync(join(root, 'src/page/Galgame.tsx'), 'utf8');
+  assert.match(galgame, /GameBackgroundRenderer/);
+  assert.match(galgame, /textModeBgScrim/);
+  assert.doesNotMatch(
+    galgame,
+    /!controller\.isTextMode && \(\s*<GameBackgroundRenderer/,
+  );
+});
+
+test('Galgame_文本模式应隐藏任务追踪并使用可滚动布局', () => {
+  const galgame = readFileSync(join(root, 'src/page/Galgame.tsx'), 'utf8');
+  const css = readFileSync(join(root, 'src/page/Galgame.module.css'), 'utf8');
+  const textCss = readFileSync(join(root, 'src/components/Galgame/TextModeDisplay.module.css'), 'utf8');
+  assert.match(galgame, /!controller\.isTextMode && !controller\.isReplay[\s\S]*questTrackerText/);
+  assert.match(galgame, /mainContentTextMode/);
+  assert.match(galgame, /key="galgame-text-mode-display"/);
+  assert.match(css, /\.gameContentWrapperTextMode[\s\S]*top:\s*3\.5rem/);
+  assert.match(css, /\.gameContentWrapperTextMode[\s\S]*bottom:\s*5\.75rem/);
+  assert.match(textCss, /touch-action:\s*pan-y/);
+  assert.match(textCss, /min-height:\s*0/);
+  assert.match(textCss, /\.textModeComposer\b/);
+  assert.match(textCss, /\.messagesContainerWithComposer\b/);
+  const textMode = readFileSync(join(root, 'src/components/Galgame/TextModeDisplay.tsx'), 'utf8');
+  assert.match(textMode, /textModeComposer/);
+  assert.doesNotMatch(textMode, /customInputSection[\s\S]*createGame\.send/);
+});
+
+test('GameBackgroundRenderer_加载中不隐藏容器', () => {
+  const src = readFileSync(
+    join(root, 'src/components/Galgame/GameBackgroundRenderer.tsx'),
+    'utf8',
+  );
+  assert.doesNotMatch(src, /opacity:\s*isTransitioning\s*\?\s*0/);
+  assert.match(src, /加载中保留上一帧/);
+});

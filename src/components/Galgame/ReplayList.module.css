@@ -1,0 +1,313 @@
+.replayList {
+  display: block;
+  background: var(--color-surface);
+}
+
+.statusMessage {
+  padding: 0.875rem 0;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.errorMessage {
+  color: var(--color-primary);
+}
+
+.replayCard {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-surface);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+  transition: background 0.18s ease;
+}
+
+.replayCardExpanded {
+  background: color-mix(in srgb, var(--color-primary) 3.5%, transparent);
+}
+
+.replayCardLast {
+  border-bottom: none;
+}
+
+.replayCardMain {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 0.75rem;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  min-height: 4.4rem;
+  padding: 0.8rem 0.1rem;
+  cursor: pointer;
+  outline: none;
+}
+
+.replayCardMain:focus-visible {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+.replayContent {
+  min-width: 0;
+}
+
+.replayTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.replayTitle {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tagGroup {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.visibilityTag,
+.mineTag {
+  padding: 0.1rem 0.42rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.45;
+  flex-shrink: 0;
+}
+
+.mineTag {
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  color: var(--color-primary);
+}
+
+.replayMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.0625rem 0.38rem;
+  margin-top: 0.16rem;
+  color: var(--color-text-muted);
+  font-size: 0.69rem;
+  line-height: 1.35;
+}
+
+.replayMetaSeparator {
+  color: var(--color-text-secondary);
+}
+
+.replayPreview {
+  margin-top: 0.18rem;
+  color: var(--color-text-secondary);
+  font-size: 0.67rem;
+  line-height: 1.32;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.replayExpandIcon {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-right: 1.5px solid var(--color-border);
+  border-bottom: 1.5px solid var(--color-border);
+  transform: rotate(-45deg);
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.replayExpandIconExpanded {
+  border-color: var(--color-primary);
+  transform: rotate(45deg);
+}
+
+.actionOverlay {
+  position: absolute;
+  top: 50%;
+  right: 0.3rem;
+  z-index: 2;
+  transform: translateY(-50%);
+  pointer-events: auto;
+}
+
+.actionGroup {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  max-width: min(17rem, calc(100vw - 4.5rem));
+  padding: 0.42rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 58%, transparent);
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, var(--color-surface) 66%, transparent);
+  box-shadow: 0 0.8rem 1.8rem color-mix(in srgb, var(--color-shadow) 14%, transparent);
+  backdrop-filter: blur(16px) saturate(1.1);
+  -webkit-backdrop-filter: blur(16px) saturate(1.1);
+  animation: actionOverlayIn 0.18s ease both;
+}
+
+.playButton,
+.copyButton,
+.deleteButton {
+  min-width: 4rem;
+  padding: 0.42rem 0.68rem;
+  border-radius: 0.55rem;
+  font-weight: 600;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.playButton {
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.copyButton {
+  border: 1px solid color-mix(in srgb, var(--color-text) 88%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  color: var(--color-text);
+}
+
+.deleteButton {
+  border: 1px solid color-mix(in srgb, var(--color-primary) 28%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  color: var(--color-primary);
+}
+
+.playButton:disabled,
+.copyButton:disabled,
+.deleteButton:disabled,
+.loadMoreButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.loadMoreWrap {
+  display: flex;
+  justify-content: center;
+  padding: 0.85rem 0 0.15rem;
+}
+
+.loadMoreButton {
+  padding: 0.5rem 0.9rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .actionGroup {
+    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  }
+}
+
+@keyframes actionOverlayIn {
+  from {
+    opacity: 0;
+    transform: translateX(0.35rem) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@media (max-width: 768px) {
+  .replayCardMain {
+    grid-template-columns: minmax(0, 1fr) 0.68rem;
+    align-items: start;
+    gap: 0.48rem;
+    min-height: 4.1rem;
+    padding: 0.72rem 0.05rem;
+  }
+
+  .replayTitle {
+    font-size: 0.84rem;
+  }
+
+  .replayMeta {
+    gap: 0.0625rem 0.3rem;
+    font-size: 0.64rem;
+  }
+
+  .replayPreview {
+    font-size: 0.63rem;
+  }
+
+  .actionOverlay {
+    top: auto;
+    right: 0.1rem;
+    bottom: 0.38rem;
+    transform: none;
+  }
+
+  .actionGroup {
+    max-width: min(14rem, calc(100vw - 4rem));
+    padding: 0.34rem;
+    gap: 0.28rem;
+  }
+
+  .playButton,
+  .copyButton,
+  .deleteButton {
+    min-width: 3.45rem;
+    padding: 0.38rem 0.52rem;
+    font-size: 0.76rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .replayCardMain {
+    grid-template-columns: minmax(0, 1fr) 0.62rem;
+    gap: 0.42rem;
+    min-height: 3.9rem;
+    padding: 0.66rem 0;
+  }
+
+  .visibilityTag,
+  .mineTag {
+    padding: 0.08rem 0.32rem;
+    font-size: 0.58rem;
+  }
+
+  .replayMeta,
+  .replayPreview {
+    font-size: 0.6rem;
+    line-height: 1.3;
+  }
+
+  .actionOverlay {
+    right: 0;
+    bottom: 0.34rem;
+  }
+
+  .actionGroup {
+    max-width: min(12rem, calc(100vw - 3.2rem));
+    padding: 0.3rem;
+    gap: 0.24rem;
+    border-radius: 0.7rem;
+  }
+
+  .playButton,
+  .copyButton,
+  .deleteButton {
+    min-width: 3.05rem;
+    padding: 0.34rem 0.46rem;
+    font-size: 0.72rem;
+  }
+}

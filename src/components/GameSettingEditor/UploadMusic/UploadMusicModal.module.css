@@ -1,0 +1,323 @@
+/* 功能注释：上传音乐弹窗对齐效果图——暗场上的白纸表单，描边控件 + 虚线投递区 */
+
+.modalOverlay {
+  --music-modal-ink: var(--color-text);
+  --music-modal-muted: var(--color-text-muted);
+  --music-modal-line: color-mix(in srgb, var(--color-text) 12%, transparent);
+  --music-modal-dash: color-mix(in srgb, var(--color-text) 18%, transparent);
+  --music-modal-accent: var(--color-primary-bold);
+  --music-modal-required: var(--color-primary);
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-shadow) 55%, transparent);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  animation: musicModalFadeIn 0.2s ease;
+}
+
+@keyframes musicModalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modalContent {
+  background: var(--color-surface);
+  border-radius: 12px;
+  width: min(520px, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 18px 48px color-mix(in srgb, var(--color-shadow) 35%, transparent);
+  animation: musicModalSlideUp 0.28s ease;
+}
+
+@keyframes musicModalSlideUp {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--music-modal-line);
+}
+
+.modalHeader h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--music-modal-ink);
+  letter-spacing: 0.01em;
+}
+
+.modalClose {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.modalClose:hover,
+.modalClose:focus-visible {
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  color: var(--music-modal-ink);
+}
+
+.modalClose:focus-visible {
+  outline: 2px solid var(--music-modal-accent);
+  outline-offset: 2px;
+}
+
+.modalBody {
+  padding: 18px 20px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldLabel {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--music-modal-ink);
+}
+
+.required {
+  color: var(--music-modal-required);
+  margin-left: 2px;
+}
+
+.fieldInput,
+.fieldTextarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--music-modal-line);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: var(--music-modal-ink);
+  background: var(--color-surface);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.fieldInput::placeholder,
+.fieldTextarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.fieldInput:focus,
+.fieldTextarea:focus {
+  outline: none;
+  border-color: var(--music-modal-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+.fieldInput:disabled,
+.fieldTextarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  background: color-mix(in srgb, var(--color-text) 2%, transparent);
+}
+
+.fieldTextarea {
+  resize: vertical;
+  min-height: 88px;
+}
+
+.uploadSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.uploadArea {
+  position: relative;
+  min-height: 132px;
+  border: 1px dashed var(--music-modal-dash);
+  border-radius: 10px;
+  background: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  padding: 20px 16px;
+}
+
+.uploadArea:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+  background: var(--color-bg);
+}
+
+.uploadAreaHasFile {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+  background: var(--color-surface);
+}
+
+.hiddenInput {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.uploadPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.uploadText {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--music-modal-ink);
+  margin: 0;
+}
+
+.uploadHint {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--music-modal-muted);
+  margin: 0;
+  max-width: 28em;
+}
+
+.fileSelected {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--music-modal-line);
+  border-radius: 8px;
+}
+
+.fileInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.fileName {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--music-modal-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileSize {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--music-modal-muted);
+}
+
+.removeFile {
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.15rem;
+  color: var(--color-text-muted);
+  transition: background 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.removeFile:hover:not(:disabled),
+.removeFile:focus-visible:not(:disabled) {
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  color: var(--music-modal-accent);
+}
+
+.removeFile:focus-visible {
+  outline: 2px solid var(--music-modal-accent);
+  outline-offset: 2px;
+}
+
+.removeFile:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--music-modal-line);
+}
+
+.footerBtn {
+  border-radius: 8px;
+  border: 1px solid var(--music-modal-line);
+  padding: 8px 16px;
+  min-height: 36px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  color: var(--music-modal-ink);
+  background: var(--color-surface);
+}
+
+.footerBtn:hover:not(:disabled),
+.footerBtn:focus-visible:not(:disabled) {
+  border-color: var(--music-modal-accent);
+  color: var(--music-modal-accent);
+  background: color-mix(in srgb, var(--color-primary) 3%, transparent);
+}
+
+.footerBtn:focus-visible {
+  outline: 2px solid var(--music-modal-accent);
+  outline-offset: 2px;
+}
+
+.footerBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}

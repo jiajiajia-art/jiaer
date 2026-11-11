@@ -1,0 +1,500 @@
+/* ========================================
+   CreatorProfile - 创作者资料（深色主题，对齐个人中心）
+   ======================================== */
+
+.creatorProfile {
+    width: 100%;
+    padding: 0 0 40px 0;
+    color: var(--color-text);
+}
+
+/* ========================================
+   视图模式 - View Container
+   ======================================== */
+
+.viewContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ========================================
+   信息卡片 - Section Card
+   ======================================== */
+
+.sectionCard {
+    background: var(--color-surface);
+    border-radius: 14px;
+    padding: 20px 24px;
+    box-shadow: none;
+    border: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.sectionCard:hover {
+    border-color: color-mix(in srgb, var(--color-text) 10%, transparent);
+    background: var(--color-surface-2);
+}
+
+.sectionCardEmpty {
+    border-style: dashed;
+    border-color: color-mix(in srgb, var(--color-text) 14%, transparent);
+    background: color-mix(in srgb, var(--color-text) 3%, transparent);
+}
+
+.sectionHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+}
+
+.sectionIcon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border-radius: 0;
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.sectionTitle {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-text);
+    margin: 0;
+    letter-spacing: 0.02em;
+}
+
+.sectionContent {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ========================================
+    信息行 - Info Row
+   ======================================== */
+
+.infoRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 36px;
+}
+
+.infoLabel {
+    font-size: 14px;
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+    min-width: 80px;
+}
+
+.infoValueWrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    justify-content: flex-end;
+}
+
+.infoValue {
+    font-size: 14px;
+    color: var(--color-text);
+    font-weight: 500;
+    text-align: right;
+}
+
+.infoValueMasked {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    text-align: right;
+    letter-spacing: 0.05em;
+}
+
+.infoActions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.infoActionBtn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.infoActionBtn:hover {
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    color: var(--color-text);
+}
+
+.infoActionBtn svg {
+    font-size: 16px;
+}
+
+/* ========================================
+   空状态 - Empty State
+   ======================================== */
+
+.emptyState {
+    padding: 16px 0;
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: 14px;
+}
+
+/* ========================================
+   编辑按钮 - Edit Button
+   ======================================== */
+
+.editButtonWrapper {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0;
+}
+
+.editButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 28px;
+    background: var(--color-primary);
+    border: none;
+    border-radius: 999px;
+    color: var(--color-on-primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: none;
+}
+
+.editButton:hover {
+    background: var(--color-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.editButton:active {
+    transform: translateY(0);
+}
+
+.editButton svg {
+    font-size: 16px;
+}
+
+/* ========================================
+   安全提示 - Security Notice
+   ======================================== */
+
+.securityNotice {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 28%, transparent);
+    border-radius: 10px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+}
+
+.securityIcon {
+    font-size: 14px;
+}
+
+/* ========================================
+   表单模式 - Form Styles
+   ======================================== */
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.formSection {
+    background: var(--color-surface);
+    border-radius: 14px;
+    padding: 20px 24px;
+    box-shadow: none;
+    border: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.formSectionTitle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+}
+
+.formSectionTitle svg {
+    font-size: 18px;
+    color: var(--color-primary-fg);
+}
+
+.formField {
+    margin-bottom: 16px;
+}
+
+.formField:last-child {
+    margin-bottom: 0;
+}
+
+.formLabel {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin-bottom: 6px;
+}
+
+.required {
+    color: var(--color-primary-fg);
+    margin-left: 2px;
+}
+
+.formInput {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--color-text);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+    outline: none;
+}
+
+.formInput:focus {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+
+.formInput::placeholder {
+    color: var(--color-text-muted);
+}
+
+.formInputError {
+    border-color: var(--color-primary-light);
+}
+
+.formInputError:focus {
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-light) 18%, transparent);
+}
+
+.formInputReadonly {
+    color: var(--color-text-secondary);
+    background: var(--color-bg);
+    cursor: not-allowed;
+}
+
+.formInputReadonly:focus {
+    border-color: var(--color-border);
+    background: var(--color-bg);
+    box-shadow: none;
+}
+
+.formHint {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.formError {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--color-primary-fg);
+}
+
+/* ========================================
+   表单操作按钮 - Form Actions
+   ======================================== */
+
+.formActions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding-top: 8px;
+}
+
+.cancelBtn {
+    padding: 10px 24px;
+    border: 1.5px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+    border-radius: 999px;
+    background: transparent;
+    color: color-mix(in srgb, var(--color-text) 75%, transparent);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cancelBtn:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--color-text) 28%, transparent);
+    color: var(--color-text);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.cancelBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.saveBtn {
+    padding: 10px 32px;
+    border: none;
+    border-radius: 999px;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: none;
+}
+
+.saveBtn:hover:not(:disabled) {
+    background: var(--color-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.saveBtn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.saveBtn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* ========================================
+   响应式设计 - Responsive
+   ======================================== */
+
+@media (max-width: 768px) {
+    .creatorProfile {
+        padding: 0 0 30px 0;
+    }
+
+    .sectionCard,
+    .formSection {
+        padding: 16px 18px;
+        border-radius: 12px;
+    }
+
+    .sectionHeader {
+        margin-bottom: 14px;
+        padding-bottom: 10px;
+    }
+
+    .sectionIcon {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+    }
+
+    .sectionTitle {
+        font-size: 15px;
+    }
+
+    .infoRow {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .infoValueWrapper {
+        justify-content: flex-start;
+        width: 100%;
+    }
+
+    .infoValue,
+    .infoValueMasked {
+        text-align: left;
+    }
+
+    .editButton {
+        padding: 9px 24px;
+        font-size: 13px;
+    }
+
+    .formActions {
+        flex-direction: column-reverse;
+    }
+
+    .cancelBtn,
+    .saveBtn {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+    }
+
+    .securityNotice {
+        font-size: 11px;
+        padding: 10px 14px;
+    }
+}
+
+/* ========================================
+   打印样式
+   ======================================== */
+
+@media print {
+    .editButton,
+    .infoActionBtn,
+    .formActions {
+        display: none !important;
+    }
+
+    .sectionCard,
+    .formSection {
+        box-shadow: none;
+        border: 1px solid var(--color-border);
+        background: var(--color-surface);
+        color: var(--color-text);
+    }
+}

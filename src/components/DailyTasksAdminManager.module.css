@@ -1,0 +1,493 @@
+.panelStack {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    color-scheme: light;
+}
+
+.heroCard,
+.card,
+.modalCard {
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 45%, transparent);
+    border-radius: 22px;
+    box-shadow: 0 18px 40px color-mix(in srgb, var(--color-highlight) 14%, transparent);
+}
+
+.heroCard {
+    padding: 30px 34px;
+}
+
+.card {
+    padding: 24px;
+}
+
+.sectionBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: var(--color-bg);
+    color: var(--color-highlight);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.heroTitle {
+    margin: 18px 0 12px;
+    font-size: 24px;
+    color: var(--color-text);
+}
+
+.heroDesc,
+.cardDesc,
+.emptyState {
+    color: var(--color-text-secondary);
+    line-height: 1.7;
+}
+
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.toolbarMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.metaPill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: var(--color-bg);
+    color: var(--color-highlight);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.cardTitle {
+    margin: 0 0 8px;
+    font-size: 18px;
+    color: var(--color-text);
+}
+
+.tableWrapper {
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 72%, transparent);
+    background: var(--color-surface);
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--color-highlight) 50%, transparent) color-mix(in srgb, var(--color-surface) 50%, transparent);
+}
+
+.tableWrapper::-webkit-scrollbar {
+    height: 10px;
+}
+
+.tableWrapper::-webkit-scrollbar-track {
+    background: var(--color-surface);
+    border-radius: 5px;
+}
+
+.tableWrapper::-webkit-scrollbar-thumb {
+    background: var(--color-primary);
+    border-radius: 5px;
+    border: 2px solid color-mix(in srgb, var(--color-text) 50%, transparent);
+}
+
+.tableWrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--color-primary);
+}
+
+.tableWrapper::-webkit-scrollbar-corner {
+    background: var(--color-surface);
+}
+
+.table {
+    width: 100%;
+    min-width: 1180px;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.table th,
+.table td {
+    padding: 12px 12px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-highlight) 16%, transparent);
+    text-align: left;
+    color: var(--color-text);
+    font-size: 13px;
+    vertical-align: middle;
+}
+
+.table th {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    background: var(--color-surface);
+    white-space: nowrap;
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.table tbody tr:hover {
+    background: var(--color-bg);
+}
+
+.taskTitle {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.taskTitleMain {
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.taskTitleSub {
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+}
+
+.codeText,
+.gameCode {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--color-highlight);
+    word-break: break-all;
+}
+
+.gameCell {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.statusTag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 76px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.statusPublished {
+    background: color-mix(in srgb, var(--color-success) 14%, transparent);
+    color: var(--color-success);
+}
+
+.statusDraft {
+    background: color-mix(in srgb, var(--color-highlight) 14%, transparent);
+    color: var(--color-highlight);
+}
+
+.statusOffline {
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: var(--color-text-secondary);
+}
+
+.actionRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.primaryButton,
+.secondaryButton,
+.dangerButton {
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.primaryButton {
+    border: none;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+}
+
+.secondaryButton {
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 88%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+}
+
+.dangerButton {
+    border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    color: var(--color-primary);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.dangerButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.emptyState {
+    padding: 18px;
+    border-radius: 16px;
+    background: var(--color-surface);
+}
+
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    background: color-mix(in srgb, var(--color-surface) 40%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modalCard {
+    width: min(760px, 100%);
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    padding: 24px;
+}
+
+.formGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.fullWidth {
+    grid-column: 1 / -1;
+}
+
+.fieldLabel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+}
+
+.fieldHint {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    line-height: 1.5;
+}
+
+.textInput,
+.select,
+.textArea {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 14px;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 88%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 14px;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.textArea {
+    min-height: 112px;
+    padding: 12px 14px;
+    resize: vertical;
+}
+
+.textInput:focus,
+.select:focus,
+.textArea:focus {
+    border-color: color-mix(in srgb, var(--color-highlight) 74%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-highlight) 12%, transparent);
+    background: var(--color-surface);
+}
+
+.fieldError {
+    font-size: 12px;
+    color: var(--color-primary);
+}
+
+.modalFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.gameSearchWrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.gameSearchSelected {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: var(--color-bg);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 30%, transparent);
+}
+
+.gameSearchSelectedTitle {
+    flex: 1;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gameSearchSelectedId {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--color-highlight);
+    background: var(--color-surface);
+    padding: 2px 6px;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.gameSearchClearBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-text) 14%, transparent);
+    color: var(--color-text-secondary);
+    font-size: 16px;
+    cursor: pointer;
+    flex-shrink: 0;
+    line-height: 1;
+    padding: 0;
+    transition: background 0.15s;
+}
+
+.gameSearchClearBtn:hover {
+    background: color-mix(in srgb, var(--color-primary) 20%, transparent);
+    color: var(--color-primary);
+}
+
+.gameSearchInputRow {
+    width: 100%;
+}
+
+.gameSearchDropdown {
+    position: absolute;
+    top: calc(100% - 8px);
+    left: 0;
+    right: 0;
+    z-index: 200;
+    max-height: 260px;
+    overflow-y: auto;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 88%, transparent);
+    background: var(--color-surface);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--color-highlight) 18%, transparent);
+}
+
+.gameSearchItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background 0.12s;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-highlight) 12%, transparent);
+}
+
+.gameSearchItem:last-child {
+    border-bottom: none;
+}
+
+.gameSearchItem:hover {
+    background: var(--color-bg);
+}
+
+.gameSearchItemSelected {
+    background: var(--color-bg);
+}
+
+.gameSearchItemSelected:hover {
+    background: var(--color-bg);
+}
+
+.gameSearchItemTitle {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gameSearchItemMeta {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 11px;
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+    .formGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .heroCard,
+    .card,
+    .modalCard {
+        padding: 20px 16px;
+        border-radius: 16px;
+    }
+
+    .heroTitle {
+        font-size: 21px;
+    }
+
+    .toolbar,
+    .cardHeader,
+    .modalFooter {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .actionRow {
+        flex-direction: column;
+    }
+}

@@ -1,0 +1,139 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3000;
+  background: color-mix(in srgb, var(--color-shadow) 40%, transparent);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.panelWrapper {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.panel {
+  position: relative;
+  width: 90vw;
+  max-width: 380px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-text) 20%, transparent) 0%,
+    color-mix(in srgb, var(--color-text) 20%, transparent) 10%,
+    color-mix(in srgb, var(--color-text) 20%, transparent) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--color-text) 30%, transparent);
+  border-radius: 8px;
+  box-shadow: 0 1px 12px color-mix(in srgb, var(--color-shadow) 43%, transparent);
+  overflow: hidden;
+}
+
+.closeButton {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--color-text) 30%, transparent);
+  color: color-mix(in srgb, var(--color-on-media) 90%, transparent);
+  background: color-mix(in srgb, var(--color-shadow) 37%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.header {
+  padding: 12px 44px 0 12px;
+}
+
+.headerBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 12px 8px 0;
+}
+
+.refreshButton {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--color-on-media) 85%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-text) 25%, transparent);
+  background: color-mix(in srgb, var(--color-shadow) 40%, transparent);
+  cursor: pointer;
+}
+
+.refreshButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.tab {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--color-on-media) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-text) 25%, transparent);
+  background: color-mix(in srgb, var(--color-shadow) 40%, transparent);
+  cursor: pointer;
+}
+
+.tabActive {
+  background: color-mix(in srgb, var(--color-primary) 30%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary) 50%, transparent);
+  color: var(--color-on-primary);
+}
+
+.body {
+  padding: 12px;
+  color: var(--color-text);
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 15%, transparent);
+  overflow: auto;
+}
+
+.contentText {
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--color-text) 95%, transparent);
+}
+
+.empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.loading {
+  padding: 24px;
+  text-align: center;
+  color: color-mix(in srgb, var(--color-text) 80%, transparent);
+}
+
+.error {
+  padding: 12px;
+  margin: 10px 12px 0;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-primary-light) 15%, transparent);
+  color: var(--color-primary-lighter);
+  font-size: 12px;
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 35%, transparent);
+}
+

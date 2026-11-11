@@ -1,0 +1,193 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-shadow) 70%, transparent);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2100;
+  animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.content {
+  position: relative;
+  /* 与 RechargeModal 一致的暗色面板 */
+  background:
+    linear-gradient(0deg, color-mix(in srgb, var(--color-text) 15%, transparent), color-mix(in srgb, var(--color-text) 15%, transparent)),
+    linear-gradient(180deg, var(--color-surface-2) 0%, color-mix(in srgb, var(--color-surface) 72%, transparent) 100%);
+  border-radius: 16px;
+  width: min(92vw, 620px);
+  box-shadow: none;
+  border: 0.68px solid transparent;
+  backdrop-filter: blur(47px);
+  -webkit-backdrop-filter: blur(47px);
+  animation: slideUp 0.25s ease-out;
+  padding: 24px 20px 20px 20px;
+  box-sizing: border-box;
+  text-align: center;
+  overflow: hidden;
+}
+
+/* 白边线性渐变（border-image 与 border-radius 不兼容） */
+.content::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 0.68px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-surface) 55%, transparent) 0%,
+    color-mix(in srgb, var(--color-text) 18%, transparent) 60%,
+    transparent 90%
+  );
+  -webkit-mask:
+    linear-gradient(var(--color-surface) 0 0) content-box,
+    linear-gradient(var(--color-surface) 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 3;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.title {
+  position: relative;
+  z-index: 1;
+  color: var(--color-text);
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.qrRow {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  justify-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.qrBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 280px;
+}
+
+.qrBox img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  max-height: 36vh;
+  border-radius: 8px;
+  /* 二维码需白底保证可扫 */
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+/* QQ 图自带白边，灰底托住后不再像硬切白框 */
+.qrBoxGray img {
+  background: var(--color-surface-2);
+  border-color: color-mix(in srgb, var(--color-text) 8%, transparent);
+  padding: 0;
+}
+
+.qrLabel {
+  margin-top: 8px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.promotionHintButton {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  margin: 4px auto 16px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-primary);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.6;
+  text-align: center;
+  cursor: pointer;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.promotionHintButton:hover {
+  color: var(--color-primary);
+  opacity: 0.92;
+}
+
+.promotionHintButton:active {
+  opacity: 1;
+}
+
+.buttons {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.cancelBtn {
+  padding: 10px 24px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.cancelBtn:hover {
+  background: color-mix(in srgb, var(--color-text) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-text) 28%, transparent);
+  color: var(--color-text);
+  transform: translateY(-1px);
+}
+
+.cancelBtn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .content { width: min(95vw, 560px); padding: 20px 14px 16px 14px; }
+  .title { font-size: 16px; margin-bottom: 12px; }
+  .qrRow { gap: 12px; margin-bottom: 12px; }
+  .qrBox { max-width: none; }
+  .qrBox img { max-height: 34vh; }
+  .promotionHintButton { margin-bottom: 12px; font-size: 14px; line-height: 1.5; }
+}
+
+/* ================= 统一弹窗风格 ================= */
+.content {
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 18px;
+    background: var(--color-surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 24px 64px color-mix(in srgb, var(--color-shadow) 50%, transparent);
+}
+.content::before { display: none; }

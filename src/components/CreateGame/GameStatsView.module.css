@@ -1,0 +1,553 @@
+/* 功能注释：创作者作品数据页对齐效果图暗色英雄区 + 酒红主按钮 + 数据概览卡 */
+
+.statsModeWrapper {
+    --primary: var(--color-primary);
+    --primary-dark: var(--color-primary-bold);
+    width: 100%;
+    max-width: none;
+    margin: 0 auto;
+    position: relative;
+    background: var(--color-bg);
+    color: var(--color-text);
+    min-height: 100vh;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+    box-sizing: border-box;
+}
+
+/* 功能注释：固定在站点顶栏左下 */
+.topBar {
+    position: fixed;
+    top: calc(var(--app-desktop-navbar-height) + 10px);
+    left: 0;
+    right: 0;
+    z-index: 900;
+    padding: 0;
+    pointer-events: none;
+}
+
+.topBarContent {
+    width: 100%;
+    margin: 0;
+    padding: 0 4px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.backIconButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 999px;
+    color: var(--color-text);
+    cursor: pointer;
+    flex-shrink: 0;
+    pointer-events: auto;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.backIconButton svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 2px color-mix(in srgb, var(--color-shadow) 75%, transparent)) drop-shadow(0 1px 2px color-mix(in srgb, var(--color-shadow) 45%, transparent));
+}
+
+.heroBanner {
+    width: 100%;
+    max-width: none;
+    height: min(58vh, 420px);
+    min-height: 280px;
+    margin: 0;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.heroOverlay {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-text) 20%, transparent) 0%,
+        color-mix(in srgb, var(--color-shadow) 45%, transparent) 42%,
+        color-mix(in srgb, var(--color-shadow) 92%, transparent) 100%
+    );
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.heroContent {
+    width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
+    max-width: none;
+    color: var(--color-text);
+    box-sizing: border-box;
+    padding: calc(var(--app-desktop-navbar-height) + 24px) 0 28px;
+}
+
+.heroTags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.heroTag {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-shadow) 45%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+    color: var(--color-on-media);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.heroTitleRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.heroTitle {
+    margin: 0;
+    font-size: clamp(24px, 3.2vw, 36px);
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-text);
+}
+
+.ratingBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.heroMetaLine,
+.heroComments {
+    margin: 0;
+    color: color-mix(in srgb, var(--color-text) 78%, transparent);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.heroComments {
+    margin-top: 6px;
+}
+
+.bodyShell {
+    width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
+    max-width: none;
+    margin: 0 auto;
+    padding: 18px 0 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.primaryStartBtn {
+    width: 100%;
+    min-height: 52px;
+    border: none;
+    border-radius: 999px;
+    background: var(--color-primary-bold);
+    color: var(--color-on-primary);
+    font-size: 16px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.primaryStartBtn svg {
+    width: 22px;
+    height: 22px;
+}
+
+.primaryStartBtn:hover:not(:disabled) {
+    background: var(--color-primary);
+    transform: translateY(-1px);
+}
+
+.primaryStartBtn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.secondaryActions {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    width: 100%;
+}
+
+.secondaryActionBtn {
+    min-height: 42px;
+    padding: 0 10px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-radius: 999px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.secondaryActionBtn:hover:not(:disabled) {
+    background: var(--color-surface-2);
+}
+
+.secondaryActionBtn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.overviewCard {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 16px 14px 18px;
+    border-radius: 18px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    background: var(--color-surface);
+}
+
+.overviewHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.overviewTitleBlock {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.overviewTitle {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.overviewHint {
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.overviewViewAll {
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.overviewViewAll:hover {
+    color: var(--color-text);
+}
+
+.overviewGrid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+    align-items: stretch;
+    gap: 0;
+}
+
+.overviewItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    min-width: 0;
+    padding: 0 4px;
+}
+
+.overviewIcon {
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    background: var(--color-surface-2);
+    color: var(--color-text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.overviewIcon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.overviewLabel {
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.overviewValue {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-text);
+    line-height: 1.1;
+}
+
+.overviewDivider {
+    width: 1px;
+    align-self: stretch;
+    margin: 4px 0;
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+
+.statsSection {
+    width: 100%;
+    margin: 0;
+}
+
+.statsLoading {
+    padding: 28px;
+    text-align: center;
+    color: var(--color-text-muted);
+    background: var(--color-surface);
+    border-radius: 14px;
+}
+
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.statBox {
+    width: 100%;
+    min-height: 88px;
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    padding: 14px;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    box-sizing: border-box;
+}
+
+.statValue {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--color-primary-fg);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
+}
+
+.statLabel {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+@media (max-width: 860px) {
+    /* 功能注释：中屏仍保持三列，避免手机前先缩成两列再变回三列 */
+    .statsGrid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+    }
+}
+
+@media (max-width: 768px) {
+    .statsModeWrapper {
+        width: 100%;
+        padding-bottom: calc(24px + env(safe-area-inset-bottom));
+    }
+
+    .topBarContent {
+        padding: 0 4px;
+    }
+
+    .heroBanner {
+        width: 100%;
+        height: min(52vh, 360px);
+        min-height: 260px;
+    }
+
+    .heroContent {
+        width: 100%;
+        padding: 56px 16px 22px;
+    }
+
+    .heroTitle {
+        font-size: 22px;
+    }
+
+    .bodyShell {
+        width: 100%;
+        padding: 16px 12px 0;
+        gap: 12px;
+    }
+
+    .secondaryActions {
+        gap: 8px;
+    }
+
+    .secondaryActionBtn {
+        min-height: 40px;
+        font-size: 12px;
+        padding: 0 6px;
+    }
+
+    .overviewCard {
+        width: 100%;
+        border-radius: 16px;
+    }
+
+    .overviewValue {
+        font-size: 16px;
+    }
+
+    /* 功能注释：手机全部数据一行三格；数字比桌面 22px 小两号，避免通栏大字刷屏 */
+    .statsGrid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .statBox {
+        min-height: 72px;
+        padding: 10px 8px;
+        border-radius: 12px;
+        gap: 6px;
+    }
+
+    .statValue {
+        font-size: 16px;
+    }
+
+    .statLabel {
+        font-size: 11px;
+        gap: 4px;
+    }
+
+    .statLabel svg {
+        width: 12px;
+        height: 12px;
+        flex-shrink: 0;
+    }
+}
+
+/* AI文游开始测试：与详情页一致的开始方式弹窗（暗色） */
+.startOptionsOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: color-mix(in srgb, var(--color-shadow) 62%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+}
+
+.startOptionsModal {
+    width: min(26rem, 92vw);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    border-radius: 1.25rem;
+    box-shadow: 0 1.5rem 3rem color-mix(in srgb, var(--color-shadow) 45%, transparent);
+    padding: 1.25rem 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.startOptionsHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.startOptionsTitle {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.startOptionsClose {
+    border: none;
+    background: transparent;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+}
+
+.startOptionsButtons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.startOptionsPrimary,
+.startOptionsSecondary,
+.startOptionsGhost {
+    height: 3rem;
+    border-radius: 999px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    background: var(--color-primary-bold);
+    color: var(--color-on-primary);
+}
+
+.startOptionsPrimary:disabled,
+.startOptionsSecondary:disabled,
+.startOptionsGhost:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.startOptionsSecondary,
+.startOptionsGhost {
+    background: var(--color-surface-2);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+}

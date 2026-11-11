@@ -1,0 +1,63 @@
+/* 功能注释：效果图底部双胶囊步进 — 描边次要 + 酒红主操作，仅移动端展示 */
+
+.footer {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+    background: var(--color-surface);
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -8px 28px color-mix(in srgb, var(--color-shadow) 35%, transparent);
+  }
+
+  .prev,
+  .next {
+    box-sizing: border-box;
+    min-height: 48px;
+    border-radius: 999px;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+  }
+
+  .prev {
+    border: 1px solid color-mix(in srgb, var(--color-text) 22%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  .prev:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--color-text) 40%, transparent);
+    background: var(--color-surface-2);
+  }
+
+  .next {
+    border: none;
+    background: var(--color-primary-bold);
+    color: var(--color-on-primary);
+  }
+
+  .next:hover:not(:disabled) {
+    background: var(--color-primary);
+  }
+
+  .prev:disabled,
+  .next:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}

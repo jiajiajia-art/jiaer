@@ -1,0 +1,878 @@
+.pageRoot {
+    --surface: var(--color-surface);
+    --surface-raised: var(--color-surface-2);
+    --surface-soft: var(--color-surface);
+    --border: color-mix(in srgb, var(--color-text) 10%, transparent);
+    --muted: var(--color-text-secondary);
+    --accent: var(--color-primary);
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: clip;
+    background: var(--color-bg);
+    color: var(--color-text);
+}
+
+.desktopChrome {
+    display: contents;
+}
+
+.mainContent {
+    width: 100%;
+    box-sizing: border-box;
+    padding: calc(var(--app-desktop-navbar-height, 64px) + 22px) 24px 96px;
+}
+
+.dashboard {
+    width: min(1040px, 100%);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.creatorLevelRow {
+    width: 100%;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 20px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--color-text);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.creatorLevelRow:hover {
+    border-color: color-mix(in srgb, var(--color-primary-light) 38%, transparent);
+    background: var(--color-surface-2);
+}
+
+.creatorLevelRow:focus-visible {
+    outline: 2px solid var(--color-primary-light);
+    outline-offset: 2px;
+}
+
+.creatorLevelLink {
+    flex: 0 0 auto;
+    color: var(--color-primary-lighter);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.withdrawButton,
+.settleButton,
+.stateBox button,
+.segmentedControl button,
+.periodCard,
+.workTabs button,
+.pagination button,
+.profileToggle {
+    touch-action: manipulation;
+}
+
+.panel {
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface);
+    box-sizing: border-box;
+}
+
+.settlementPanel {
+    background:
+        radial-gradient(circle at 96% -18%, color-mix(in srgb, var(--color-primary) 20%, transparent), transparent 33%),
+        var(--surface);
+}
+
+.promotionPanel {
+    background: var(--surface-soft);
+}
+
+.promotionEmpty {
+    min-height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+}
+
+.sectionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.sectionHeader h2 {
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.35;
+}
+
+.sectionHeader p {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.withdrawButton {
+    min-height: 44px;
+    flex: 0 0 auto;
+    padding: 0 17px;
+    border: 1px solid color-mix(in srgb, var(--color-primary-light) 38%, transparent);
+    border-radius: 11px;
+    background: color-mix(in srgb, var(--color-primary) 13%, transparent);
+    color: var(--color-primary-fg);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.settlementGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.settlementCard {
+    min-width: 0;
+    min-height: 112px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 15px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 7.5%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+    box-sizing: border-box;
+}
+
+.cardLabel {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.settlementValueRow {
+    min-width: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.amountGroup {
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.amountGroup strong {
+    max-width: 100%;
+    color: var(--color-text);
+    font-size: 26px;
+    line-height: 1.05;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.cardUnit,
+.cardSubvalue {
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.cardUnit {
+    white-space: nowrap;
+}
+
+.settleButton {
+    min-width: 54px;
+    min-height: 44px;
+    flex: 0 0 auto;
+    padding: 0 11px;
+    border: none;
+    border-radius: 10px;
+    background: var(--accent);
+    color: var(--color-on-primary);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.settleButton:disabled {
+    opacity: 0.48;
+    cursor: not-allowed;
+}
+
+.stateBox {
+    min-height: 96px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 18px;
+    border: 1px dashed color-mix(in srgb, var(--color-text) 14%, transparent);
+    border-radius: 12px;
+    color: var(--muted);
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.stateBox button {
+    min-height: 44px;
+    padding: 0 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--color-text) 7%, transparent);
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.analyticsPanel {
+    overflow: hidden;
+}
+
+.analyticsBody {
+    display: grid;
+    grid-template-columns: minmax(230px, 0.34fr) minmax(0, 1fr);
+    gap: 14px;
+}
+
+.overviewPane,
+.chartPane {
+    min-width: 0;
+    border: 1px solid color-mix(in srgb, var(--color-text) 7.5%, transparent);
+    border-radius: 12px;
+    background: var(--surface-soft);
+}
+
+.overviewPane {
+    padding: 14px;
+}
+
+.periodGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.periodCard {
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 10px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 9px;
+    background: var(--color-surface-2);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.periodCardActive {
+    border-color: color-mix(in srgb, var(--color-primary-light) 66%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+    color: var(--color-on-primary);
+}
+
+.periodAmount {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    padding: 20px 4px 4px;
+}
+
+.periodAmount > span,
+.periodAmount small {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.periodAmount strong {
+    font-size: 26px;
+    font-variant-numeric: tabular-nums;
+}
+
+.chartPane {
+    padding: 14px;
+}
+
+.chartToolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 10px;
+}
+
+.chartToolbar h3 {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.4;
+}
+
+.chartToolbar p {
+    margin: 3px 0 0;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.segmentedControl {
+    flex: 0 0 auto;
+    display: inline-grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 3px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--color-surface);
+}
+
+.segmentedControl button {
+    min-width: 64px;
+    min-height: 44px;
+    padding: 0 11px;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.segmentedControl .segmentActive {
+    background: var(--color-surface-2);
+    color: var(--color-text);
+}
+
+.chartPlaceholder {
+    position: relative;
+    min-height: 220px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    background: var(--color-surface);
+}
+
+.chartGrid {
+    position: absolute;
+    inset: 16px;
+    display: grid;
+    grid-template-rows: repeat(4, 1fr);
+}
+
+.chartGrid span {
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 6.5%, transparent);
+}
+
+.chartEmpty {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 20px;
+    text-align: center;
+}
+
+.chartEmpty strong {
+    font-size: 16px;
+}
+
+.chartEmpty span {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.workTabs {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.workTabs button {
+    min-width: 0;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 9px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 9px;
+    background: var(--surface-raised);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.workTabs button span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.workTabs button small {
+    min-width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 7%, transparent);
+    color: var(--color-text-secondary);
+    font-size: 10px;
+    box-sizing: border-box;
+}
+
+.workTabs .workTabActive {
+    border-color: color-mix(in srgb, var(--color-primary-light) 66%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+    color: var(--color-on-primary);
+}
+
+.workTabs .workTabActive small {
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: var(--color-text);
+}
+
+.workPanel {
+    margin-top: 12px;
+}
+
+.workGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.workRow {
+    min-width: 0;
+    min-height: 78px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    padding: 13px 14px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 7%, transparent);
+    border-radius: 11px;
+    background: color-mix(in srgb, var(--color-surface) 72%, transparent);
+    box-sizing: border-box;
+}
+
+.workMeta,
+.workAmount {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.workMeta strong {
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 1.45;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.workMeta span,
+.workAmount span {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.workAmount {
+    align-items: flex-end;
+    text-align: right;
+}
+
+.workAmount strong {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.pageNumbers {
+    display: inline-flex;
+    gap: 6px;
+}
+
+.pageNavButton,
+.pageNumbers button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--surface-raised);
+    color: var(--color-text);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.pageNumbers button {
+    padding: 0;
+}
+
+.pageNumbers .pageButtonActive {
+    border-color: color-mix(in srgb, var(--color-primary-light) 66%, transparent);
+    background: var(--accent);
+}
+
+.pagination button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.pageSummary {
+    display: none;
+    color: var(--muted);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.profilePanel {
+    padding: 0;
+    overflow: hidden;
+}
+
+.profileToggle {
+    width: 100%;
+    min-height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 14px 20px;
+    border: none;
+    background: transparent;
+    color: var(--color-text);
+    text-align: left;
+    cursor: pointer;
+}
+
+.profileHeading {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.profileHeading strong {
+    font-size: 16px;
+}
+
+.profileHeading span {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.profileToggleMeta {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.profileStatus {
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-highlight) 14%, transparent);
+    color: var(--color-highlight);
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.profileStatusComplete {
+    background: color-mix(in srgb, var(--color-success) 14%, transparent);
+    color: var(--color-success);
+}
+
+.profileToggleMeta svg {
+    font-size: 19px;
+    transition: transform 0.2s ease;
+}
+
+.chevronOpen {
+    transform: rotate(180deg);
+}
+
+.profileContent {
+    padding: 0 20px 20px;
+    border-top: 1px solid var(--border);
+}
+
+.profileContent > :first-child {
+    margin-top: 16px;
+}
+
+.withdrawButton:hover,
+.settleButton:hover:not(:disabled),
+.stateBox button:hover,
+.periodCard:hover,
+.segmentedControl button:hover,
+.workTabs button:hover,
+.pagination button:hover:not(:disabled),
+.profileToggle:hover {
+    filter: brightness(1.12);
+}
+
+.withdrawButton:focus-visible,
+.settleButton:focus-visible,
+.stateBox button:focus-visible,
+.periodCard:focus-visible,
+.segmentedControl button:focus-visible,
+.workTabs button:focus-visible,
+.pagination button:focus-visible,
+.profileToggle:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-primary-light) 72%, transparent);
+    outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+    .settlementGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .analyticsBody {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .overviewPane {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 18px;
+    }
+
+    .periodGrid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .periodAmount {
+        min-width: 150px;
+        padding: 0;
+    }
+
+    .workTabs {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .desktopChrome {
+        display: none;
+    }
+
+    .mainContent {
+        padding: 14px 12px calc(36px + env(safe-area-inset-bottom));
+    }
+
+    .dashboard {
+        gap: 12px;
+    }
+
+}
+
+@media (max-width: 640px) {
+    .mainContent {
+        padding: 12px 12px calc(32px + env(safe-area-inset-bottom));
+    }
+
+    .dashboard {
+        gap: 12px;
+    }
+
+    .panel {
+        padding: 14px;
+        border-radius: 13px;
+    }
+
+    .sectionHeader {
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .sectionHeader h2 {
+        font-size: 17px;
+    }
+
+    .sectionHeader p {
+        display: none;
+    }
+
+    .withdrawButton {
+        padding: 0 13px;
+    }
+
+    .settlementGrid {
+        gap: 8px;
+    }
+
+    .settlementCard {
+        min-height: 108px;
+        gap: 8px;
+        padding: 12px;
+    }
+
+    .cardLabel {
+        min-height: 34px;
+        font-size: 11px;
+    }
+
+    .settlementValueRow {
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 7px;
+    }
+
+    .amountGroup strong {
+        font-size: 23px;
+    }
+
+    .settleButton {
+        min-width: 50px;
+        padding: 0 9px;
+    }
+
+    .analyticsBody {
+        gap: 10px;
+    }
+
+    .overviewPane {
+        display: block;
+        padding: 11px;
+    }
+
+    .periodGrid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 5px;
+    }
+
+    .periodCard {
+        padding: 0 4px;
+        font-size: 11px;
+    }
+
+    .periodAmount {
+        min-width: 0;
+        padding: 14px 2px 2px;
+    }
+
+    .periodAmount strong {
+        font-size: 24px;
+    }
+
+    .chartPane {
+        padding: 11px;
+    }
+
+    .chartToolbar {
+        gap: 8px;
+    }
+
+    .chartToolbar p {
+        display: none;
+    }
+
+    .segmentedControl button {
+        min-width: 58px;
+        padding: 0 8px;
+    }
+
+    .chartPlaceholder {
+        min-height: 190px;
+    }
+
+    .workTabs {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+    }
+
+    .workTabs button {
+        padding: 0 6px;
+        font-size: 11px;
+    }
+
+    .workGrid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 7px;
+    }
+
+    .workRow {
+        min-height: 70px;
+        gap: 10px;
+        padding: 11px 12px;
+    }
+
+    .pageNumbers {
+        display: none;
+    }
+
+    .pagination {
+        justify-content: space-between;
+    }
+
+    .pageSummary {
+        display: inline;
+    }
+
+    .profileToggle {
+        min-height: 68px;
+        padding: 12px 14px;
+    }
+
+    .profileHeading span {
+        display: none;
+    }
+
+    .profileToggleMeta {
+        gap: 7px;
+    }
+
+    .profileContent {
+        padding: 0 12px 14px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .profileToggleMeta svg {
+        transition: none;
+    }
+}

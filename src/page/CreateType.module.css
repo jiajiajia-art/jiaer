@@ -1,0 +1,299 @@
+.pageRoot {
+    /* createTypeOption 卡片色来自模态框 CSS，需祖先提供变量 */
+    --type-card: var(--color-surface);
+    --type-border: color-mix(in srgb, var(--color-text) 10%, transparent);
+    /* 功能注释：活动入口跟暗色主站次要文案一致（白灰），不用品红/酒红当正文色 */
+    --activity-accent: var(--color-text-secondary);
+    --activity-accent-strong: var(--color-surface);
+    --activity-rule: color-mix(in srgb, var(--color-text) 14%, transparent);
+    width: 100%;
+    min-height: 100vh;
+    max-width: 1920px;
+    margin: 0 auto;
+    background: var(--color-bg);
+    color: var(--color-text);
+}
+
+.mainContent {
+    display: flex;
+    /* 功能注释：壳层 .main 是 flex-column；顶对齐，禁止垂直居中以免顶栏下大块空白 */
+    justify-content: flex-start;
+    /* 功能注释：列布局下用 align-items 水平居中单列内容 */
+    align-items: center;
+    /* 功能注释：壳层已用 --app-navbar-offset 避让顶栏，这里只留内容边距，禁止再叠一层 navbar 高度 */
+    padding: 8px 20px 32px;
+    min-height: 100%;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+/* 功能注释：PC 居中单列（与移动端同结构）；由 mainContent justify-center 居中，勿贴左成半屏空区 */
+.content {
+    width: 100%;
+    max-width: 560px;
+    margin: 0 auto;
+    color: var(--color-text);
+    box-sizing: border-box;
+}
+
+.moreActivitiesButton {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 36px;
+    margin: 0 0 6px;
+    padding: 0 2px;
+    box-sizing: border-box;
+    border: 0;
+    background: transparent;
+    color: var(--color-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: opacity 0.18s ease;
+}
+
+.moreActivitiesButton::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 1px;
+    /* 功能注释：分割线用中性白边，对齐卡片描边而非金色/品红 */
+    background: var(--activity-rule);
+    transition: background-color 0.18s ease;
+}
+
+.moreActivitiesButton:hover::after {
+    background: color-mix(in srgb, var(--color-text) 28%, transparent);
+}
+
+.moreActivitiesButton:active {
+    opacity: 0.76;
+}
+
+.moreActivitiesButton:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 80%, transparent);
+    outline-offset: 3px;
+}
+
+.moreActivitiesButton:hover .moreActivitiesIcon,
+.moreActivitiesButton:hover .moreActivitiesAction {
+    color: var(--activity-accent-strong);
+}
+
+.moreActivitiesLead {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 8px;
+    overflow: hidden;
+}
+
+.moreActivitiesIcon {
+    flex: 0 0 auto;
+    width: 17px;
+    height: 17px;
+    color: var(--activity-accent);
+}
+
+.moreActivitiesPromoViewport {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    color: color-mix(in srgb, var(--color-text) 78%, transparent);
+    white-space: nowrap;
+}
+
+.moreActivitiesPromoTrack {
+    display: inline-flex;
+    align-items: center;
+    width: max-content;
+    will-change: transform;
+}
+
+.moreActivitiesPromoTrackScrolling {
+    animation: activityPromoMarquee 12s linear infinite;
+}
+
+.moreActivitiesPromoText {
+    flex: 0 0 auto;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.moreActivitiesPromoTrackScrolling .moreActivitiesPromoText {
+    margin-right: 32px;
+}
+
+.moreActivitiesButton:hover .moreActivitiesPromoTrackScrolling,
+.moreActivitiesButton:focus-visible .moreActivitiesPromoTrackScrolling {
+    animation-play-state: paused;
+}
+
+.moreActivitiesAction {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 2px;
+    margin-left: 10px;
+    color: var(--activity-accent);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.moreActivitiesArrow {
+    flex: 0 0 auto;
+    width: 15px;
+    height: 15px;
+}
+
+@keyframes activityPromoMarquee {
+    to {
+        transform: translate3d(-50%, 0, 0);
+    }
+}
+
+.header {
+    justify-content: center;
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.banHint {
+    margin: 0 0 14px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+    color: color-mix(in srgb, var(--color-primary-lighter) 95%, transparent);
+    font-size: 13px;
+    line-height: 1.45;
+    text-align: center;
+}
+
+.title {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-align: center;
+    font-family: "Alibaba PuHuiTi 2.0", "Alibaba PuHuiTi", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-weight: 500;
+}
+
+.helpBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: 50%;
+    border: 2px solid color-mix(in srgb, var(--color-text) 35%, transparent);
+    background: transparent;
+    color: color-mix(in srgb, var(--color-text) 78%, transparent);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.helpBtn:hover {
+    color: var(--color-text);
+    border-color: color-mix(in srgb, var(--color-text) 65%, transparent);
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.helpBtn:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 80%, transparent);
+    outline-offset: 2px;
+}
+
+/* 功能注释：与移动端一致单列；覆盖模态 flex 列默认，保证卡片通栏可读 */
+.content .options {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 0;
+    width: 100%;
+}
+
+/* 功能注释：「创作游戏」二级弹层，三项竖排，与主列表卡片同风格 */
+.romanceSubModal {
+    max-width: 440px;
+}
+
+.romanceSubOptions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .mainContent {
+        /* 功能注释：历史曾用 desktop-navbar-height 做 padding-top，与 AppPageShell 双倍占位导致顶栏下大块空白 */
+        padding: 8px 16px 100px;
+    }
+
+    .content {
+        width: 100%;
+        max-width: none;
+    }
+
+    .content .options {
+        gap: 12px;
+    }
+}
+
+/* 功能注释：保证主区背景铺满，居中列两侧是同色底而非「半截空栏」感 */
+.pageRoot,
+.mainContent {
+    background: var(--color-bg);
+}
+
+@media (max-width: 420px) {
+    .moreActivitiesLead {
+        gap: 6px;
+    }
+
+    .moreActivitiesPromoText {
+        font-size: 12px;
+    }
+
+    .moreActivitiesAction {
+        margin-left: 8px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .moreActivitiesPromoTrackScrolling {
+        display: block;
+        max-width: 100%;
+        animation: none;
+        transform: none;
+    }
+
+    .moreActivitiesPromoTrackScrolling .moreActivitiesPromoText {
+        display: block;
+        overflow: hidden;
+        margin-right: 0;
+        text-overflow: ellipsis;
+    }
+
+    .moreActivitiesPromoDuplicate {
+        display: none;
+    }
+}

@@ -1,0 +1,126 @@
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    pointer-events: auto;
+    background: color-mix(in srgb, var(--color-shadow) 40%, transparent);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+.panelWrapper {
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: auto;
+}
+
+.panel {
+    background: linear-gradient(to bottom, 
+        color-mix(in srgb, var(--color-text) 20%, transparent) 0%, 
+        color-mix(in srgb, var(--color-text) 20%, transparent) 10%, 
+        color-mix(in srgb, var(--color-text) 20%, transparent) 100%);
+    border: 1px solid color-mix(in srgb, var(--color-text) 30%, transparent);
+    border-radius: 8px;
+    padding: 32px 28px 24px;
+    width: 90vw;
+    max-width: 360px;
+    box-shadow: 0 1px 12px color-mix(in srgb, var(--color-shadow) 43.6%, transparent);
+    position: relative;
+}
+
+/* 上方中央的白色渐变效果 */
+.panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 40px;
+    background: radial-gradient(ellipse at center top, 
+        color-mix(in srgb, var(--color-text) 15%, transparent) 0%, 
+        color-mix(in srgb, var(--color-text) 5%, transparent) 50%, 
+        transparent 100%);
+    border-radius: 8px 8px 0 0;
+    pointer-events: none;
+}
+
+.closeButton {
+    position: absolute;
+    top: -12px;
+    right: -12px;
+    background: color-mix(in srgb, var(--color-shadow) 37.1%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 30%, transparent);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: color-mix(in srgb, var(--color-on-media) 90%, transparent);
+    font-size: 22px;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-shadow) 10%, transparent);
+    z-index: 10;
+}
+
+.closeButton:hover {
+    background: color-mix(in srgb, var(--color-bg) 95%, transparent);
+    color: var(--color-text);
+    transform: scale(1.05);
+}
+
+.content {
+    color: var(--color-text);
+}
+
+.title {
+    font-size: 16px;
+    font-weight: 400;
+    margin-bottom: 20px;
+    color: color-mix(in srgb, var(--color-text) 95%, transparent);
+    text-align: left;
+    padding-bottom: 12px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 15%, transparent);
+}
+
+.attributeList {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.attributeItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0;
+    color: color-mix(in srgb, var(--color-text) 90%, transparent);
+}
+
+.attrName {
+    color: color-mix(in srgb, var(--color-text) 85%, transparent);
+    font-size: 15px;
+    font-weight: 400;
+}
+
+.attrValue {
+    color: color-mix(in srgb, var(--color-text) 95%, transparent);
+    font-size: 15px;
+    font-weight: 400;
+    margin-left: auto;
+    padding-left: 20px;
+}
+
+.noAttributes {
+    text-align: center;
+    color: var(--color-text-secondary);
+    padding: 20px;
+    font-size: 14px;
+}
