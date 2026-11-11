@@ -15,6 +15,7 @@
     <script>
       var _hmt = _hmt || [];
       (function() {
+        if (['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname)) return;
         // 嵌入在跨域 iframe（如 Figma Make 预览）时不加载：hm.js 会读取 top.location.href 并抛 SecurityError
         if (window.self !== window.top) return;
         var hm = document.createElement("script");

@@ -72,6 +72,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     const navigate = useNavigate();
     const user = useAuthStore((s) => s.user);
     const worksSectionRef = useRef<HTMLDivElement>(null);
+    const isVisitor = access === 'visitor';
 
     const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
     const [isLoadingMyGames, setIsLoadingMyGames] = useState(true);
@@ -93,7 +94,6 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     const [draftCapacity, setDraftCapacity] = useState<{ count: number; limit: number; canCreate: boolean } | null>(null);
 
     const isPreview = mode === 'preview';
-    const isVisitor = access === 'visitor';
     // 功能注释：下架只认 moderationStatus（兼容 moderation_status），勿用申诉 approved 推断已上架
     const hasTakenDownWork = useMemo(
         () => !isVisitor && fileMetas.some((game) => {
