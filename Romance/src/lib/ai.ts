@@ -305,9 +305,25 @@ export async function completeWithTools(
   tools: ToolDef[],
   timeoutMs?: number,
 ): Promise<{ text: string; calls: ToolCall[]; native: boolean }> {
-  // 功能注释：平台文案链路暂不透传 tools，退回普通 complete（与接口不支持 tools 时一致）
+  // 功能注释：平台登录时透传 tools，解析返回的 tool_calls；上游不支持时后端会回退正文
   if (hasPlatformPlayAuth()) {
-    return { text: await complete(cfg, messages, timeoutMs), calls: [], native: false };
+    try {
+      const result = await completePlayViaPlatform(messages, {
+        timeoutMs,
+        max_tokens: 4000,
+        tools: tools.map((t) => ({ type: "function" as const, function: t })),
+        tool_choice: "auto",
+      });
+      const calls: ToolCall[] = (result.tool_calls || []).map((c) => {
+        const raw = c?.function?.arguments ?? "";
+        let args: unknown = undefined;
+        try { args = raw ? JSON.parse(raw) : {}; } catch { try { args = JSON.parse(raw.replace(/,\s*([}\]])/g, "$1")); } catch { args = undefined; } }
+        return { name: c?.function?.name ?? "", args, raw };
+      });
+      return { text: result.text || "", calls, native: calls.length > 0 };
+    } catch {
+      return { text: await complete(cfg, messages, timeoutMs), calls: [], native: false };
+    }
   }
   const ctl = timeoutMs && timeoutMs > 0 ? new AbortController() : undefined;
   const dog = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : undefined;

@@ -39,6 +39,7 @@ import { perkKeyOptions } from "../game/perkKeys";
 import ModWorldBookEditor from "./ModWorldBookEditor";
 import ModRelationsEditor from "./ModRelationsEditor";
 import ImagePicker from "./ImagePicker";
+import CreatorAssetLibrary from "./CreatorAssetLibrary";
 import {
   NPC_AVATAR_GEN_SIZE,
   buildNpcAvatarPromptParts,
@@ -478,6 +479,8 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
     setM({ ...m, content: next });
   };
   const [addPlayOpen, setAddPlayOpen] = useState(false);
+  /** 功能注释：统一素材库面板（头像/整包/地点图/通用图）；顶栏固定入口 */
+  const [assetLibOpen, setAssetLibOpen] = useState(false);
   /* 功能注释：玩法配置面板按已安装 Mod 动态出现；编辑 addon 本体时按其目录声明的面板展示 */
   const playPanels = useMemo(() => {
     if (m.kind === "addon") {
@@ -901,6 +904,14 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
           enabledThemeTags={enabledThemeTags}
         />
       )}
+      {assetLibOpen ? (
+        <CreatorAssetLibrary
+          initialTab="general"
+          initialScope="mine"
+          pickMode="browse"
+          onClose={() => setAssetLibOpen(false)}
+        />
+      ) : null}
       {/* 功能注释：顶栏固定「保存 / 预览」在右侧且 shrink-0，避免窄屏被标题挤出可视区 */}
       <div className="mod-editor-chrome sticky top-0 z-20 -mx-1 space-y-1 border-b border-line bg-paper-2/95 px-1 py-2 backdrop-blur">
         <div className="flex items-center gap-1.5 sm:gap-2">
@@ -911,7 +922,16 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
             {persisted ? `编辑「${m.name || initial.name}」` : "创建世界"}
           </span>
           <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
-            {/* 功能注释：顶栏只留「保存 / 放弃 / 预览」；已去掉「保存后退出」按钮，退出用左侧‹返回 */}
+            {/* 功能注释：顶栏固定「素材库」统一入口；上传/选用头像·地点·通用图 */}
+            <button
+              type="button"
+              onClick={() => setAssetLibOpen(true)}
+              title="素材库：头像 / 地点整包 / 地点图 / 通用图"
+              className="rounded-full border border-jade px-2.5 py-1.5 text-[12px] font-bold text-jade transition hover:bg-jade/10 sm:px-3 sm:text-[12.5px]"
+            >
+              素材库
+            </button>
+            {/* 功能注释：顶栏「保存 / 放弃 / 预览」；退出用左侧‹返回 */}
             <button
               type="button"
               onClick={() => save(true)}

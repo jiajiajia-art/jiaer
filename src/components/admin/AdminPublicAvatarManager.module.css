@@ -160,16 +160,34 @@
   backdrop-filter: blur(4px);
 }
 
+/*
+ * 上传 / 编辑标签抽屉：portal 挂 body，必须自带 --av-*（禁止依赖 .root），
+ * 关键字色带 fallback，避免浅米色底上发白不可读。
+ */
 .uploadDrawer {
+  --av-ink: #3b2a1d;
+  --av-muted: #8a7463;
+  --av-line: rgba(201, 139, 92, 0.22);
+  --av-line-strong: rgba(205, 157, 120, 0.42);
+  --av-surface: rgba(255, 251, 246, 0.96);
+  --av-surface-soft: rgba(250, 242, 234, 0.92);
+  --av-accent: #c9733f;
+  --av-accent-strong: #aa5a2d;
+  --av-accent-soft: rgba(201, 115, 63, 0.12);
+  --av-danger: #b4232c;
+  --av-danger-soft: rgba(180, 35, 44, 0.1);
+  --av-warn: #9a6700;
+  --av-warn-soft: rgba(154, 103, 0, 0.12);
+
   width: min(440px, 100%);
   height: 100%;
   overflow: auto;
   background: #fffaf5;
-  border-left: 1px solid var(--av-line);
+  border-left: 1px solid var(--av-line, rgba(201, 139, 92, 0.22));
   box-shadow: -12px 0 40px rgba(28, 20, 14, 0.18);
   padding: 20px 20px 28px;
   box-sizing: border-box;
-  color: var(--av-ink);
+  color: var(--av-ink, #3b2a1d);
 }
 
 .uploadDrawerHeader {
@@ -184,13 +202,14 @@
   margin: 0;
   font-size: 20px;
   font-weight: 700;
+  color: var(--av-ink, #3b2a1d);
 }
 
 .uploadDrawerHint {
   margin: 8px 0 0;
   font-size: 12px;
   line-height: 1.5;
-  color: var(--av-muted);
+  color: var(--av-muted, #8a7463);
 }
 
 .uploadClose {
@@ -200,15 +219,15 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: var(--av-muted);
+  color: var(--av-muted, #8a7463);
   font-size: 24px;
   line-height: 1;
   cursor: pointer;
 }
 
 .uploadClose:hover {
-  background: var(--av-accent-soft);
-  color: var(--av-ink);
+  background: var(--av-accent-soft, rgba(201, 115, 63, 0.12));
+  color: var(--av-ink, #3b2a1d);
 }
 
 .uploadPickBox {
@@ -217,7 +236,7 @@
   gap: 8px;
   padding: 14px;
   border-radius: 12px;
-  border: 1px dashed var(--av-line-strong);
+  border: 1px dashed var(--av-line-strong, rgba(205, 157, 120, 0.42));
   background: rgba(255, 255, 255, 0.7);
 }
 
@@ -225,18 +244,19 @@
   margin: 0;
   font-size: 14px;
   font-weight: 650;
+  color: var(--av-ink, #3b2a1d);
 }
 
 .uploadPickSub {
   margin: 0;
   font-size: 12px;
-  color: var(--av-muted);
+  color: var(--av-muted, #8a7463);
 }
 
 .editMeta {
   margin: 0;
   font-size: 12px;
-  color: var(--av-muted);
+  color: var(--av-muted, #8a7463);
 }
 
 .cardSummary {
@@ -391,18 +411,18 @@
   width: 100%;
   height: 40px;
   padding: 0 12px;
-  border: 1px solid var(--av-line-strong);
+  border: 1px solid var(--av-line-strong, rgba(205, 157, 120, 0.42));
   border-radius: 8px;
   background: #fff;
-  color: var(--av-ink);
+  color: var(--av-ink, #3b2a1d);
   font-size: 14px;
   font-family: inherit;
 }
 
 .titleInput:focus {
   outline: none;
-  border-color: var(--av-accent);
-  box-shadow: 0 0 0 3px var(--av-accent-soft);
+  border-color: var(--av-accent, #c9733f);
+  box-shadow: 0 0 0 3px var(--av-accent-soft, rgba(201, 115, 63, 0.12));
 }
 
 .titleInput::placeholder {
@@ -426,7 +446,7 @@
 .segLabel {
   font-size: 11px;
   font-weight: 700;
-  color: var(--av-muted);
+  color: var(--av-muted, #8a7463);
   letter-spacing: 0.06em;
 }
 
@@ -437,7 +457,7 @@
   padding: 3px;
   border-radius: 9px;
   background: #fff;
-  border: 1px solid var(--av-line-strong);
+  border: 1px solid var(--av-line-strong, rgba(205, 157, 120, 0.42));
 }
 
 .seg,
@@ -451,25 +471,25 @@
   cursor: pointer;
   font-family: inherit;
   background: transparent;
-  color: var(--av-muted);
+  color: var(--av-muted, #8a7463);
   line-height: 1.2;
   white-space: nowrap;
 }
 
 .seg:hover {
-  color: var(--av-ink);
-  background: var(--av-accent-soft);
+  color: var(--av-ink, #3b2a1d);
+  background: var(--av-accent-soft, rgba(201, 115, 63, 0.12));
 }
 
 .segActive {
-  background: var(--av-accent-soft);
-  color: var(--av-accent-strong);
+  background: var(--av-accent-soft, rgba(201, 115, 63, 0.12));
+  color: var(--av-accent-strong, #aa5a2d);
 }
 
 .fieldLabel {
   font-size: 11px;
   font-weight: 700;
-  color: var(--av-muted);
+  color: var(--av-muted, #8a7463);
   letter-spacing: 0.06em;
 }
 
@@ -497,13 +517,13 @@
 }
 
 .primaryBtn {
-  background: var(--av-accent);
+  background: var(--av-accent, #c9733f);
   color: #fff;
   box-shadow: 0 2px 8px rgba(201, 115, 63, 0.28);
 }
 
 .primaryBtn:hover {
-  background: var(--av-accent-strong);
+  background: var(--av-accent-strong, #aa5a2d);
 }
 
 .primaryBtn:disabled {
@@ -514,14 +534,14 @@
 
 .secondaryBtn {
   background: #fff;
-  color: var(--av-ink);
-  border: 1px solid var(--av-line-strong);
+  color: var(--av-ink, #3b2a1d);
+  border: 1px solid var(--av-line-strong, rgba(205, 157, 120, 0.42));
 }
 
 .secondaryBtn:hover {
-  border-color: var(--av-accent);
-  color: var(--av-accent-strong);
-  background: var(--av-accent-soft);
+  border-color: var(--av-accent, #c9733f);
+  color: var(--av-accent-strong, #aa5a2d);
+  background: var(--av-accent-soft, rgba(201, 115, 63, 0.12));
 }
 
 /*

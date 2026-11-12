@@ -1,14 +1,14 @@
 /* 场景地点树编辑器
  * 大地图 → 地点树：作品可有多张大地图，每张下挂一棵地点树（parent 空 = 该图顶层）。
- * 「从地点库添加」复制运营库大地图 + 整棵地点树进本作品；打开编辑器不会自动写入库条目。 */
-import { useEffect, useMemo, useState, type DragEvent, type JSX } from "react";
+ * 「从地点库添加」打开统一素材库 · 地点整包（我的 + 平台精选）；复制进本作品后与库脱钩。 */
+import { useMemo, useState, type DragEvent, type JSX } from "react";
 import type { RoomContent, Requirement } from "../worlds/star2005/content";
 import { childrenOf, cloneBranch, pathOf, rootsOf, subtreeOf, wouldCycle } from "../game/roomTree";
 import { EmptyState, Help, SearchBox, matches } from "./EditorKit";
 import ImagePicker from "./ImagePicker";
 import ModBatchImageGen from "./ModBatchImageGen";
+import CreatorAssetLibrary from "./CreatorAssetLibrary";
 import { applyBatchPatch, type BatchApplyPatch } from "../lib/imageGenBatchPlan";
-import { Modal } from "./ui";
 import { IconChevronDown } from "../lib/icons";
 import {
   LOCATION_SCENE_GEN_SIZE,
@@ -18,7 +18,6 @@ import {
   type WorkImageGenBinding,
 } from "../lib/editorImagePrompts";
 import {
-  listActivePlatformLocations,
   resolvePlatformLocationImageUrl,
   type PlatformLocationItem,
 } from "../lib/platformLocationLibrary";
@@ -65,10 +64,6 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
   const [q, setQ] = useState("");
   const [drag, setDrag] = useState<string | null>(null);
   const [libOpen, setLibOpen] = useState(false);
-  const [libQ, setLibQ] = useState("");
-  const [libLoading, setLibLoading] = useState(false);
-  const [libErr, setLibErr] = useState("");
-  const [libItems, setLibItems] = useState<PlatformLocationItem[]>([]);
   const cur = sel && mapRooms[sel] ? sel : ids[0] ?? null;
   const r = cur ? mapRooms[cur] : undefined;
   const nm = (id: string) => allRooms[id]?.name || id;
@@ -111,7 +106,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
     }, startRoom);
     setSel(id); setTab("base");
   };
-  // 功能注释：从运营库复制一整张大地图 + 地点树进本作品
+  // 功能注释：从素材库（我的/精选）复制一整张大地图 + 地点树进本作品
   const addFromLibrary = (item: PlatformLocationItem) => {
     const tree = parseLibraryMapTree(item.treeJson);
     const { map, rooms: added, rootId } = importLibraryMapTree({
@@ -128,56 +123,14 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
     setLibOpen(false);
   };
 
-  useEffect(() => {
-    if (!libOpen) return;
-    let cancelled = false;
-    setLibLoading(true);
-    setLibErr("");
-    void listActivePlatformLocations(libQ)
-      .then((rows) => { if (!cancelled) setLibItems(rows); })
-      .catch((e) => { if (!cancelled) { setLibItems([]); setLibErr(e instanceof Error ? e.message : "加载失败"); } })
-      .finally(() => { if (!cancelled) setLibLoading(false); });
-    return () => { cancelled = true; };
-  }, [libOpen, libQ]);
-
   const libPicker = libOpen ? (
-    <Modal title="从地点库添加" onClose={() => setLibOpen(false)}>
-      <p className="mb-2 text-[12px] leading-relaxed text-ink-soft">
-        地点库装的是「大地图 + 地点树」整包。选中后复制进本作品（名称、层级、场景描述一并带入），原包不改。下架条目不会出现。
-      </p>
-      <SearchBox value={libQ} onChange={setLibQ} placeholder="搜索名称 / 作者库兰号 / 标签" />
-      {libErr ? <p className="mt-2 text-[12px] text-danger">{libErr}</p> : null}
-      {libLoading ? <p className="mt-3 text-[12px] text-ink-soft">加载中…</p> : null}
-      {!libLoading && !libErr && !libItems.length ? <EmptyState>地点库暂无可用条目，请联系运营在后台配置。</EmptyState> : null}
-      <ul className="mt-2 max-h-[22rem] space-y-1.5 overflow-y-auto">
-        {libItems.map((item) => {
-          const img = resolvePlatformLocationImageUrl(item.imageUrl);
-          const tree = parseLibraryMapTree(item.treeJson);
-          const n = tree?.rooms.length ?? 1;
-          const tags = Array.isArray(item.tags) ? item.tags.filter(Boolean) : [];
-          return (
-            <li key={item.id}>
-              <button
-                type="button"
-                className="flex w-full items-start gap-2 rounded-2xl border border-line bg-paper p-2 text-left transition hover:border-jade"
-                onClick={() => addFromLibrary(item)}
-              >
-                {img ? <img src={img} alt="" className="h-14 w-9 shrink-0 rounded-lg object-cover" /> : <span className="h-14 w-9 shrink-0 rounded-lg bg-paper-2" />}
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-bold text-ink">{item.name}</span>
-                  <span className="mt-0.5 line-clamp-2 text-[11.5px] text-ink-soft">{item.description || "（无说明）"}</span>
-                  <span className="mt-0.5 block text-[10.5px] text-ink-soft">
-                    含 {n} 个地点
-                    {item.authorKul ? ` · 库兰 ${item.authorKul}` : ""}
-                    {tags.length ? ` · ${tags.slice(0, 4).join("、")}` : ""}
-                  </span>
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </Modal>
+    <CreatorAssetLibrary
+      initialTab="locationPack"
+      initialScope="public"
+      pickMode="locationPack"
+      onClose={() => setLibOpen(false)}
+      onPickLocationPack={addFromLibrary}
+    />
   ) : null;
 
   const reorder = (parent: string | undefined, src: string, target: string) => {

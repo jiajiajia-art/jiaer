@@ -86,9 +86,14 @@ const newId = () => Math.random().toString(36).slice(2, 9);
 export function rememberImageAsset(url: string, name = "图片"): void {
   if (!url) return;
   const a = loadAssets();
-  if (a.some((x) => x.url === url)) return;
+  if (a.some((x) => x.url === url)) {
+    // 功能注释：本机已有时仍尝试同步云端，避免「有的进库有的不进」
+    void import("./platformCreatorAssets").then((m) => m.syncRememberToCloud(url, name)).catch(() => {});
+    return;
+  }
   saveAssets([{ id: newId(), name: name.slice(0, 24) || "图片", url, at: Date.now() }, ...a]);
   emitAssets();
+  void import("./platformCreatorAssets").then((m) => m.syncRememberToCloud(url, name)).catch(() => {});
 }
 /** 生图结果自动收进素材库（临时）；已存在则只刷新使用时间 */
 export function addTempAsset(url: string, name = "AI 生图") {
@@ -97,6 +102,7 @@ export function addTempAsset(url: string, name = "AI 生图") {
   if (hit) { hit.usedAt = Date.now(); saveAssets(a); }
   else saveAssets([{ id: newId(), name: name.slice(0, 24), url, at: Date.now(), temp: true }, ...a]);
   emitAssets();
+  void import("./platformCreatorAssets").then((m) => m.syncRememberToCloud(url, name, { temp: true })).catch(() => {});
 }
 /** 收藏：长期保留（不在库里则直接加入） */
 export function keepAsset(url: string, name = "AI 生图") {
@@ -105,6 +111,7 @@ export function keepAsset(url: string, name = "AI 生图") {
   if (hit) { delete hit.temp; saveAssets(a); }
   else saveAssets([{ id: newId(), name: name.slice(0, 24), url, at: Date.now() }, ...a]);
   emitAssets();
+  void import("./platformCreatorAssets").then((m) => m.syncRememberToCloud(url, name)).catch(() => {});
 }
 export const isAssetKept = (url: string) => loadAssets().some((x) => x.url === url && !x.temp);
 /** 素材被用上时刷新使用时间，临时素材重新计 7 天 */

@@ -38,12 +38,69 @@ export const DEFAULT_TEXT_LLM_MODEL: TextLlmPresetModel = 'doubao-seed-2-1-lite-
 
 export const DEFAULT_TEXT_LLM_GATEWAY_PRESETS: readonly TextLlmGatewayPreset[] = [
   { id: 'deepseek', label: 'DeepSeek 官方', baseUrl: 'https://api.deepseek.com' },
-  { id: 'epone', label: 'epone 代理', baseUrl: 'https://epone.ggb.today' },
+  // 功能注释：国内默认生文网关；运营台 Tab 标「GGB」方便一键切回
+  { id: 'epone', label: 'GGB（默认）', baseUrl: 'https://epone.ggb.today' },
   // 功能注释：TokenHub 文档 baseURL 为 …/v1；此处存根地址，保存时会剥掉 /v1
   { id: 'tokenhub', label: 'TokenHub', baseUrl: 'https://tokenhub.tencentmaas.com' },
   { id: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com' },
   { id: 'openrouter', label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api' },
 ];
+
+/** 功能注释：运营台始终置顶展示的默认 GGB 网关 id */
+export const DEFAULT_TEXT_LLM_GGB_GATEWAY_ID = 'epone';
+
+export type TextLlmGatewayTab = {
+  id: string;
+  label: string;
+  baseUrl: string;
+  isCustom?: boolean;
+};
+
+/**
+ * 功能注释：运营台生文网关 Tab——始终置顶 GGB；再并入已存密钥的预置、当前地址、用户自定义槽。
+ * ≥2 个时 UI 用 Tab；仅 GGB 时不必切 Tab。
+ */
+export function buildTextLlmGatewayTabs(options: {
+  presets?: readonly TextLlmGatewayPreset[];
+  activeBaseUrl?: string;
+  gatewayKeyStates?: Record<string, { keySet?: boolean } | undefined>;
+  customTabs?: readonly TextLlmGatewayTab[];
+}): TextLlmGatewayTab[] {
+  const presets = options.presets?.length ? options.presets : DEFAULT_TEXT_LLM_GATEWAY_PRESETS;
+  const ggb = presets.find((p) => p.id === DEFAULT_TEXT_LLM_GGB_GATEWAY_ID)
+    || { id: DEFAULT_TEXT_LLM_GGB_GATEWAY_ID, label: 'GGB（默认）', baseUrl: 'https://epone.ggb.today' };
+  const list: TextLlmGatewayTab[] = [{ id: ggb.id, label: ggb.label, baseUrl: ggb.baseUrl }];
+  const seen = new Set([normalizeTextLlmOpenAiBaseUrl(ggb.baseUrl)]);
+
+  const push = (tab: TextLlmGatewayTab) => {
+    const key = normalizeTextLlmOpenAiBaseUrl(tab.baseUrl);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    list.push(tab);
+  };
+
+  for (const preset of presets) {
+    if (preset.id === ggb.id) continue;
+    if (options.gatewayKeyStates?.[preset.id]?.keySet) {
+      push({ id: preset.id, label: preset.label, baseUrl: preset.baseUrl });
+    }
+  }
+
+  for (const custom of options.customTabs || []) {
+    push({ ...custom, isCustom: true });
+  }
+
+  const active = normalizeTextLlmOpenAiBaseUrl(options.activeBaseUrl || '');
+  if (active && !seen.has(active)) {
+    const presetId = resolveTextLlmGatewayPresetId(active);
+    const preset = presetId ? presets.find((p) => p.id === presetId) : null;
+    push(preset
+      ? { id: preset.id, label: preset.label, baseUrl: preset.baseUrl }
+      : { id: `custom-${active}`, label: '自定义网关', baseUrl: active, isCustom: true });
+  }
+
+  return list;
+}
 
 export interface TextLlmUsageRow {
   key: string;

@@ -167,10 +167,14 @@ test('书架页接线_路由底栏真实接口且无原生弹窗与mock', () => 
   const app = read('src/App.tsx');
   assert.match(app, /<Route path="\/bookshelf" element={<CreateWorks \/>} \/>/);
   const unifiedWorks = read('src/components/Create/CreatorWorksPanel.tsx');
-  assert.match(unifiedWorks, /'all' \| 'published' \| 'favorites'/);
+  assert.match(unifiedWorks, /'all' \| 'published' \| 'history' \| 'favorites'/);
   assert.doesNotMatch(unifiedWorks, /worksTab === 'drafts'/);
   assert.match(unifiedWorks, /create\.manage/);
   assert.match(unifiedWorks, /normalizeWorksTabKey/);
+  // 功能注释：isVisitor 必须在 resolveOwnerTab / useState 惰性初始化之前，否则 TDZ 黑屏
+  const isVisitorAt = unifiedWorks.indexOf('const isVisitor = access === \'visitor\'');
+  const resolveOwnerAt = unifiedWorks.indexOf('const resolveOwnerTab');
+  assert.ok(isVisitorAt >= 0 && resolveOwnerAt > isVisitorAt, 'isVisitor must precede resolveOwnerTab');
   const nav = read('src/components/Layout/MobileBottomNav.tsx');
   assert.match(nav, /key: 'bookshelf'/);
   assert.match(nav, /navigate\('\/bookshelf'\)/);

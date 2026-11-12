@@ -27,12 +27,20 @@ export type PlatformPlayCompleteOpts = {
   timeoutMs?: number;
   signal?: AbortSignal;
   max_tokens?: number;
+  /** 功能注释：OpenAI tools；后端透传并回传 tool_calls */
+  tools?: Array<{ type: "function"; function: { name: string; description?: string; parameters?: Record<string, unknown> } }>;
+  tool_choice?: "auto" | "none" | { type: "function"; function: { name: string } };
+};
+
+export type PlatformPlayToolCall = {
+  function?: { name?: string; arguments?: string };
 };
 
 export type PlatformPlayCompleteResult = {
   text: string;
   pointsDeducted: number;
   remainingPoints?: number;
+  tool_calls?: PlatformPlayToolCall[];
 };
 
 function requireAuthToken(): string {
@@ -75,6 +83,7 @@ export async function completePlayViaPlatform(
       body: JSON.stringify({
         messages,
         max_tokens: opts.max_tokens || 4000,
+        ...(opts.tools?.length ? { tools: opts.tools, tool_choice: opts.tool_choice || "auto" } : {}),
         ...aiRouteBody("text"),
       }),
     });
@@ -82,7 +91,13 @@ export async function completePlayViaPlatform(
     const rawBody = await res.text().catch(() => "");
     let json: {
       success?: boolean;
-      data?: { text?: string; pointsDeducted?: number; remainingPoints?: number };
+      data?: {
+        text?: string;
+        content?: string;
+        tool_calls?: PlatformPlayToolCall[];
+        pointsDeducted?: number;
+        remainingPoints?: number;
+      };
       message?: string;
       error?: string;
       code?: string;
@@ -104,8 +119,10 @@ export async function completePlayViaPlatform(
       });
     }
 
-    const text = String(json?.data?.text || "").trim();
-    if (!text) {
+    const tool_calls = Array.isArray(json?.data?.tool_calls) ? json.data!.tool_calls! : [];
+    const text = String(json?.data?.text || json?.data?.content || "").trim();
+    // 功能注释：对话改世界可能只有 tool_calls 无正文
+    if (!text && tool_calls.length === 0) {
       throw Object.assign(new Error("平台返回空内容"), { status: 204, body: rawBody.slice(0, 200) });
     }
     const pointsDeducted = Math.max(0, Math.floor(Number(json?.data?.pointsDeducted) || 0));
@@ -114,7 +131,7 @@ export async function completePlayViaPlatform(
       remainingRaw == null || !Number.isFinite(Number(remainingRaw))
         ? undefined
         : Math.max(0, Math.floor(Number(remainingRaw)));
-    return { text, pointsDeducted, remainingPoints };
+    return { text, pointsDeducted, remainingPoints, tool_calls };
   } catch (e) {
     if ((e as { name?: string })?.name === "AbortError") {
       throw new DOMException("已取消", "AbortError");

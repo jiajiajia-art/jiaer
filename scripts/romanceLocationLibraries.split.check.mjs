@@ -10,7 +10,7 @@ import test from "node:test";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const romance = join(root, "Romance/src");
 
-test("ModRoomTreeEditor_大地图按钮同行_无简介_素材库走平台用途", () => {
+test("ModRoomTreeEditor_大地图按钮同行_无简介_素材库走统一整包", () => {
   const src = readFileSync(join(romance, "components/ModRoomTreeEditor.tsx"), "utf8");
   assert.match(src, /从地点库添加/);
   assert.match(src, /＋ 大地图/);
@@ -19,14 +19,16 @@ test("ModRoomTreeEditor_大地图按钮同行_无简介_素材库走平台用途
   assert.doesNotMatch(src, /给创作者自己看的备注/);
   assert.match(src, /platformAssetPurpose="world_map"/);
   assert.match(src, /platformAssetPurpose="location_scene"/);
-  assert.match(src, /作者库兰号/);
+  assert.match(src, /CreatorAssetLibrary/);
+  assert.match(src, /initialTab="locationPack"/);
 });
 
-test("ImagePicker_平台素材库与本地库分离", () => {
+test("ImagePicker_地点用途默认停在统一素材库地点图Tab", () => {
   const src = readFileSync(join(romance, "components/ImagePicker.tsx"), "utf8");
   assert.match(src, /platformAssetPurpose/);
-  assert.match(src, /PlatformLocationAssetPicker/);
-  assert.match(src, /setPlatformLibOpen\(true\)/);
+  assert.match(src, /CreatorAssetLibrary/);
+  assert.match(src, /locationImage/);
+  assert.doesNotMatch(src, /PlatformLocationAssetPicker/);
 });
 
 test("PlatformLocationAssetPicker_只选图不改结构", () => {

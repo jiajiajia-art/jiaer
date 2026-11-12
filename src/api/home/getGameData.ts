@@ -44,8 +44,9 @@ const getGameDataApi = {
     getPlayStatus: (fileId: string) => {
         return api.get<GamePlayStatusResponse>(`/auth/games/${fileId}/play-status`);
     },
+    // 功能注释：旧仓库（购买+创作）迁到 /warehouse；/history 已改为浏览记录
     getWareHouseData: (data: PublicGameRequest) => {
-        return api.get<WareHouseResponse>(`/auth/games/history`, { params: data });
+        return api.get<WareHouseResponse>(`/auth/games/warehouse`, { params: data });
     }
 }
 

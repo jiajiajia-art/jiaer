@@ -437,11 +437,10 @@ const Navbar: React.FC<NavbarProps> = ({
                                         <img
                                             key={user?.user?.avatarUrl || 'default-avatar'}
                                             src={(() => {
+                                                // 功能注释：getImageUrl 已对用户头像追加 format=webp；默认图不加查询参数
                                                 const baseUrl = getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/default_avatar.png`;
-                                                // 功能注释：用户头像统一请求 webp 格式；后端按 USER_AVATAR_WEBP_AB_PERCENT 决定返回 webp 或原图。
                                                 if (!baseUrl || baseUrl.includes('default_avatar')) return baseUrl;
-                                                const sep = baseUrl.includes('?') ? '&' : '?';
-                                                return `${baseUrl}${sep}format=webp`;
+                                                return baseUrl;
                                             })()}
                                             alt=""
                                         />
