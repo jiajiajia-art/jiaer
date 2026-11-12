@@ -148,6 +148,22 @@ export function buildNpcAvatarPromptParts(
 }
 
 /**
+ * 功能注释：把「你来到了「地名」。」这类进入叙事从画面词里剥掉；
+ * 整句只有这句时返回空，避免主体变成「地点「X」，你来到了「X」。。」。
+ */
+function sanitizeSceneSpace(name: string, raw: string): string {
+  let space = clip(raw, 360);
+  if (!space) return "";
+  const esc = name ? name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : ".+?";
+  // 功能注释：匹配「你来到了「地名」。」及无书名号变体；整句命中则丢弃
+  const arrivalOnly = new RegExp(`^你来到了[「"']?${esc}[」"']?[。.!！…]*$`);
+  if (arrivalOnly.test(space)) return "";
+  space = space.replace(new RegExp(`^你来到了[「"']?${esc}[」"']?[。.!！…]*\\s*`), "").trim();
+  if (name && (space === name || space === `地点「${name}」`)) return "";
+  return space;
+}
+
+/**
  * 功能注释：地点场景三层——
  * 主体是「空间长什么样」（visualDesc / scenePrompt），不是进入时给玩家看的叙事 desc。
  */
@@ -160,9 +176,12 @@ export function buildLocationScenePromptParts(
   settings: WorkImageStyleSettings = {},
 ): EditorImagePromptParts {
   const name = clip(r.name, 60);
-  const space = clip(r.scenePrompt, 360);
-  const body = joinParts([name ? `地点「${name}」` : "", space]);
-  const subject = body ? `${body}。${FRAMING_SCENE}` : "";
+  const space = sanitizeSceneSpace(name, r.scenePrompt ?? "");
+  // 功能注释：无画面描述时不塞叙事句，改用一句空间脚手架；有描述则「地点名 + 画面」
+  const body = space
+    ? joinParts([name ? `地点「${name}」` : "", space])
+    : (name ? `地点「${name}」的场景空间，布局、光线与陈设` : "");
+  const subject = body ? joinParts([body.replace(/[。.\s]+$/g, ""), FRAMING_SCENE], "。") : "";
   return makeParts(settings, subject, BASE_NEGATIVE_SCENE);
 }
 

@@ -92,12 +92,40 @@ export async function listPublishedPlayMods(installed: string[] = []): Promise<P
     data?: unknown;
     message?: string;
   } | null;
-  const data = json?.data as PlayModShelfApiItem[] | { items?: PlayModShelfApiItem[] } | undefined;
-  const rows = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : null;
-  if (!res.ok || !json?.success || !rows) {
+  const data = json?.data as
+    | PlayModShelfApiItem[]
+    | {
+        items?: PlayModShelfApiItem[];
+        official?: PlayModShelfApiItem[];
+        newcomers?: PlayModShelfApiItem[];
+        ranked?: PlayModShelfApiItem[];
+      }
+    | undefined;
+  // 功能注释：兼容数组 / items / 分桶（official+newcomers+ranked）三种后端形态
+  const rows = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.items)
+      ? data.items
+      : [
+          ...(Array.isArray(data?.official) ? data.official : []),
+          ...(Array.isArray(data?.newcomers) ? data.newcomers : []),
+          ...(Array.isArray(data?.ranked) ? data.ranked : []),
+        ];
+  if (!res.ok || !json?.success) {
     throw new Error(json?.message || "加载玩法商店失败");
   }
-  return rows.map(toStoreItem);
+  if (!Array.isArray(rows)) {
+    throw new Error(json?.message || "加载玩法商店失败");
+  }
+  const seen = new Set<string>();
+  return rows
+    .filter((x) => {
+      const id = String(x?.id || "");
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    })
+    .map(toStoreItem);
 }
 
 /** 功能注释：添加进作品后登记安装（POST /api/components/:id/install），用于累计安装数；失败不影响本地安装 */

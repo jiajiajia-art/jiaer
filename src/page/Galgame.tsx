@@ -4,7 +4,7 @@ import { copyTextToClipboard as copyTextWithFallback } from '../utils/clipboard'
 import { useAuthStore } from "../store/useAuthStore";
 import { useGameStore } from "../store/gameStore";
 import { RiLogoutCircleRLine } from "react-icons/ri";
-import { MdSettings, MdTimeline, MdPerson, MdOutlineAssessment, MdFlag, MdDns, MdContentCopy, MdAutoStories } from "react-icons/md";
+import { MdSettings, MdTimeline, MdPerson, MdOutlineAssessment, MdFlag, MdDns, MdContentCopy, MdAutoStories, MdArrowBack } from "react-icons/md";
 import {
   buildOpeningRoutesFromWorldKeyEvents,
   buildSilentDefaultGameStartConfig,
@@ -1769,26 +1769,47 @@ const Galgame = () => {
                     )}
                     <div id="custom-ui-root" className={styles.customUIRoot}></div>
                     <div className={styles.topBar}>
-                        {hasMusic && (
-                            <div
-                                className={`${styles.musicButton} ${!isMusicPlaying && !isMusicLoading ? styles.musicButtonMuted : ''}`}
-                                onClick={handleMusicToggle}
+                        <div className={styles.topBarLeft}>
+                            <button
+                                type="button"
+                                className={styles.topBackButton}
+                                onClick={() => {
+                                    logVisualButtonClick('play_back');
+                                    if (controller.isReplay) {
+                                        controller.handleExitGame();
+                                        return;
+                                    }
+                                    navigateBackSafe();
+                                }}
+                                aria-label={t('galgame.back')}
+                                title={t('galgame.back')}
                             >
-                                <div className={styles.musicButtonInner}>
-                                    {isMusicLoading ? (
-                                        <div className={styles.musicLoading}></div>
-                                    ) : !isMusicPlaying ? (
-                                        <>
+                                <span className={styles.topBackButtonInner}>
+                                    <MdArrowBack aria-hidden />
+                                    <span>{t('galgame.back')}</span>
+                                </span>
+                            </button>
+                            {hasMusic && (
+                                <div
+                                    className={`${styles.musicButton} ${!isMusicPlaying && !isMusicLoading ? styles.musicButtonMuted : ''}`}
+                                    onClick={handleMusicToggle}
+                                >
+                                    <div className={styles.musicButtonInner}>
+                                        {isMusicLoading ? (
+                                            <div className={styles.musicLoading}></div>
+                                        ) : !isMusicPlaying ? (
+                                            <>
+                                                <img src={`${import.meta.env.BASE_URL}data/assets/bgm.png`} alt="BGM" />
+                                                <div className={styles.muteSlash}></div>
+                                            </>
+                                        ) : (
                                             <img src={`${import.meta.env.BASE_URL}data/assets/bgm.png`} alt="BGM" />
-                                            <div className={styles.muteSlash}></div>
-                                        </>
-                                    ) : (
-                                        <img src={`${import.meta.env.BASE_URL}data/assets/bgm.png`} alt="BGM" />
-                                    )}
-                                    <span>{t('galgame.music')}</span>
+                                        )}
+                                        <span>{t('galgame.music')}</span>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
                         <div className={`${styles.topHeader} ${controller.isTextMode ? styles.topHeaderTextMode : ''}`}>
                             <span className={styles.topHeaderLocationIcon} aria-hidden="true">
                                 <CiLocationOn />

@@ -626,6 +626,31 @@
 }
 .goodsTagPill { flex: 0 1 auto; min-width: 0; }
 
+/* 功能注释：书架「我的作品」——按内容收紧，取消双行标题/空简介/空标签占位，去掉卡内大块空白 */
+.gridWorks {
+    align-items: start !important;
+}
+.goodsCardWorks {
+    height: auto;
+}
+.goodsCardWorks .goodsBody {
+    flex: 0 0 auto;
+    gap: 6px;
+    padding: 8px 10px 10px;
+}
+.goodsCardWorks .goodsTitle {
+    min-height: 0;
+}
+.goodsCardWorks .goodsMetaRow {
+    height: auto;
+    min-height: 0;
+}
+.goodsCardWorks .goodsTagRow {
+    margin-top: 0;
+    height: auto;
+    min-height: 0;
+}
+
 /* ===== 功能注释：卡片视觉精修 =====
    层级：封面（数据角标）→ 标题 → 作者 → 题材；统一 12px 内边距与 8px 节奏 */
 .goodsCard {

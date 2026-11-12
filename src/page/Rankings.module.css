@@ -27,12 +27,17 @@
     background: var(--rank-bg);
 }
 
+/* 功能注释：短内容时把页脚沉到滚动区底（贴底栏上方），避免版权下方再空出一大块黑底 */
+.page > :global(footer[data-site-footer]) {
+    margin-top: auto;
+}
+
 .pageInner {
     /* 功能注释：定位上下文留给 sticky Tab；勿写到壳层 main 上 */
     position: relative;
     max-width: 1360px;
     margin: 0 auto;
-    padding: 0 32px 96px;
+    padding: 0 32px 40px;
     width: 100%;
     box-sizing: border-box;
 }
@@ -953,8 +958,8 @@
 /* ─── Responsive ─────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .pageInner {
-        /* 功能注释：底栏避让已由 AppPageShell 负责，这里只留列表与页脚间距 */
-        padding: 0 16px 48px;
+        /* 功能注释：底栏避让已由 AppPageShell 负责；底距只留列表与页脚呼吸，勿再垫半屏空白 */
+        padding: 0 16px 20px;
     }
 
     .tabBar {

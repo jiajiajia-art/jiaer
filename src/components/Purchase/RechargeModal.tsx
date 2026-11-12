@@ -959,20 +959,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                             </div>
                         </section>
 
-                        <section className={styles.orderSummary} aria-label="订单摘要">
-                            {rechargeTab === 'membership' ? (
-                                <>
-                                    <div><span>选择商品</span><strong>{selectedMembershipPlan?.name ?? '未选择'}</strong></div>
-                                    <div><span>支付金额</span><strong>{fmt(membershipPayAmount)}</strong></div>
-                                </>
-                            ) : (
-                                <>
-                                    <div><span>支付金额</span><strong>{fmt(payAmount)}</strong></div>
-                                    <div><span>本次获得</span><strong>{estimatedDiamonds} KK币</strong></div>
-                                </>
-                            )}
-                        </section>
-
+                        {/* 功能注释：订单摘要已删——支付按钮文案已含金额与商品，中间摘要重复且占位 */}
                         <button
                             type="submit"
                             className={`${styles.submitBtn} ${rechargeTab === 'membership' ? styles.membershipSubmitBtn : ''}`}

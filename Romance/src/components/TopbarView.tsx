@@ -315,11 +315,9 @@ export default function TopbarView({ data, diy, topbar = "gradient", topbarText,
   const raw = !questOnly && rules?.some((r) => r.enabled && r.target === "rawBar") ? rx("rawBar", rawBarText(data)) : null;
   const style = c.barStyle;
   let bar: ReactNode = null;
-  let noteInBar = false; // 局势已并入主线行时不再单独渲染第二行
-  // 功能注释：作者预览状态栏只留当前主线步骤，不展示周数/日期/地点/金钱/倒计时
+  // 功能注释：作者预览状态栏只留当前主线步骤，不展示周数/日期/地点/金钱/倒计时；不再展示「局势」摘要
   if (questOnly && layout !== "profileOnly") {
     const step = data.questStep?.trim();
-    noteInBar = !!step;
     bar = step ? (
       <button
         type="button"
@@ -331,11 +329,7 @@ export default function TopbarView({ data, diy, topbar = "gradient", topbarText,
         className={`${base} ${BAR_BOX[style]} flex w-full min-w-0 items-center gap-2 text-left`}
       >
         <span className="shrink-0 rounded-full bg-coral px-2 py-0.5 text-[10px] font-black tracking-[0.14em] text-white">主线</span>
-        {/* 功能注释：局势与主线同一行：主线步骤在前，局势摘要跟在后面，整行截断 */}
-        <span className="min-w-0 flex-1 truncate">
-          <span className="font-semibold text-ink">{step}</span>
-          {data.note?.trim() && <><span className="mx-1.5 text-ink-soft/60">·</span><span className="mr-1 text-[11px] font-bold tracking-[0.12em] text-coral">局势</span><span className="text-[11.5px] text-ink-soft">{data.note}</span></>}
-        </span>
+        <span className="min-w-0 flex-1 truncate font-semibold text-ink">{step}</span>
         <IconFlag width={13} height={13} className="shrink-0 text-coral" aria-hidden />
       </button>
     ) : null;
@@ -545,23 +539,6 @@ export default function TopbarView({ data, diy, topbar = "gradient", topbarText,
       {topbar !== "plain" && <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-line to-transparent" />}
       <div className={`topbar-inner relative ${compact ? "px-4 py-1.5" : "mx-auto max-w-3xl px-3.5 py-1.5 @min-[40rem]:px-5"}`}>
         {body}
-        {/* 功能注释：局势摘要并入主线同一块顶栏（不再是独立飘条）；点按同样打开剧情志详情，窄屏单行截断避免顶没叙事窗 */}
-        {data.note?.trim() && !noteInBar && (
-          preview ? (
-            <p className="topbar-note mt-1 truncate text-[11px] leading-snug text-ink-soft">{data.note}</p>
-          ) : (
-            <button
-              type="button"
-              aria-label="查看局势详情"
-              title={data.note}
-              onClick={(e) => { e.stopPropagation(); openQuest(); }}
-              className="topbar-note mt-1 block w-full truncate text-left text-[11px] leading-snug text-ink-soft"
-            >
-              <span className="mr-1.5 font-bold tracking-[0.12em] text-coral">局势</span>
-              {data.note}
-            </button>
-          )
-        )}
       </div>
       {children}
     </Tag>

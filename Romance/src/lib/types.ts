@@ -866,6 +866,8 @@ export type AIStep = {
   npc_changes?: {
     id?: string;
     name: string;
+    /** 功能注释：新人物必填；男 / 女 / 其他，写入 persona 供剧情人称锁定 */
+    gender?: string;
     aliases?: string[]; // 称谓/昵称（如「二姨」），用于后续同人识别
     age?: string;
     identity?: string;

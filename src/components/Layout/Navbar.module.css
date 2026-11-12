@@ -14,7 +14,8 @@
     --navbar-text-strong: var(--color-text);
     --navbar-search-bg: color-mix(in srgb, var(--color-text) 8%, transparent);
     --navbar-search-border: color-mix(in srgb, var(--color-text) 14%, transparent);
-    --navbar-search-input: color-mix(in srgb, var(--color-surface) 94%, transparent);
+    /* 功能注释：输入/占位必须用正文色——曾误用 surface，暗色主题下与搜索底同色，字完全看不见 */
+    --navbar-search-input: var(--color-text);
     --navbar-search-placeholder: var(--color-text-muted);
     --navbar-search-icon-bg: linear-gradient(180deg, color-mix(in srgb, var(--color-text) 18%, transparent) 0%, color-mix(in srgb, var(--color-text) 8%, transparent) 100%);
     --navbar-search-icon-color: var(--color-text);
@@ -23,8 +24,8 @@
     --navbar-search-panel-shadow: 0 18px 34px color-mix(in srgb, var(--color-shadow) 28%, transparent);
     --navbar-search-panel-item-hover: color-mix(in srgb, var(--color-text) 8%, transparent);
     --navbar-search-panel-title: color-mix(in srgb, var(--color-text) 96%, transparent);
-    --navbar-search-panel-meta: color-mix(in srgb, var(--color-surface) 58%, transparent);
-    --navbar-search-panel-empty: color-mix(in srgb, var(--color-surface) 62%, transparent);
+    --navbar-search-panel-meta: var(--color-text-muted);
+    --navbar-search-panel-empty: var(--color-text-muted);
     --navbar-action-bg: color-mix(in srgb, var(--color-text) 8%, transparent);
     --navbar-action-bg-hover: color-mix(in srgb, var(--color-text) 14%, transparent);
     --navbar-action-border: color-mix(in srgb, var(--color-text) 14%, transparent);
@@ -555,17 +556,18 @@
         --navbar-text-strong: var(--color-text);
         --navbar-search-bg: var(--color-surface);
         --navbar-search-border: color-mix(in srgb, var(--color-text) 12%, transparent);
-        --navbar-search-input: color-mix(in srgb, var(--color-surface) 94%, transparent);
+        --navbar-search-input: var(--color-text);
         --navbar-search-placeholder: var(--color-text-muted);
-        --navbar-search-icon-bg: linear-gradient(180deg, var(--color-text-secondary) 0%, var(--color-text) 100%);
+        /* 功能注释：移动端搜索键改为暗底圆钮，禁止浅色渐变胶囊在窄栏里亮成一块白 */
+        --navbar-search-icon-bg: color-mix(in srgb, var(--color-text) 14%, transparent);
         --navbar-search-icon-color: var(--color-text);
         --navbar-search-panel-bg: var(--color-surface);
         --navbar-search-panel-border: color-mix(in srgb, var(--color-text) 10%, transparent);
         --navbar-search-panel-shadow: 0 14px 28px color-mix(in srgb, var(--color-shadow) 45%, transparent);
         --navbar-search-panel-item-hover: color-mix(in srgb, var(--color-text) 8%, transparent);
         --navbar-search-panel-title: var(--color-text);
-        --navbar-search-panel-meta: color-mix(in srgb, var(--color-surface) 58%, transparent);
-        --navbar-search-panel-empty: color-mix(in srgb, var(--color-surface) 62%, transparent);
+        --navbar-search-panel-meta: var(--color-text-muted);
+        --navbar-search-panel-empty: var(--color-text-muted);
         --navbar-action-bg: var(--color-surface);
         --navbar-action-bg-hover: var(--color-surface-2);
         --navbar-action-border: color-mix(in srgb, var(--color-text) 12%, transparent);
@@ -600,13 +602,13 @@
     }
 
     .logo {
-        width: 100px;
+        width: 86px;
         height: 54px;
         flex-shrink: 0;
     }
 
     .logo img {
-        width: 100px;
+        width: 86px;
         height: 70%;
     }
 
@@ -615,7 +617,7 @@
     }
 
     .navRight {
-        gap: 8px;
+        gap: 6px;
         margin-right: 0;
         flex: 1;
         min-width: 0;
@@ -623,12 +625,14 @@
     }
 
     .searchBox {
-        flex: 1;
+        flex: 1 1 auto;
         min-width: 0;
-        max-width: 62%;
-        height: 28px;
-        padding-left: 8px;
-        padding-right: 0;
+        /* 功能注释：取消 62% 上限，把剩余宽度留给输入，避免搜索键挤掉「查询游戏」 */
+        max-width: none;
+        height: 32px;
+        padding-left: 10px;
+        padding-right: 3px;
+        gap: 4px;
         box-shadow: none;
     }
 
@@ -641,11 +645,17 @@
 
     .searchIcon {
         flex-shrink: 0;
-        height: 24px;
-        width: 40px;
-        min-width: 40px;
+        height: 26px;
+        width: 26px;
+        min-width: 26px;
         font-size: 14px;
-        border-radius: 20px;
+        border-radius: 50%;
+    }
+
+    .searchIcon img,
+    .searchIcon .navAssetIcon {
+        width: 13px;
+        height: 13px;
     }
 
     .searchPanel {
@@ -739,17 +749,18 @@
         --navbar-text-strong: var(--color-on-media);
         --navbar-search-bg: color-mix(in srgb, var(--color-surface) 92%, transparent);
         --navbar-search-border: color-mix(in srgb, var(--color-text) 14%, transparent);
-        --navbar-search-input: color-mix(in srgb, var(--color-surface) 96%, transparent);
-        --navbar-search-placeholder: color-mix(in srgb, var(--color-surface) 56%, transparent);
-        --navbar-search-icon-bg: linear-gradient(180deg, var(--color-text-secondary) 0%, var(--color-text) 100%);
+        --navbar-search-input: var(--color-text);
+        --navbar-search-placeholder: var(--color-text-muted);
+        /* 功能注释：首页压图态同样用暗底圆钮，避免搜索提交键浅色渐变抢视觉 */
+        --navbar-search-icon-bg: color-mix(in srgb, var(--color-text) 16%, transparent);
         --navbar-search-icon-color: var(--color-text);
         --navbar-search-panel-bg: var(--color-surface);
         --navbar-search-panel-border: color-mix(in srgb, var(--color-text) 10%, transparent);
         --navbar-search-panel-shadow: 0 14px 28px color-mix(in srgb, var(--color-shadow) 45%, transparent);
         --navbar-search-panel-item-hover: color-mix(in srgb, var(--color-text) 8%, transparent);
         --navbar-search-panel-title: var(--color-text);
-        --navbar-search-panel-meta: color-mix(in srgb, var(--color-surface) 58%, transparent);
-        --navbar-search-panel-empty: color-mix(in srgb, var(--color-surface) 62%, transparent);
+        --navbar-search-panel-meta: var(--color-text-muted);
+        --navbar-search-panel-empty: var(--color-text-muted);
         --navbar-action-bg: color-mix(in srgb, var(--color-surface) 92%, transparent);
         --navbar-action-bg-hover: var(--color-surface-2);
         --navbar-action-border: color-mix(in srgb, var(--color-text) 14%, transparent);

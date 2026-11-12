@@ -293,7 +293,7 @@ function ChatSettingsSheet({ thread, onClose }: { thread: Thread; onClose: () =>
   };
   const pill = (on: boolean) => `rounded-full border px-3 py-1 text-[12.5px] transition ${on ? "border-[#07c160] bg-[#07c160]/10 font-semibold text-[#07a050]" : "border-black/10 text-ink"}`;
   return (
-    <div className="absolute inset-0 z-40 flex flex-col bg-[#ededed]">
+    <div className="comm-sheet absolute inset-0 z-40 flex flex-col bg-[#ededed]">
       <div className="flex items-center border-b border-black/5 px-3 py-2.5">
         <button onClick={onClose} className="text-[15px]">‹ 返回</button>
         <span className="flex-1 text-center text-[15px] font-semibold text-ink">聊天背景与气泡</span>
@@ -685,12 +685,13 @@ function MoneySheet({ kind, to, balance, unit, onClose, onSend }: { kind: "redpa
   const err = !amt ? "" : !(n > 0) ? "请输入金额" : n > balance ? `${unit ?? "零钱"}余额不足` : n > cap ? `单个${commTerm("red")}金额不可超过 200 元` : "";
   const ok = n > 0 && n <= max;
   return (
-    <div className="absolute inset-0 z-50 flex flex-col bg-[#ededed]">
-      <div className="relative flex h-11 items-center px-3">
-        <button onClick={onClose} className="text-[16px] text-ink">取消</button>
+    // 功能注释：comm-sheet 在古风传讯里强制不透明宣纸底——.comm-ancient 会把 bg-[#ededed] 改成透明，导致聊天内容透上来
+    <div className="comm-sheet absolute inset-0 z-[60] flex flex-col bg-[#ededed]">
+      <div className="relative flex h-11 shrink-0 items-center px-3">
+        <button type="button" onClick={onClose} className="text-[16px] text-ink">取消</button>
         <span className="absolute left-1/2 -translate-x-1/2 text-[17px] font-semibold text-ink">{red ? `发${commTerm("red")}` : `${commTerm("transfer")}给${to}`}</span>
       </div>
-      <div className="flex-1 space-y-3 px-4 pt-3">
+      <div className="flex-1 space-y-3 overflow-y-auto px-4 pt-3">
         <div className="flex items-center rounded-[6px] bg-white px-4 py-3.5">
           <span className="text-[16px] text-ink">金额</span>
           <input autoFocus inputMode="decimal" value={amt} onChange={(e) => setAmt(e.target.value.replace(/[^\d.]/g, "").slice(0, 9))} placeholder={unit ? "0" : "0.00"} className="flex-1 bg-transparent text-right text-[16px] text-ink outline-none placeholder:text-ink-soft/40" />
@@ -698,8 +699,8 @@ function MoneySheet({ kind, to, balance, unit, onClose, onSend }: { kind: "redpa
         </div>
         <input value={note} onChange={(e) => setNote(e.target.value.slice(0, 20))} placeholder={red ? "恭喜发财，大吉大利" : `添加${commTerm("transfer")}说明`} className="w-full rounded-[6px] bg-white px-4 py-3.5 text-[16px] text-ink outline-none placeholder:text-ink-soft/50" />
         <p className={`px-1 text-[12.5px] ${err ? "text-[#fa5151]" : "text-ink-soft"}`}>{err || `${unit ?? "零钱"}余额 ${fmt(balance)}`}</p>
-        <p className="pt-6 text-center text-[40px] font-medium tabular-nums text-ink">{fmt(n > 0 ? n : 0)}</p>
-        <button disabled={!ok} onClick={() => onSend(n, note.trim())} className="mx-auto block w-[180px] rounded-[6px] py-3 text-[16px] font-medium text-white disabled:opacity-40" style={{ background: red ? "var(--wx-red, #f25542)" : WX_GREEN }}>
+        <p className="pt-6 text-center font-sans text-[40px] font-medium tabular-nums text-ink">{fmt(n > 0 ? n : 0)}</p>
+        <button type="button" disabled={!ok} onClick={() => onSend(n, note.trim())} className="mx-auto block w-[180px] rounded-[6px] py-3 text-[16px] font-medium text-white disabled:opacity-40" style={{ background: red ? "var(--wx-red, #f25542)" : WX_GREEN }}>
           {red ? `塞钱进${commTerm("red")}` : commTerm("transfer")}
         </button>
       </div>
@@ -772,7 +773,7 @@ function ChatInfoPage({ thread, onClose, onBg, onJump }: { thread: Thread; onClo
   }
 
   return (
-    <div className="absolute inset-0 z-40 flex flex-col bg-[#ededed]">
+    <div className="comm-sheet absolute inset-0 z-40 flex flex-col bg-[#ededed]">
       <div className="relative flex h-11 shrink-0 items-center px-2">
         <button onClick={onClose} className="flex items-center text-ink" aria-label="返回"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 5-7 7 7 7" /></svg></button>
         <span className="absolute left-1/2 -translate-x-1/2 text-[17px] font-semibold text-ink">{isGroup ? `聊天信息(${people.length + 1})` : "聊天信息"}</span>
@@ -1496,8 +1497,8 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
                 { k: "photo", label: "相册", on: () => photoRef.current?.click() },
                 { k: "camera", label: "拍摄", on: () => camRef.current?.click() },
                 ...(!isGroup ? [{ k: "call", label: isAncientComm() ? commTerm("voice") : "语音通话", on: () => { setMoreOpen(false); setCalling(true); } }] : [{ k: "watch", label: "旁观群聊", on: () => void watchGroup() }]),
-                { k: "red", label: commTerm("red"), on: () => setMoney("redpacket") },
-                ...(!isGroup ? [{ k: "transfer", label: commTerm("transfer"), on: () => setMoney("transfer") }] : []),
+                { k: "red", label: commTerm("red"), on: () => { setMoreOpen(false); setMoney("redpacket"); } },
+                ...(!isGroup ? [{ k: "transfer", label: commTerm("transfer"), on: () => { setMoreOpen(false); setMoney("transfer"); } }] : []),
                 { k: "sticker", label: "表情包", on: () => { setMoreOpen(false); setPanel("sticker"); setShowEmoji(true); } },
                 // 功能注释：摇一摇网友聊满门槛后可约见面，见面后正式进入游戏世界
                 ...(!isGroup && st && !st.met ? [{ k: "meet", label: "约见面", on: () => {

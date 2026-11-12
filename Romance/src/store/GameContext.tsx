@@ -139,6 +139,7 @@ import { declarePersona, doPublicAct, personaWeekly, resolveCrisis } from "../ga
 import { syncBoundMetrics } from "../game/metricBind";
 import { applyProject, doWorkday, negotiateOffer, processAuditions, processReleases, promoteWork, signContract } from "../game/projects";
 import { blankRel, confessTo, contactPerson, decayRelations, ensureRelations, relDecayNotes } from "../game/relations";
+import { personGender } from "../game/relNet";
 import { askProducer, meetProducer } from "../game/producer";
 import { bridgeEnabled, bridgeModes, bridgePerDay, fillPair, type BridgeMode } from "../game/bridge";
 import { RELATIONS, SIDEQUEST_BY_ID, SIDEQUESTS, evalRequires, romanticCapOf, type SigningContract } from "../worlds/star2005/content";
@@ -249,9 +250,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [game, setGame] = useState<GameState | null>(null);
   // 功能注释：存档 npcs 偶发非数组；先收成数组再 flatMap，禁止建角/预览挂载时 is not iterable
   const npcGender = useMemo(() => {
-    const list = Array.isArray(game?.npcs) ? game.npcs : [];
-    return Object.fromEntries(list.flatMap((n) => { const g = n.persona?.gender; return g ? [[n.id, g]] : []; }));
-  }, [game?.npcs]);
+    if (!game) return {};
+    const list = Array.isArray(game.npcs) ? game.npcs : [];
+    // 功能注释：同步性别到引擎时合并世界设定，不只看 persona（否则作者写了女、persona 空时规则侧当成无性别）
+    return Object.fromEntries(list.flatMap((n) => {
+      const g = n.persona?.gender || personGender(game, n.id);
+      return g ? [[n.id, g]] : [];
+    }));
+  }, [game]);
   syncWorldRules(game?.worldRules, game?.player.gender, npcGender); // 世界规则 → 引擎同步
   const [live, setLive] = useState("");
   const [busy, setBusy] = useState(false);

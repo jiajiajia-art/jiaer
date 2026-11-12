@@ -8,9 +8,10 @@
         display: flex;
         position: fixed;
         bottom: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 100vw;
+        /* 功能注释：不用 100vw+translateX——vw 含滚动条时会宽出壳层，被 overflow:clip 裁掉左右圆角，表现为「缺一角」 */
+        left: 0;
+        right: 0;
+        width: auto;
         height: calc(72px + env(safe-area-inset-bottom));
         padding-bottom: env(safe-area-inset-bottom);
         background: var(--color-bg);
@@ -20,7 +21,8 @@
         border-top: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
         border-radius: 22px 22px 0 0;
         box-sizing: border-box;
-        overflow: hidden;
+        /* 功能注释：禁止 overflow:hidden——圆角+裁切会把上凸的创作钮切掉，表现为底栏顶边「缺一角」 */
+        overflow: visible;
     }
 
     .navItem {

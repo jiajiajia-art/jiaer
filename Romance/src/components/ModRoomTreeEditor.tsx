@@ -40,6 +40,21 @@ const lbl = "mb-0.5 block text-[11px] text-ink-soft";
 const rid = () => `room_${Math.random().toString(36).slice(2, 8)}`;
 /** 功能注释：地点库 / 手工添加时若缺场景描述，用地名补一句，避免必填框交白卷。 */
 const sceneDescFallback = (name: string) => `你来到了「${name}」。`;
+/** 功能注释：<select> 的 value 必须是标量；脏数据里 parent/bgm/op 可能是数组或对象，直接塞会控制台红字。 */
+const selectStr = (v: unknown): string => (typeof v === "string" || typeof v === "number" ? String(v) : "");
+const reqOp = (v: unknown): Requirement["op"] => (v === "lte" ? "lte" : "gte");
+const asReqList = (raw: unknown): Requirement[] => {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((x) => {
+    const r = x && typeof x === "object" ? (x as Partial<Requirement>) : {};
+    return {
+      metric: typeof r.metric === "string" ? r.metric : "",
+      op: reqOp(r.op),
+      value: typeof r.value === "number" && Number.isFinite(r.value) ? r.value : Number(r.value) || 0,
+      hint: typeof r.hint === "string" ? r.hint : "",
+    };
+  });
+};
 
 export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks, emptyHint, imageGen, onChange, onDelete, onRename: _onRename }: {
   rooms: Rooms;
@@ -363,7 +378,9 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
   const kids = cur ? childrenOf(mapRooms, cur) : [];
   const path = cur ? pathOf(mapRooms, cur) : [];
   const parentOpts = cur ? ids.filter((x) => !wouldCycle(mapRooms, cur, x)) : [];
-  const reqs = r?.access?.requires ?? [];
+  const parentVal = selectStr(r?.parent);
+  const bgmVal = selectStr(r?.bgm);
+  const reqs = asReqList(r?.access?.requires);
   const setReqs = (next: Requirement[]) => cur && set(cur, { access: next.length || r?.access?.note ? { note: r?.access?.note ?? "", requires: next.length ? next : undefined } : undefined });
 
   return (
@@ -408,7 +425,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
                 </div>
                 <label className="block">
                   <span className={lbl}>父地点 · 空 = 本大地图顶层（不能选自己或自己的下级）</span>
-                  <select className={inp} value={r.parent ?? ""} onChange={(e) => {
+                  <select className={inp} value={parentVal} onChange={(e) => {
                     const p = e.target.value || undefined;
                     if (wouldCycle(mapRooms, cur, p)) return;
                     set(cur, { parent: p, order: p ? childrenOf(mapRooms, p).length : undefined, mapId: curMapId });
@@ -445,9 +462,13 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
                     />
                   </div>
                   <label className="block"><span className={lbl}>BGM（进入此地自动切换）</span>
-                    <select className={inp} value={r.bgm ?? ""} onChange={(e) => set(cur, { bgm: e.target.value || undefined })}>
+                    <select className={inp} value={bgmVal} onChange={(e) => set(cur, { bgm: e.target.value || undefined })}>
                       <option value="">不切换</option>
-                      {tracks.map((t) => <option key={t.id} value={t.id}>{t.name || t.id}</option>)}
+                      {tracks.map((t) => {
+                        const id = selectStr(t?.id);
+                        if (!id) return null;
+                        return <option key={id} value={id}>{selectStr(t?.name) || id}</option>;
+                      })}
                     </select>
                   </label>
                 </div>
@@ -492,8 +513,8 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
                     commit({ ...allRooms, [id]: { name, desc: sceneDescFallback(name), exits: {}, mapId: curMapId, parent: cur, order: kids.length, mapX: x, mapY: y } });
                   }}
                 />
-                <label className="block"><span className={lbl}>返回上层的文案（留空 = 「返回{r.parent ? nm(r.parent) : "上层"}」）</span>
-                  <input className={inp} value={r.upLabel ?? ""} placeholder={`走出${nm(cur)}，回到${r.parent ? nm(r.parent) : "上层"}`} disabled={!r.parent} onChange={(e) => set(cur, { upLabel: e.target.value || undefined })} />
+                <label className="block"><span className={lbl}>返回上层的文案（留空 = 「返回{parentVal ? nm(parentVal) : "上层"}」）</span>
+                  <input className={inp} value={r.upLabel ?? ""} placeholder={`走出${nm(cur)}，回到${parentVal ? nm(parentVal) : "上层"}`} disabled={!parentVal} onChange={(e) => set(cur, { upLabel: e.target.value || undefined })} />
                 </label>
                 <Help>玩家在「{nm(cur)}」里会看到这些子地点的入口胶囊，点击逐层进入；同一棵树内走动不收路费、不扣行动点。</Help>
               </div>
@@ -520,7 +541,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
                   {reqs.map((q2, i) => (
                     <div key={i} className="flex flex-wrap gap-1">
                       <input className={`${inp} !w-36 font-mono`} value={q2.metric} placeholder="fame / c:属性 / flag:变量" onChange={(e) => setReqs(reqs.map((x, j) => (j === i ? { ...x, metric: e.target.value } : x)))} />
-                      <select className={`${inp} !w-16`} value={q2.op} onChange={(e) => setReqs(reqs.map((x, j) => (j === i ? { ...x, op: e.target.value as Requirement["op"] } : x)))}>
+                      <select className={`${inp} !w-16`} value={reqOp(q2.op)} onChange={(e) => setReqs(reqs.map((x, j) => (j === i ? { ...x, op: reqOp(e.target.value) } : x)))}>
                         <option value="gte">≥</option><option value="lte">≤</option>
                       </select>
                       <input type="number" className={`${inp} !w-20`} value={q2.value} onChange={(e) => setReqs(reqs.map((x, j) => (j === i ? { ...x, value: Number(e.target.value) || 0 } : x)))} />

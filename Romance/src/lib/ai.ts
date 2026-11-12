@@ -34,7 +34,7 @@ import { knowledgeBlock } from "../game/kb";
 import { timelinePrompt } from "../game/npcTimeline";
 import { attrCap, walletDef, wallet } from "../game/wallet";
 import { phoneLinkPrompt } from "../game/phoneLink";
-import { linkNewcomer, relNetPromptLines } from "../game/relNet";
+import { linkNewcomer, personGender, relNetPromptLines } from "../game/relNet";
 
 export type ContentPart = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
 export type ChatMsg = { role: "system" | "user" | "assistant"; content: string | ContentPart[] };
@@ -603,11 +603,13 @@ ${state.npcs
     const kbm = state.npcKb?.[n.id]?.playerMemory;
     const mem = (kbm?.length ? kbm.slice(-2).map((m) => m.text) : (n.interactions ?? []).slice(-2).map((it) => it.text)).join("；");
     const ps = n.persona;
-    const custom = [ps?.gender && `性别${ps.gender}`, ps?.text?.trim() && `玩家设定人设：${ps.text.trim()}`, ps?.voice?.trim() && `说话口吻：${ps.voice.trim()}`].filter(Boolean).join("；");
+    // 功能注释：性别必须写入核心人物条——世界设定 / persona / 花名册任一来源；否则模型常把女角色写成「他」
+    const gender = personGender(state, n.id) || ps?.gender || "";
+    const custom = [gender && `性别${gender}`, ps?.text?.trim() && `玩家设定人设：${ps.text.trim()}`, ps?.voice?.trim() && `说话口吻：${ps.voice.trim()}`].filter(Boolean).join("；");
     const tl = timelinePrompt(n, state.sim?.day ?? 0);
     const love = romanceBlock(state, n.id, true); // 家人返回空：只有亲情，不演恋爱
     const unmet = (state.sim?.metPeople ?? []).includes(n.id) ? "" : "，尚未结识";
-    return `- ${n.name} [id: ${n.id}]（${n.identity}，与主角：${n.relation}${unmet}，好感${affinityOf(state, n.id)}${love ? `，${love}` : ""}，心情${n.mood || "平静"}）${custom ? `\n  · ${custom}（务必遵守）` : ""}${tl ? `\n  · ${tl}` : ""}${mem ? `\n  · 近况记忆：${mem}` : ""}`;
+    return `- ${n.name} [id: ${n.id}]（${gender ? `${gender}，` : ""}${n.identity}，与主角：${n.relation}${unmet}，好感${affinityOf(state, n.id)}${love ? `，${love}` : ""}，心情${n.mood || "平静"}）${custom ? `\n  · ${custom}（务必遵守）` : ""}${tl ? `\n  · ${tl}` : ""}${mem ? `\n  · 近况记忆：${mem}` : ""}`;
   })
   .join("\n")}
 
@@ -632,16 +634,16 @@ ${state.memory || "（游戏刚刚开始）"}
   "dialogue": [{"speaker":"角色名","text":"台词"}],
   "system": "系统提示，可省略",
   "options": [{"label":"给玩家看的选项文案","value":"发给你的指令"}],
-  "world": {"time":"游戏内时间","location":"当前地点","weather":"天气","note":"一句话状态"},
+  "world": {"time":"游戏内时间","location":"当前地点","weather":"天气"},
   "player_changes": {"attrs":[{"key":"fame","label":"${term("fame", "名气")}","delta":5}],"identity":"如有变化","history_add":{"title":"","detail":""}},
-  "npc_changes": [{"id":"${npcEx.id}","name":"${npcEx.name}","aliases":["称谓，可省略"],"age":"新人物必填，如 46岁","identity":"新人物必填","relation":"与主角关系","bio":"新人物必填：一两句背景","affinity_delta":8,"dims":[{"label":"爱慕","delta":2}],"reason":"原因","interaction":"本回合互动一句话","self_event":"（可选）该角色自己身上发生的事","mood":"此刻心境，一句完整的话（10~25字，如：刚被导演夸了，嘴角压不住）","links":[{"id":"仅新人物可填：已有人物的 id","kind":"parent","note":"可选：具体称呼，如 养母"}]}],
+  "npc_changes": [{"id":"${npcEx.id}","name":"${npcEx.name}","gender":"女","aliases":["称谓，可省略"],"age":"新人物必填，如 46岁","identity":"新人物必填","relation":"与主角关系","bio":"新人物必填：一两句背景","affinity_delta":8,"dims":[{"label":"爱慕","delta":2}],"reason":"原因","interaction":"本回合互动一句话","self_event":"（可选）该角色自己身上发生的事","mood":"此刻心境，一句完整的话（10~25字，如：刚被导演夸了，嘴角压不住）","links":[{"id":"仅新人物可填：已有人物的 id","kind":"parent","note":"可选：具体称呼，如 养母"}]}],
   "thoughts": [{"name":"在场角色名","text":"TA 此刻没说出口的心事，一两句","diary":"可选：当 TA 心绪起伏较大时，以 TA 第一人称写的日记，80~200字"}],
   "intimate": ["仅当本回合主角与某 NPC 发生亲密关系时填该 NPC 名字，否则省略"],
   "game_end": false,
   "epilogue": "仅当你判定结局到来时给出，≥1000字的主角生平后记"
 }
 2.0 记忆：memory_updates 里 scope=main 只记本回合真正发生的新事实（不写猜测、不复述旧事），imp 为重要度：1 日常、2 重要（关系转折、承诺、秘密）、3 关键（改变剧情走向、日后必须记得的事，极少使用）；who 填相关人物全名。scene_memory 只在此地陈设、状态或在场者穿着发生变化时填写，没有变化整个省略。
-2.1 state_diff 与下方的 world / player_changes / npc_changes 等价，二选一填写即可，不要两边重复写同一变动。
+2.1 state_diff 与下方的 world / player_changes / npc_changes 等价，二选一填写即可，不要两边重复写同一变动。不要输出 world.note，不要写「局势」摘要。
 2.2 禁止剧情重复：不得复述上一回合已经写过的段落、台词或情节，每回合都必须推进新的事件或新的情绪。
 2.4 台词与旁白去 AI 味：人物说话必须符合其身份、年龄、性格与当下处境，像真实活人在日常开口——口语化、自然平实、有烟火气；严禁书面腔、严禁排比与金句堆砌、严禁拿人物职业硬拗生硬比喻（如用修桥、算账、做菜去硬套人生哲理），严禁「把这话说得很轻，轻得像……」「那口气只有……才懂」「眼底闪过一丝不易察觉的……」「先说清楚/我只说一次」等矫揉造作的 AI 惯用语；段落结尾严禁旁白对玩家总结、喊话或抒情收尾（如「接下来怎么走，全看你自己」「故事才刚刚开始」「这一天注定不平凡」），停在具体的动作、台词或画面上即可。
 2.5 角色不知道游戏数值：任何人物的台词与心事里，一律不得出现属性名、数值、分数、等级、「八维」「好感度」「名气值」等游戏术语（如「演技180」）；要评价主角，只能用该角色在剧情里亲眼所见、亲耳所闻的具体表现来说（如「你上回试镜那段哭戏还行」），数值只放进 JSON。
@@ -651,8 +653,9 @@ ${state.memory || "（游戏刚刚开始）"}
 2.3 正文中不得出现「# 谨遵指令」「---」分隔线、markdown 标题或任何字段名。
 3. thoughts：给本回合每位在场的重要 NPC 各写一句心事（不含主角），要与台词形成反差或补充，让玩家有「偷看到」的感觉；diary 只在情绪有明显波动时写，不要每回合都写。
 4. options 固定给 3 个（不要多于 3 个），文案就是玩家点击后要发生的事，具体可玩。没有数值变化的字段就省略，不要编造无意义的变动。
-5. 人物命名铁律：凡在剧情中出场或说话的人物（含来电、亲戚、路人里有台词者），都必须有具体姓名。台词行的「角色名」一律写全名（如「苏桂芬」），不得只写「二姨」「男人」「陌生人」等称谓；称谓写进 aliases。首次出场的新人物必须写进 npc_changes（含 name/age/identity/relation/bio），已出场的人物沿用原名与 id，只更新变化的字段，绝不另建同名或同一人的新角色。
+5. 人物命名铁律：凡在剧情中出场或说话的人物（含来电、亲戚、路人里有台词者），都必须有具体姓名。台词行的「角色名」一律写全名（如「苏桂芬」），不得只写「二姨」「男人」「陌生人」等称谓；称谓写进 aliases。首次出场的新人物必须写进 npc_changes（含 name/gender/age/identity/relation/bio；gender 只能是「男」「女」或「其他」），已出场的人物沿用原名、id 与性别，只更新变化的字段，绝不另建同名或同一人的新角色。
 5.1 人物关系：新人物与【核心人物】里已有人物的关系，只有剧情明确交代时才写进该新人物的 links（按 [id: …] 引用，没有 id 时写对方全名到 name），kind 指对方是新人物的什么人：parent=父亲或母亲，child=子女，partner=现任伴侣或配偶，ex=前任，other=其他明确关系（note 写清是什么关系，如 同门师兄）；拿不准就不写。links 只用于新人物，不得借此改写已有人物之间的关系；【人物关系网】以外的关系一律按未设定处理。
+5.2 性别与人称：旁白与台词指代人物时，代词必须与其性别一致——女用「她」，男用「他」，其他用「TA」；不得把女角色写成「他」或男性外貌动作，也不得把男角色写成「她」。【核心人物】里已标明的性别不可改写。
 6. 只有当故事自然抵达结局（${promptFrag("endingHint", "达成目标/离开/婚恋定局/意外")}等）才把 game_end 设为 true 并给出 epilogue。
 ${pregnancyBlock(state)}
 
@@ -945,7 +948,11 @@ export function applyStep(state: GameState, step: AIStep): { next: GameState; ch
 
   // 日历归确定性引擎：world.time 由引擎写成「第 N 周 · 日期 星期」，AI 回写的时间只作上面 time 的记忆时间戳。
   // 模型常照抄提示里的手机时间（如「2005.01.04 上午 08:12」），若覆盖进来，顶栏会把年份读成「第 2005 周」。
-  if (step.world) next.world = { ...next.world, ...step.world, time: next.world.time || step.world.time || "" };
+  // 功能注释：不再解析 / 落账 world.note（局势摘要），顶栏也不再展示
+  if (step.world) {
+    const { note: _dropNote, ...worldRest } = step.world;
+    next.world = { ...next.world, ...worldRest, time: next.world.time || step.world.time || "", note: "" };
+  }
 
   // 玩家变更
   const pc = step.player_changes;
@@ -1044,8 +1051,11 @@ export function applyStep(state: GameState, step: AIStep): { next: GameState; ch
         interactions: [],
       };
       // 头像：AI 指定的同名池优先，否则从本剧随机池抽（都没开 → 留空，沿用首字头像）
-      // 功能注释：本剧池抽不到时套用平台头像库（按性别 / 年龄段分类）
-      const av = drawProfileAvatar(npc.id, { name: ncName, age: nc.age, identity: nc.identity, bio: nc.bio, variant: typeof nc.avatar_variant === "string" ? nc.avatar_variant : undefined });
+      // 功能注释：本剧池抽不到时套用平台头像库（按性别 / 年龄段分类）；性别一并写入 persona，后续剧情提示才能锁定人称
+      const gIn = typeof nc.gender === "string" ? nc.gender.trim() : "";
+      const gNorm = gIn === "男" || gIn === "女" || gIn === "其他" ? gIn : (/女|姐|妹|娘|她/.test(`${ncName}${nc.identity ?? ""}${nc.bio ?? ""}`) ? "女" : /男|哥|弟|他/.test(`${ncName}${nc.identity ?? ""}${nc.bio ?? ""}`) ? "男" : undefined);
+      if (gNorm) npc.persona = { ...(npc.persona ?? {}), gender: gNorm };
+      const av = drawProfileAvatar(npc.id, { name: ncName, age: nc.age, identity: nc.identity, bio: nc.bio, gender: gNorm, variant: typeof nc.avatar_variant === "string" ? nc.avatar_variant : undefined });
       if (av.url) { npc.avatar = av.url; npc.avatarVariant = av.variant; }
       npc = ensureBirthday(npc, next.sim?.day ?? 0);
       next.npcs.push(npc);
@@ -1057,6 +1067,11 @@ export function applyStep(state: GameState, step: AIStep): { next: GameState; ch
     }
     for (const a of nc.aliases ?? []) {
       if (a && normName(a) !== normName(npc.name) && !(npc.aliases ?? []).some((x) => normName(x) === normName(a))) npc.aliases = [...(npc.aliases ?? []), a];
+    }
+    // 功能注释：已有人物缺性别时，用本回合 AI 给出的 gender 补上（不覆盖玩家已设定）
+    if (!npc.persona?.gender) {
+      const gIn = typeof nc.gender === "string" ? nc.gender.trim() : "";
+      if (gIn === "男" || gIn === "女" || gIn === "其他") npc.persona = { ...(npc.persona ?? {}), gender: gIn };
     }
     if (nc.age && !npc.age) npc.age = nc.age;
     if (nc.identity) npc.identity = nc.identity;
@@ -1114,7 +1129,12 @@ export function applyStep(state: GameState, step: AIStep): { next: GameState; ch
         changes.push(`${npc.name} 爱慕 ${eff > 0 ? "+" : ""}${eff}`);
       }
     }
-    if (nc.interaction) npc.interactions.push({ turn, time, text: nc.interaction });
+    // 功能注释：interactions 供人物页「互动记录」等读取；与 playerMemory 同步写，同句不重复 push
+    if (nc.interaction) {
+      const it = nc.interaction.trim();
+      const lastIt = npc.interactions[npc.interactions.length - 1];
+      if (it && lastIt?.text?.trim() !== it) npc.interactions.push({ turn, time, text: it });
+    }
     kbWrites.push({ id: npc.id, player: nc.interaction, self: nc.self_event });
   }
   // 新人物的人际关系：只收剧情明确交代、两头都真实存在的（按 id，或与花名册全名 / 别名完全一致），不改动已有人物之间的关系

@@ -287,7 +287,7 @@ export default function CharacterCreate() {
       ...CUSTOM.map(fxOf),
       optFx(IDENTITIES.find((o) => o.id === identityIdOf())),
     ].filter((x): x is OptFx => !!x);
-    const contract = career ? offers.find((c) => c.id === contractId) : undefined;
+    const contract = needSigning ? offers.find((c) => c.id === contractId) : undefined;
     const identityId = identityIdOf();
     const player: Player = {
       name: form.name || "无名",
@@ -356,6 +356,9 @@ export default function CharacterCreate() {
 
   // 当前所选世界观是否有演艺事业线：没有则走通用建角（无人物线路 / 母校 / 经纪合约）
   const career = selectedFeature("career");
+  // 功能注释：事业包默认开着，但本体空白底稿 / starter 会清空公司与签约列表；
+  // 作者未填公司时合约池为空——禁止再展示空「经纪合约」并把「开始」永久灰掉。
+  const needSigning = career && offers.length > 0;
   const selWorld = getSelectedWorld().chain[0];
   const systemFieldsComplete = !!form.name.trim() && Number(form.age) > 0 && !!form.gender && form.birthMonth > 0 && form.birthDay > 0;
   const customFieldsComplete = CUSTOM.every((field) => {
@@ -364,7 +367,7 @@ export default function CharacterCreate() {
     return !!value && (!(field.type === "select" || field.type === "radio") || customOptions(field).includes(value));
   });
   const whoComplete = systemFieldsComplete && customFieldsComplete;
-  const okToFinish = whoComplete && (!career || !!contractId);
+  const okToFinish = whoComplete && (!needSigning || !!contractId);
   const path = PATHS.find((p) => p.id === pathId);
   // 人物线路 · 预设主角：选中后用 TA 的档案填好自设页（玩家仍可微调）
   const heroId = path?.hero;
@@ -705,7 +708,7 @@ export default function CharacterCreate() {
     path: stepPath,
     // 功能注释：基本信息与属性紧挨，避免中间空一大截
     who: <div className="space-y-2">{stepWho}{stepAttrs}{stepCustom}</div>,
-    setup: <div className="space-y-3">{career && stepSign}{stepFactions}{stepSetup}</div>,
+    setup: <div className="space-y-3">{needSigning && stepSign}{stepFactions}{stepSetup}</div>,
   };
 
   // 功能注释：底栏走 Modal.footer，钉在 85% 框底；滚动只发生在 ui-dialog-body，属性不被按钮盖住

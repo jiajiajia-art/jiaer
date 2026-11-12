@@ -69,6 +69,10 @@ export default function AiImageGen({
   const [negative, setNegative] = useState(initialParts?.negative ?? "");
   // 功能注释：重绘时默认把当前图作为参考图（最多 MAX_REFS 张），创作者可点「移除」
   const [refs, setRefs] = useState<string[]>(() => (initialRefs ?? []).filter(Boolean).slice(0, MAX_REFS));
+  // 功能注释：参考图 / 选画风两 Tab；画风正向词由后台配置，创作者只点选、不手改
+  const [prepTab, setPrepTab] = useState<"refs" | "stylePick">(
+    () => ((initialRefs ?? []).filter(Boolean).length > 0 ? "refs" : "stylePick"),
+  );
   const onPartsCommitRef = useRef(onPartsCommit);
   onPartsCommitRef.current = onPartsCommit;
   const [phase, setPhase] = useState<AiImageGenPhase>("edit");
@@ -253,79 +257,107 @@ export default function AiImageGen({
         </div>
       ) : (
         <>
-          <div>
-            <p className="mb-1.5 text-[11px] font-bold tracking-wide text-ink-soft">
-              参考图（可选，最多 {MAX_REFS} 张{(initialRefs?.length ?? 0) > 0 ? " · 已默认带入当前图，可移除" : ""}）
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {refs.map((src, i) => (
-                <div key={`${i}-${src.slice(0, 24)}`} className="relative h-16 w-16 overflow-hidden rounded-lg border border-line bg-paper-2">
-                  <img src={src} alt={`参考图 ${i + 1}`} className="h-full w-full object-cover" />
-                  {!locked && (
-                    <button
-                      type="button"
-                      className="absolute inset-x-0 bottom-0 bg-ink/65 py-0.5 text-[10px] font-semibold text-paper"
-                      onClick={() => setRefs((prev) => prev.filter((_, j) => j !== i))}
-                    >
-                      移除
-                    </button>
-                  )}
+          {/* 功能注释：参考图 / 选画风 Tab；画风正向词后台配置，不在创作者端暴露手改框 */}
+          <div className="overflow-hidden rounded-xl border border-line/80 bg-paper-2/40">
+            <div className="grid grid-cols-2 gap-0.5 border-b border-line/70 bg-paper-2/80 p-1" role="tablist" aria-label="生图准备">
+              {(
+                [
+                  ["refs", "参考图", refs.length > 0 ? String(refs.length) : ""],
+                  ["stylePick", "选画风", style.trim() ? "✓" : ""],
+                ] as const
+              ).map(([id, label, badge]) => {
+                const on = prepTab === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={on}
+                    onClick={() => setPrepTab(id)}
+                    className={`relative rounded-lg px-1.5 py-1.5 text-[11.5px] font-bold transition ${
+                      on ? "bg-paper text-coral shadow-sm" : "text-ink-soft hover:text-ink"
+                    }`}
+                  >
+                    {label}
+                    {badge && (
+                      <span className={`ml-1 inline-grid min-w-[1rem] place-items-center rounded-full px-1 text-[9px] font-black ${
+                        on ? "bg-coral/15 text-coral" : "bg-ink/8 text-ink-soft"
+                      }`}>{badge}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="p-2.5" role="tabpanel">
+              {prepTab === "refs" && (
+                <div>
+                  <p className="mb-1.5 text-[11px] font-bold tracking-wide text-ink-soft">
+                    参考图（可选，最多 {MAX_REFS} 张{(initialRefs?.length ?? 0) > 0 ? " · 已默认带入当前图，可移除" : ""}）
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {refs.map((src, i) => (
+                      <div key={`${i}-${src.slice(0, 24)}`} className="relative h-16 w-16 overflow-hidden rounded-lg border border-line bg-paper-2">
+                        <img src={src} alt={`参考图 ${i + 1}`} className="h-full w-full object-cover" />
+                        {!locked && (
+                          <button
+                            type="button"
+                            className="absolute inset-x-0 bottom-0 bg-ink/65 py-0.5 text-[10px] font-semibold text-paper"
+                            onClick={() => setRefs((prev) => prev.filter((_, j) => j !== i))}
+                          >
+                            移除
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {refs.length < MAX_REFS && !locked && (
+                      <button
+                        type="button"
+                        onClick={() => refInputRef.current?.click()}
+                        className="flex h-16 min-w-[7.5rem] flex-1 items-center justify-center rounded-lg border border-dashed border-line bg-paper px-2 text-[12px] font-semibold text-ink-soft transition hover:border-coral hover:text-coral"
+                      >
+                        + 上传参考图
+                      </button>
+                    )}
+                    {refs.length > 0 && locked && (
+                      <p className="self-center text-[11.5px] text-ink-soft">已上传 {refs.length} 张参考图</p>
+                    )}
+                    {refs.length === 0 && locked && (
+                      <p className="text-[11.5px] text-ink-soft">未使用参考图</p>
+                    )}
+                  </div>
+                  <input
+                    ref={refInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      void addRefFiles(e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
                 </div>
-              ))}
-              {refs.length < MAX_REFS && !locked && (
-                <button
-                  type="button"
-                  onClick={() => refInputRef.current?.click()}
-                  className="flex h-16 min-w-[7.5rem] flex-1 items-center justify-center rounded-lg border border-dashed border-line bg-paper px-2 text-[12px] font-semibold text-ink-soft transition hover:border-coral hover:text-coral"
-                >
-                  + 上传参考图
-                </button>
               )}
-              {refs.length > 0 && locked && (
-                <p className="self-center text-[11.5px] text-ink-soft">已上传 {refs.length} 张参考图</p>
+
+              {prepTab === "stylePick" && (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-bold tracking-wide text-ink-soft">点选画风（提示词由后台配置，此处只选不改）</p>
+                  <ArtStylePicker value={style} disabled={locked} onChange={(v, preset) => {
+                    setStyle(v);
+                    // 功能注释：选中画风时并入该画风的负面词（排除三次元 / 低质）
+                    if (preset) setNegative((n) => mergeNegativePrompt(n, preset.negative));
+                  }} />
+                </div>
               )}
             </div>
-            <input
-              ref={refInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                void addRefFiles(e.target.files);
-                e.target.value = "";
-              }}
-            />
-          </div>
-
-          {/* 功能注释：画风快捷选择，所有生图入口共用 */}
-          <div>
-            <p className="mb-1.5 text-[11px] font-bold tracking-wide text-ink-soft">选择画风 · 点选填入，可再手改</p>
-            <ArtStylePicker value={style} disabled={locked} onChange={(v, preset) => {
-              setStyle(v);
-              // 功能注释：选中画风时并入该画风的负面词（排除三次元 / 低质）
-              if (preset) setNegative((n) => mergeNegativePrompt(n, preset.negative));
-            }} />
-            {!layered && (
-              <textarea
-                rows={2}
-                value={style}
-                readOnly={locked}
-                onChange={(e) => setStyle(e.target.value)}
-                placeholder="选填：自定义画风；留空则按提示词生成"
-                className={`mt-1.5 w-full rounded-lg border border-line px-2.5 py-1.5 text-[12.5px] text-ink outline-none focus:border-coral ${
-                  locked ? "cursor-not-allowed bg-paper-2 text-ink-soft" : "bg-paper"
-                }`}
-              />
-            )}
           </div>
 
           {layered ? (
             <div className="space-y-2.5">
-              {/* 功能注释：三层提示词——画风（整部统一）/ 本张主体 / 负面词；开始生成前可逐项改 */}
+              {/* 功能注释：主体 / 负面词常显；画风已进上方 Tab */}
               {(
                 [
-                  ["画风 · 整部作品统一", style, setStyle, 2, "选填：可写画风；留空则按主体与设定生成"],
                   ["本张主体 · 只写这一张", subject, setSubject, 4, placeholder ?? "这一张画什么：主体、构图……"],
                   ["负面词 · 不想出现的内容", negative, setNegative, 2, "如：文字，水印，畸形手指"],
                 ] as const

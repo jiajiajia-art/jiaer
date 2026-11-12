@@ -95,13 +95,45 @@ const SquareAvatarCropGate = forwardRef<SquareAvatarCropGateHandle, Props>(funct
       const minErr = assertMinSide(size.width, size.height);
       const isGif = isAnimatedGifFile(file);
 
-      if (!forceCrop && isGif && isApproxSquare(size.width, size.height) && !minErr) {
+      if (!forceCrop && isApproxSquare(size.width, size.height) && !minErr) {
+        // 功能注释：已是 1:1 —— GIF 原片直传；静图整图导出成片，不再弹缩小选区让用户手动拉全
+        if (isGif) {
+          await onReady({
+            file,
+            crop: null,
+            isGif: true,
+            previewBlob: file,
+            previewSide: Math.min(size.width, size.height),
+          });
+          return 'ok';
+        }
+        const img = new Image();
+        img.src = imageSrc;
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error('图片加载失败'));
+        });
+        const blob = await exportSquareStaticBlob(
+          img,
+          { left: 0, top: 0, width: size.width, height: size.height },
+          {
+            targetSide: SQUARE_AVATAR_TARGET_SIDE,
+            fill: SQUARE_AVATAR_FILL,
+            mimeType: 'image/webp',
+            quality: 0.95,
+          },
+        );
+        const out = new File(
+          [blob],
+          `${file.name.replace(/\.[^.]+$/, '') || 'avatar'}.webp`,
+          { type: blob.type || 'image/webp' },
+        );
         await onReady({
-          file,
+          file: out,
           crop: null,
-          isGif: true,
-          previewBlob: file,
-          previewSide: Math.min(size.width, size.height),
+          isGif: false,
+          previewBlob: blob,
+          previewSide: SQUARE_AVATAR_TARGET_SIDE,
         });
         return 'ok';
       }

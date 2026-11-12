@@ -436,7 +436,8 @@ function MemoryBody({ pid }: { pid: string }) {
         <ul className="space-y-1">
           {list.map((m, i) => (
             <li key={i} className="flex gap-2 text-[12.5px] leading-relaxed text-ink/85">
-              <span className="shrink-0 text-[11px] tabular-nums text-ink-soft">{m.t}</span>
+              {/* 功能注释：时间戳强制 UI 圆体，避免中文数字走叙事衬线、阿拉伯数字走另一套字 */}
+              <span className="shrink-0 font-sans text-[11px] tabular-nums text-ink-soft" style={{ fontFamily: "'Sarasa Gothic Rounded', 'Source Han Rounded SC', 'PingFang SC', 'Microsoft YaHei', sans-serif" }}>{m.t}</span>
               <span className="min-w-0 flex-1">{m.text}</span>
               <button aria-label="删除" onClick={() => write(tab, list.filter((_, j) => j !== i))} className="shrink-0 text-ink-soft/50 hover:text-danger">×</button>
             </li>

@@ -796,8 +796,6 @@ export default function GameShell() {
     : null;
   const topbarData = {
     ...topbarDataOf(game, modWorld.chain[0].name),
-    // 功能注释：局势摘要并入主线同一块顶栏，不再单独渲染第二条飘条
-    note: game.world.note?.trim() || undefined,
     ...(mainQuest
       ? {
           questStep: mainQuest.waitLabel ? `${mainQuest.stepName} · ${mainQuest.waitLabel}` : mainQuest.stepName,

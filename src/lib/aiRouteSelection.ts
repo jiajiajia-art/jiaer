@@ -27,7 +27,9 @@ export type AiRouteOption = {
   available: boolean;
   /** 功能注释：以下为后端可选字段，给了才显示（见交接文档模块六） */
   billingMode?: AiRouteBillingMode;
+  /** 创作 / 预览：织梦豆单价 */
   pricePoints?: number;
+  /** 游玩：KK 币单价 */
   priceKk?: number;
   priceUnit?: string;
 };
@@ -91,6 +93,20 @@ function num(v: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+/** 功能注释：单价可能散落在顶层 / pricing / 多种别名；×10000 整型也兼容 */
+function pickPrice(r: Record<string, unknown>, keys: string[]): number | undefined {
+  const nested = (r.pricing && typeof r.pricing === 'object')
+    ? (r.pricing as Record<string, unknown>)
+    : undefined;
+  for (const key of keys) {
+    const v = num(r[key]) ?? (nested ? num(nested[key]) : undefined);
+    if (v !== undefined) return v;
+    const x = num(r[`${key}X10000`]) ?? (nested ? num(nested[`${key}X10000`]) : undefined);
+    if (x !== undefined) return x / 10000;
+  }
+  return undefined;
+}
+
 export function normalizeAiRoute(raw: unknown): AiRouteOption | null {
   const r = (raw ?? {}) as Record<string, unknown>;
   const id = String(r.id ?? '').trim();
@@ -98,7 +114,9 @@ export function normalizeAiRoute(raw: unknown): AiRouteOption | null {
   const mx = num(r.multiplierX10000);
   const m = num(r.multiplier) ?? (mx !== undefined ? mx / 10000 : 1);
   const tag = r.tag ? String(r.tag) : undefined;
-  const mode = r.billingMode === 'per_call' || r.billingMode === 'per_token' ? r.billingMode : undefined;
+  const modeRaw = r.billingMode ?? (r.pricing as Record<string, unknown> | undefined)?.billingMode;
+  const mode = modeRaw === 'per_call' || modeRaw === 'per_token' ? modeRaw : undefined;
+  const priceUnitRaw = r.priceUnit ?? r.price_unit ?? (r.pricing as Record<string, unknown> | undefined)?.priceUnit;
   return {
     id,
     name: String(r.name ?? r.displayName ?? id),
@@ -110,9 +128,9 @@ export function normalizeAiRoute(raw: unknown): AiRouteOption | null {
     isDefault: r.isDefault === true,
     available: r.available !== false,
     billingMode: mode,
-    pricePoints: num(r.pricePoints),
-    priceKk: num(r.priceKk),
-    priceUnit: r.priceUnit ? String(r.priceUnit) : undefined,
+    pricePoints: pickPrice(r, ['pricePoints', 'price_points', 'pointsPrice', 'userPricePoints']),
+    priceKk: pickPrice(r, ['priceKk', 'price_kk', 'kkPrice', 'userPriceKk']),
+    priceUnit: priceUnitRaw ? String(priceUnitRaw) : undefined,
   };
 }
 
@@ -142,3 +160,18 @@ export function resolveActiveRoute(routes: AiRouteOption[], selectedId: string):
 }
 
 export const fmtMultiplier = (m: number) => `×${Number.isInteger(m) ? m : m.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')}`;
+
+function fmtPriceNum(v: number): string {
+  return Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+/** 功能注释：线路消耗文案（倍率 + 可选单价），列表与「正在使用」共用 */
+export function formatAiRouteCostLines(r: Pick<AiRouteOption, 'multiplier' | 'billingMode' | 'pricePoints' | 'priceKk' | 'priceUnit'>): string[] {
+  const unit = r.priceUnit || '万 token';
+  const lines: string[] = [];
+  if (r.billingMode) lines.push(r.billingMode === 'per_call' ? '按次扣费' : '按量扣费');
+  lines.push(`倍率 ${fmtMultiplier(r.multiplier)}`);
+  if (r.pricePoints !== undefined) lines.push(`${fmtPriceNum(r.pricePoints)} 织梦豆 / ${unit}`);
+  if (r.priceKk !== undefined) lines.push(`${fmtPriceNum(r.priceKk)} KK 币 / ${unit}`);
+  return lines;
+}

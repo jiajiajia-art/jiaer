@@ -326,9 +326,12 @@ export const ROMANCE_CREATOR_AGREEMENT_VERSION = "1.0.0";
 export const ROMANCE_REVIEW_STANDARDS_VERSION = "1.0.0";
 
 export type RomancePublishInput = {
+  /** 功能注释：沿用作品信息简介；弹窗不再二次填写 */
   description: string;
+  /** 功能注释：首次正式上线不填；后续有改版入口再传 */
   versionNotes?: string;
   audienceType: "male" | "female" | "all";
+  /** 功能注释：提交审核弹窗已去掉「通知收藏玩家」；默认不通知 */
   notifyFavoritedUsers?: boolean;
 };
 

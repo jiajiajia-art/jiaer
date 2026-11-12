@@ -212,11 +212,9 @@ export default function ModBatchImageGen({ rooms, maps, curMapId, imageGen, onAp
             <span className="text-[11px] text-ink-soft">本范围命中 {preview} 个地点</span>
           </div>
 
-          <div className="space-y-1">
-            <p className="text-[11px] font-bold tracking-wide text-ink-soft">画风 · 整部作品统一</p>
+          <div className="space-y-1.5 rounded-xl border border-line/80 bg-paper-2/40 p-2.5">
+            <p className="text-[11px] font-bold tracking-wide text-ink-soft">选画风 · 整部统一（提示词由后台配置，此处只选不改）</p>
             <ArtStylePicker value={style} onChange={(v, preset) => { setStyle(v); setStyleNeg(preset?.negative ?? ""); }} disabled={running} />
-            <input className="w-full rounded-lg border border-line bg-paper px-2.5 py-1.5 text-[12px] text-ink outline-none focus:border-coral" value={style} disabled={running}
-              placeholder="选填：自定义画风；留空则按地点描述生成" onChange={(e) => setStyle(e.target.value)} />
           </div>
 
           {scope === "selected" && (

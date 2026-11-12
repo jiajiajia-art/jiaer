@@ -121,7 +121,12 @@
   /* 功能注释：有底栏的移动端不再挂完整官网站脚，只留 © + 隐私/协议 */
   .footer {
     display: flex;
-    padding: 14px 0 calc(14px + env(safe-area-inset-bottom, 0px));
+    padding: 14px 0 16px;
+  }
+
+  /* 功能注释：壳层已用 --app-bottom-nav-offset 避开底栏+Home Indicator；再垫 safe-area 会在版权下多出一块空白 */
+  :global([data-app-page-shell]) .footer {
+    padding-bottom: 16px;
   }
 
   .container {

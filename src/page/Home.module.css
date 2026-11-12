@@ -1882,20 +1882,24 @@
 /* ===== 移动端排版呼吸感：拉开模块间距、收小分类胶囊、去掉标题发光 ===== */
 @media (max-width: 768px) {
     .pageRoot {
-        --home-filter-gap-above: 24px;
+        /* 功能注释：加群卡/筛选条上间距，跟 Banner→公告→分类→标题 同一套呼吸节奏 */
+        --home-filter-gap-above: 32px;
     }
 
+    /* Banner 与公告条 */
     .homeTicker {
-        margin-top: 20px;
+        margin-top: 28px;
         padding: 10px 14px;
     }
 
+    /* 公告条与分类胶囊 */
     .themeShowcase {
-        margin-top: 18px;
+        margin-top: 24px;
     }
 
     .themeShowcaseList {
         gap: 8px;
+        padding: 4px 0 6px;
     }
 
     .themeShowcaseItem {
@@ -1904,9 +1908,10 @@
         font-size: 13px;
     }
 
+    /* 分类胶囊与「为您挑选…」标题 */
     .themeShowcaseTitleRow {
-        margin-top: 28px;
-        margin-bottom: 4px;
+        margin-top: 36px;
+        margin-bottom: 6px;
     }
 
     .themeShowcaseTitle,
@@ -1917,5 +1922,15 @@
 
     .themeShowcaseTitleGroup::before {
         box-shadow: none;
+    }
+
+    /* 标题与精选卡、精选卡与加群横幅 */
+    .themeShowcasePreview {
+        margin-top: 18px;
+        margin-bottom: 8px;
+    }
+
+    .mobileJoinGroupSection {
+        margin-top: var(--home-filter-gap-above, 32px);
     }
 }

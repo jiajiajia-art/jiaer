@@ -9,7 +9,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 5000;
+    /* 功能注释：须高于 AI 线路悬浮层（Fab 2147483000 / Sheet 2147483001），否则从线路弹窗点充值会埋在后面 */
+    z-index: 2147483010;
     animation: fadeIn 0.3s ease-out;
     margin: 0;
     padding: 16px;
@@ -107,9 +108,18 @@
 }
 
 .modalContent.rechargeCenter {
+    /* 功能注释：充值中心是居中卡片，勿铺满视口；过高会像整页盖住底栏 */
     min-height: 0;
-    max-height: 75dvh;
-    padding: 20px 22px 24px;
+    width: min(400px, calc(100vw - 48px));
+    max-width: 400px;
+    max-height: min(640px, 68dvh);
+    padding: 16px 18px 18px;
+    /* 功能注释：锁回全站 UI 圆体；避免 default 主题给 h2 套站酷快乐体后，标题与「周卡」正文看起来像两套字 */
+    font-family: 'Sarasa Gothic Rounded', 'Source Han Rounded SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.modalContent.rechargeCenter :is(h1, h2, h3, button, input, select, textarea, span, strong, small, p, label, div) {
+    font-family: inherit;
 }
 
 @keyframes slideUp {
@@ -192,7 +202,7 @@
 .title {
     color: var(--color-text);
     font-size: 16px;
-    font-weight: 500;
+    font-weight: 600;
     text-align: center;
     margin: 4px 0 18px;
     letter-spacing: 0;
@@ -202,6 +212,8 @@
     justify-content: center;
     min-height: 22px;
     flex-shrink: 0;
+    /* 功能注释：盖过 [data-theme=default] h2 的装饰字体，与套餐名同属一套 UI 字重 */
+    font-family: inherit;
 }
 
 .exchangeRate {
@@ -1688,7 +1700,8 @@
 .confirmationOverlay {
     position: fixed;
     inset: 0;
-    z-index: 5100;
+    /* 功能注释：确认支付叠在充值中心之上（同档高于 AI 线路层） */
+    z-index: 2147483011;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1780,22 +1793,31 @@
 }
 
 .membershipRulesCard {
-    padding: 14px;
+    margin-top: 4px;
+    padding: 16px 16px 18px;
 }
 
 .membershipRulesCard > strong {
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
     color: var(--color-text);
     font-size: 13px;
+    letter-spacing: 0.02em;
 }
 
 .membershipRulesCard ul {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     margin: 0;
     padding-left: 18px;
     color: var(--color-text-secondary);
-    font-size: 11px;
-    line-height: 1.65;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.membershipRulesCard li {
+    padding: 0;
 }
 
 .confirmationPanel {
@@ -1866,10 +1888,11 @@
     }
 
     .modalContent.rechargeCenter {
-        width: min(520px, calc(100vw - 24px));
-        max-width: 520px;
-        max-height: calc(100dvh - 12px - env(safe-area-inset-bottom));
-        padding: 8px 12px 12px;
+        /* 功能注释：手机端留出上下呼吸区，内部 .form 继续滚动，避免「整屏弹窗」感 */
+        width: min(360px, calc(100vw - 40px));
+        max-width: 360px;
+        max-height: min(620px, calc(100dvh - 120px - env(safe-area-inset-bottom)));
+        padding: 10px 12px 12px;
     }
 
     .modalContent.rechargeCenter .closeBtn {
@@ -2092,18 +2115,19 @@
     }
 
     .membershipRulesCard {
-        padding: 8px;
+        padding: 14px 14px 16px;
     }
 
     .membershipRulesCard > strong {
-        margin-bottom: 4px;
-        font-size: 11px;
+        margin-bottom: 10px;
+        font-size: 12.5px;
     }
 
     .membershipRulesCard ul {
-        padding-left: 14px;
-        font-size: 10px;
-        line-height: 1.3;
+        gap: 9px;
+        padding-left: 16px;
+        font-size: 11.5px;
+        line-height: 1.65;
     }
 
     /* 会员页面移动端适配 */
@@ -2316,6 +2340,21 @@
     .orderSummary > div { min-height: 40px; font-size: 12px; }
     .submitBtn, .membershipSubmitBtn { min-height: 48px; font-size: 14px; }
     .paymentNotice { font-size: 11px; line-height: 1.5; text-align: center; }
+
+    /* 功能注释：充值中心卡片已缩小；删掉订单摘要后略放宽 gap，规则区不至于贴死支付钮 */
+    .modalContent.rechargeCenter .form { gap: 14px; padding-bottom: 8px; }
+    .modalContent.rechargeCenter .regionSummary { min-height: 36px; margin-bottom: 8px; }
+    .modalContent.rechargeCenter .rechargeTabs { margin-bottom: 8px; }
+    .modalContent.rechargeCenter .rechargeTabs button { min-height: 40px; }
+    .modalContent.rechargeCenter .sectionHeading,
+    .modalContent.rechargeCenter .sectionHeadRow { margin-bottom: 6px; }
+    .modalContent.rechargeCenter .amountsGrid { gap: 6px; }
+    .modalContent.rechargeCenter .amountBtn,
+    .modalContent.rechargeCenter .customAmountTile { min-height: 64px; padding: 8px 4px; }
+    .modalContent.rechargeCenter .amountsGrid .tileCustom { min-height: 64px; padding: 8px 6px; }
+    .modalContent.rechargeCenter .orderSummary > div { min-height: 34px; }
+    .modalContent.rechargeCenter .submitBtn,
+    .modalContent.rechargeCenter .membershipSubmitBtn { min-height: 44px; }
 }
 
 /* 功能注释：充值确认弹窗主信息区；首充与非首充同结构，仅标签配色不同 */

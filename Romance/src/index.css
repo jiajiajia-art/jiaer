@@ -2891,7 +2891,12 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
     linear-gradient(180deg, rgba(255, 255, 255, 0.25), rgba(122, 90, 46, 0.06));
   background-size: 5px 5px, 100% 100%;
 }
-.comm-ancient :is(.bg-\[\#ededed\], .bg-\[\#f2f2f2\], .bg-\[\#f3f3f3\]) { background-color: transparent !important; }
+/* 功能注释：顶栏/底栏灰底改透明以透出宣纸纹；全屏表单（发锦囊/聊天信息）必须用不透明底，否则聊天内容叠上来 */
+.comm-ancient :is(.bg-\[\#ededed\], .bg-\[\#f2f2f2\], .bg-\[\#f3f3f3\]):not(.comm-sheet) { background-color: transparent !important; }
+.comm-ancient .comm-sheet {
+  background-color: var(--ca-paper) !important;
+  background-image: none !important;
+}
 .comm-ancient :is(.bg-\[\#f7f7f7\], .bg-\[\#e9e9eb\], .bg-\[\#e5e5e5\]) { background-color: var(--ca-paper-2) !important; }
 .comm-ancient .bg-white { background-color: var(--ca-paper-3) !important; }
 .comm-ancient :is(.bg-\[\#07c160\], .bg-\[\#fa5151\]) { background-color: var(--ca-cinnabar) !important; }

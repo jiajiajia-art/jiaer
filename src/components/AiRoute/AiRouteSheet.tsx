@@ -1,9 +1,10 @@
 /**
  * 功能注释：AI 线路选择弹窗。手机底部弹出、桌面居中。
- * 顶部余额（织梦豆 / KK 币 + 充值）→ 正在使用 → 按厂商分组的线路（可折叠）→ 底部确认。
+ * 顶部余额（织梦豆 / KK 币 + 充值 / 消耗明细）→ 正在使用 → 按厂商分组的线路（可折叠）→ 底部确认。
  * 线路只在点「使用」后生效；「恢复平台默认」清除选择。
  */
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import styles from './AiRouteSheet.module.css';
 import RechargeModal from '../Purchase/RechargeModal';
@@ -13,6 +14,7 @@ import { auth } from '../../api/account/authApi';
 import { useAuthStore } from '../../store/useAuthStore';
 import { formatKk } from '../../utils/kkMoney';
 import {
+  formatAiRouteCostLines,
   fmtMultiplier,
   resolveActiveRoute,
   setSelectedAiRouteId,
@@ -41,6 +43,7 @@ interface Props {
 }
 
 const AiRouteSheet: React.FC<Props> = ({ routes, selectedId, onClose, onReload }) => {
+  const navigate = useNavigate();
   const { user, updateUser } = useAuthStore();
   const active = resolveActiveRoute(routes, selectedId);
   const defaultRoute = routes.find((r) => r.isDefault && r.available);
@@ -127,6 +130,14 @@ const AiRouteSheet: React.FC<Props> = ({ routes, selectedId, onClose, onReload }
     }).catch(() => undefined);
   };
 
+  /** 功能注释：跳转账户流水页看织梦豆 / KK 币消耗明细（与个人中心入口一致） */
+  const openAssetDetails = () => {
+    close();
+    window.setTimeout(() => navigate('/asset/details'), 180);
+  };
+
+  const activeCostLines = active ? formatAiRouteCostLines(active) : [];
+
   return (
     <div className={`${styles.overlay} ${closing ? styles.overlayOut : ''}`} onClick={close} role="presentation">
       <section
@@ -148,19 +159,24 @@ const AiRouteSheet: React.FC<Props> = ({ routes, selectedId, onClose, onReload }
         </header>
 
         <div className={styles.wallet}>
-          <div className={styles.balance}>
+          <button type="button" className={styles.balanceBtn} onClick={openAssetDetails} aria-label="查看织梦豆消耗明细">
             <span className={styles.balanceLabel}>织梦豆</span>
             <span className={styles.balanceValue}>{points.toLocaleString('zh-CN')}</span>
-          </div>
+          </button>
           <span className={styles.walletDivider} aria-hidden="true" />
-          <div className={styles.balance}>
+          <button type="button" className={styles.balanceBtn} onClick={openAssetDetails} aria-label="查看 KK 币消耗明细">
             <span className={styles.balanceLabel}>KK 币</span>
             <span className={styles.balanceValue}>{formatKk(kk)}</span>
-          </div>
-          <button type="button" className={styles.topup} onClick={() => setRechargeOpen(true)}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-            充值
           </button>
+          <div className={styles.walletActions}>
+            <button type="button" className={styles.ledgerLink} onClick={openAssetDetails}>
+              消耗明细
+            </button>
+            <button type="button" className={styles.topup} onClick={() => setRechargeOpen(true)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+              充值
+            </button>
+          </div>
         </div>
 
         {active && (
@@ -170,6 +186,11 @@ const AiRouteSheet: React.FC<Props> = ({ routes, selectedId, onClose, onReload }
             <span className={styles.currentName}>{active.name}</span>
             {!selectedId && <span className={styles.chipSoft}>平台默认</span>}
             <span className={styles.currentMult}>{fmtMultiplier(active.multiplier)}</span>
+            {activeCostLines.length > 1 && (
+              <span className={styles.currentCost} title={activeCostLines.join(' · ')}>
+                {activeCostLines.filter((x) => !x.startsWith('倍率')).join(' · ')}
+              </span>
+            )}
           </div>
         )}
 
@@ -229,14 +250,20 @@ const AiRouteSheet: React.FC<Props> = ({ routes, selectedId, onClose, onReload }
                               {!r.available && <span className={styles.chipMuted}>维护中</span>}
                             </span>
                             {r.desc && <span className={styles.routeDesc}>{r.desc}</span>}
-                            <span className={styles.prices}>
-                              <span className={`${styles.mult} ${styles[`mult_${rel}`]}`}>倍率 {fmtMultiplier(r.multiplier)}</span>
-                              {r.pricePoints !== undefined && (
-                                <span className={styles.price}>{fmtPrice(r.pricePoints)} 织梦豆<small> / {r.priceUnit || '万 token'}</small></span>
-                              )}
-                              {r.priceKk !== undefined && (
-                                <span className={styles.price}>{fmtPrice(r.priceKk)} KK 币<small> / {r.priceUnit || '万 token'}</small></span>
-                              )}
+                            <span className={styles.costBlock} aria-label="消耗明细">
+                              <span className={styles.costLabel}>消耗明细</span>
+                              <span className={styles.prices}>
+                                {r.billingMode && (
+                                  <span className={styles.price}>{MODE_LABEL[r.billingMode]}</span>
+                                )}
+                                <span className={`${styles.mult} ${styles[`mult_${rel}`]}`}>倍率 {fmtMultiplier(r.multiplier)}</span>
+                                {r.pricePoints !== undefined && (
+                                  <span className={styles.price}>{fmtPrice(r.pricePoints)} 织梦豆<small> / {r.priceUnit || '万 token'}</small></span>
+                                )}
+                                {r.priceKk !== undefined && (
+                                  <span className={styles.price}>{fmtPrice(r.priceKk)} KK 币<small> / {r.priceUnit || '万 token'}</small></span>
+                                )}
+                              </span>
                             </span>
                           </span>
                         </button>
@@ -250,6 +277,7 @@ const AiRouteSheet: React.FC<Props> = ({ routes, selectedId, onClose, onReload }
           <p className={styles.note}>
             倍率由平台设定：实际扣费 = 本次用量计价 × 倍率。切换后从下一次生成开始生效，已生成的内容不受影响。
             <button type="button" className={styles.linkBtn} onClick={onReload}>刷新线路</button>
+            <button type="button" className={styles.linkBtn} onClick={openAssetDetails}>查看账户消耗明细</button>
           </p>
         </div>
 

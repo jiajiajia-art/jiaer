@@ -313,10 +313,12 @@ const GameGrid: React.FC<GameGridProps> = ({
                             <div className={styles.goodsTitle} title={meta.title || undefined}>
                                 {meta.title || `剧情${idx + 1}`}
                             </div>
-                            {/* 功能注释：预览简介，无简介时占位保持卡片等高 */}
-                            <p className={styles.goodsDesc} title={body.subtitle || undefined}>
-                                {body.subtitle || '\u00a0'}
-                            </p>
+                            {/* 功能注释：首页无简介用空行保卡片等高；书架 works 仅在有且与标题不同的简介时渲染，去掉空行/重复行 */}
+                            {(!isWorksLayout || (body.subtitle && body.subtitle !== String(meta.title ?? '').trim())) && (
+                                <p className={styles.goodsDesc} title={body.subtitle || undefined}>
+                                    {body.subtitle || '\u00a0'}
+                                </p>
+                            )}
                             {/* 功能注释：左作者署名、右收藏徽标，同一行左右布局 */}
                             <div className={styles.goodsMetaRow}>
                                 <div className={styles.goodsAuthor} title={author.name}>
@@ -330,12 +332,14 @@ const GameGrid: React.FC<GameGridProps> = ({
                                     <span className={styles.goodsAuthorName}>{author.name}</span>
                                 </div>
                             </div>
-                            {/* 功能注释：标签行始终占位，无标签卡片也与同行等高 */}
-                            <div className={styles.goodsTagRow} aria-hidden={body.tags.length === 0 || undefined}>
-                                {body.tags.map((tag) => (
-                                    <span key={tag} className={styles.goodsTagPill}>{tag}</span>
-                                ))}
-                            </div>
+                            {/* 功能注释：首页标签行恒占位保齐；书架 works 无标签不渲染，去掉作者下方空白条 */}
+                            {(body.tags.length > 0 || !isWorksLayout) && (
+                                <div className={styles.goodsTagRow} aria-hidden={body.tags.length === 0 || undefined}>
+                                    {body.tags.map((tag) => (
+                                        <span key={tag} className={styles.goodsTagPill}>{tag}</span>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 );

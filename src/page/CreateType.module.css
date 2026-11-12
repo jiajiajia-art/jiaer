@@ -22,7 +22,8 @@
     align-items: center;
     /* 功能注释：壳层已用 --app-navbar-offset 避让顶栏，这里只留内容边距，禁止再叠一层 navbar 高度 */
     padding: 8px 20px 32px;
-    min-height: 100%;
+    /* 功能注释：禁止 min-height:100%——与壳层 absolute top/bottom 叠加后会按壳高撑开，压穿底栏导致看起来「滑不动」且末项被挡 */
+    min-height: 0;
     box-sizing: border-box;
     width: 100%;
 }
