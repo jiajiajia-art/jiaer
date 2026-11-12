@@ -317,6 +317,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                 disabled={!day.canMakeup || isMakeupSubmitting}
                 onClick={(event) => openMakeupConfirm(day.date, event.currentTarget)}
             >
+                {day.state === 'today' && <span className={styles.todayTag}>今天</span>}
                 <span className={styles.weekday}>{t(`checkIn.weekdays.${weekdayKey}`)}</span>
                 <span className={styles.weekDate}>{formatUtcMonthDay(day.date)}</span>
                 <span className={styles.coinWrap} aria-hidden="true">

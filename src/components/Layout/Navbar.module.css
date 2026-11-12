@@ -776,6 +776,26 @@
     .navbarContainerMobileHomeOverlayActive .loginBtn {
         box-shadow: var(--navbar-login-shadow);
     }
+
+    /* 功能注释：明色模式下压图顶栏改为浅色毛玻璃，不再用深色遮罩；文字/搜索框回到常规浅色配色 */
+    :global([data-theme]:not([data-mode="dark"])) .navbarContainerMobileHomeOverlayActive {
+        --navbar-surface: color-mix(in srgb, var(--color-surface) 78%, transparent);
+        --navbar-text: color-mix(in srgb, var(--color-text) 78%, transparent);
+        --navbar-text-strong: var(--color-text);
+        --navbar-search-bg: color-mix(in srgb, var(--color-surface) 92%, transparent);
+        --navbar-search-input: var(--color-text);
+        --navbar-search-placeholder: var(--color-text-muted);
+        --navbar-search-panel-meta: var(--color-text-muted);
+        --navbar-search-panel-empty: var(--color-text-muted);
+        backdrop-filter: blur(14px) saturate(1.2);
+        -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    }
+
+    :global([data-theme]:not([data-mode="dark"])) .navbarContainerMobileHomeOverlayActive .langTrigger {
+        border-color: color-mix(in srgb, var(--color-text) 14%, transparent);
+        background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+        color: var(--color-text);
+    }
 }
 
 /* 功能注释：平板/窄桌面区间收紧顶栏，避免导航链接与搜索框重叠、排行被挤出 */

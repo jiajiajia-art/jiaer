@@ -3,7 +3,7 @@ import { rulesOf } from "../game/engineRules";
 import { useGame, useLive } from "../store/gameCtx";
 import type { Npc, Segment, Thought, Turn } from "../lib/types";
 import { Avatar } from "./ui";
-import { IconChevronDown, IconChevronUp, IconPencil, IconRefresh, IconSend, IconSparkle, IconThought } from "../lib/icons";
+import { IconChevronDown, IconPencil, IconRefresh, IconSend, IconSparkle, IconThought } from "../lib/icons";
 import { EntityText } from "./EntityText";
 import { looksGarbled, repairSegments, proseToSegments } from "../lib/ai";
 import { findNpc } from "../lib/npcIdentity";
@@ -229,31 +229,28 @@ function SegmentView({ s, npcs, tightTop, cont, player, overlay, plain }: {
   );
 }
 
-/* 回合末尾的「心事」：默认折起，点开偷看在场角色没说出口的话 */
+/* 回合末尾的「心事」：直接展开显示在场角色没说出口的话（不再折叠） */
 export function Thoughts({ thoughts, npcs }: { thoughts?: Thought[]; npcs: Npc[] }) {
-  const [open, setOpen] = useState(false);
   if (!thoughts?.length) return null;
   return (
     <div className="mt-2.5">
-      <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-1.5 rounded-full border border-dashed border-coral/50 px-2.5 py-0.5 text-[11.5px] font-bold text-coral transition hover:bg-coral/10">
-        <IconThought size={14} /> 心事 · {thoughts.length} {open ? <IconChevronUp size={12} /> : <IconChevronDown size={12} />}
-      </button>
-      {open && (
-        <ul className="mt-2 space-y-1.5">
-          {thoughts.map((t, i) => {
-            const n = npcs.find((x) => x.name === t.name);
-            return (
-              <li key={i} className="flex items-start gap-2 rounded-xl bg-coral/[0.06] px-2.5 py-2">
-                <Avatar src={n?.avatar ?? ""} name={t.name} size={26} square />
-                <p className="story-thought min-w-0 flex-1 text-[12.5px] leading-relaxed text-ink/85">
-                  {/* 功能注释：心事不用斜体，中文斜体会掉成系统黑体；跟游戏字体 */}
-                  <b className="mr-1 text-coral">{t.name}</b><span className="not-italic">{t.text}</span>
-                </p>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <p className="flex items-center gap-1.5 text-[11.5px] font-bold text-coral">
+        <IconThought size={14} /> 心事
+      </p>
+      <ul className="mt-1.5 space-y-1.5">
+        {thoughts.map((t, i) => {
+          const n = npcs.find((x) => x.name === t.name);
+          return (
+            <li key={i} className="flex items-start gap-2 rounded-xl bg-coral/[0.06] px-2.5 py-2">
+              <Avatar src={n?.avatar ?? ""} name={t.name} size={26} square />
+              <p className="story-thought min-w-0 flex-1 text-[12.5px] leading-relaxed text-ink/85">
+                {/* 功能注释：心事不用斜体，中文斜体会掉成系统黑体；跟游戏字体 */}
+                <b className="mr-1 text-coral">{t.name}</b><span className="not-italic">{t.text}</span>
+              </p>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

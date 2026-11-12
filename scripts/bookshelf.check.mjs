@@ -167,7 +167,8 @@ test('书架页接线_路由底栏真实接口且无原生弹窗与mock', () => 
   const app = read('src/App.tsx');
   assert.match(app, /<Route path="\/bookshelf" element={<CreateWorks \/>} \/>/);
   const unifiedWorks = read('src/components/Create/CreatorWorksPanel.tsx');
-  assert.match(unifiedWorks, /'all' \| 'published' \| 'favorites'/);
+  // 书架页签新增「历史」
+  assert.match(unifiedWorks, /'all' \| 'published' \| 'history' \| 'favorites'/);
   assert.doesNotMatch(unifiedWorks, /worksTab === 'drafts'/);
   assert.match(unifiedWorks, /create\.manage/);
   assert.match(unifiedWorks, /normalizeWorksTabKey/);

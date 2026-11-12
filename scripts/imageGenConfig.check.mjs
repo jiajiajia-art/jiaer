@@ -40,7 +40,9 @@ test('toImageGenModelsPayload_应按 key 组装', () => {
 
 test('AdminPanel_应包含 AI 模型中心与兼容路由', () => {
   const panel = readFileSync(join(root, 'src/page/AdminPanel.tsx'), 'utf8');
-  assert.match(panel, /AI 模型中心/);
+  // 侧栏文案已抽到 admin-shell/adminNavigation.tsx
+  const nav = readFileSync(join(root, 'src/components/admin-shell/adminNavigation.tsx'), 'utf8');
+  assert.match(nav, /label: 'AI 模型中心'/);
   assert.match(panel, /aiModelCenter/);
   assert.match(panel, /\/admin\/image-gen/);
   assert.match(panel, /AiModelCenter/);

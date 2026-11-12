@@ -1500,10 +1500,6 @@
 
 /* Tablet & Mobile: <= 1080px */
 @media (max-width: 1080px) {
-    .pageRoot {
-        padding-bottom: 20px;
-    }
-
     .main {
         max-width: 100%;
         padding: 0 12px;

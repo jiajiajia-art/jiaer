@@ -1,4 +1,5 @@
 /** 纯逻辑：旧阶段的 groups 限定一律剥离，只按关系值判定。 */
+import { lastOf } from "../lib/lastOf.ts";
 export type ContactStageShape = { id: string; label: string; min: number; tone?: string; groups?: string[] };
 
 export function normalizeContactStages<T extends ContactStageShape>(stages: readonly T[]): Omit<T, "groups">[] {
@@ -10,7 +11,7 @@ export function normalizeContactStages<T extends ContactStageShape>(stages: read
 
 export function resolveContactStage<T extends ContactStageShape>(stages: readonly T[], value: number): Omit<T, "groups"> | undefined {
   const sorted = normalizeContactStages(stages).sort((a, b) => b.min - a.min);
-  return sorted.find((stage) => value >= stage.min) ?? sorted.at(-1);
+  return sorted.find((stage) => value >= stage.min) ?? lastOf(sorted);
 }
 
 /** 功能注释：按作者配置顺序出组；每个人只进入当前关系阶段一次。 */

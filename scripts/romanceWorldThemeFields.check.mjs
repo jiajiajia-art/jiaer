@@ -75,19 +75,16 @@ test('flattenThemeTagTree_取叶子_去重_丢非法节点', async () => {
   assert.equal(parseGameThemeFromInfo(null), null);
 });
 
-test('ModEditorPanel_基本信息两条路径都挂世界题材字段_并向玩法商店和手机应用传enabledThemeTags', () => {
+// 编辑器内的世界题材表单（WorldThemeFields）已下线：题材改由平台作品信息下发，进编辑器时合入 Mod，
+// 并继续传给玩法商店与手机应用做题材筛选；通讯皮肤按题材自动判定（旧作显式 commsSkin 仍生效）
+test('ModEditorPanel_题材取自平台_并向玩法商店和手机应用传enabledThemeTags', () => {
   const panel = read('components/ModEditorPanel.tsx');
-  assert.equal((panel.match(/<WorldThemeFields /g) || []).length, 2, 'authorSimplify 与完整路径各一处');
-  assert.match(panel, /patchWorldTheme\(m, patch\)/);
+  assert.doesNotMatch(panel, /<WorldThemeFields /);
   assert.equal((panel.match(/enabledThemeTags=\{enabledThemeTags\}/g) || []).length, 2, 'AddPlayModModal + PhoneAppsEditor');
   assert.match(panel, /fetchPlatformThemeTags\(\)/);
   assert.match(panel, /applyPlatformThemeToMod\(latest, theme\)/);
-  const fields = read('components/WorldThemeFields.tsx');
-  assert.match(fields, /data-world-theme-fields/);
-  for (const k of ['data-world-theme-label', 'data-world-theme-code', 'data-world-theme-comms-skin', 'data-world-theme-tag']) {
-    assert.ok(fields.includes(k), `缺少 ${k}`);
-  }
-  assert.match(fields, /COMMS_SKIN_OPTIONS/);
+  const theme = read('lib/worldTheme.ts');
+  assert.match(theme, /override: hint\.commsSkin/);
 });
 
 test('PlayerPlayBootstrap_进局前补平台题材_失败不阻断', () => {

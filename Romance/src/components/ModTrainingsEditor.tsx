@@ -12,13 +12,13 @@ const uid = () => `tr_${Date.now().toString(36).slice(-5)}${Math.random().toStri
 
 export default function ModTrainingsEditor({ value, stats, attrs, onChange }: { value?: Training[]; stats?: StatsSlot; attrs?: AttrDef[]; onChange: (v?: Training[]) => void }) {
   const list = value ?? [];
-  // 可选属性：未停用的八维（用模组改过的叫法）+ 自定义属性（键加 c: 前缀区分）
+  // 可选属性：作者在属性里真正配置过（改过叫法或设了初值）且未停用的八维 + 自定义属性（键加 c: 前缀区分）；不再默认塞娱乐圈的演技等八维
   const hidden = new Set(stats?.hidden ?? []);
   const opts = [
-    ...RAW_STAT_ORDER.filter((k) => !hidden.has(k)).map((k) => ({ v: k as string, l: (typeof stats?.labels?.[k] === "string" ? stats.labels![k]!.trim() : "") || RAW_STAT_LABELS[k] })),
+    ...RAW_STAT_ORDER.filter((k) => !hidden.has(k) && (String(stats?.labels?.[k] ?? "").trim() || typeof stats?.base?.[k] === "number")).map((k) => ({ v: k as string, l: (typeof stats?.labels?.[k] === "string" ? stats.labels![k]!.trim() : "") || RAW_STAT_LABELS[k] })),
     ...(Array.isArray(attrs) ? attrs : []).map((a) => ({ v: `c:${a.id}`, l: a.label || a.id })),
   ];
-  const labelOf = (v: string) => opts.find((o) => o.v === v)?.l ?? v;
+  const labelOf = (v: string) => opts.find((o) => o.v === v)?.l ?? RAW_STAT_LABELS[v as StatKey] ?? v;
   const rowsOf = (t: Training): { k: string; r: Range }[] => [
     ...Object.entries(t.gain ?? {}).filter(([, r]) => r).map(([k, r]) => ({ k, r: r as Range })),
     ...Object.entries(t.cgain ?? {}).map(([k, r]) => ({ k: `c:${k}`, r })),
@@ -59,8 +59,8 @@ export default function ModTrainingsEditor({ value, stats, attrs, onChange }: { 
             <div className="space-y-1">
               {rows.map((row, ri) => (
                 <div key={ri} className="flex items-center gap-1.5">
-                  <select className={inp} value={row.k} onChange={(e) => setRows(i, rows.map((x, j) => (j === ri ? { ...x, k: e.target.value } : x)))}>
-                    {!opts.some((o) => o.v === row.k) && <option value={row.k}>{row.k}（属性已删除）</option>}
+                  <select className={`${inp} flex-1 py-1.5`} value={row.k} onChange={(e) => setRows(i, rows.map((x, j) => (j === ri ? { ...x, k: e.target.value } : x)))}>
+                    {!opts.some((o) => o.v === row.k) && <option value={row.k}>{labelOf(row.k)}（未启用）</option>}
                     {opts.map((o) => <option key={o.v} value={o.v} disabled={o.v !== row.k && used.has(o.v)}>{o.l}{o.v.startsWith("c:") ? "（自定义）" : ""}</option>)}
                   </select>
                   <span className="shrink-0 text-[11px] text-ink-soft">+</span>
@@ -70,6 +70,7 @@ export default function ModTrainingsEditor({ value, stats, attrs, onChange }: { 
                   <button className={`${btn} shrink-0`} onClick={() => setRows(i, rows.filter((_, j) => j !== ri))} aria-label="删除收益">×</button>
                 </div>
               ))}
+              {!opts.length && <p className="text-[11px] text-ink-soft">还没有可加成的属性，先到「属性」里添加自定义属性。</p>}
               <button className={btn} disabled={used.size >= opts.length} onClick={() => { const free = opts.find((o) => !used.has(o.v)); if (free) setRows(i, [...rows, { k: free.v, r: [1, 3] }]); }}>＋ 加一项收益</button>
             </div>
             <input className={inp} value={t.effect} placeholder="课程说明（留空自动生成）" onChange={(e) => set(i, { effect: e.target.value })} />

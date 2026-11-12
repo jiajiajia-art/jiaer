@@ -58,7 +58,7 @@ function joinParts(parts: string[], sep = "，"): string {
  * 都没有则留空，禁止偷偷塞平台默认二次元句。
  */
 export function resolveArtStyle(workStyle?: string, inferredFromSetting?: string): string {
-  const t = clip(workStyle, 80);
+  const t = clip(workStyle, 600);
   if (t) return t;
   return clip(inferredFromSetting, 80);
 }
@@ -297,7 +297,7 @@ export function workImageGenFromParts(
   parts: Pick<EditorImagePromptParts, "style" | "negative">,
   forbidGen?: string,
 ): { style?: string; negative?: string } | undefined {
-  const style = clip(parts.style, 80);
+  const style = clip(parts.style, 600);
   const baseSet = new Set(
     mergeNegativePrompt(ALL_BASE_NEGATIVE, forbidGen).split("，").map((x) => x.toLowerCase()),
   );
@@ -309,4 +309,71 @@ export function workImageGenFromParts(
   if (style) out.style = style;
   if (extra) out.negative = extra;
   return Object.keys(out).length ? out : undefined;
+}
+
+/**
+ * 功能注释：生图画风预设——平台偏 galgame / 视觉小说，只保留二次元画风（不做写实摄影 / 电影感 / 3D）。
+ * 按「质量层 + 风格层」写，内容层由各入口的主体提示词补；控制在约 75 token 内，精简胜过堆砌。
+ * negative：选中该画风时并入负面词（排除三次元 / 低质），与正向不重复。
+ * sample：示例图放在 public/assets/art-styles/<id>.webp；没有时显示色块，生成过的图会记成本机示例。
+ */
+export type ArtStylePreset = { id: string; label: string; prompt: string; negative: string; swatch: string; /** 后台画风库配置的示例图 */ sampleUrl?: string };
+
+const Q = "masterpiece, best quality, highly detailed";
+const NOT_REAL = "photorealistic, realistic photo, 3d render, cgi, real person, lowres, bad anatomy, bad hands, blurry, jpeg artifacts, worst quality, low quality, signature, watermark";
+
+export const ART_STYLE_PRESETS: ReadonlyArray<ArtStylePreset> = [
+  { id: "vn", label: "日系视觉小说", swatch: "linear-gradient(135deg,#ffd6e0,#a8c8ff)",
+    prompt: `${Q}, polished Japanese anime visual novel character art, clean elegant linework, soft cel shading, refined facial features, detailed but readable outfit design, high-quality game character sprite`,
+    negative: NOT_REAL },
+  { id: "otome", label: "乙女向", swatch: "linear-gradient(135deg,#ffe3ec,#f3b6d0 55%,#c9a2e8)",
+    prompt: `${Q}, elegant otome game character art, delicate facial features, graceful silhouette, refined hair rendering, beautiful expressive eyes, soft romantic lighting, polished anime shading, premium visual novel sprite quality`,
+    negative: NOT_REAL },
+  { id: "dark", label: "暗黑幻想", swatch: "linear-gradient(135deg,#2a1b2e,#5b2033 55%,#1a1420)",
+    prompt: `${Q}, dark fantasy visual novel character art, refined anime linework, muted color palette, subtle dramatic shadows, elegant gothic mood, detailed clothing textures, mysterious but readable character design`,
+    negative: `${NOT_REAL}, oversaturated, neon colors` },
+  { id: "guofeng", label: "古风水彩", swatch: "linear-gradient(135deg,#f4ede0,#c9d8cf 55%,#9fb4b0)",
+    prompt: `${Q}, hand-painted ancient Chinese watercolor character sprite, guofeng otome style, soft but clear linework, pale translucent colors, natural ink and watercolor washes, paper texture, layered hanfu with flowing fabric, warm elegant poetic mood, clear silhouette, readable face`,
+    negative: `${NOT_REAL}, landscape painting, scenery only, pure ink-wash background, blurry face` },
+  { id: "anime", label: "日系动漫", swatch: "linear-gradient(135deg,#9fe0ff,#ffe08a)",
+    prompt: `${Q}, anime style, vibrant TV anime key visual, crisp linework, bright cel shading, clean colors, expressive character`,
+    negative: NOT_REAL },
+  { id: "manhua", label: "国漫厚涂", swatch: "linear-gradient(135deg,#f2c6a0,#b0566b 60%,#3b2a40)",
+    prompt: `${Q}, Chinese manhua semi-thick painting style, anime proportions, soft painterly rendering, refined facial features, rich warm lighting, elegant character illustration`,
+    negative: NOT_REAL },
+  { id: "chibi", label: "Q版萌系", swatch: "linear-gradient(135deg,#fff1b8,#ffc2d6)",
+    prompt: `${Q}, chibi anime style, cute super-deformed proportions, big expressive eyes, simple clean shading, soft pastel colors, sticker-like character art`,
+    negative: NOT_REAL },
+  { id: "cyber", label: "赛博动漫", swatch: "linear-gradient(135deg,#1b1f4a,#7a2bd6 55%,#19d3e6)",
+    prompt: `${Q}, cyberpunk anime visual novel art, neon rim lighting, rainy night reflections, sharp anime linework, cool and warm contrast, futuristic outfit details`,
+    negative: NOT_REAL },
+  { id: "pixel", label: "像素风", swatch: "repeating-linear-gradient(45deg,#7fb8ff 0 6px,#ffb3c7 6px 12px)",
+    prompt: `${Q}, retro pixel art, 16-bit game sprite, limited color palette, crisp pixels, clean readable silhouette`,
+    negative: `${NOT_REAL}, smooth gradient, anti-aliasing` },
+];
+
+/** 功能注释：画风示例图：先用本机最近一次用该画风生成的图，否则用 public 里的固定示例 */
+const SAMPLE_KEY = "romance.artStyleSamples";
+export function artStyleSampleUrl(id: string): { local?: string; bundled: string } {
+  let local: string | undefined;
+  try { local = (JSON.parse(localStorage.getItem(SAMPLE_KEY) || "{}") as Record<string, string>)[id]; } catch { /* 无痕模式等 */ }
+  const base = String(import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
+  return { local, bundled: `${base}assets/art-styles/${id}.webp` };
+}
+/** 功能注释：当前生效的画风列表（后台画风库有上架项时用后台，否则内置） */
+let activePresets: ReadonlyArray<ArtStylePreset> = ART_STYLE_PRESETS;
+export function setActiveArtStylePresets(list: ReadonlyArray<ArtStylePreset>): void {
+  activePresets = list.length ? list : ART_STYLE_PRESETS;
+}
+export function getActiveArtStylePresets(): ReadonlyArray<ArtStylePreset> {
+  return activePresets;
+}
+export function rememberArtStyleSample(style: string, url: string): void {
+  const p = activePresets.find((x) => x.prompt === style.trim());
+  if (!p || !url) return;
+  try {
+    const map = JSON.parse(localStorage.getItem(SAMPLE_KEY) || "{}") as Record<string, string>;
+    map[p.id] = url;
+    localStorage.setItem(SAMPLE_KEY, JSON.stringify(map));
+  } catch { /* 忽略 */ }
 }

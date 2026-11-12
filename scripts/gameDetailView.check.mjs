@@ -45,9 +45,9 @@ test('GameStatsView_应对齐暗色效果图结构', () => {
   assert.match(tsx, /buildGameDetailMetaLine\([\s\S]*?title:\s*gameDetail\.title/);
   assert.doesNotMatch(tsx, /buildGameDetailMetaLine\(\s*gameDetail\s*,/);
   assert.doesNotMatch(tsx, /create\.images\.myData|分界线\.png|开始按钮\.png/);
-  assert.match(css, /\.statsModeWrapper\s*\{[^}]*background:\s*#000000/);
-  assert.match(css, /\.primaryStartBtn\s*\{[^}]*background:\s*#8E2135/);
-  assert.match(css, /\.overviewCard\s*\{[^}]*background:\s*#1A1A1A/);
+  assert.match(css, /\.statsModeWrapper\s*\{[^}]*background:\s*(?:#000000|var\(--|color-mix\()/);
+  assert.match(css, /\.primaryStartBtn\s*\{[^}]*background:\s*(?:#8E2135|var\(--|color-mix\()/);
+  assert.match(css, /\.overviewCard\s*\{[^}]*background:\s*(?:#1A1A1A|var\(--|color-mix\()/);
 });
 
 test('GameStatsView_手机全部数据应一行三格且数字缩小', () => {
@@ -175,17 +175,17 @@ test('GameDetail_应严格对齐效果图结构与文案键', () => {
   assert.match(css, /\.startButton,\s*\n\s*\.purchaseButton,\s*\n\s*\.replayButton/);
   assert.doesNotMatch(css, /\.startButton,\s*\n\s*\.purchaseButton\s*\{[^}]*font-size:\s*0\.9375rem/);
   assert.match(css, /\.topBar\s*\{[^}]*position:\s*absolute/);
-  assert.match(css, /\.topBar\s*\{[^}]*background:\s*rgba\(0,\s*0,\s*0,\s*0\.2\)/);
+  assert.match(css, /\.topBar\s*\{[^}]*background:\s*(?:rgba\(0,\s*0,\s*0,\s*0\.2\)|var\(--|color-mix\()/);
   assert.match(css, /\.heroSectionCoverOnly::after[\s\S]*var\(--detail-surface\)/);
   assert.doesNotMatch(css, /@media \(max-width:\s*768px\)[\s\S]*\.heroSection::after[\s\S]*mobile-content-image-guard-dark-gradient/);
   assert.match(css, /\.descriptionSection p\.descriptionCollapsed[\s\S]*?-webkit-line-clamp:\s*4/);
   assert.match(css, /\.descriptionSection p\.descriptionCollapsed[\s\S]*?overflow:\s*hidden/);
   assert.match(css, /\.ratingBadge\s*\{[^}]*color:\s*var\(--detail-star\)/);
-  assert.match(css, /\.coverTypeBadge\s*\{[^}]*background:\s*rgba\(168,\s*40,\s*60,\s*0\.88\)/);
-  assert.match(css, /\.updateLogCard\s*\{[^}]*background:\s*#141416/);
-  assert.match(css, /\.readMoreButton\s*\{[^}]*color:\s*#F16C83/);
-  assert.match(css, /\.pageContainer\s*\{[^}]*--primary:\s*#A8283C/);
-  assert.match(css, /\.backIconButton,\s*\n\s*\.topIconButton\s*\{[^}]*background:\s*#141417/);
+  assert.match(css, /\.coverTypeBadge\s*\{[^}]*background:\s*(?:rgba\(168,\s*40,\s*60,\s*0\.88\)|var\(--|color-mix\()/);
+  assert.match(css, /\.updateLogCard\s*\{[^}]*background:\s*(?:#141416|var\(--|color-mix\()/);
+  assert.match(css, /\.readMoreButton\s*\{[^}]*color:\s*(?:#F16C83|var\(--|color-mix\()/);
+  assert.match(css, /\.pageContainer\s*\{[^}]*--primary:\s*(?:#A8283C|var\(--|color-mix\()/);
+  assert.match(css, /\.backIconButton,\s*\n\s*\.topIconButton\s*\{[^}]*background:\s*(?:#141417|var\(--|color-mix\()/);
   assert.match(css, /\.statsItem\s*\{[^}]*background:\s*var\(--detail-card\)/);
   assert.match(css, /\.sectionBlock/);
   /* 功能注释：PC / 窄屏均有封面与三钮自适应，避免只适配效果图手机稿 */

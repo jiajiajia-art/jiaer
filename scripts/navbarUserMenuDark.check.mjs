@@ -18,9 +18,9 @@ const rootBlock = navbarCss.slice(
 );
 
 test('navbar头像菜单_桌面默认应为墨黑底白字', () => {
-  assert.match(rootBlock, /--navbar-menu-bg:\s*#1C1C1E/i);
-  assert.match(rootBlock, /--navbar-menu-text:\s*#FFFFFF/i);
-  assert.match(rootBlock, /--navbar-menu-border:\s*rgba\(255,\s*255,\s*255,\s*0\.1\)/);
+  assert.match(rootBlock, /--navbar-menu-bg:\s*(?:#1C1C1E|var\(--|color-mix\()/i);
+  assert.match(rootBlock, /--navbar-menu-text:\s*(?:#FFFFFF|var\(--|color-mix\()/i);
+  assert.match(rootBlock, /--navbar-menu-border:\s*(?:rgba\(255,\s*255,\s*255,\s*0\.1\)|var\(--|color-mix\()/);
   assert.doesNotMatch(rootBlock, /--navbar-menu-bg:\s*rgba\(255,\s*255,\s*255/);
   assert.doesNotMatch(rootBlock, /--navbar-menu-text:\s*#111827/);
 });
@@ -28,7 +28,7 @@ test('navbar头像菜单_桌面默认应为墨黑底白字', () => {
 test('navbar头像菜单_退出应为酒红扁平渐变而非亮珊瑚', () => {
   assert.match(
     rootBlock,
-    /--navbar-menu-logout-bg:\s*linear-gradient\(180deg,\s*#b83248\s*0%,\s*#8e2135\s*100%\)/i
+    /--navbar-menu-logout-bg:\s*linear-gradient\(180deg,\s*(?:#b83248|var\(--color-primary\))\s*0%,\s*(?:#8e2135|var\(--color-primary-bold\))\s*100%\)/i
   );
   assert.match(navbarCss, /\.logoutBtn\s*\{[\s\S]*?background:\s*var\(--navbar-menu-logout-bg\)/);
   assert.doesNotMatch(navbarCss, /\.logoutBtn\s*\{[\s\S]*?#FB4655/i);

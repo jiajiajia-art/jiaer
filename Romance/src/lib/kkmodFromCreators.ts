@@ -2,8 +2,8 @@
  * 功能注释：创作者侧把「玩法 Mod / 手机应用」草稿打成专属 .kkmod，供 Mod 商店安装引用。
  */
 import type { Mod } from "../mods/types.ts";
-import { packModFiles } from "../mods/kkmod/files";
-import { PLAY_MOD_SDK_VERSION, derivePlayModEditorPanels, sanitizeConflictIds, stripForbiddenPlayFields } from "../mods/playModGuard";
+import { packModFiles } from "../mods/kkmod/files.ts";
+import { PLAY_MOD_SDK_VERSION, derivePlayModEditorPanels, sanitizeConflictIds, stripForbiddenPlayFields } from "../mods/playModGuard.ts";
 import {
   packKkmod,
   type ComponentKind,

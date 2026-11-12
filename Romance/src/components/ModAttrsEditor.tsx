@@ -1,7 +1,7 @@
 import { IconChevronUp, IconClose, IconSpark } from "../lib/icons";
 import { useState } from "react";
 import type { AttrDef, AttrTier } from "../lib/types";
-import { attrDiceProblem, attrUsesRandomStart } from "../lib/attrInit";
+import { attrChoiceOptions, attrDiceProblem, attrStartMode, attrUsesRandomStart } from "../lib/attrInit";
 import { ColorPick } from "./EditorKit";
 import { CURRENCY_ATTR_DESC, newCurrencyAttr, newNumberAttr } from "../lib/creationItems";
 
@@ -13,6 +13,12 @@ const DISPLAY = [
   { v: "both", l: "数值 + 档位" },
   { v: "tier", l: "只显示档位" },
   { v: "num", l: "只显示数值" },
+] as const;
+const START_MODES = [
+  { v: "random", l: "开局随机", d: "开局在最小～最大之间由代码随机，不交给生成文本的模型；玩家可在建角页单独重掷或整组重掷。" },
+  { v: "locked", l: "作者锁定", d: "固定为你填的开局值，玩家在建角页只能看、不能改。" },
+  { v: "choice", l: "玩家选择", d: "你列出几个选项（每项对应一个开局值），玩家在建角页选一个；选项名会写进主角档案。" },
+  { v: "custom", l: "玩家自定义", d: "玩家在建角页自己填一个数（限制在最小～最大之间）。" },
 ] as const;
 const uid = () => `attr_${Math.random().toString(36).slice(2, 7)}`;
 const num = (v: string) => Number(v) || 0;
@@ -68,34 +74,47 @@ export function AttrDefForm({ a, onChange }: { a: AttrDef; onChange: (p: Partial
           </select>
         </label>
       </div>
-      {/* 功能注释：开局取值只用「固定数值」勾选——勾上填固定值，不勾则最小～最大随机 */}
-      <div className="space-y-1.5 rounded-lg border border-line/70 bg-paper-2/40 px-2 py-1.5">
+      {/* 功能注释：开局取值四种：随机（玩家可重掷）/ 作者锁定 / 玩家从选项里选 / 玩家自填 */}
+      <div className="space-y-1.5 rounded-lg border border-line/70 bg-paper-2/40 px-2 py-1.5" data-attr-start-mode>
         <p className="text-[11px] font-semibold text-ink">开局取值</p>
-        <label className="flex items-center gap-1.5 text-[11.5px] text-ink">
-          <input
-            type="checkbox"
-            className="accent-jade"
-            checked={!attrUsesRandomStart(a)}
-            onChange={(e) => {
-              if (e.target.checked) {
-                set({ initMode: undefined, dice: undefined });
-                return;
-              }
-              const lo = a.min ?? 0;
-              const hi = typeof a.max === "number" && a.max > lo ? a.max : Math.max(lo + 1, 100);
-              set({ initMode: "random", max: hi, dice: undefined });
-            }}
-          />
-          固定数值
-        </label>
-        {!attrUsesRandomStart(a) ? (
-          <label className="block text-[11px] text-ink-soft">开局固定值
+        <div className="grid grid-cols-2 gap-1 sm:grid-cols-4">
+          {START_MODES.map((m) => {
+            const on = attrStartMode(a) === m.v || (m.v === "choice" && a.initMode === "choice");
+            return (
+              <button key={m.v} type="button" title={m.d}
+                className={`rounded-lg border px-2 py-1 text-[11.5px] font-semibold transition ${on ? "border-jade bg-jade/10 text-jade" : "border-line bg-paper text-ink-soft hover:border-jade/50"}`}
+                onClick={() => {
+                  const lo = a.min ?? 0;
+                  const hi = typeof a.max === "number" && a.max > lo ? a.max : Math.max(lo + 1, 100);
+                  if (m.v === "locked") set({ initMode: undefined, dice: undefined });
+                  else if (m.v === "random") set({ initMode: "random", max: hi, dice: undefined });
+                  else if (m.v === "custom") set({ initMode: "custom", dice: undefined });
+                  else set({ initMode: "choice", dice: undefined, options: a.options?.length ? a.options : [{ label: "", value: a.init }] });
+                }}>
+                {m.l}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[10.5px] leading-snug text-ink-soft">{START_MODES.find((m) => m.v === (a.initMode === "choice" ? "choice" : attrStartMode(a)))?.d}</p>
+        {(a.initMode === undefined || a.initMode === "fixed" || a.initMode === "custom") && (
+          <label className="block text-[11px] text-ink-soft">{a.initMode === "custom" ? "默认值（玩家可改）" : "锁定的开局值"}
             <input type="number" className={`${inp} mt-0.5 w-full`} value={a.init} onChange={(e) => set({ init: num(e.target.value) })} />
           </label>
-        ) : (
-          <p className={`text-[10.5px] leading-snug ${attrDiceProblem(a) ? "text-danger" : "text-ink-soft"}`}>
-            {attrDiceProblem(a) || "不勾选时，开局在最小与最大之间由代码随机一次；开局后仍是普通数字，剧情与养成照旧加减。不交给生成文本的模型。"}
-          </p>
+        )}
+        {attrUsesRandomStart(a) && attrDiceProblem(a) && <p className="text-[10.5px] text-danger">{attrDiceProblem(a)}</p>}
+        {a.initMode === "choice" && (
+          <div className="space-y-1">
+            {(a.options ?? []).map((o, i) => (
+              <div key={i} className="flex items-center gap-1">
+                <input className={`${inp} flex-1`} value={o.label} placeholder="选项名，如：书香门第" onChange={(e) => set({ options: (a.options ?? []).map((x, j) => (j === i ? { ...x, label: e.target.value } : x)) })} />
+                <input type="number" className={`${inp} w-20`} value={o.value} aria-label="开局值" onChange={(e) => set({ options: (a.options ?? []).map((x, j) => (j === i ? { ...x, value: num(e.target.value) } : x)) })} />
+                <button type="button" className="text-ink-soft hover:text-coral" aria-label="删除选项" onClick={() => set({ options: (a.options ?? []).filter((_, j) => j !== i) })}><IconClose size={14} /></button>
+              </div>
+            ))}
+            <button type="button" className={btn} onClick={() => set({ options: [...(a.options ?? []), { label: "", value: a.init }] })}>＋ 选项</button>
+            {!attrChoiceOptions(a).length && <p className="text-[10.5px] text-danger">至少填一个有名字的选项，否则按锁定值开局。</p>}
+          </div>
         )}
       </div>
       <div className="flex items-center gap-2 text-[11px] text-ink-soft">颜色<ColorPick value={a.color} fallback="coral" onChange={(color) => set({ color })} /></div>
@@ -144,7 +163,7 @@ export default function ModAttrsEditor({ attrs, onAttrs }: {
               <span className="flex w-5 items-center justify-center text-center text-[15px]">{a.icon || <IconSpark size={14} />}</span>
               <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setOpen(isOpen ? null : a.id)}>
                 <p className="truncate text-[12.5px] font-bold text-ink">{a.label || "未命名"}</p>
-                <p className="truncate text-[10.5px] text-ink-soft">范围 {a.min ?? 0}~{a.max ?? "无上限"} · {attrUsesRandomStart(a) ? "开局随机" : `固定 ${a.init}`}{a.tiers?.length ? ` · ${a.tiers.length} 档` : ""}{a.pin ? " · 顶栏" : ""}{a.hidden ? " · 隐藏" : ""}{a.tierEvent ? " · 升档剧情" : ""} · {DISPLAY.find((d) => d.v === (a.display ?? "both"))?.l}</p>
+                <p className="truncate text-[10.5px] text-ink-soft">范围 {a.min ?? 0}~{a.max ?? "无上限"} · {({ random: "开局随机", locked: `锁定 ${a.init}`, choice: `玩家选择 ${attrChoiceOptions(a).length} 项`, custom: "玩家自定义" } as const)[attrStartMode(a)]}{a.tiers?.length ? ` · ${a.tiers.length} 档` : ""}{a.pin ? " · 顶栏" : ""}{a.hidden ? " · 隐藏" : ""}{a.tierEvent ? " · 升档剧情" : ""} · {DISPLAY.find((d) => d.v === (a.display ?? "both"))?.l}</p>
               </button>
               <button type="button" disabled={!i} className="text-[11px] text-ink-soft disabled:opacity-25" onClick={() => { const l = [...list]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; commit(l); }} aria-label="上移"><IconChevronUp size={12} /></button>
               <button type="button" className="text-[12px] text-ink-soft hover:text-coral" onClick={() => commit(list.filter((x) => x.id !== a.id))} aria-label="删除"><IconClose size={14} /></button>            </div>

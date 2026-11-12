@@ -1,12 +1,16 @@
 import ModRoomTreeEditor from "./ModRoomTreeEditor";
 import { useDraft, fmtDraftTime, peekDraft, writeSavedVersionAt, resolveSavedVersionAt, type DraftCursor } from "../lib/useDraft";
-import { Modal } from "./ui";
+import { Avatar, Modal } from "./ui";
 import { loadConfig } from "../lib/store";
-import { synthSpeech } from "./phone/screenShare";
+import { speakOut, synthSpeech, ttsAvailable } from "./phone/screenShare";
+import { useAiRoutes } from "../lib/platformAiRoutes";
+import { hasPlatformPlayAuth } from "../lib/platformPlayAi";
+import { completeViaPlatform } from "../lib/platformWorldGenAi";
+import { friendlyAIError } from "../lib/aiError";
+import AiRoutePicker from "./AiRoutePicker";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { importModJson, useMods, validateMod } from "../mods/registry";
-import { applyPlatformThemeToMod, patchWorldTheme, readWorldThemeHint, type WorldThemeFieldsPatch } from "../lib/worldTheme";
-import WorldThemeFields from "./WorldThemeFields";
+import { applyPlatformThemeToMod, readWorldThemeHint } from "../lib/worldTheme";
 import { fetchPlatformGameTheme, fetchPlatformThemeTags, type PlatformThemeTag } from "../lib/platformThemeTags";
 import { readRomancePlatformDraftId } from "../lib/platformRomanceDraft";
 import {
@@ -39,6 +43,7 @@ import { perkKeyOptions } from "../game/perkKeys";
 import ModWorldBookEditor from "./ModWorldBookEditor";
 import ModRelationsEditor from "./ModRelationsEditor";
 import ImagePicker from "./ImagePicker";
+import AiImageGen, { type AiImageGenPhase } from "./AiImageGen";
 import {
   NPC_AVATAR_GEN_SIZE,
   buildNpcAvatarPromptParts,
@@ -136,7 +141,7 @@ import PhoneAppsEditor from "./PhoneAppsEditor";
 import NavTabsModEditor from "./NavTabsModEditor";
 import type { PlaySlot } from "../lib/types";
 import { Dirty, EmptyState, FieldErr, Help, ScopeBanner, SearchBox, matches, useConfirm } from "./EditorKit";
-import { IconCheck, IconRedo, IconSpark, IconUndo, StatusMark } from "../lib/icons";
+import { IconCheck, IconRedo, IconSpark, IconUndo, IconVolume, StatusMark } from "../lib/icons";
 
 /* 模组可视化编辑器：无需手写 JSON 即可新建 / 编辑用户模组的常用槽位。
  * 保存走 importModJson（与 JSON 导入同一套校验），在下次开新局时生效。 */
@@ -172,8 +177,8 @@ const GROUPS = [
   { k: "base", label: "① 基础", hint: "作品封面、名称与简介、剧本基调、时间与推进、头像、建角、人物线路、地点、音乐、已添加的玩法" },
   { k: "role", label: "② 角色", hint: "开局人物与关系档位（表白/婚礼请在「已添加的玩法」里加关系玩法）" },
   { k: "grow", label: "③ 养成", hint: "养成总开关、日程分类，以及课程、打工、账单、玩法规则、评级、休息等子系统" },
-  { k: "story", label: "④ 剧情", hint: "世界书、固定 / 首次事件、剧情线（主线 · 支线 · 结局）" },
-  { k: "look", label: "⑤ 美化", hint: "手机外观、皮肤美化、开场页外观、剧情美化、底栏样式" },
+  { k: "story", label: "④ 剧情", hint: "世界书、固定 / 首次事件、剧情线（主线 · 支线 · 结局）、剧情美化" },
+  { k: "look", label: "⑤ 美化", hint: "手机外观、皮肤美化、开场页外观、底栏样式" },
   { k: "pack", label: "本包内容", hint: "只列出这个叠加包里实际写了内容的区块；要加别的内容，去其他分组找" },
 ] as const;
 const STEPS = GROUPS.filter((x) => x.k !== "pack");
@@ -384,7 +389,6 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
     });
     return () => { cancelled = true; };
   }, []);
-  const patchTheme = (patch: Partial<WorldThemeFieldsPatch>) => setM(patchWorldTheme(m, patch));
   const lockId = (x: Mod) => (persisted && x.id !== m.id ? { ...x, id: m.id } : x);
   const undo = () => { const h = hist.current; const prev = h.past.pop(); if (!prev) return; h.future.push(m); h.at = 0; const n = lockId(prev); setMRaw(n); liveCb.current?.(n); setRev((r) => r + 1); };
   const redo = () => { const h = hist.current; const next = h.future.pop(); if (!next) return; h.past.push(m); h.at = 0; const n = lockId(next); setMRaw(n); liveCb.current?.(n); setRev((r) => r + 1); };
@@ -692,6 +696,9 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
   };
 
   // —— 人物 ——
+  // 功能注释：人物头像生图弹窗（按外观描述三层提示词，可选画风）
+  const [avatarGenFor, setAvatarGenFor] = useState<number | null>(null);
+  const [avatarGenPhase, setAvatarGenPhase] = useState<AiImageGenPhase>("edit");
   const setNpc = (i: number, p: Partial<PersonContent>) => setC({ npcs: npcs.map((n, j) => (j === i ? { ...n, ...p } : n)) });
   // 功能注释：作品级画风 / 负面词（content.imageGen）——人物 / 地点 / 大地图 / 封面生图共用；点「开始生成」时把创作者改过的画风与负面词存回作品
   const imageGenBinding: WorkImageGenBinding = {
@@ -1280,7 +1287,6 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
                 <FieldErr>{toneErr}</FieldErr>
               </label>
             </div>
-            <WorldThemeFields value={worldTheme} tags={platformThemeTags} onPatch={patchTheme} />
           </>
         ) : (
           <>
@@ -1339,7 +1345,6 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
               <Help>生成世界时由 AI 写出并填入；开局与每回合都会注入。超出 5000 字标红，不能照常保存。</Help>
               <FieldErr>{toneErr}</FieldErr>
             </label>
-            <WorldThemeFields value={worldTheme} tags={platformThemeTags} onPatch={patchTheme} />
             <div>
               <span className={lbl}>类型</span>
               <div className="inline-flex max-w-full flex-wrap rounded-lg border border-line bg-paper-2 p-0.5 text-[12px] font-bold">
@@ -1528,6 +1533,8 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
         {npcs.map((n, i) => !matches(npcQ, n.name, n.role, n.id) ? null : (
           <div key={i} className="min-w-0 space-y-1.5 overflow-x-hidden rounded-xl border border-line bg-paper px-2.5 py-2">
             <div className="flex min-w-0 items-center gap-1.5">
+              {/* 功能注释：头像在姓名前，点击直接打开头像库（官方/我的/本地上传） */}
+              <Avatar src={n.avatar} name={String(n.name ?? "") || "人物"} size={36} onPick={(url) => setNpc(i, { avatar: url || undefined })} />
               <input
                 className={`${inp} !w-auto min-w-0 flex-1 font-medium ${improperPersonNameReason(n.name) ? "!border-danger" : ""}`}
                 value={String(n.name ?? "")}
@@ -1541,6 +1548,7 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
             {improperPersonNameReason(n.name) && (
               <p className="text-[10.5px] text-coral">{improperPersonNameReason(n.name)}</p>
             )}
+            <CatchphraseField npc={n} onChange={(v) => setNpc(i, { catchphrase: v })} />
             <div className="flex flex-wrap items-center gap-1.5">
               <input type="number" min={0} className={`${inp} !w-20 ${typeof n.age === "number" ? "" : "!border-danger"}`} value={n.age ?? ""} placeholder="年龄 *" aria-label="年龄（必填）"
                 onChange={(e) => setNpc(i, { age: e.target.value === "" ? undefined : Math.max(0, Math.trunc(Number(e.target.value))) })} />
@@ -1609,33 +1617,18 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
               <summary className="cursor-pointer text-[12px] font-bold text-ink">时间线 <span className="font-normal text-ink-soft">· {n.timeline?.length ? `${n.timeline.length} 条` : "过去经历与未来安排，随游戏日期推进"}</span></summary>
               <div className="mt-1.5"><TimelineEditor compact value={n.timeline} onChange={(timeline) => setNpc(i, { timeline })} /></div>
             </details>
-            {/* 功能注释：固定头像走统一 ImagePicker 生图；无图且无池时游玩端仍用首字头像 */}
+            {/* 功能注释：固定头像在姓名前点选；无图且无池时游玩端仍用首字头像 */}
             <div className="space-y-1.5">
               {/* 功能注释：外观描述与小传分开，只喂头像生图（性别/年龄感/发型/面容/衣着），不写关系与剧情；留空时生图弹窗按性别+年龄给脚手架 */}
               <label className="block">
-                <span className={lbl}>外观描述 · 只给头像生图用（发型 / 面容 / 衣着），不写关系与剧情</span>
+                <span className="flex items-center justify-between gap-2">
+                  <span className={lbl}>外观描述 · 只给头像生图用（发型 / 面容 / 衣着），不写关系与剧情</span>
+                  <button type="button" className="shrink-0 rounded-full border border-coral/40 px-2.5 py-0.5 text-[11px] font-semibold text-coral hover:bg-coral/10"
+                    onClick={(e) => { e.preventDefault(); setAvatarGenPhase("edit"); setAvatarGenFor(i); }}>按外观生成头像</button>
+                </span>
                 <textarea className={`${inp} max-w-full resize-y`} rows={2} value={n.appearancePrompt ?? ""} placeholder="如：黑色齐肩发，圆脸，杏眼，米色针织衫（留空则生图时按性别与年龄给模板）"
                   onChange={(e) => setNpc(i, { appearancePrompt: e.target.value || undefined })} />
               </label>
-              <span className={lbl}>头像 · 生图 / 上传后写入本人物；也可只填头像池名开局抽一张</span>
-              <ImagePicker
-                value={n.avatar}
-                label={`${n.name || "人物"}头像`}
-                max={768}
-                thumb="h-16 w-16"
-                onChange={(avatar) => setNpc(i, { avatar: avatar || undefined })}
-                aiGen={{
-                  size: NPC_AVATAR_GEN_SIZE,
-                  placeholder: "只写这个人的外观：性别、年龄感、发型、面容、衣着……",
-                  initialParts: buildNpcAvatarPromptParts(
-                    { gender: n.gender, age: n.age, appearancePrompt: n.appearancePrompt, role: n.role },
-                    imageGenBinding.settings,
-                  ),
-                  // 功能注释：重绘时默认把当前头像带进参考图（最多 2 张），弹窗里可移除；仍会发送主体提示词
-                  initialRefs: n.avatar ? [n.avatar] : undefined,
-                  onPartsCommit: imageGenBinding.onCommit,
-                }}
-              />
               {(() => {
                 const av = n.avatarVariant ?? "";
                 const bad = !!av && !variantNames(c.avatars ?? null).includes(av);
@@ -1649,6 +1642,26 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
                 );
               })()}
             </div>
+            {avatarGenFor === i && (
+              <Modal title={`生成「${n.name || "人物"}」头像`} locked={avatarGenPhase === "busy"} onClose={() => { setAvatarGenFor(null); setAvatarGenPhase("edit"); }}>
+                <AiImageGen
+                  bare
+                  size={NPC_AVATAR_GEN_SIZE}
+                  placeholder="只写这个人的外观：性别、年龄感、发型、面容、衣着……"
+                  initialParts={buildNpcAvatarPromptParts(
+                    { gender: n.gender, age: n.age, appearancePrompt: n.appearancePrompt, role: n.role },
+                    imageGenBinding.settings,
+                  )}
+                  // 功能注释：重绘时默认把当前头像带进参考图，弹窗里可移除
+                  initialRefs={n.avatar ? [n.avatar] : undefined}
+                  onPartsCommit={imageGenBinding.onCommit}
+                  onPhaseChange={setAvatarGenPhase}
+                  assetKind="avatar"
+                  assetName={String(n.name ?? "") || "人物头像"}
+                  onPick={(url) => { setNpc(i, { avatar: url }); setAvatarGenFor(null); setAvatarGenPhase("edit"); }}
+                />
+              </Modal>
+            )}
             <VoiceField label="专属音色" value={n.ttsVoice} gender={n.gender} sample={`我是${n.name || "这个人"}，有事找我？`} onChange={(v) => setNpc(i, { ttsVoice: v || undefined })} />
             <div className="flex flex-wrap gap-x-4 gap-y-1">
               <label className="flex cursor-pointer items-center gap-2 text-[12px] text-ink">
@@ -2191,10 +2204,9 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
         <ModBgmEditor bgm={c.bgm} audioRefs={c.audioRefs} platformAudioRefs={c.platformAudioRefs} platformAutoplay={c.platformAutoplay} musicOrder={c.musicOrder} onChange={(patch) => setC(patch)} />
       </Section>
 
-      <Section g="look" title="开场剧情" target="author-field-opening" on={has(c.opening)} hint="开场页外观 · AI 对话 / 粘贴 HTML · 实时预览" count={Object.keys(c.opening ?? {}).length || undefined}>
+      <Section g="look" title="开场剧情" target="author-field-opening" on={has(c.opening)} hint="可选 · 用 AI 对话或粘贴 HTML 设计开场页样式" count={c.opening?.page ? 1 : undefined}>
         {/* 功能注释：只留开场页外观；旧模组 title/paragraphs 等字段仍保留在 content.opening，运行时用内置排版播放，编辑器不再二次填写 */}
-        <Help>作品展示封面在「① 基础 → 基本信息」名称上方配置（仅列表/详情/书架用，开局不显示）。自定义开场页用 AI 对话或粘贴 HTML；不做自定义时，游戏按内置排版播已有开场文案（旧数据不会被保存清掉）。</Help>
-        <p className="ui-label">开场页外观</p>
+        <Help>开场页是玩家开局时看到的第一屏。不做也行，游戏会用内置排版播放开场文案。</Help>
         <div data-author-field="author-field-opening" tabIndex={-1}>
           <OpeningStyleStudio value={c.opening} modId={m.id} modName={m.name}
             onPage={(page) => {
@@ -2206,7 +2218,7 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
         </div>
       </Section>
 
-      <Section g="look" title="剧情美化" on={has(c.lookRules)} hint="条件满足时自动切换外观 · 玩家可在美化里关闭" count={c.lookRules?.length}>
+      <Section g="story" title="剧情美化" on={has(c.lookRules)} hint="条件满足时自动切换外观 · 玩家可在美化里关闭" count={c.lookRules?.length}>
         <p className="text-[11px] leading-relaxed text-ink-soft">给这个世界设计「会随剧情变化的外观」：深夜转暗、压力爆表变灰、成名后换上流金……条件与固定事件同一套，也能读取玩法规则里的规则变量。玩家自己的剧情美化优先于此处。</p>
         <LookRulesEditor value={c.lookRules} events={c.fixedEvents} onChange={(lookRules) => setC({ lookRules })} />
       </Section>
@@ -2254,23 +2266,76 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
   );
 }
 
-/* 人物音色：填语音模型的 voice 名，可当场试听；留空则按性别用设置里的默认音色 */
+/* 人物音色：只走平台后台「语音线路」（同生图线路，可选倍率）；音色从当前线路读取，留空 = 按性别默认音色。编辑器试听扣织梦豆 */
 function VoiceField({ label, value, gender, sample, onChange }: { label: string; value?: string; gender?: string; sample: string; onChange: (v: string) => void }) {
   const [st, setSt] = useState<"" | "busy" | "ok" | string>("");
   const cfg = loadConfig();
+  const platform = hasPlatformPlayAuth();
+  const { current } = useAiRoutes("tts");
+  const voices = current?.voices ?? [];
+  const sorted = [...voices].sort((a, b) => Number(b.gender === gender) - Number(a.gender === gender));
+  const known = !value || voices.some((v) => v.id === value);
+  const [custom, setCustom] = useState(!known);
+  const enabled = ttsAvailable(cfg);
   const test = async () => {
     setSt("busy");
     try { const url = await synthSpeech(cfg, sample, gender, value?.trim() || undefined); await new Audio(url).play(); setSt("ok"); }
     catch (e) { setSt(e instanceof Error ? e.message : "试听失败"); }
   };
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 space-y-1">
+      {platform ? <AiRoutePicker capability="tts" compact /> : <p className="text-[10.5px] text-ink-soft">未登录平台：游戏里将使用浏览器朗读，专属音色不生效</p>}
       <div className="flex items-center gap-1.5">
         <span className="shrink-0 text-[11.5px] text-ink-soft">{label}</span>
-        <input className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-2 py-1 text-[12px] text-ink outline-none focus:border-jade" value={value ?? ""} placeholder={cfg.ttsModel ? "留空用默认音色" : "需先在设置里配置语音模型"} onChange={(e) => onChange(e.target.value)} />
-        <button type="button" disabled={!cfg.ttsModel || st === "busy"} onClick={test} className="shrink-0 rounded-full border border-jade px-2 py-0.5 text-[11px] font-bold text-jade transition hover:bg-jade/10 disabled:opacity-40">{st === "busy" ? "…" : "试听"}</button>
+        {voices.length > 0 && (
+          <select className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-2 py-1 text-[12px] text-ink outline-none focus:border-jade" aria-label={label}
+            value={custom ? "__custom" : value ?? ""}
+            onChange={(e) => { const v = e.target.value; if (v === "__custom") { setCustom(true); return; } setCustom(false); onChange(v); }}>
+            <option value="">默认（按性别）</option>
+            {sorted.map((v) => <option key={v.id} value={v.id}>{v.name}{v.gender ? ` · ${v.gender}声` : ""}</option>)}
+            <option value="__custom">自定义音色名…</option>
+          </select>
+        )}
+        {(voices.length === 0 || custom) && (
+          <input className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-2 py-1 text-[12px] text-ink outline-none focus:border-jade" value={value ?? ""}
+            placeholder={!enabled ? "登录平台后可选音色" : voices.length ? "填写音色名" : "留空用默认音色"} onChange={(e) => onChange(e.target.value)} />
+        )}
+        <button type="button" disabled={!enabled || st === "busy"} onClick={test} className="shrink-0 rounded-full border border-jade px-2 py-0.5 text-[11px] font-bold text-jade transition hover:bg-jade/10 disabled:opacity-40">{st === "busy" ? "…" : "试听"}</button>
       </div>
       {st && st !== "busy" && st !== "ok" && <p className="mt-0.5 truncate text-[10.5px] text-danger">{st}</p>}
+    </div>
+  );
+}
+
+/* 常用语：一句口头禅，人物档案名字下方展示并可朗读；可手写，也可按人设 AI 生成 */
+function CatchphraseField({ npc, onChange }: { npc: { name?: string; role?: string; gender?: string; age?: number; bio?: string; tags?: string[]; catchphrase?: string; ttsVoice?: string }; onChange: (v: string | undefined) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const cfg = loadConfig();
+  const gen = async () => {
+    if (!hasPlatformPlayAuth()) { setErr("请先登录平台账号后再生成。"); return; }
+    setBusy(true); setErr("");
+    try {
+      const persona = [`姓名：${npc.name || "未命名"}`, npc.gender && `性别：${npc.gender}`, typeof npc.age === "number" && `年龄：${npc.age}`, npc.role && `身份：${npc.role}`, npc.tags?.length && `性格标签：${npc.tags.join("、")}`, npc.bio && `小传：${npc.bio.slice(0, 600)}`].filter(Boolean).join("\n");
+      const r = await completeViaPlatform([
+        { role: "system", content: "你为互动小说里的人物写一句「常用语」（口头禅）：最能体现其性格与说话方式的一句台词，第一人称口语，8~24 个字，不加引号、不加动作描写、不解释。只输出这一句。" },
+        { role: "user", content: persona },
+      ], { moduleId: "npc-catchphrase", feature: "editor:npc-catchphrase", max_tokens: 80 });
+      const line = r.text.split("\n").map((x) => x.trim()).find(Boolean)?.replace(/^[「『“"']+|[」』”"']+$/g, "").slice(0, 40) ?? "";
+      if (line) onChange(line); else setErr("没有生成出内容，请重试。");
+    } catch (e) { setErr(friendlyAIError(e).text); } finally { setBusy(false); }
+  };
+  return (
+    <div className="min-w-0">
+      <div className="flex items-center gap-1.5">
+        <span className="shrink-0 text-[11.5px] text-ink-soft">常用语</span>
+        <input className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-2 py-1 text-[12px] text-ink outline-none focus:border-jade" value={npc.catchphrase ?? ""} maxLength={60}
+          placeholder="一句口头禅，显示在档案名字下方，可点喇叭朗读" aria-label="常用语" onChange={(e) => onChange(e.target.value || undefined)} />
+        <button type="button" disabled={busy} onClick={gen} className="shrink-0 rounded-full border border-jade px-2 py-0.5 text-[11px] font-bold text-jade transition hover:bg-jade/10 disabled:opacity-40">{busy ? "生成中…" : "AI 生成"}</button>
+        <button type="button" disabled={!npc.catchphrase?.trim()} onClick={() => speakOut(npc.catchphrase!, npc.gender, undefined, npc.ttsVoice)} aria-label="朗读常用语" title={ttsAvailable(cfg) ? "朗读（扣织梦豆）" : "未登录平台，将使用浏览器朗读"}
+          className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-jade hover:bg-jade/10 disabled:opacity-40"><IconVolume width={14} height={14} /></button>
+      </div>
+      {err && <p className="mt-0.5 truncate text-[10.5px] text-danger">{err}</p>}
     </div>
   );
 }

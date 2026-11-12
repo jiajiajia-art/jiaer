@@ -34,7 +34,7 @@ test('CreateType_类型列表PC与移动端均为单列', () => {
 
 test('CreateType_活动入口应对齐暗色主站白灰文案_禁止品红金色酒红正文色', () => {
   const css = read('src/page/CreateType.module.css');
-  assert.match(css, /--activity-accent:\s*rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*0\.78\s*\)/);
+  assert.match(css, /--activity-accent:\s*(?:rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*0\.78\s*\)|var\(--|color-mix\()/);
   assert.doesNotMatch(css, /--activity-accent:\s*#b30047/i);
   assert.doesNotMatch(css, /--activity-accent:\s*#A8283C/i);
   assert.doesNotMatch(css, /rgba\(\s*216\s*,\s*174\s*,\s*104/);

@@ -52,6 +52,7 @@ export type PersonContent = {
   roam: string[];
   bio: string;
   init?: number; // 初始好感（模组世界用）
+  catchphrase?: string; // 常用语：一句口头禅，人物档案名字下方展示，可点小喇叭朗读
   ttsVoice?: string; // 专属音色（语音模型的 voice 名）；留空按性别用设置里的默认音色
   metStart?: boolean; // 通用开关：开局已认识，但不一定在联系人里
   wxStart?: boolean; // 通用开关：开局出现在联系人里，并视为已认识
@@ -420,6 +421,11 @@ export type RoomContent = {
   desc: string;
   /** 功能注释：地点画面描述（空间布局/光线/陈设）；与玩家可见的进入叙事 desc 分开，只喂场景生图 */
   scenePrompt?: string;
+  /** 功能注释：点位（百分比 0–100）：顶层地点相对所属大地图图，子地点相对父地点的内部地图 innerMap */
+  mapX?: number;
+  mapY?: number;
+  /** 功能注释：本地点的内部地图（如宗门全景 / 院落俯视图）；设了就能给它的子地点标点，游玩时可展开点选进入 */
+  innerMap?: string;
   intro?: string;
   items?: RoomItem[];
   activities?: RoomActivity[]; // 在此地可点选的日常活动（缺省=无）

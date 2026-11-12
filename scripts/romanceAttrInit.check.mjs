@@ -58,3 +58,21 @@ test('开局写入走playerAttrsFromCreatorDefs_不把随机交给AI', () => {
   assert.doesNotMatch(ctx, /Math\.min\(attrCap\(d\.max\), d\.init\)/);
   assert.match(editor, /不交给生成文本的模型/);
 });
+
+test('开局取值四种模式_随机锁定选择自定义', async () => {
+  const mod = await import(join(root, 'Romance/src/lib/attrInit.ts'));
+  assert.equal(mod.attrStartMode({}), 'locked');
+  assert.equal(mod.attrStartMode({ initMode: 'fixed' }), 'locked');
+  assert.equal(mod.attrStartMode({ initMode: 'dice' }), 'random');
+  assert.equal(mod.attrStartMode({ initMode: 'custom' }), 'custom');
+  assert.equal(mod.attrStartMode({ initMode: 'choice', options: [] }), 'locked');
+  const choice = { init: 1, min: 0, max: 10, initMode: 'choice', options: [{ label: '书香门第', value: 7 }, { label: '', value: 3 }] };
+  assert.equal(mod.attrStartMode(choice), 'choice');
+  assert.equal(mod.attrChoiceOptions(choice).length, 1);
+  assert.equal(mod.attrStartValue(choice), 7);
+  assert.equal(mod.attrStartValue({ init: 4, min: 0, max: 10, initMode: 'custom' }), 4);
+  const cc = readFileSync(join(root, 'Romance/src/components/CharacterCreate.tsx'), 'utf8');
+  assert.match(cc, /data-attr-mode=\{mode\}/);
+  assert.match(cc, /rerollOne\(a\)/);
+  assert.match(cc, /attrStartMode\(a\) === "random"/);
+});

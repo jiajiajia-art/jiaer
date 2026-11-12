@@ -1878,3 +1878,44 @@
         font-size: 13px;
     }
 }
+
+/* ===== 移动端排版呼吸感：拉开模块间距、收小分类胶囊、去掉标题发光 ===== */
+@media (max-width: 768px) {
+    .pageRoot {
+        --home-filter-gap-above: 24px;
+    }
+
+    .homeTicker {
+        margin-top: 20px;
+        padding: 10px 14px;
+    }
+
+    .themeShowcase {
+        margin-top: 18px;
+    }
+
+    .themeShowcaseList {
+        gap: 8px;
+    }
+
+    .themeShowcaseItem {
+        min-height: 34px;
+        padding: 7px 16px;
+        font-size: 13px;
+    }
+
+    .themeShowcaseTitleRow {
+        margin-top: 28px;
+        margin-bottom: 4px;
+    }
+
+    .themeShowcaseTitle,
+    .homeWideSections .themeShowcaseTitle {
+        font-size: 16px;
+        text-shadow: none;
+    }
+
+    .themeShowcaseTitleGroup::before {
+        box-shadow: none;
+    }
+}

@@ -116,3 +116,23 @@ export function drawAvatar(seed: string, variant?: string, strict = false, slot?
   const all = randomPools(slot).flatMap((p) => (Array.isArray(p.images) ? p.images : []).map((url) => ({ url, variant: p.name })));
   return all.length ? all[hash(seed) % all.length] : { url: "" };
 }
+
+export { guessAvatarCategory } from "./avatarCategory";
+import { guessAvatarCategory } from "./avatarCategory";
+
+/**
+ * 功能注释：新人物头像——AI 指定池 → 本剧随机池 → 平台头像库按性别年龄分类 → 平台任意池；都没有返回空（首字头像）
+ */
+export function drawProfileAvatar(
+  seed: string,
+  p: { name?: string; age?: string | number; identity?: string; bio?: string; gender?: string; variant?: string },
+  slot?: AvatarSlot | null,
+): { url: string; variant?: string } {
+  const first = drawAvatar(seed, p.variant, false, slot);
+  if (first.url) return first;
+  const sys = systemPools().filter(hasImages);
+  if (!sys.length) return { url: "" };
+  const cat = guessAvatarCategory(p);
+  const pool = sys.find((x) => x.name === cat) ?? sys[hash(seed) % sys.length];
+  return { url: pool.images[hash(seed) % pool.images.length], variant: pool.name };
+}

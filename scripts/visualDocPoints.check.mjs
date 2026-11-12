@@ -10,18 +10,19 @@ import { dirname, join } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
 
-test('TXT_IDEA_GENERATE_COST and TXT_DOC_PARSE_COST are 10 in constants', () => {
+test('TXT_IDEA_GENERATE_COST is 10 and doc parse has no fixed cost', () => {
   const src = readFileSync(join(root, 'src/utils/constants.ts'), 'utf8');
   assert.match(src, /export const TXT_IDEA_GENERATE_COST = 10/);
-  assert.match(src, /export const TXT_DOC_PARSE_COST = 10/);
+  // 文档导入改为按实际用量计费，不再有固定扣费常量
+  assert.doesNotMatch(src, /TXT_DOC_PARSE_COST/);
   assert.match(src, /export const TXT_IDEA_TEXT_COST = 1/);
 });
 
 test('useFileUpload wires points precheck and success deduct toast', () => {
   const src = readFileSync(join(root, 'src/hooks/editor/useFileUpload.ts'), 'utf8');
   assert.match(src, /ensureEnoughPointsForVisualDoc/);
-  assert.match(src, /TXT_DOC_PARSE_COST/);
-  assert.match(src, /TXT_IDEA_GENERATE_COST/);
+  // 文档解析按后端返回的 pointsDeducted 提示，没有固定兜底
+  assert.match(src, /fallbackCost = kind === 'idea' \? TXT_IDEA_GENERATE_COST : 0/);
   assert.match(src, /applyVisualDocPointsSuccess/);
   assert.match(src, /pointsKind/);
   assert.match(src, /ideaGenerateSuccessDeducted/);
@@ -41,7 +42,7 @@ test('DocumentsPanel and GenerateFromIdeaModal show dual scope and 10-point text
     'utf8',
   );
   assert.match(panel, /TXT_IDEA_GENERATE_COST/);
-  assert.match(panel, /TXT_DOC_PARSE_COST/);
+  assert.doesNotMatch(panel, /TXT_DOC_PARSE_COST/);
   assert.match(panel, /generateTextOnlyWithCost/);
   assert.match(panel, /generateFullWorkCta/);
   assert.match(panel, /documentImportWithCost/);

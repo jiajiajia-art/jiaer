@@ -110,10 +110,12 @@ test('Galgame_主角缩放须用文档portraitScale禁止msg残留', () => {
     '禁止把 Message 已解析的 scale 当文档缩放，否则重生成仍 0.8',
   );
   assert.match(src, /sessionPlayerAvatarUrl:\s*sessionPlayerProfile\?\.avatarUrl/);
+  // 现为旁路（raw bridge）立绘优先、局内消息立绘兜底，避免两路抢源连环换图闪屏；
+  // 风险：局内改了立绘而 bridge 未刷新时会显示旧图，需人工回归
   assert.match(
     src,
-    /normalModeMessage\?\.characterImage\s*\|\|\s*controller\.rawBridgePortrait\?\.characterImage/,
-    '主线立绘层须优先吃局内覆盖后的 normalModeMessage，并允许 Aliyun raw bridge 立绘兜底',
+    /controller\.rawBridgePortrait\?\.characterImage\s*\|\|\s*normalModeMessage\?\.characterImage/,
+    '立绘层须同时接入旁路立绘与局内覆盖后的 normalModeMessage',
   );
   assert.doesNotMatch(
     src,

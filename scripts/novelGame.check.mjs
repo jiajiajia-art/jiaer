@@ -169,7 +169,7 @@ test('resolveGameTypeToneStyle returns distinct background colors', () => {
     resolveGameTypeToneStyle('aiWenyou').backgroundColor,
     resolveGameTypeToneStyle('visualNovel').backgroundColor,
   );
-  assert.equal(resolveGameTypeToneStyle('aiWenyou').color, '#fff');
+  assert.equal(resolveGameTypeToneStyle('aiWenyou').color, 'var(--color-on-primary)');
 });
 
 test('countVisibleNovelTextSteps excludes scene_change only steps', async () => {

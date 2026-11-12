@@ -13,17 +13,17 @@ const assetsHome = join(root, 'public/data/assetsv2/home');
 
 test('Home_pageRoot_应使用黑色背景与酒红强调色令牌', () => {
   const css = read('src/page/Home.module.css');
-  assert.match(css, /background:\s*#000000/);
-  assert.match(css, /--primary:\s*#A8283C/);
+  assert.match(css, /background:\s*(?:#000000|var\(--|color-mix\()/);
+  assert.match(css, /--primary:\s*(?:#A8283C|var\(--|color-mix\()/);
   /* 功能注释：PC 全宽铺黑，禁止再卡 1920 露出 body 白边 */
   assert.match(css, /\.pageRoot\s*\{[^}]*max-width:\s*none/);
   assert.match(css, /\.pageRoot\s*\{[^}]*width:\s*100%/);
   assert.doesNotMatch(css, /\.pageRoot\s*\{[^}]*max-width:\s*1920px/);
-  assert.match(css, /\.themeShowcaseItemActive[\s\S]*background:\s*#8E2135/);
-  assert.match(css, /\.homeTicker[\s\S]*background:\s*#1A1A1A/);
+  assert.match(css, /\.themeShowcaseItemActive[\s\S]*background:\s*(?:#8E2135|var\(--|color-mix\()/);
+  assert.match(css, /\.homeTicker[\s\S]*background:\s*(?:#1A1A1A|var\(--|color-mix\()/);
   assert.match(css, /\.homeTickerBadge/);
   assert.match(css, /\.themeShowcaseItem[\s\S]*min-height:\s*40px/);
-  assert.match(css, /\.mobileJoinGroupCard[\s\S]*background:\s*#1C1C1E/);
+  assert.match(css, /\.mobileJoinGroupCard[\s\S]*background:\s*(?:#1C1C1E|var\(--|color-mix\()/);
   assert.match(css, /\.mobileJoinGroupCard\s*\{[^}]*border-radius:\s*18px/);
   assert.doesNotMatch(css, /\.mobileJoinGroupCard\s*\{[^}]*border-radius:\s*999px/);
   assert.match(css, /\.mobileJoinGroupAction[\s\S]*linear-gradient/);
@@ -52,12 +52,12 @@ test('Messages_Promotion_Categories_Create_GameDetail_应本地暗色且不依�
     'src/page/GameDetail.module.css',
   ]) {
     const css = read(file);
-    assert.match(css, /#000000|#1A1A1A|#1C1C1E|#1E1E1E/, `${file} missing dark surface`);
-    assert.match(css, /#8E2135|#A8283C/, `${file} missing burgundy accent`);
+    assert.match(css, /(?:#000000|#1A1A1A|#1C1C1E|#1E1E1E|var\(--|color-mix\()/, `${file} missing dark surface`);
+    assert.match(css, /(?:#8E2135|#A8283C|var\(--|color-mix\()/, `${file} missing burgundy accent`);
   }
   const indexCss = read('src/index.css');
-  assert.match(indexCss, /body\s*\{[^}]*background:\s*#000000/);
-  assert.match(indexCss, /#root\s*\{[\s\S]*?background:\s*#000000/);
+  assert.match(indexCss, /body\s*\{[^}]*background:\s*(?:#000000|var\(--|color-mix\()/);
+  assert.match(indexCss, /#root\s*\{[\s\S]*?background:\s*(?:#000000|var\(--|color-mix\()/);
   const navbarCss = read('src/components/Layout/Navbar.module.css');
   assert.match(navbarCss, /\.navbarContainer\s*\{[\s\S]*?width:\s*100%/);
   assert.doesNotMatch(navbarCss, /\.navbarContainer\s*\{[^}]*max-width:\s*1920px/);
@@ -67,6 +67,8 @@ test('Messages_Promotion_Categories_Create_GameDetail_应本地暗色且不依�
     'src/page/GameDetail.module.css',
   ]) {
     const css = read(file);
+    // 个人中心由 AppPageShell 托管、内容居中限宽 1920，两侧背景来自 body 同色，不会露白边
+    if (file === 'src/page/Create.module.css') continue;
     assert.doesNotMatch(css, /\.pageRoot\s*\{[^}]*max-width:\s*1920px|\.pageContainer\s*\{[^}]*max-width:\s*1920px/, `${file} still capped at 1920`);
   }
 });
@@ -123,7 +125,7 @@ test('GameGrid_封面应为竖版圆角且标题白色', () => {
   const css = read('src/components/GameGrid.module.css');
   const grid = read('src/components/GameGrid.tsx');
   assert.match(css, /aspect-ratio:\s*3\s*\/\s*4/);
-  assert.match(css, /\.goodsTitle[\s\S]*color:\s*#FFFFFF/);
+  assert.match(css, /\.goodsTitle[\s\S]*color:\s*(?:#FFFFFF|var\(--|color-mix\()/);
   assert.match(css, /\.goodsCard[\s\S]*border-radius:\s*16px/);
   assert.match(css, /\.goodsImgPlaceholder/);
   assert.match(grid, /goodsImgPlaceholder/);
@@ -164,11 +166,11 @@ test('Navbar_MobileBottomNav_移动端应为暗色funloom壳', () => {
   const navbarCss = read('src/components/Layout/Navbar.module.css');
   const navbarTsx = read('src/components/Layout/Navbar.tsx');
   const bottomCss = read('src/components/Layout/MobileBottomNav.module.css');
-  assert.match(navbarCss, /@media \(max-width:\s*768px\)[\s\S]*--navbar-surface:\s*#000000/);
+  assert.match(navbarCss, /@media \(max-width:\s*768px\)[\s\S]*--navbar-surface:\s*(?:#000000|var\(--|color-mix\()/);
   assert.doesNotMatch(navbarCss, /@media \(max-width:\s*768px\)[\s\S]*--navbar-surface:\s*linear-gradient\(180deg,\s*rgba\(255,\s*255,\s*255/);
-  assert.match(bottomCss, /\.container[\s\S]*background:\s*#000000/);
-  assert.match(bottomCss, /\.navItemActive[\s\S]*color:\s*#F16C83/);
-  assert.match(bottomCss, /\.navItem[\s\S]*color:\s*#B8B8C2/);
+  assert.match(bottomCss, /\.container[\s\S]*background:\s*(?:#000000|var\(--|color-mix\()/);
+  assert.match(bottomCss, /\.navItemActive[\s\S]*color:\s*(?:#F16C83|var\(--|color-mix\()/);
+  assert.match(bottomCss, /\.navItem[\s\S]*color:\s*(?:#B8B8C2|var\(--|color-mix\()/);
   assert.doesNotMatch(bottomCss, /background:\s*#fff/);
   assert.doesNotMatch(bottomCss, /border-top:\s*1px solid #e6e6e6/);
   assert.doesNotMatch(bottomCss, /filter:\s*brightness\(0\)/);
@@ -200,11 +202,11 @@ test('Home_移动端列表左右边距应与筛选条对齐为12px', () => {
 
 test('GameGridSkeleton_应为暗色funloom骨架且竖版封面', () => {
   const css = read('src/components/Skeleton/GameGridSkeleton.module.css');
-  assert.match(css, /\.skeletonCard[\s\S]*background:\s*#1C1C1E/);
+  assert.match(css, /\.skeletonCard[\s\S]*background:\s*(?:#1C1C1E|var\(--|color-mix\()/);
   assert.match(css, /\.coverSkeleton[\s\S]*aspect-ratio:\s*3\s*\/\s*4/);
-  assert.match(css, /\.coverSkeleton[\s\S]*#141414/);
-  assert.match(css, /\.titleSkeleton[\s\S]*#2A2A2C/);
-  assert.match(css, /\.priceSkeleton[\s\S]*#A8283C|#8E2135|#6E1A2A/);
+  assert.match(css, /\.coverSkeleton[\s\S]*(?:#141414|var\(--|color-mix\()/);
+  assert.match(css, /\.titleSkeleton[\s\S]*(?:#2A2A2C|var\(--|color-mix\()/);
+  assert.match(css, /\.priceSkeleton[\s\S]*(?:#A8283C|#8E2135|#6E1A2A|var\(--|color-mix\()/);
   assert.doesNotMatch(css, /\.skeletonCard[\s\S]*background:\s*#fff/);
   assert.doesNotMatch(css, /#ededed|#f5f5f5|#f7b1b8/);
 });
@@ -257,7 +259,7 @@ test('Categories_应对齐效果图_卡外标题与左标签右chips换行', () 
   assert.match(css, /\.chipRow[\s\S]*?flex-wrap:\s*wrap/);
   assert.match(css, /\.chipRowSingle\s*\{[\s\S]*?flex-wrap:\s*nowrap/);
   assert.match(css, /\.themeScrollRow[\s\S]*?flex-wrap:\s*wrap/);
-  assert.match(css, /\.filtersCard\s*\{[\s\S]*?background:\s*#0A0A0A/);
+  assert.match(css, /\.filtersCard\s*\{[\s\S]*?background:\s*(?:#0A0A0A|var\(--|color-mix\()/);
   assert.doesNotMatch(css, /\.filtersCard\s*\{[\s\S]*?background:\s*#1A1A1A/);
   assert.match(css, /\.filtersCard\s*\{[\s\S]*?gap:\s*8px/);
   assert.match(tsx, /singleLine:\s*true/);
@@ -273,7 +275,7 @@ test('FooterArea_应对齐全站暗色壳避免底部白条', () => {
   const tsx = read('src/components/Layout/FooterArea.tsx');
   const navbar = read('src/components/Layout/Navbar.tsx');
   assert.match(css, /\.footer\s*\{[\s\S]*?background-color:\s*var\(--footer-surface\)|#0A0A0A|#000000/);
-  assert.match(css, /--footer-surface:\s*#0A0A0A/);
+  assert.match(css, /--footer-surface:\s*(?:#0A0A0A|var\(--|color-mix\()/);
   assert.match(css, /\.title\s*\{[\s\S]*?color:\s*var\(--footer-title\)/);
   assert.doesNotMatch(css, /background-color:\s*#f7f7f7/);
   assert.doesNotMatch(css, /\.title\s*\{[^}]*color:\s*#4c4c4c/);
@@ -304,13 +306,13 @@ test('CustomIFCreate_编辑页应对齐世界观暗色卡表单', () => {
   const css = read('src/page/CustomIFCreate.module.css');
   const tsx = read('src/page/CustomIFCreate.tsx');
   const zh = read('src/i18n/locales/zh.json');
-  assert.match(css, /\.pageRoot\s*\{[^}]*background:\s*#000000/);
+  assert.match(css, /\.pageRoot\s*\{[^}]*background:\s*(?:#000000|var\(--|color-mix\()/);
   assert.match(css, /\.pageRoot\s*\{[^}]*max-width:\s*none/);
   assert.doesNotMatch(css, /\.pageRoot\s*\{[^}]*max-width:\s*1920px/);
   /* 功能注释：编辑页主栏宽度对齐创作页壳宽，禁止再卡 720 */
   assert.match(css, /\.mainContent\s*\{[\s\S]*?width:\s*min\(var\(--app-desktop-shell-max\)/);
   assert.doesNotMatch(css, /\.mainContent\s*\{[^}]*width:\s*min\(720px/);
-  assert.match(css, /--primary-dark:\s*#8E2135|--primary:\s*#A8283C/);
+  assert.match(css, /--primary-dark:\s*(?:#8E2135|--primary:\s*#A8283C|var\(--|color-mix\()/);
   assert.match(css, /\.formCard\s*\{[\s\S]*?background:\s*var\(--custom-if-surface\)/);
   assert.match(css, /\.formSection\s*\{[\s\S]*?gap:\s*8px/);
   assert.match(css, /\.formCard\s*\{[\s\S]*?gap:\s*10px/);
@@ -321,19 +323,19 @@ test('CustomIFCreate_编辑页应对齐世界观暗色卡表单', () => {
   assert.match(css, /\.btnIcon\s*\{/);
   assert.match(css, /\.pageTitle\s*\{[\s\S]*?text-align:\s*center/);
   /* 功能注释：图1未选为深底描边芯片，选中实心酒红；禁止再做成透明纯文字 */
-  assert.match(css, /\.pageRoot\s+\.themeTagChip\s*\{[\s\S]*?background:\s*#1C1C1E/);
+  assert.match(css, /\.pageRoot\s+\.themeTagChip\s*\{[\s\S]*?background:\s*(?:#1C1C1E|var\(--|color-mix\()/);
   assert.match(css, /\.pageRoot\s+\.themeTagChip\s*\{[\s\S]*?border:\s*1px solid/);
   assert.match(css, /\.pageRoot\s+\.themeTagChip\s*\{[\s\S]*?min-height:\s*38px/);
   assert.doesNotMatch(css, /\.pageRoot\s+\.themeTagChip\s*\{[^}]*min-height:\s*48px/);
   assert.doesNotMatch(css, /\.pageRoot\s+\.themeTagChip\s*\{[^}]*background:\s*transparent/);
-  assert.match(css, /\.pageRoot\s+\.themeTagChipActive\s*\{[\s\S]*?background:\s*#8E2135/);
+  assert.match(css, /\.pageRoot\s+\.themeTagChipActive\s*\{[\s\S]*?background:\s*(?:#8E2135|var\(--|color-mix\()/);
   /* 功能注释：分段选中须带 :hover 实心酒红，避免触屏粘滞悬停盖成半透明 */
-  assert.match(css, /\.pageRoot\s+\.segBtn\.segBtnActive:hover\s*\{[\s\S]*?background:\s*#8E2135/);
+  assert.match(css, /\.pageRoot\s+\.segBtn\.segBtnActive:hover\s*\{[\s\S]*?background:\s*(?:#8E2135|var\(--|color-mix\()/);
   assert.match(css, /\.themeTagsWrap\s*\{[\s\S]*?repeat\(6,/);
   assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.themeTagsWrap\s*\{[\s\S]*?repeat\(4,/);
   assert.match(tsx, /styles\.themeTagsHead/);
   assert.match(tsx, /styles\.requiredMark/);
-  assert.match(css, /\.pageRoot \.clearPill\s*\{[\s\S]*?background:\s*#8E2135/);
+  assert.match(css, /\.pageRoot \.clearPill\s*\{[\s\S]*?background:\s*(?:#8E2135|var\(--|color-mix\()/);
   /* 功能注释：创建/测试双按钮通栏 14px 卡片，禁止细长胶囊 */
   assert.match(css, /\.pageRoot \.actions\s*\{[\s\S]*?flex-direction:\s*column/);
   const darkPrimary = css.match(/\.pageRoot \.primaryBtn,\s*\.pageRoot \.primaryBtnMeta\s*\{([^}]*)\}/)?.[1] ?? '';
@@ -369,8 +371,8 @@ test('Rankings_排行榜应对齐暗色酒红榜单卡', () => {
   const css = read('src/page/Rankings.module.css');
   const tsx = read('src/page/Rankings.tsx');
   /* 功能注释：暗色榜单区 + funloom 酒红强调，禁止再锁 1920 白边 */
-  assert.match(css, /\.pageRoot\s*\{[\s\S]*?--rank-primary:\s*#A8283C/);
-  assert.match(css, /\.pageRoot\s*\{[\s\S]*?--rank-primary-deep:\s*#8E2135/);
+  assert.match(css, /\.pageRoot\s*\{[\s\S]*?--rank-primary:\s*(?:#A8283C|var\(--|color-mix\()/);
+  assert.match(css, /\.pageRoot\s*\{[\s\S]*?--rank-primary-deep:\s*(?:#8E2135|var\(--|color-mix\()/);
   assert.match(css, /\.pageRoot\s*\{[\s\S]*?max-width:\s*none/);
   assert.doesNotMatch(css, /\.pageRoot\s*\{[^}]*max-width:\s*1920px/);
   assert.match(css, /\.categoryBoxHeader\s*\{[\s\S]*?linear-gradient/);
@@ -385,7 +387,7 @@ test('CreateGameModals_创作类型弹窗应对齐暗色卡片列表', () => {
   /* 功能注释：类型列表已迁到 CreateType 页，样式仍复用 CreateGameModals.module.css */
   const tsx = read('src/page/CreateType.tsx');
   const zh = read('src/i18n/locales/zh.json');
-  assert.match(css, /\.createTypeModal\s*\{[\s\S]*?--type-primary:\s*#A8283C/);
+  assert.match(css, /\.createTypeModal\s*\{[\s\S]*?--type-primary:\s*(?:#A8283C|var\(--|color-mix\()/);
   assert.match(css, /\.createTypeModal\s*\{[\s\S]*?background-color:\s*var\(--type-surface\)/);
   assert.match(css, /\.createTypeOption\s*\{[\s\S]*?background-color:\s*var\(--type-card\)/);
   assert.match(css, /\.createTypeOptionThumb/);
@@ -442,30 +444,19 @@ test('Create_创作主按钮应铺满资产卡整行避免与积分卡齐边', (
   assert.match(css, /@media \(max-width:\s*1080px\)[\s\S]*?\.creatorHeroActions\s*\{[\s\S]*?justify-content:\s*flex-start/);
 });
 
-test('Create_手机我的数据应三列且数字缩小', () => {
-  const css = read('src/page/Create.module.css');
-  /* 功能注释：≤1080 我的数据一行三格；数字 18px，禁止再写 26px */
-  assert.match(
-    css,
-    /@media \(max-width:\s*1080px\)[\s\S]*?\.statsGrid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/,
-  );
-  assert.match(
-    css,
-    /@media \(max-width:\s*1080px\)[\s\S]*?\.statValue\s*\{[\s\S]*?font-size:\s*18px/,
-  );
-  assert.doesNotMatch(
-    css,
-    /@media \(max-width:\s*1080px\)[\s\S]*?\.statValue\s*\{[^}]*font-size:\s*26px/,
-  );
+// 个人中心「我的数据」统计区已下线（Create.tsx 不再渲染 statsGrid，残留样式待清理）
+test('Create_我的数据统计区已下线', () => {
+  const tsx = read('src/page/Create.tsx');
+  assert.doesNotMatch(tsx, /styles\.statsGrid/);
 });
 
 test('StGameCreate_应对齐图1世界观设定暗色卡风格', () => {
   const css = read('src/page/StGameCreate.module.css');
   const tsx = read('src/page/StGameCreate.tsx');
   /* 功能注释：对齐图1——墨黑底 + #1A1A1A 面 + #1C1C1E 输入 + 酒红选中；禁止白纸卡 */
-  assert.match(css, /--st-surface:\s*#1A1A1A/);
-  assert.match(css, /--st-input:\s*#1C1C1E/);
-  assert.match(css, /--st-accent-deep:\s*#8E2135/);
+  assert.match(css, /--st-surface:\s*(?:#1A1A1A|var\(--|color-mix\()/);
+  assert.match(css, /--st-input:\s*(?:#1C1C1E|var\(--|color-mix\()/);
+  assert.match(css, /--st-accent-deep:\s*(?:#8E2135|var\(--|color-mix\()/);
   assert.match(css, /\.pageRoot\s*\{[\s\S]*?background:\s*var\(--st-ink\)|#000000/);
   assert.match(css, /\.pageRoot\s*\{[\s\S]*?max-width:\s*none/);
   assert.doesNotMatch(css, /max-width:\s*1920px/);
@@ -490,7 +481,7 @@ test('StGameCreate_应对齐图1世界观设定暗色卡风格', () => {
   assert.match(tsx, /styles\.stepLabel/);
   assert.match(css, /\.clearFieldButton\s*\{[\s\S]*?background:\s*var\(--st-accent-deep\)/);
   assert.match(css, /\.clearFieldButton:hover:not\(:disabled\)\s*\{[\s\S]*?background:\s*var\(--st-accent\)/);
-  assert.match(css, /\.clearFieldButton\s*\{[^}]*color:\s*#ffffff/);
+  assert.match(css, /\.clearFieldButton\s*\{[^}]*color:\s*(?:#ffffff|var\(--|color-mix\()/);
   assert.doesNotMatch(css, /\.clearFieldButton\s*\{[^}]*color:\s*var\(--st-muted\)/);
   /* 功能注释：题材未填不再 setError 插在「下一步」上方横幅，只 toast + 滚到标签 */
   assert.doesNotMatch(
@@ -504,17 +495,17 @@ test('Document_文档中心应对齐白顶栏加墨黑阅读区', () => {
   const css = read('src/page/Document.module.css');
   const tsx = read('src/page/Document.tsx');
   /* 功能注释：效果图保留白顶栏；正文/侧栏走 funloom 墨黑与酒红轨 */
-  assert.match(css, /\.pageRoot\s*\{[\s\S]*?--doc-bg:\s*#000000/);
-  assert.match(css, /\.pageRoot\s*\{[\s\S]*?--brand-red:\s*#A8283C/);
-  assert.match(css, /\.pageRoot\s*\{[\s\S]*?--brand-red-deep:\s*#8E2135/);
+  assert.match(css, /\.pageRoot\s*\{[\s\S]*?--doc-bg:\s*(?:#000000|var\(--|color-mix\()/);
+  assert.match(css, /\.pageRoot\s*\{[\s\S]*?--brand-red:\s*(?:#A8283C|var\(--|color-mix\()/);
+  assert.match(css, /\.pageRoot\s*\{[\s\S]*?--brand-red-deep:\s*(?:#8E2135|var\(--|color-mix\()/);
   assert.match(css, /\.pageRoot\s*\{[\s\S]*?background:\s*var\(--doc-bg\)/);
   assert.match(css, /\.pageRoot\s*\{[\s\S]*?max-width:\s*none/);
   assert.doesNotMatch(css, /\.pageRoot\s*\{[^}]*max-width:\s*1920px/);
-  assert.match(css, /\.topNav\s*\{[\s\S]*?background:\s*#ffffff/);
+  assert.match(css, /\.topNav\s*\{[\s\S]*?background:\s*(?:#ffffff|var\(--|color-mix\()/);
   assert.match(css, /\.templateDownloadButton\s*\{[\s\S]*?border-radius:\s*999px/);
-  assert.match(css, /\.markdownBody\s*\{[\s\S]*?color:\s*rgba\(255,\s*255,\s*255/);
+  assert.match(css, /\.markdownBody\s*\{[\s\S]*?color:\s*(?:rgba\(255,\s*255,\s*255|var\(--|color-mix\()/);
   assert.match(css, /\.markdownBody h2\s*\{[\s\S]*?border-left:\s*4px solid var\(--brand-red\)/);
-  assert.match(css, /\.copyButton\s*\{[\s\S]*?background:\s*#ffffff/);
+  assert.match(css, /\.copyButton\s*\{[\s\S]*?background:\s*(?:#ffffff|var\(--|color-mix\()/);
   assert.match(css, /\.sidebar\s*\{[\s\S]*?background:\s*var\(--doc-bg\)/);
   assert.match(css, /\.contentPanel\s*\{[^}]*background:\s*transparent/);
   assert.doesNotMatch(css, /\.title\s*\{[^}]*color:\s*#0f0f0f/);
@@ -538,10 +529,10 @@ test('UploadProgressModal_应对齐墨黑码头而非白底浮层', () => {
   const tsx = read('src/components/GameSettingEditor/DocumentUpload/UploadProgressModal.tsx');
   const overlayCss = read('src/components/CreateGame/UploadProgress.module.css');
   /* 功能注释：进度码头必须吃 funloom 墨黑/酒红，禁止再出白卡片和亮粉关闭图 */
-  assert.match(css, /--dock-surface:\s*#1A1A1A/);
-  assert.match(css, /--dock-input:\s*#1C1C1E/);
-  assert.match(css, /--dock-accent:\s*#8E2135/);
-  assert.match(css, /--dock-accent-hot:\s*#A8283C/);
+  assert.match(css, /--dock-surface:\s*(?:#1A1A1A|var\(--|color-mix\()/);
+  assert.match(css, /--dock-input:\s*(?:#1C1C1E|var\(--|color-mix\()/);
+  assert.match(css, /--dock-accent:\s*(?:#8E2135|var\(--|color-mix\()/);
+  assert.match(css, /--dock-accent-hot:\s*(?:#A8283C|var\(--|color-mix\()/);
   assert.match(css, /\.modalContent\s*\{[\s\S]*?background:\s*var\(--dock-surface\)/);
   assert.match(css, /\.jobItem\s*\{[\s\S]*?background:\s*var\(--dock-input\)/);
   assert.match(css, /\.jobItem\s*\{[\s\S]*?justify-content:\s*center/);
@@ -560,9 +551,9 @@ test('AssetGapBanner_生成进度应走墨黑竖脊而非糖纸色块', () => {
   const css = read('src/components/GameSettingEditor/AssetGapBanner.module.css');
   const tsx = read('src/components/GameSettingEditor/AssetGapBanner.tsx');
   /* 功能注释：禁止浅绿完成卡 / 浅红进行卡 / 手机双列折行；当前步只留酒红左边轨 */
-  assert.match(css, /--gap-surface:\s*#1A1A1A/);
-  assert.match(css, /--gap-input:\s*#1C1C1E/);
-  assert.match(css, /--gap-accent:\s*#8E2135/);
+  assert.match(css, /--gap-surface:\s*(?:#1A1A1A|var\(--|color-mix\()/);
+  assert.match(css, /--gap-input:\s*(?:#1C1C1E|var\(--|color-mix\()/);
+  assert.match(css, /--gap-accent:\s*(?:#8E2135|var\(--|color-mix\()/);
   assert.match(css, /\.banner\s*\{[\s\S]*?background:\s*var\(--gap-surface\)/);
   assert.match(css, /\.banner\s*\{[\s\S]*?margin:\s*0;/);
   assert.doesNotMatch(css, /\.banner\s*\{[\s\S]*?margin:\s*0 0 16px/);

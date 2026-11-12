@@ -84,10 +84,11 @@ test('WeChatApp_品牌串全部走brand_外壳带data-comms-skin_letter隐藏现
   assert.doesNotMatch(src, /label="绿信安全中心"/);
   assert.doesNotMatch(src, /title="关于绿信"/);
   assert.doesNotMatch(src, /label: "绿信"/);
-  // 书信风隐藏朋友圈 / 视频号 / 摇一摇
+  // 书信风：朋友圈改用书信术语（commTerm）、隐藏摇一摇；视频号已整体下线
   assert.match(src, /letterSkin = useCommsBrand\(\)\.skin === "letter"/);
   assert.match(src, /!letterSkin && .*label="朋友圈"/s);
-  assert.match(src, /!letterSkin && \(\s*<div>\s*<Item.*?label="视频号"/s);
+  assert.match(src, /letterSkin && \(\s*<div><Item.*?label=\{commTerm\("moments"\)\}/s);
+  assert.doesNotMatch(src, /label="视频号"/);
   assert.match(src, /!letterSkin && \(\s*<div>\s*<Item.*?label="摇一摇"/s);
 });
 

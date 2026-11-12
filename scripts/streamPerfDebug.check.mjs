@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readBackend, skipNoBackend } from './_backendRepo.mjs';
 import {
   buildStreamPerfDedupeKey,
   buildStreamPerfMetricFingerprint,
@@ -164,11 +165,8 @@ test('开局自动重发_应用固定bootstrapActionId且可跳过', () => {
   assert.match(helper, /bootstrap-start/);
 });
 
-test('sendActionStream_streamPerf不得再挂data或done', () => {
-  const send = readFileSync(
-    join(root, '../Interactive-fiction-backend/interface/handlers/visual/sendActionStream.js'),
-    'utf8',
-  );
+test('sendActionStream_streamPerf不得再挂data或done', { skip: skipNoBackend }, () => {
+  const send = readBackend('interface/handlers/visual/sendActionStream.js');
   assert.match(send, /JSON\.stringify\(streamPerf\)/);
   assert.doesNotMatch(send, /\.\.\.\(streamPerf \? \{ streamPerf \} : \{\}\)/);
 });

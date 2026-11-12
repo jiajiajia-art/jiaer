@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 /** 可切换主题列表；每一项对应 styles/themes/theme-<id>.css */
-export const THEMES = ['default', 'ocean', 'amber', 'crimson'] as const;
+export const THEMES = ['default', 'crimson'] as const;
 export type ThemeId = (typeof THEMES)[number];
 export type ThemeMode = 'light' | 'dark' | 'system';
 

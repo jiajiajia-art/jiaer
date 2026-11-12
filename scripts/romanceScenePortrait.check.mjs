@@ -62,7 +62,8 @@ test('LocationHero_矮横幅铺满_不用contain', () => {
 test('HomeTab_正文在场景区_输入可进内容卡_无逐句对话框', () => {
   const home = read('components/HomeTab.tsx');
   assert.match(home, /data-tour="scene-prose"/);
-  assert.match(home, /game\.story\.map/);
+  // 功能注释：正文只渲染当前场景的回合（换地点后不堆旧场景）
+  assert.match(home, /turnsInCurrentScene\(game\.story, room\)/);
   assert.doesNotMatch(home, /function GalPlayer/);
   assert.doesNotMatch(home, /paceActive/);
   assert.doesNotMatch(home, /novelProse/);

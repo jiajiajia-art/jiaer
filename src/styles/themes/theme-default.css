@@ -1,16 +1,97 @@
-/* 默认主题 · 酒红 */
+/* 默认主题 · 暗夜织梦
+   取自 logo：珊瑚红织梦蛛 + 圆润粗体字标。
+   深色：紫黑夜幕 + 珊瑚红发光；浅色：暖奶白 + 珊瑚红。
+   中性色带一点梅紫，让红色更"亮"而不脏。 */
 [data-theme="default"] {
-  --color-primary: #d63848;
-  --color-primary-bold: #b02a39;
-  --color-primary-light: #e8606d;
-  --color-primary-lighter: #fdecee;
-  --main-background: linear-gradient(135deg, #d63848 0%, #e8606d 100%);
+  --color-primary: #ec4656;
+  --color-primary-bold: #c92f42;
+  --color-primary-light: #ff6b77;
+  --color-primary-lighter: #fff0f1;
+  --color-accent: #8b5cf6;
+  --color-bg: #fbf7f6;
+  --color-surface: #ffffff;
+  --color-surface-2: #f6eef0;
+  --color-border: #eedfe2;
+  --color-text: #1d1420;
+  --color-text-secondary: #5e4f62;
+  --color-text-muted: #77687b;
+  --main-background: linear-gradient(135deg, #ff6b77 0%, #ec4656 55%, #c92f42 100%);
+  --brand-glow: 0 8px 24px color-mix(in srgb, #ec4656 28%, transparent);
+  --brand-thread: color-mix(in srgb, #ec4656 7%, transparent);
 }
 
 [data-theme="default"][data-mode="dark"] {
-  --color-primary: #e03d4b;
-  --color-primary-bold: #c42d3a;
-  --color-primary-light: #ff5a67;
-  --color-primary-lighter: #3a1a1f;
-  --main-background: linear-gradient(135deg, #c0304a 0%, #e0485f 100%);
+  --color-primary: #f0505a;
+  --color-primary-bold: #d63a49;
+  --color-primary-light: #ff7580;
+  --color-primary-lighter: #3a1622;
+  --color-accent: #b18cff;
+  --color-bg: #0d0911;
+  --color-surface: #17111c;
+  --color-surface-2: #221a29;
+  --color-border: #2e2436;
+  --color-text: #f7f1f8;
+  --color-text-secondary: #b9adbf;
+  --color-text-muted: #988c9f;
+  --main-background: linear-gradient(135deg, #ff6b77 0%, #f0505a 50%, #c4304a 100%);
+  --brand-glow: 0 0 0 1px color-mix(in srgb, #f0505a 35%, transparent), 0 10px 32px color-mix(in srgb, #f0505a 30%, transparent);
+  --brand-thread: color-mix(in srgb, #f0505a 6%, transparent);
+}
+
+/* —— 氛围层：顶部珊瑚红/紫色夜光 + 极淡"丝线"斜纹，呼应 loom（织机） —— */
+[data-theme="default"] body {
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(1200px 520px at 85% -10%, color-mix(in srgb, var(--color-primary) 14%, transparent), transparent 60%),
+    radial-gradient(900px 480px at -10% 10%, color-mix(in srgb, var(--color-accent) 10%, transparent), transparent 60%),
+    repeating-linear-gradient(135deg, var(--brand-thread) 0 1px, transparent 1px 22px);
+  background-attachment: fixed;
+}
+
+/* —— 标题：logo 同款圆润粗体 —— */
+[data-theme="default"] h1,
+[data-theme="default"] h2 {
+  font-family: 'ZCOOL KuaiLe', 'Baloo 2', 'Sarasa Gothic Rounded', 'PingFang SC', sans-serif;
+  letter-spacing: 0.02em;
+}
+
+/* —— 主按钮：渐变 + 柔光 —— */
+[data-theme="default"] button[class*="primary" i],
+[data-theme="default"] button[class*="submit" i],
+[data-theme="default"] [class*="joinBtn" i] {
+  background-image: var(--main-background);
+  box-shadow: var(--brand-glow);
+}
+
+/* —— 卡片：细描边 + 悬停珊瑚红光晕 —— */
+[data-theme="default"] [class*="goodsCard"],
+[data-theme="default"] [class*="cardShell"] {
+  border-radius: 18px;
+}
+@media (hover: hover) {
+  [data-theme="default"] [class*="goodsCard"]:hover,
+  [data-theme="default"] [class*="cardShell"]:hover {
+    box-shadow: var(--brand-glow);
+  }
+}
+
+[data-theme="default"] ::selection {
+  background: color-mix(in srgb, var(--color-primary) 30%, transparent);
+}
+
+/* —— 浅色模式适配：白底上卡片需要描边与柔和投影才有层次 —— */
+[data-theme="default"]:not([data-mode="dark"]) [class*="goodsCard"],
+[data-theme="default"]:not([data-mode="dark"]) [class*="cardShell"] {
+  border-color: var(--color-border);
+  box-shadow: 0 1px 2px rgba(60, 20, 40, 0.04), 0 6px 18px rgba(60, 20, 40, 0.06);
+}
+[data-theme="default"]:not([data-mode="dark"]) input,
+[data-theme="default"]:not([data-mode="dark"]) textarea {
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+[data-theme="default"]:not([data-mode="dark"]) input::placeholder,
+[data-theme="default"]:not([data-mode="dark"]) textarea::placeholder {
+  color: var(--color-text-muted);
 }

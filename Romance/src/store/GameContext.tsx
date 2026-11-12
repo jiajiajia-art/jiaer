@@ -1,7 +1,11 @@
 import type { ChatMsg } from "../lib/ai";
+import { getStranger, promoteStranger } from "../components/phone/wxFeatures";
+import { buildTheaterDirective, parseTheaterOutput, theaterFormatOf } from "../lib/theaterFormats";
+import { applyMemory } from "../lib/chronicle";
+import { presentNpcIds } from "../lib/ai";
 import type { WeekDiaryEntry } from "../lib/types";
 import { readScriptTone } from "../lib/scriptTone";
-import { buildWeekDiaryMessages, parseWeekDiary } from "../lib/weekReview";
+import { buildWeekDiaryMessages, parseNpcWeekMemories, parseWeekDiary } from "../lib/weekReview";
 import { makeEventNotice, noticeRoomOf, tickEventNotices, nextTurnCueBlock, type EventNotice } from "../lib/eventNotices";
 import { homeMainQuest } from "../lib/homeMainQuest";
 import { perkKeyLabel, perkKeyOptions } from "../game/perkKeys";
@@ -13,7 +17,7 @@ import { friendlyAIError } from "../lib/aiError";
 import { applyBonus, attrLabelOf } from "../game/data";
 import { carShopId, allRooms } from "../game/mud";
 import { syncChildNpcs } from "../game/pregnancy";
-import { getWorldStartRoom } from "../mods/registry";
+import { getWorldStartRoom, worldLocOf } from "../mods/registry";
 import {
   DEFAULT_WORLD, activateWorld, saveAddons, feature, getWorldEventGroups, getOpeningDirective, getWorld, getWorldId, getWorldStorylines, term, getWorldLookRules,
   beginAuthorPreviewMod, endAuthorPreviewMod, currentModStamp, worldItemMemo,
@@ -104,10 +108,14 @@ import {
   type GameState as SimState,
   type GigCat,
 } from "../game/logic";
-import { gossipTick } from "../game/npcKnowledge";
+import { gossipTick, kbOf, remember } from "../game/npcKnowledge";
+import { findNpc } from "../lib/npcIdentity";
 import { meetPerson, withNewcomers } from "../game/npcIntro";
 import { addAutoSpot, isFormalPlaceName } from "../lib/newLocation";
-import { findSceneImageForNewSpot } from "../lib/newLocationAsset";
+import { preloadPlatformAvatarPools } from "../lib/avatarPreload";
+import { drawProfileAvatar } from "../game/avatarPools";
+import { getWorldNpcs } from "../mods/registry";
+import { findSceneImageForNewSpot, NEW_SPOT_NO_IMAGE_EVENT } from "../lib/newLocationAsset";
 import { commitWorldBook } from "../game/worldbookPick";
 import { recordTimeline } from "../game/timeline";
 import { syncFactions, setFactionRoomPath, setFactionRepReader, factionFlag, REP_MIN, REP_MAX } from "../game/factions";
@@ -233,6 +241,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemePref>(defaultTheme);
   // 功能注释：进游戏不再进封面开始菜单；直接建角，完成后进开幕
   const [screen, setScreen] = useState<Screen>("create");
+  // 功能注释：把当前画面广播给平台宿主（AI 线路悬浮球只在游戏画面显示，含 Studio 预览）
+  useEffect(() => {
+    (window as unknown as { __romanceScreen?: string }).__romanceScreen = screen;
+    window.dispatchEvent(new CustomEvent("romance:screen", { detail: screen }));
+  }, [screen]);
   const [game, setGame] = useState<GameState | null>(null);
   // 功能注释：存档 npcs 偶发非数组；先收成数组再 flatMap，禁止建角/预览挂载时 is not iterable
   const npcGender = useMemo(() => {
@@ -463,6 +476,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         // 已落幕的存档回到结局页：读进游戏里会变成过了时限也无法再落幕的局。
         // AI 已判定收场、但后记没写完就被关掉的存档，接着把结局补完。
         setScreen(g.endingGrade ? "ending" : "game");
+        // 后台后记任务随页面关闭而终止：读档时清掉「生成中」标记，保留已落盘的本地后记
+        if (g.epiloguePending) { const fixed = { ...g, epiloguePending: false }; gameRef.current = fixed; setGame(fixed); }
         if (g.ended && !g.endingGrade) queueMicrotask(() => void endManuallyRef.current?.("ai"));
         if (modNotes.length && !g.endingGrade) setPopup({ title: "本作品的玩法有变化", segments: [{ kind: "system", text: modNotes.join("\n") }], changes: [] });
       },
@@ -498,9 +513,34 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return true;
   }, []);
 
+  // 功能注释：开局预拉平台头像库；之后把 AI 新建、还没头像的人物（非作者预设）按性别年龄套用平台头像
+  useEffect(() => {
+    const gid = game?.id;
+    if (!gid) return;
+    let alive = true;
+    void preloadPlatformAvatarPools().then((ok) => {
+      const cur = gameRef.current;
+      if (!ok || !alive || !cur || cur.id !== gid) return;
+      const authored = new Set((getWorldNpcs() ?? []).map((n) => n.id));
+      let changed = false;
+      const npcs = cur.npcs.map((n) => {
+        if (n.avatar || authored.has(n.id)) return n;
+        const av = drawProfileAvatar(n.id, { name: n.name, age: n.age, identity: n.identity, bio: n.bio });
+        if (!av.url) return n;
+        changed = true;
+        return { ...n, avatar: av.url, avatarVariant: av.variant };
+      });
+      if (changed) persist({ ...cur, npcs });
+    });
+    return () => { alive = false; };
+  }, [game?.id, persist]);
+
   // 核心：推进一回合
   const runTurn = useCallback(
     async (base: GameState, input: string, asPopup: boolean, hideInput = false, journalMeta?: Omit<import("../lib/types").JournalEntry, "id" | "ts" | "text">, preSettled = false, popupTitle?: string) => {
+      // 功能注释：总兜底——落地阶段（解析后结算 / 转场 / 存档）任何意外异常都不能让界面卡在「演绎中」：
+      // 解除忙碌、不结算，落一条可「重新生成」的错误条（重试从回合前快照原样重跑）
+      try {
       const lock = simLockRef.current; // 只由「先结算后演绎」的入口在调用前设置
       simLockRef.current = null;
       // 未配置 AI：剧情演绎需要模型，绝不凭空编造旁白/台词或偷偷改动好感数值。
@@ -529,7 +569,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         lastTurnRef.current = { base, input, hideInput };
         // hideInput：开场序章等「幕后导演指令」只驱动 AI 生成，不作为玩家气泡显示给玩家
         if (!hideInput) {
-          const playerTurn: Turn = { id: uid(), role: "player", segments: [{ kind: "narration", text: input }], ts: Date.now() };
+          const playerTurn: Turn = { id: uid(), role: "player", room: base.sim?.room, segments: [{ kind: "narration", text: input }], ts: Date.now() };
           working = { ...base, story: [...base.story, playerTurn] };
           setGame(working);
         }
@@ -585,7 +625,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         const fe = friendlyAIError(e);
         if (!asPopup && !preSettled) {
           // 主剧情失败：落一条错误提示条（带「重新生成」），基础功能不受影响；重试时从 base 快照原样重跑
-          const errTurn: Turn = { id: uid(), role: "ai", segments: [], error: fe, ts: Date.now() };
+          const errTurn: Turn = { id: uid(), role: "ai", room: working.sim?.room, segments: [], error: fe, ts: Date.now() };
           setGame({ ...working, story: [...working.story, errTurn] });
           setCanRetry(true);
         } else setPopup({ title: fe.title, segments: [{ kind: "system", text: fe.text }], changes: [], retry: { input, hideInput, journalMeta, preSettled } });
@@ -617,7 +657,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         if (asPopup || preSettled) {
           setPopup({ title: fe.title, segments: [...(prose ? proseToSegments(prose) : []), { kind: "system", text: fe.text }], changes: [], retry: { input, hideInput, journalMeta, preSettled } });
         } else {
-          const errTurn: Turn = { id: uid(), role: "ai", segments: [], error: fe, ts: Date.now() };
+          const errTurn: Turn = { id: uid(), role: "ai", room: working.sim?.room, segments: [], error: fe, ts: Date.now() };
           setGame({ ...working, story: [...working.story, errTurn] });
           setCanRetry(true);
         }
@@ -648,7 +688,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         if (prevAi && isRepeatNarrative(prevAi.segments.map((sg) => sg.text).join(""), curText)) {
           setBusy(false);
           setLive("");
-          const errTurn: Turn = { id: uid(), role: "ai", segments: [], error: { title: "剧情重复", text: "AI 这次复述了上一回合的内容，已拦截、未结算任何数值。点「重新生成」换一版。" }, ts: Date.now() };
+          const errTurn: Turn = { id: uid(), role: "ai", room: working.sim?.room, segments: [], error: { title: "剧情重复", text: "AI 这次复述了上一回合的内容，已拦截、未结算任何数值。点「重新生成」换一版。" }, ts: Date.now() };
           setGame({ ...working, story: [...working.story, errTurn] });
           setCanRetry(true);
           return;
@@ -710,8 +750,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
         if (freshSpot) {
           const spotId = freshSpot.id;
           const gid = next.id;
+          const spotInfo = freshSpot;
           void findSceneImageForNewSpot(freshSpot.name, { desc: freshSpot.desc }).then((url) => {
             const cur = gameRef.current;
+            // 功能注释：素材库没有合适图 → 通知界面弹「为新地点生图」提示（NewSpotImagePrompt）
+            if (!url && cur && cur.id === gid) {
+              window.dispatchEvent(new CustomEvent(NEW_SPOT_NO_IMAGE_EVENT, { detail: { id: spotId, name: spotInfo.name, desc: spotInfo.desc ?? "" } }));
+            }
             if (!url || !cur || cur.id !== gid) return;
             const spot = cur.mapEdits?.[spotId] as MapSpotEdit | undefined;
             if (!spot || spot.background?.trim()) return;
@@ -761,8 +806,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
         changes.push(...beat.events.map((e) => e.text).filter((t) => !stayNames.some((nm) => nm && t.startsWith(nm))));
         next = gossipTick(next, mobs, beat.tick, next.world.time).g;
       }
-      const thoughts = (step?.thoughts ?? []).filter((t) => t?.name && t?.text).map((t) => ({ name: t.name, text: t.text }));
-      const aiTurn: Turn = { id: uid(), role: "ai", ...(movedTo ? { scene: movedTo } : {}), segments, raw: full, ts: Date.now(), ...(thoughts.length ? { thoughts } : {}), ...newcomers };
+      // 功能注释：心事只保留代码判定在场的人（AI 写了不在场者的心事一律丢弃）
+      const presentNames = new Set(presentNpcIds(next).map((id) => next.npcs.find((n) => n.id === id)?.name).filter(Boolean));
+      const thoughts = (step?.thoughts ?? []).filter((t) => t?.name && t?.text && presentNames.has(t.name)).map((t) => ({ name: t.name, text: t.text }));
+      const aiTurn: Turn = { id: uid(), role: "ai", room: next.sim?.room, ...(movedTo ? { scene: movedTo } : {}), segments, raw: full, ts: Date.now(), ...(thoughts.length ? { thoughts } : {}), ...newcomers };
       const withStory = { ...next, story: [...next.story, aiTurn] };
       persist(withStory);
       setLastChanges(changes);
@@ -793,6 +840,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
       } else if (!isOoc) {
         // AI 回合可能推进了日期或改变了属性：检查是否触发本局结算时限到期或「达成即落幕」结局
         queueMicrotask(() => runFixedRef.current?.());
+      }
+      } catch (e) {
+        console.error("[runTurn] 回合落地异常", e);
+        setBusy(false);
+        setLive("");
+        const fe = { title: "本回合处理出错", text: "剧情已生成，但写入游戏时出错，本回合未结算任何数值。点「重新生成」再来一次。" };
+        if (asPopup || preSettled) {
+          setPopup({ title: fe.title, segments: [{ kind: "system", text: fe.text }], changes: [], retry: { input, hideInput, journalMeta, preSettled } });
+        } else {
+          const cur = gameRef.current && gameRef.current.id === base.id ? gameRef.current : base;
+          setGame({ ...cur, story: [...cur.story, { id: uid(), role: "ai", room: cur.sim?.room, segments: [], error: fe, ts: Date.now() }] });
+          setCanRetry(true);
+        }
       }
     },
     [cfg, persist],
@@ -1038,6 +1098,74 @@ export function GameProvider({ children }: { children: ReactNode }) {
     window.addEventListener("phone:interrupt", h);
     return () => window.removeEventListener("phone:interrupt", h);
   }, [runTurn]);
+
+  // 功能注释：魔法棒三种幕后指令——只驱动 AI 写这一回合，不显示玩家气泡；结算、记忆、在场约束照常走 runTurn
+  const directTurn = useCallback((kind: "advance" | "pov" | "after", povName?: string) => {
+    const g = gameRef.current;
+    if (!g || busy) return;
+    const directive =
+      kind === "advance"
+        ? "【推进 · 幕后指令，不是主角的台词】主角本回合不做额外行动。请让剧情按当前情势自然向前发展一段：在场人物主动行动或交谈、事件往前走，时间可略过片刻；不要替主角做重大决定或说关键台词，结尾停在需要主角回应的地方，并给出后续选项。"
+        : kind === "pov"
+          ? `【切换视角推进 · 幕后指令，不是主角的台词】本回合改从「${povName}」的视角叙述（第三人称，贴近 TA 的所见所想）：写 TA 此刻在想什么、做什么，剧情随之推进一段，主角只以 TA 眼中的样子出现。${povName} 只知道自己知道的事，不得知道主角的心理活动。下回合恢复主角视角；options 仍写主角接下来可以做的事。`
+          : "【后日谈 · 幕后指令，不是主角的台词】以番外的形式写一段「之后的日子」：时间跳到若干时日后，写当前人物关系与主角处境的余韵、日常片段与细小变化。这是氛围番外：不推进主线、不改任何数值与关系、不宣布结局，state 只填 world.note，npc_changes / player_changes 留空；memory_updates 记一条 scope=main、开头注明「后日谈番外：」的一句话；结尾回到当下，给出可继续游玩的选项。";
+    void runTurn(g, directive, false, true);
+  }, [busy, runTurn]);
+
+  // 功能注释：小剧场——借当前世界与在场人物写一段番外短剧。不进剧情流、不结算任何状态；
+  // 存进本存档「小剧场合集」可回看，并把一句梗概记进剧情记忆（标明番外，人物可以当作玩笑提起，但不当成真实发生）
+  const theaterTurn = useCallback(async (theme?: string, format?: string): Promise<string | null> => {
+    const g = gameRef.current;
+    if (!g || busy) return null;
+    if (!isConfigured(cfg)) { setPopup({ title: "还没接入 AI", segments: [{ kind: "system", text: "小剧场需要 AI：请先登录平台账号。" }], changes: [] }); return null; }
+    const topic = String(theme ?? "").trim().slice(0, 80);
+    const fmt = theaterFormatOf(format);
+    const castIds = presentNpcIds(g);
+    const castNamesNow = castIds.map((id) => g.npcs.find((n) => n.id === id)?.name).filter(Boolean) as string[];
+    setBusy(true);
+    setLive(`（小剧场「${fmt.label}」开演中……）`);
+    try {
+      // 功能注释：小剧场要原样拿到 html 代码块，不能先过 displayText（它会剥掉代码块）
+      const raw = await complete(cfg, buildMessages(g, buildTheaterDirective(fmt.id, topic, castNamesNow)), 120_000);
+      const parsed = parseTheaterOutput(raw);
+      const html = fmt.id === "text" ? "" : parsed.html;
+      const prose = fmt.id === "text" || !html ? displayText(parsed.prose).trim() : "";
+      if (!html && !prose) throw new Error("这次没有写出内容，请再试一次。");
+      const title = parsed.title || topic.slice(0, 20) || `${fmt.label}小剧场`;
+      const summary = parsed.summary;
+      const piece: import("../lib/types").TheaterPiece = { id: uid(), title, ...(topic ? { topic } : {}), format: fmt.id, ...(html ? { html } : {}), cast: castIds, prose, summary: summary || (prose || title).replace(/\s+/g, "").slice(0, 40), day: g.sim?.day ?? 0, time: g.world?.time, ts: Date.now() };
+      const cur = gameRef.current && gameRef.current.id === g.id ? gameRef.current : g;
+      const roomName = (id?: string) => (id ? spotName(cur, id) ?? worldLocOf(id)?.name ?? id : "");
+      const castNames = castIds.map((id) => cur.npcs.find((n) => n.id === id)?.name).filter(Boolean) as string[];
+      const withMem = applyMemory({ ...cur, theaters: [...(cur.theaters ?? []), piece].slice(-30) }, [{ scope: "main", text: `（番外小剧场·${fmt.label}，并非真实发生）《${title}》：${piece.summary}`, imp: 1, who: castNames }], undefined, { roomName, defaultBook: defaultWorldBook });
+      persist(withMem);
+      return piece.id;
+    } catch (e) {
+      const fe = friendlyAIError(e);
+      setPopup({ title: fe.title || "小剧场没演成", segments: [{ kind: "system", text: fe.text }], changes: [] });
+      return null;
+    } finally {
+      setBusy(false);
+      setLive("");
+    }
+  }, [busy, cfg, persist]);
+  const removeTheater = useCallback((id: string) => {
+    const g = gameRef.current;
+    if (g) persist({ ...g, theaters: (g.theaters ?? []).filter((t) => t.id !== id) });
+  }, [persist]);
+
+  // 功能注释：摇一摇约见面——门槛在聊天里判；这里把 TA 正式加入人物名单、落座到主角所在地，再上演一段见面剧情
+  const meetStranger = useCallback((pid: string): boolean => {
+    const g = gameRef.current;
+    const st = getStranger(pid);
+    if (!g || busy || !st || st.met) return false;
+    const room = g.sim?.room && worldLocOf(g.sim.room) ? g.sim.room : getWorldStartRoom();
+    const placeName = spotName(g, room) ?? worldLocOf(room)?.name ?? "这里";
+    const next = promoteStranger(g, st, room);
+    persist(next);
+    void runTurn(next, `【约见面 · 幕后指令，不是主角的台词】主角和在「摇一摇」上认识、聊了一阵的网友${st.name}（${st.age}岁，${st.occupation}）约在「${placeName}」第一次线下见面，${st.name}此刻已到场。请写两人见面的场景：认出对方的瞬间、和网上聊天时的反差或印证、略带拘谨又熟悉的对话，可自然提起之前聊过的事（${st.mem.slice(-3).join("；") || "随意的闲聊"}）。${st.name}的言行符合其人设，结尾给出后续选项。`, false, true);
+    return true;
+  }, [busy, persist, runTurn]);
 
   const submit = useCallback(
     async (input: string, asPopup = false) => {
@@ -1375,7 +1503,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
     // 确定性动作的叙事结果直接落进下半部分的对话框（故事线），不再另开绿色小字。
     const storyOf = (nar?: string) => nar
-      ? [...g.story, { id: uid(), role: "ai" as const, segments: [{ kind: "system" as const, text: nar }], ts: Date.now() }]
+      ? [...g.story, { id: uid(), role: "ai" as const, room: g.sim?.room, segments: [{ kind: "system" as const, text: nar }], ts: Date.now() }]
       : g.story;
     // 日历进入 NPC 生日月：年龄 +1（每年一次），并在旁白里播报
     const bd = nextSim.day !== g.sim.day ? tickBirthdays(g.npcs, nextSim.day) : { npcs: g.npcs, notes: [] as string[] };
@@ -2692,6 +2820,20 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (pending) clearTimeout(pending);
       const out = parseWeekDiary(full);
       setEntry(out ? { status: "done", title: out.title, text: out.text, ts: Date.now() } : { status: "failed" });
+      // 功能注释：周记末尾的人物周记忆 → 各人物私有记忆（一句话，带周次）；同一句重复写会被 remember 去重
+      patchGame((g) => {
+        const e = (g.weekDiaries ?? []).find((x) => x.id === id);
+        const mems = parseNpcWeekMemories(full, g.npcs.map((n) => n.name));
+        if (!e || !mems.length) return g;
+        const label = e.weekTo && e.weekTo !== e.week ? `第${e.week}～${e.weekTo}周` : `第${e.week}周`;
+        let next = g;
+        for (const m of mems) {
+          const npc = findNpc(next.npcs, undefined, m.name);
+          // 功能注释：人物周记写的是 TA 自己的一周 → 记入自身经历 selfMemory
+          if (npc) next = remember(next, npc.id, "self", `${label}回顾：${m.text}`, e.date || next.world.time);
+        }
+        return next;
+      });
     } catch {
       if (pending) clearTimeout(pending);
       setEntry({ status: "failed" });
@@ -2716,9 +2858,27 @@ export function GameProvider({ children }: { children: ReactNode }) {
       daysLeft: diary.left,
       memory: g.memory || undefined,
       prevTail: prev?.text?.slice(-160),
+      // 功能注释：人物周记素材——已结识的人（最近有往来的在前，最多 10 人）：自己的经历 / 近况心情 / 与主角的往来分开给，
+      // 让人物周记写 TA 自己的一周；上周写进去的「第N周回顾」不再回灌，避免自我复读
+      npcs: g.npcs
+        .filter((n) => (g.sim.metPeople ?? []).includes(n.id))
+        .sort((a, b) => (b.interactions[b.interactions.length - 1]?.turn ?? -1) - (a.interactions[a.interactions.length - 1]?.turn ?? -1))
+        .slice(0, 10)
+        .map((n) => {
+          const kb = kbOf(g, n.id);
+          // 功能注释：「本周」= 上一篇周记之后的回合；没有上一篇时取最近 3 条
+          const lastTurn = [...(g.weekDiaries ?? [])].reverse().find((e) => typeof e.turn === "number" && e.week !== report.week)?.turn ?? -Infinity;
+          return {
+            name: n.name,
+            identity: n.identity,
+            mood: n.mood || undefined,
+            self: kb.selfMemory.filter((m) => !/^第\d+(～\d+)?周回顾：/.test(m.text)).slice(-3).map((m) => m.text),
+            withPlayer: n.interactions.filter((x) => x.turn > lastTurn).slice(-3).map((x) => x.text),
+          };
+        }),
     });
     const id = uid();
-    const entry: WeekDiaryEntry = { id, week: report.week, weekTo: report.weekTo, date: diary.date, status: "writing", req, ts: Date.now() };
+    const entry: WeekDiaryEntry = { id, week: report.week, weekTo: report.weekTo, date: diary.date, status: "writing", req, ts: Date.now(), turn: g.turnCount };
     // 同一周重复结算（读档重来）只留最新一篇
     patchGame((x) => ({ ...x, weekDiaries: [...(x.weekDiaries ?? []).filter((e) => e.week !== report.week), entry] }));
     void runWeekDiary(id, req);
@@ -2796,35 +2956,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
       g.epilogue?.trim() ? `模型收场时留下的话：${g.epilogue.slice(0, 400)}` : "",
     ].filter(Boolean).join("\n");
     const MIN = 1000;
-    // 后记总时限：接口卡住或续写拖太久时，用已写好的部分或本地后记收尾，不能让一个挂起的请求挡住结局页
-    const deadline = Date.now() + 150_000;
-    const left = () => deadline - Date.now();
-    let epilogue = "";
-    try {
-      if (isConfigured(cfg)) {
-        const sys = { role: "system" as const, content: "你是深情细腻的传记作者。只输出后记正文，用空行分段，不要标题以外的说明。" };
-        epilogue = await complete(cfg, [
-          sys,
-          {
-            role: "user",
-            content: `请为这位${her}写一篇不少于${MIN}字（建议 1200–1800 字）的「生平记事及后传」。\n要求：\n1. 按人生阶段分段：初出茅庐、艰难打拼、高光与低谷、情感与抉择、结局之后的后传、暮年回望；每段写出该阶段的重点事件。\n2. 语言细腻感人，有画面与细节，不要流水账。\n3. 在结尾回扣「最初的场景」与剧情中的具体记忆，形成首尾呼应。\n4. 基调、成就与遗憾须与结局定级和人生评级相符。\n\n${material}`,
-          },
-        ], left());
-        // 字数不够就续写，最多两次；总时限只剩不到 30 秒就不再续写
-        for (let i = 0; i < 2 && epilogue.replace(/\s/g, "").length < MIN && left() > 30_000; i++) {
-          const more = await complete(cfg, [sys, { role: "user", content: `以下后记只有 ${epilogue.replace(/\s/g, "").length} 字，不足 ${MIN} 字。请紧接末尾续写后传与暮年回望，补足细节并回扣最初的记忆，只输出续写部分：\n\n${epilogue}\n\n素材：\n${material}` }], left());
-          if (!more.trim()) break;
-          epilogue = `${epilogue.trim()}\n\n${more.trim()}`;
-        }
-      }
-    } catch {
-      /* 退回本地后记 */
-    }
-    if (!epilogue.trim()) epilogue = localEpilogue(g, rank, grade, firstScenes, lastScenes, journal);
+    // 先用本地后记立即落幕进结局页（闭环不被长时间的 AI 请求卡住），AI 后记在后台生成后替换
+    const local = localEpilogue(g, rank, grade, firstScenes, lastScenes, journal);
+    const aiOn = isConfigured(cfg);
     persist({
       ...g,
       ended: true,
-      epilogue,
+      epilogue: local,
+      epiloguePending: aiOn,
       endingTitle: rank.title,
       endingTag: rank.body,
       endingId: custom?.id,
@@ -2840,6 +2979,35 @@ export function GameProvider({ children }: { children: ReactNode }) {
       endingKind: kind,
     });
     setScreen("ending");
+    if (!aiOn) return;
+    // 后记总时限：接口卡住或续写拖太久时，保留本地后记
+    const deadline = Date.now() + 150_000;
+    const left = () => deadline - Date.now();
+    let epilogue = "";
+    void (async () => {
+      try {
+        const sys = { role: "system" as const, content: "你是深情细腻的传记作者。只输出后记正文，用空行分段，不要标题以外的说明。" };
+        epilogue = await complete(cfg, [
+          sys,
+          {
+            role: "user",
+            content: `请为这位${her}写一篇不少于${MIN}字（建议 1200–1800 字）的「生平记事及后传」。\n要求：\n1. 按人生阶段分段：初出茅庐、艰难打拼、高光与低谷、情感与抉择、结局之后的后传、暮年回望；每段写出该阶段的重点事件。\n2. 语言细腻感人，有画面与细节，不要流水账。\n3. 在结尾回扣「最初的场景」与剧情中的具体记忆，形成首尾呼应。\n4. 基调、成就与遗憾须与结局定级和人生评级相符。\n\n${material}`,
+          },
+        ], left());
+        // 字数不够就续写，最多两次；总时限只剩不到 30 秒就不再续写
+        for (let i = 0; i < 2 && epilogue.replace(/\s/g, "").length < MIN && left() > 30_000; i++) {
+          const more = await complete(cfg, [sys, { role: "user", content: `以下后记只有 ${epilogue.replace(/\s/g, "").length} 字，不足 ${MIN} 字。请紧接末尾续写后传与暮年回望，补足细节并回扣最初的记忆，只输出续写部分：\n\n${epilogue}\n\n素材：\n${material}` }], left());
+          if (!more.trim()) break;
+          epilogue = `${epilogue.trim()}\n\n${more.trim()}`;
+        }
+      } catch {
+        /* 保留本地后记 */
+      }
+      const cur = gameRef.current;
+      // 玩家已开新局或切档：不回写
+      if (!cur || cur.id !== g.id || !cur.endingGrade) return;
+      persist({ ...cur, epilogue: epilogue.trim() ? epilogue : cur.epilogue, epiloguePending: false });
+    })();
   }, [cfg, persist]);
 
   const endManually = useCallback(async (kind: "bankrupt" | "finish" | "manual" | "ai" = "manual") => {
@@ -2864,12 +3032,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     () => ({
       cfg, setCfg, theme, setTheme, look: lookRes.look, activeLooks: lookRes.active, lookCss: lookRes.css, previewLook, lookPreview, screen, go, game, busy, lastChanges, popup, setPopup,
       startNew, loadState, submit, setPlayerAvatar, setNpcAvatar, setNpcPortrait, setRelValue, setRomanceable, setNpcDim, saveNow, regenerate, saveEpoch, canRetry, retryPopup, autosaveOn, setAutosaveOn, endManually, setWorldRules, setWorldBook, setMapEdits, setFixedEvents, setRandomGroups, previewFixedEvent,
-      branchAct, leaveBranch, setSchedule, runWeekNow, endDayNow, advanceNow, equipTitle, simVisit, simEvent, simMove, simPickup, simUseItem, simGiftItem, simActivity, simBuy, simAskIntel, simNegotiate, simAskOffers, simChooseArc, simConfirmDating,
+      directTurn, theaterTurn, removeTheater, meetStranger, branchAct, leaveBranch, setSchedule, runWeekNow, endDayNow, advanceNow, equipTitle, simVisit, simEvent, simMove, simPickup, simUseItem, simGiftItem, simActivity, simBuy, simAskIntel, simNegotiate, simAskOffers, simChooseArc, simConfirmDating,
       projApply, projSign, projNegotiate, projPromote, projWorkday, simContact, simConfess, simBridge, simWedding, simDivorce, simMeetProducer, simAskProducer,
       personaDeclare, personaAct, crisisResolve, resolveBreach, buyCar, sellCar, setActiveCar, xianyuList, xianyuDelist, xianyuSell, commitGame, patchGame, retryWeekDiary, weekDiaryLive, playEventNotice, phoneExchange, meetNewcomer,
       playSpotEvent, playQuest, toggleFav, removeJournal, exportJournal,
     }),
-    [cfg, setCfg, theme, setTheme, lookRes, lookPreview, screen, go, game, busy, lastChanges, popup, startNew, loadState, submit, setPlayerAvatar, setNpcAvatar, setNpcPortrait, setRelValue, setRomanceable, setNpcDim, saveNow, regenerate, saveEpoch, canRetry, retryPopup, autosaveOn, setAutosaveOn, endManually, setWorldRules, setWorldBook, setMapEdits, setFixedEvents, setRandomGroups, previewFixedEvent, setSchedule, runWeekNow, endDayNow, advanceNow, equipTitle, simVisit, simEvent, simMove, simPickup, simUseItem, simGiftItem, simActivity, simBuy, simAskIntel, simNegotiate, simAskOffers, simChooseArc, simConfirmDating, projApply, projSign, projNegotiate, projPromote, projWorkday, simContact, simConfess, simBridge, simWedding, simDivorce, simMeetProducer, simAskProducer, personaDeclare, personaAct, crisisResolve, resolveBreach, buyCar, sellCar, setActiveCar, xianyuList, xianyuDelist, xianyuSell, commitGame, patchGame, retryWeekDiary, weekDiaryLive, playEventNotice, phoneExchange, meetNewcomer, playSpotEvent, playQuest, toggleFav, removeJournal, exportJournal],
+    [cfg, setCfg, theme, setTheme, lookRes, lookPreview, screen, go, game, busy, lastChanges, popup, startNew, loadState, submit, directTurn, theaterTurn, removeTheater, meetStranger, setPlayerAvatar, setNpcAvatar, setNpcPortrait, setRelValue, setRomanceable, setNpcDim, saveNow, regenerate, saveEpoch, canRetry, retryPopup, autosaveOn, setAutosaveOn, endManually, setWorldRules, setWorldBook, setMapEdits, setFixedEvents, setRandomGroups, previewFixedEvent, setSchedule, runWeekNow, endDayNow, advanceNow, equipTitle, simVisit, simEvent, simMove, simPickup, simUseItem, simGiftItem, simActivity, simBuy, simAskIntel, simNegotiate, simAskOffers, simChooseArc, simConfirmDating, projApply, projSign, projNegotiate, projPromote, projWorkday, simContact, simConfess, simBridge, simWedding, simDivorce, simMeetProducer, simAskProducer, personaDeclare, personaAct, crisisResolve, resolveBreach, buyCar, sellCar, setActiveCar, xianyuList, xianyuDelist, xianyuSell, commitGame, patchGame, retryWeekDiary, weekDiaryLive, playEventNotice, phoneExchange, meetNewcomer, playSpotEvent, playQuest, toggleFav, removeJournal, exportJournal],
   );
 
   return (

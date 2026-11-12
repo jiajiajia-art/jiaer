@@ -33,8 +33,10 @@ test('CreatePlatformApp与PlayModCreateShell_直链门禁', () => {
   assert.match(app, /isCreatorIdentityActivated/);
   assert.match(app, /navigate\('\/create'/);
   assert.match(app, /hideBottomNav/);
-  assert.doesNotMatch(app, /运营 · 已上架应用/);
-  assert.doesNotMatch(app, /isStaff/);
+  // 运营「已上架应用」区块只对运营角色显示与拉取（后端仍需自行鉴权）
+  assert.match(app, /const isStaff = isOperatorRole\(role\)/);
+  assert.match(app, /if \(isStaff\) \{\s*const pub = await platformAppsApi\.listPublished/);
+  assert.match(app, /\{isStaff \? \(\s*<section[^>]*>\s*<h2[^>]*>运营 · 已上架应用/);
   assert.match(shell, /需要过审作品解锁创作者身份即可使用/);
   assert.match(shell, /fetchCreatorActivated|校验创作者身份/);
   assert.match(shell, /← 返回/);

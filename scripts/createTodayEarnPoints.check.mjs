@@ -10,31 +10,19 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(join(root, rel), 'utf8');
 
-test('Create_今日可赚织梦豆应在邀请下方且迁出旧入口', () => {
+// 「今日可赚织梦豆」已从个人中心卡片迁到独立页 /points/earn（签到 / 每日任务在页内），
+// 个人中心只保留入口按钮；旧 TodayEarnPointsPanel 组件已无引用
+test('Create_赚织梦豆入口跳独立页且功能面板不再挂旧入口', () => {
+  const app = read('src/App.tsx');
   const create = read('src/page/Create.tsx');
   const panel = read('src/components/Profile/ProfileFunctionPanel.tsx');
-  const today = read('src/components/Profile/TodayEarnPointsPanel.tsx');
-  const zh = read('src/i18n/locales/zh.json');
+  const earn = read('src/page/EarnPoints.tsx');
 
-  assert.match(create, /<InviteCampaignCard\s*\/>\s*<TodayEarnPointsPanel\s*\/>\s*<ProfileFunctionPanel\s*\/>/);
-  assert.doesNotMatch(create, /className=\{styles\.worksSection\}[\s\S]*<ProfileFunctionPanel/);
-  assert.match(today, /create\.todayEarnPointsTitle/);
-  assert.match(today, /setIsCheckInOpen\(true\)/);
-  assert.match(today, /DailyTasksModal/);
-  assert.match(today, /profile\.adFeatureDeveloping|handleWatchAd/);
-  assert.match(zh, /"todayEarnPointsTitle":\s*"今日可赚织梦豆"/);
-  assert.match(zh, /"todayEarnCheckInHint":\s*"每日领织梦豆"/);
-  assert.match(zh, /"todayEarnDailyTasksHint":\s*"做任务领织梦豆"/);
-  assert.match(zh, /"todayEarnWatchAdHint":\s*"看广告领奖"/);
-  assert.match(today, /create\.todayEarnCheckInHint/);
-
-  const todayCss = read('src/components/Profile/TodayEarnPointsPanel.module.css');
-  const chevron = todayCss.match(/\.cardChevron\s*\{[^}]*\}/);
-  assert.ok(chevron, 'missing .cardChevron');
-  assert.doesNotMatch(chevron[0], /border-radius:\s*50%/);
-  assert.doesNotMatch(chevron[0], /background:\s*rgba/);
-  assert.match(todayCss, /@media \(max-width:\s*768px\)[\s\S]*?\.cardChevron\s*\{[\s\S]*?display:\s*none/);
-
+  assert.match(app, /path="\/points\/earn"/);
+  assert.match(create, /navigate\('\/points\/earn'\)/);
+  assert.match(create, /create\.accountEarnPoints/);
+  assert.doesNotMatch(create, /<TodayEarnPointsPanel/);
+  assert.match(earn, /<DailyTasksModal/);
   assert.doesNotMatch(create, /setIsCheckInModalOpen\(true\)/);
   assert.doesNotMatch(panel, /profile\.dailyTasks/);
   assert.doesNotMatch(panel, /profile\.watchAd/);

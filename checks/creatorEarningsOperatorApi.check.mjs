@@ -32,7 +32,7 @@ test('operator withdrawal list and detail types match backend-mapped creator ide
     'creatorUserId', 'creatorUserCode', 'creatorNickname', 'phoneNumber', 'realName', 'idCard',
     'grossCents', 'grossYuan', 'payoutCents', 'payoutYuan',
     'incomeTaxCents', 'incomeTaxYuan', 'createdAt', 'updatedAt', 'status', 'remark',
-  ]) assert.match(item, new RegExp(`${field}\\s*:`), field);
+  ]) assert.match(item, new RegExp(`${field}\\??\\s*:`), field); // 可选字段写作 field?:
 
   const detailItem = source.match(/export interface CreatorEarningWithdrawalItem\s*\{[\s\S]*?\n\}/)?.[0] || '';
   assert.match(detailItem, /fileId:\s*string/);
@@ -46,9 +46,9 @@ test('operator withdrawal actions send the backend-specific remark and reason pa
   assert.match(source, /approveWithdrawal\s*:/);
   assert.match(source, /rejectWithdrawal\s*:/);
   assert.match(source, /markWithdrawalPaid\s*:/);
-  assert.match(source, /\/approve['"]?,\s*\{\s*remark\s*\}/);
-  assert.match(source, /\/reject['"]?,\s*\{\s*reason\s*\}/);
-  assert.match(source, /\/paid['"]?,\s*\{\s*remark\s*\}/);
+  assert.match(source, /\/approve['"`]?,\s*\{\s*remark\s*\}/);
+  assert.match(source, /\/reject['"`]?,\s*\{\s*reason\s*\}/);
+  assert.match(source, /\/paid['"`]?,\s*\{\s*remark\s*\}/);
 });
 
 test('operator API uses shared axios client and preserves AxiosResponse envelope', () => {

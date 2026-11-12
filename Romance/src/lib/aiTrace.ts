@@ -9,11 +9,11 @@
 import { resolveRomancePlayMode } from "./platformRomancePlay.ts";
 import { readRomancePlatformDraftId } from "./platformRomanceDraft.ts";
 
-export type AiTraceKind = "text" | "image";
+export type AiTraceKind = "text" | "image" | "tts";
 export type AiTraceScene =
-  | "create_text" | "create_image"
-  | "play_text" | "play_image"
-  | "review_text" | "review_image";
+  | "create_text" | "create_image" | "create_tts"
+  | "play_text" | "play_image" | "play_tts"
+  | "review_text" | "review_image" | "review_tts";
 /** 功能注释：fileId 从哪里来，后端落库原样保存，便于核对 */
 export type AiTraceFileIdSource = "url_play" | "url_review" | "url_draft" | "none";
 
@@ -47,15 +47,15 @@ export function aiTraceBody(kind: AiTraceKind, opts: { feature?: string; clientR
   let fileId = "";
   let fileIdSource: AiTraceFileIdSource = "none";
   if (play.mode === "play") {
-    scene = kind === "image" ? "play_image" : "play_text";
+    scene = `play_${kind}` as AiTraceScene;
     fileId = play.fileId;
     fileIdSource = "url_play";
   } else if (play.mode === "reviewPreview") {
-    scene = kind === "image" ? "review_image" : "review_text";
+    scene = `review_${kind}` as AiTraceScene;
     fileId = play.fileId;
     fileIdSource = "url_review";
   } else {
-    scene = kind === "image" ? "create_image" : "create_text";
+    scene = `create_${kind}` as AiTraceScene;
     fileId = readRomancePlatformDraftId(search);
     fileIdSource = fileId ? "url_draft" : "none";
   }

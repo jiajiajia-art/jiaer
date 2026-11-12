@@ -32,7 +32,11 @@ export type ChatReply = {
   gift?: Gift; // TA 这次当场发给主角的红包 / 转账（金额由 chatMoney.giftCard 校正）
 };
 /* 私聊附加上下文：money = 主角给 TA、TA 还没收的那笔钱（如「红包 ¥88（恭喜发财）」） */
-export type ChatOpts = { money?: string };
+export type ChatOpts = { money?: string; stickers?: string[] };
+/* 可发表情包提示：AI 在 bubbles 里单独一条写「[表情包：名字]」即发出该表情包（只能用列表里的名字） */
+export function stickerHint(names?: string[]): string {
+  return names?.length ? `\n（系统：你可以偶尔发表情包——在 bubbles 里单独一条写「[表情包：名字]」，名字只能从这里选：${names.slice(0, 40).join("、")}。贴合情绪时再用，不要每轮都发，也不要编造列表外的名字。）` : "";
+}
 
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -125,6 +129,7 @@ export function buildChatMessages(g: GameState, thread: Thread, userText: string
   const me = g.player;
   const myMood = MOOD_LABELS[moodTier(g.sim)];
   const recall = groupRecallBlock(g, pid);
+  const stk = stickerHint(opts.stickers);
   const moneyAsk = opts.money
     ? `\n（系统：主角给你的${opts.money}你还没收。收不收由你按人设和你们的关系决定，写进 accept_money：true＝收下，false＝不收、退回去；还在客气推辞、没拿定主意就填 null，钱先放着。说出口的话必须和它一致——说了"不要""退给你""你自己留着"就不能填 true。）`
     : "";
@@ -184,7 +189,7 @@ inner_os 每次都必须填写（已读不回时也要写你为什么不回）�
             { type: "image_url" as const, image_url: { url: image } },
           ],
         }
-      : { role: "user" as const, content: `${userText}${moneyAsk}\n\n（系统：请严格按上面规定的 JSON 格式回复，bubbles 每条一句、不含换行，并填写 inner_os 与 emotion）` },
+      : { role: "user" as const, content: `${userText}${moneyAsk}${stk}\n\n（系统：请严格按上面规定的 JSON 格式回复，bubbles 每条一句、不含换行，并填写 inner_os 与 emotion）` },
   ];
 }
 
@@ -271,7 +276,7 @@ export type GroupLine = { id: string; text: string; emotion?: EmotionId; inner_o
 /* grab：这轮领了主角红包 / 收下主角转账的成员（按先后）；AI 没给这个字段时为 undefined，由说出口的话兜底 */
 export type GroupReply = { lines: GroupLine[]; memories: Record<string, string>; rel: Record<string, number>; love: Record<string, number>; grab?: string[] };
 /* narration：userText 是旁白（旁观群聊），不是主角的发言；money：主角发在群里、还没领完的红包 / 转账 */
-export type GroupOpts = { narration?: boolean; money?: string };
+export type GroupOpts = { narration?: boolean; money?: string; stickers?: string[] };
 
 /* 说话人别名：成员显示名与 id → 成员；「主角」与主角姓名 → ME（模型抄回主角的话，要丢掉） */
 export const ME = "__me__";
@@ -376,7 +381,7 @@ emotion 取值：${Object.entries(EMOTIONS).map(([k, v]) => `${k}=${v.label}`).j
   }));
   const last = image
     ? { role: "user" as const, content: [{ type: "text" as const, text: `【主角在群里共享了一张截图，大家看完各自反应】${userText}` }, { type: "image_url" as const, image_url: { url: image } }] }
-    : { role: "user" as const, content: userText };
+    : { role: "user" as const, content: `${userText}${stickerHint(opts.stickers)}` };
   const raw = await complete(cfg, [{ role: "system" as const, content: sys }, ...history, last]);
 
   let o: { lines?: unknown; memories?: unknown; rel?: unknown; love?: unknown; grab?: unknown } = {};

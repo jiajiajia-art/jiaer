@@ -39,18 +39,17 @@ test('platformAppThemes_readAppThemeTagIds_优先字段再回落content', () => 
 
 test('CreatePlatformApp_分栏预览与题材多选接线', () => {
   const tsx = read('src/page/CreatePlatformApp.tsx');
-  assert.match(tsx, /<PhoneAppLivePreview draft=\{previewDraft\}/);
-  assert.match(tsx, /styles\.splitPreview/);
+  // 实时预览改为右栏 iframe（previewRef），左右分栏由 .workspace 网格承担
+  assert.match(tsx, /ref=\{previewRef\}/);
+  assert.match(tsx, /styles\.previewPane/);
   assert.match(tsx, /applicableThemeTagIds: number\[\]/);
   assert.match(tsx, /useLocalizedThemeTags/);
   assert.match(tsx, /validateApplicableThemesForPublish/);
   assert.match(tsx, /pages: form\.pages/);
   assert.doesNotMatch(tsx, /\balert\(|window\.confirm|\bconfirm\(/);
-  const preview = read('src/components/Create/PhoneAppLivePreview.tsx');
-  assert.match(preview, /data-phone-app-live-preview/);
   const css = read('src/page/CreatePlatformApp.module.css');
-  assert.match(css, /max-width:\s*1100px/);
-  assert.match(css, /@media \(min-width: 1024px\)[\s\S]*position:\s*sticky/);
+  assert.match(css, /max-width:\s*1120px/);
+  assert.match(css, /@media \(min-width: 960px\)[\s\S]*?\.previewPane\s*\{[^}]*position:\s*sticky/);
 });
 
 test('platformAppsApi_create_update带适用题材字段', () => {

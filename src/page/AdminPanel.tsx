@@ -34,6 +34,7 @@ import CommentAdminManager from '../components/admin/CommentAdminManager';
 import WithdrawAdminManager from '../components/WithdrawAdminManager';
 import LotteryAdminManager from '../components/LotteryAdminManager';
 import AdminPublicAvatarManager from '../components/admin/AdminPublicAvatarManager';
+import AdminArtStyleManager from '../components/admin/AdminArtStyleManager';
 import AdminPlayModManager from '../components/admin/AdminPlayModManager';
 import AiModelCenter from '../components/AiModelCenter';
 import announcementApi from '../api/announcement/announcementApi';
@@ -58,7 +59,7 @@ import { useMessageStore } from '../store/useMessageStore';
 import { useAuthStore } from '../store/useAuthStore';
 
 type EditorMode = 'new' | 'draft' | 'published';
-type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'diamonds' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users' | 'comments' | 'withdraw' | 'aiModelCenter' | 'lottery' | 'avatars' | 'components';
+type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'diamonds' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users' | 'comments' | 'withdraw' | 'aiModelCenter' | 'lottery' | 'avatars' | 'artStyles' | 'components';
 type SortModalMode = 'featured' | 'all' | null;
 
 interface SortDraftItem {
@@ -95,6 +96,7 @@ const resolveAdminTab = (pathname: string, search: string): AdminTab => {
     if (pathname.startsWith('/admin/ai-model-center') || pathname.startsWith('/admin/ai-model-pricing') || pathname.startsWith('/admin/image-gen') || pathname.startsWith('/admin/text-llm')) return 'aiModelCenter';
     if (pathname.startsWith('/admin/lottery')) return 'lottery';
     if (pathname.startsWith('/admin/avatars')) return 'avatars';
+    if (pathname.startsWith('/admin/art-styles')) return 'artStyles';
     if (pathname.startsWith('/admin/components') || pathname.startsWith('/admin/play-mods')) return 'components';
     const tabParam = new URLSearchParams(search).get('tab');
     if (tabParam === 'announcements' || tabParam === 'banners' || tabParam === 'themes' || tabParam === 'comments') return tabParam;
@@ -1781,6 +1783,7 @@ const AdminPanel: React.FC = () => {
 
                         {activeTab === 'lottery' && <LotteryAdminManager />}
                         {activeTab === 'avatars' && <AdminPublicAvatarManager />}
+                        {activeTab === 'artStyles' && <AdminArtStyleManager />}
                         {activeTab === 'components' && <AdminPlayModManager />}
 
                         {activeTab === 'subscriptions' && <SubscriptionAdminManager />}

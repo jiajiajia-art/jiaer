@@ -4,7 +4,7 @@
  * 进入时剥离主站 html.dark / accent / skin / font（否则 Romance 令牌被主站深色壳劫持成图1那种深紫底）；
  * 离开时清掉 Romance 主题 class，并恢复进页前主站 class。
  */
-import { Suspense, lazy, useEffect, type ComponentType } from 'react';
+import { Suspense, lazy, useEffect, useState, type ComponentType } from 'react';
 import AuthModal from '../components/AuthModal';
 import AiRouteFab from '../components/AiRoute/AiRouteFab';
 import { useLocation } from 'react-router-dom';
@@ -48,6 +48,13 @@ export default function RomanceHost() {
   const { search } = useLocation();
   const q = new URLSearchParams(search);
   const isPlayerPlay = q.get('play') === '1' && !!q.get('fileId');
+  // 功能注释：Romance 内部进入游戏画面（含编辑器 Studio 预览）时广播 romance:screen，宿主据此显示 AI 线路悬浮球
+  const [inGame, setInGame] = useState(() => (window as unknown as { __romanceScreen?: string }).__romanceScreen === 'game');
+  useEffect(() => {
+    const h = (e: Event) => setInGame((e as CustomEvent<string>).detail === 'game');
+    window.addEventListener('romance:screen', h);
+    return () => window.removeEventListener('romance:screen', h);
+  }, []);
   useEffect(() => {
     // 功能注释：生成世界「知道了」通过该事件拉起平台登录；本页没有顶栏，须在宿主挂 AuthModal
     const openAuth = () => setIsAuthModalOpen(true);
@@ -85,7 +92,7 @@ export default function RomanceHost() {
       >
         <RomanceApp />
       </Suspense>
-      {isPlayerPlay && <AiRouteFab />}
+      {(isPlayerPlay || inGame) && <AiRouteFab />}
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </div>
   );

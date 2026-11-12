@@ -5,6 +5,8 @@
   height: 100dvh;
   max-height: 100dvh;
   overflow: hidden;
+  /* 功能注释：clip 禁止壳层被程序性滚动（scrollIntoView / 聚焦），否则内容整体上移、底部露出大块空白 */
+  overflow: clip;
   background: var(--color-bg);
   color: var(--color-text);
 }

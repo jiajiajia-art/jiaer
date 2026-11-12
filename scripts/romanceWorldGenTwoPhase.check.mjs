@@ -151,7 +151,10 @@ test('worldGenTwoPhase_运行时严格两次请求且串行_缺日期本地兜�
             storylines: [{
               id: 'main',
               name: '旅店主线',
-              nodes: [{ id: 'n1', name: '接手旅店', desc: '熟悉账本与人情', conds: [] }],
+              nodes: [
+                { id: 'n1', name: '接手旅店', desc: '熟悉账本与人情', conds: [{ kind: 'metric', key: 'insight', op: 'gte', value: 50 }] },
+                { id: 'n2', name: '站稳脚跟', desc: '客人认可', conds: [{ kind: 'metric', key: 'charm', op: 'gte', value: 60 }] },
+              ],
             }],
             endings: [{ id: 'e1', title: '灯火长明' }, { id: 'e2', title: '远航离去' }],
           },

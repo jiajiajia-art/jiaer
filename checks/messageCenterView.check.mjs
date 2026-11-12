@@ -6,6 +6,9 @@ import {
   resolveMessageListSection,
 } from '../src/lib/messageCenterView.ts';
 
+// 展示按本地时区格式化；固定为北京时间，避免在 UTC 的 CI / 沙箱里结果不同
+process.env.TZ = 'Asia/Shanghai';
+
 test('creator earning withdrawal notifications belong to system messages', () => {
   assert.equal(resolveMessageListSection('creator_earning_withdrawal'), 'system');
 });

@@ -1,6 +1,6 @@
 import type { PlayMode, PlayPrefs, Pov } from "../lib/types";
 
-/* 游玩偏好：游玩模式（目前固定游戏模式）+ 叙事视角。
+/* 游玩偏好：游玩模式（目前固定剧情模式，游戏模式暂未开放）+ 叙事视角。
  * 建角页、游玩设置、编辑器共用；dense 用于编辑器里的紧凑版式。横竖屏暂不支持选择，固定竖屏。 */
 const MODES: { v: PlayMode; l: string; d: string }[] = [
   { v: "game", l: "游戏模式", d: "正文适中 · 重选项与数值反馈" },
@@ -31,11 +31,11 @@ export default function PlayPrefsPicker({
         <span className={head}>游玩模式</span>
         <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="游玩模式">
           {MODES.map((m) => {
-            // 功能注释：剧情模式暂未开放——固定游戏模式，剧情模式卡片锁定
-            const locked = m.v === "novel";
+            // 功能注释：游戏模式暂未开放——固定剧情模式，游戏模式卡片锁定
+            const locked = m.v === "game";
             const on = !locked;
             return (
-              <button key={m.v} type="button" role="radio" aria-checked={on} aria-disabled={locked} disabled={locked} onClick={() => onChange({ ...value, mode: "game" })} className={`${card(on)} ${locked ? "cursor-not-allowed opacity-55" : ""}`}>
+              <button key={m.v} type="button" role="radio" aria-checked={on} aria-disabled={locked} disabled={locked} onClick={() => onChange({ ...value, mode: "novel" })} className={`${card(on)} ${locked ? "cursor-not-allowed opacity-55" : ""}`}>
                 <span className={`flex items-center gap-1.5 text-[13px] font-bold ${on ? "text-jade" : "text-ink"}`}>
                   {m.l}
                   {locked && <span className="rounded-full bg-ink-soft/12 px-1.5 py-px text-[10px] font-semibold text-ink-soft">暂未开放</span>}

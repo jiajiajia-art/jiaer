@@ -184,6 +184,11 @@ const AiRouteSheet: React.FC<Props> = ({ routes, selectedId, onClose, onReload }
         )}
 
         <div className={styles.list} role="radiogroup" aria-label="可选线路">
+          {groups.length === 0 && (
+            <p className={styles.currentLabel} style={{ padding: '16px 4px', textAlign: 'center', lineHeight: 1.6 }}>
+              平台暂未开放可切换的线路，当前使用平台默认线路。
+            </p>
+          )}
           {groups.map((g) => {
             const isOpen = expanded.has(g.name);
             const hasPicked = g.items.some((r) => r.id === pick);

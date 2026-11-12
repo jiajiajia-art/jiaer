@@ -1,13 +1,16 @@
 /**
  * 平台 AI 线路：运营在后台（AI 模型中心）配置线路与用户价格倍率，前端只读展示并让玩家选择。
- * 接口：GET /api/romance/ai-routes?capability=text|image（见 docs/后端对接-字段与接口清单.md 第 14 节）。
+ * 接口：GET /api/romance/ai-routes?capability=text|image|tts（见 docs/后端对接-字段与接口清单.md 第 14 节）。
  * 选择结果按能力全局保存；请求 AI 时带上 routeId，后端按该线路调用与计费。接口不可用时返回空列表，前端不展示选择器，由后端走默认线路。
  */
 import { useEffect, useState } from "react";
 import { loadGlobal, saveGlobal } from "./saveScope.ts";
 import { readFunloomAuthToken, resolveFunloomApiBase } from "./platformAvatarLibrary.ts";
 
-export type AiCapability = "text" | "image";
+export type AiCapability = "text" | "image" | "tts";
+
+/** 语音线路下的可选音色（运营在后台为该线路配置） */
+export type PlatformTtsVoice = { id: string; name: string; gender?: "男" | "女" };
 
 export type PlatformAiRoute = {
   id: string;
@@ -18,6 +21,8 @@ export type PlatformAiRoute = {
   multiplier: number;
   isDefault?: boolean;
   available?: boolean;
+  /** 仅 tts 线路：该线路可选音色 */
+  voices?: PlatformTtsVoice[];
 };
 
 const K_SEL = (c: AiCapability) => `star:aiRoute:${c}`;
@@ -38,7 +43,16 @@ function normalize(raw: unknown): PlatformAiRoute | null {
     multiplier: Number.isFinite(multiplier) && multiplier > 0 ? multiplier : 1,
     isDefault: r.isDefault === true,
     available: r.available !== false,
+    voices: Array.isArray(r.voices) ? (r.voices as unknown[]).map(normalizeVoice).filter((v): v is PlatformTtsVoice => !!v) : undefined,
   };
+}
+
+function normalizeVoice(raw: unknown): PlatformTtsVoice | null {
+  const v = raw as Record<string, unknown>;
+  const id = String(v?.id ?? v?.voice ?? "").trim();
+  if (!id) return null;
+  const g = String(v.gender ?? "");
+  return { id, name: String(v.name ?? v.displayName ?? id), gender: g === "男" || g === "male" ? "男" : g === "女" || g === "female" ? "女" : undefined };
 }
 
 export function fetchAiRoutes(capability: AiCapability, force = false): Promise<PlatformAiRoute[]> {

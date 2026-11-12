@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { IoChevronDown, IoEyeOutline } from 'react-icons/io5';
 import { MdContentCopy, MdOutlineEdit, MdOutlineTaskAlt } from 'react-icons/md';
 import ExchangeModal from '../components/Purchase/ExchangeModal';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
@@ -20,7 +19,6 @@ import ProfilePreferenceModal from '../components/ProfilePreferenceModal';
 import { useAuthStore } from '../store/useAuthStore';
 import { useProfileIdentityEdit } from '../hooks/useProfileIdentityEdit';
 import statisticsApi from '../api/statistics/statisticsApi';
-import creatorStatsApi, { type StatsOverview } from '../api/stats/creatorStatsApi';
 import payApi from '../api/pay/payApi';
 import type { PayOrderRequest } from '../api/pay/pay.type';
 import { auth } from '../api/account/authApi';
@@ -40,14 +38,6 @@ import type { RechargeReceipt } from '../lib/rechargeReceipt';
 import accountSocialApi from '../api/account/accountSocialApi';
 
 type CreatorStatsIncentiveType = 'none' | 'incentive' | 'game_incentive' | 'code_incentive' | 'all_incentive';
-
-const formatPlayDuration = (seconds: number) => {
-    const safe = Math.max(0, Number(seconds) || 0);
-    const hours = Math.floor(safe / 3600);
-    const minutes = Math.floor((safe % 3600) / 60);
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
-};
 
 const Create: React.FC = () => {
     const { t } = useTranslation();
@@ -75,13 +65,11 @@ const Create: React.FC = () => {
         invitePendingIncome: 0,
         incentiveType: 'none' as CreatorStatsIncentiveType,
     });
-    const [creatorStats, setCreatorStats] = useState<StatsOverview | null>(null);
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [returnedRechargeReceipt, setReturnedRechargeReceipt] = useState<{ outTradeNo: string; receipt: RechargeReceipt } | null>(null);
     const [isMembershipRechargeModalOpen, setIsMembershipRechargeModalOpen] = useState(false);
     const [isVipStatusModalOpen, setIsVipStatusModalOpen] = useState(false);
     const [streakDays, setStreakDays] = useState(0);
-    const [isStatsExpanded, setIsStatsExpanded] = useState(false);
     const [isExchangeModalOpen, setIsExchangeModalOpen] = useState(false);
     const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
     const [isSettleDiamondsModalOpen, setIsSettleDiamondsModalOpen] = useState(false);
@@ -135,21 +123,6 @@ const Create: React.FC = () => {
         }
     };
 
-    const getCreatorOverviewStats = async () => {
-        if (!user?.user?.id) {
-            return;
-        }
-
-        try {
-            const response = await creatorStatsApi.getOverview();
-            if (response.data.success) {
-                setCreatorStats(response.data.data);
-            }
-        } catch (error) {
-            console.error('获取创作者统计错误:', error);
-        }
-    };
-
     const getUserInfo = async () => {
         try {
             const response = await auth.getUserInfo();
@@ -182,7 +155,6 @@ const Create: React.FC = () => {
 
     useEffect(() => {
         getGameTotalStats();
-        getCreatorOverviewStats();
         getUserInfo();
         getSignInStreak();
     }, [user?.user?.id]);
@@ -273,14 +245,6 @@ const Create: React.FC = () => {
         })();
     }, [location.pathname, location.search, navigate, t]);
 
-    const handlePreviewHomepage = () => {
-        if (!userCode) {
-            toast.error(t('create.previewHomepageNoCode'));
-            return;
-        }
-        navigate(`/account/${encodeURIComponent(userCode)}`);
-    };
-
     const handleOpenSocialList = (tab: 'following' | 'followers') => {
         if (!userCode) {
             toast.error(t('create.previewHomepageNoCode'));
@@ -346,7 +310,7 @@ const Create: React.FC = () => {
                         ? t('create.settleSuccessDiamonds', { amount: diamondsAmount })
                         : t('create.settleSuccessZero');
             toast.success(successMsg);
-            await Promise.all([getGameTotalStats(), getCreatorOverviewStats(), getUserInfo()]);
+            await Promise.all([getGameTotalStats(), getUserInfo()]);
             setIsSettleModalOpen(false);
         } catch (error: unknown) {
             toast.error(getApiErrorMessage(error, t('create.settleFailed')));
@@ -511,15 +475,6 @@ const Create: React.FC = () => {
                                                 <span className={styles.creatorSocialValue}>{followersCount}</span>
                                             </button>
                                         </div>
-                                        <button
-                                            type="button"
-                                            className={styles.creatorPreviewHomeBtn}
-                                            onClick={handlePreviewHomepage}
-                                            aria-label={t('create.previewHomepage')}
-                                        >
-                                            <IoEyeOutline className={styles.creatorPreviewHomeIcon} aria-hidden="true" />
-                                            <span>{t('create.previewHomepage')}</span>
-                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -564,77 +519,8 @@ const Create: React.FC = () => {
                                         <div className={styles.primaryStatValue}>{stats.totalCreated}</div>
                                         <div className={styles.primaryStatLabel}>{t('create.totalCreated')}</div>
                                     </div>
-                                    <div className={styles.primaryStatItem}>
-                                        <div className={styles.primaryStatValue}>{creatorStats?.likeCount ?? 0}</div>
-                                        <div className={styles.primaryStatLabel}>{t('creatorStats.totalLikes')}</div>
-                                    </div>
                                 </div>
-
-                                {!isStatsExpanded && (
-                                    <button
-                                        type="button"
-                                        className={styles.statsExpandToggle}
-                                        onClick={() => setIsStatsExpanded(true)}
-                                        aria-expanded={false}
-                                    >
-                                        <span>{t('create.expandMoreStats')}</span>
-                                        <IoChevronDown className={styles.statsExpandIcon} />
-                                    </button>
-                                )}
-
-                                {isStatsExpanded && (
-                                    <div className={styles.expandedStatsBar}>
-                                        <div className={styles.expandedStatItem}>
-                                            <div className={styles.primaryStatValue}>{stats.totalViews}</div>
-                                            <div className={styles.primaryStatLabel}>{t('create.totalViews')}</div>
-                                        </div>
-                                        <div className={styles.expandedStatItem}>
-                                            <div className={styles.primaryStatValue}>{stats.totalClicks}</div>
-                                            <div className={styles.primaryStatLabel}>{t('create.totalVisitors')}</div>
-                                        </div>
-                                        <div className={styles.expandedStatItem}>
-                                            <div className={styles.primaryStatValue}>{creatorStats?.playCount ?? 0}</div>
-                                            <div className={styles.primaryStatLabel}>{t('creatorStats.playCount')}</div>
-                                        </div>
-                                        <div className={styles.expandedStatItem}>
-                                            <div className={styles.primaryStatValue}>{creatorStats?.playRounds ?? 0}</div>
-                                            <div className={styles.primaryStatLabel}>{t('creatorStats.playRounds')}</div>
-                                        </div>
-                                        <div className={styles.expandedStatItem}>
-                                            <div className={styles.primaryStatValue}>
-                                                {formatPlayDuration(creatorStats?.playDurationSeconds ?? 0)}
-                                            </div>
-                                            <div className={styles.primaryStatLabel}>{t('creatorStats.playDuration')}</div>
-                                        </div>
-                                        <div className={styles.expandedStatItem}>
-                                            <div className={styles.primaryStatValue}>{creatorStats?.shareCount ?? 0}</div>
-                                            <div className={styles.primaryStatLabel}>{t('creatorStats.shareCount')}</div>
-                                        </div>
-                                        <div className={styles.expandedStatItem}>
-                                            <div className={styles.primaryStatValue}>{creatorStats?.commentCount ?? 0}</div>
-                                            <div className={styles.primaryStatLabel}>{t('creatorStats.commentCount')}</div>
-                                        </div>
-                                        <div className={styles.expandedStatItem}>
-                                            <div className={styles.primaryStatValue}>{creatorStats?.spendPoints ?? 0}</div>
-                                            <div className={styles.primaryStatLabel}>{t('creatorStats.spendPoints')}</div>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
-
-                            {isStatsExpanded && (
-                                <button
-                                    type="button"
-                                    className={`${styles.statsExpandToggle} ${styles.statsExpandToggleFooter}`}
-                                    onClick={() => setIsStatsExpanded(false)}
-                                    aria-expanded={true}
-                                >
-                                    <span>{t('create.collapseMoreStats')}</span>
-                                    <IoChevronDown
-                                        className={`${styles.statsExpandIcon} ${styles.statsExpandIconOpen}`}
-                                    />
-                                </button>
-                            )}
                         </div>
 
                         <div className={styles.accountPanel}>

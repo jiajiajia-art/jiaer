@@ -16,6 +16,9 @@ import {
   resolveSubmissionListBadgeTone,
 } from '../src/lib/promotionCenterView.ts';
 
+// 展示按本地时区格式化；固定为北京时间，避免在 UTC 的 CI / 沙箱里结果不同
+process.env.TZ = 'Asia/Shanghai';
+
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(join(root, rel), 'utf8');
 

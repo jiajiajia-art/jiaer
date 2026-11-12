@@ -47,6 +47,14 @@ export interface OverseasPayResponse {
         mchOrderNo: string;
         amountYuan: number;
         amountFen: number;
+        /** 实际收款币种（海外为 USD），见 docs/海外充值倍率-后端接口文档.md */
+        currency?: 'USD';
+        /** 实收金额（美元，两位小数） */
+        amount?: number;
+        /** 实收金额最小单位（美分） */
+        amountMinor?: number;
+        /** 下单时使用的倍率快照 */
+        multiplier?: number;
         notifyUrl: string;
         returnUrl: string;
         returnWebBase?: string | null;

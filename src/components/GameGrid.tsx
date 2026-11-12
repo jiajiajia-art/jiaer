@@ -313,6 +313,10 @@ const GameGrid: React.FC<GameGridProps> = ({
                             <div className={styles.goodsTitle} title={meta.title || undefined}>
                                 {meta.title || `剧情${idx + 1}`}
                             </div>
+                            {/* 功能注释：预览简介，无简介时占位保持卡片等高 */}
+                            <p className={styles.goodsDesc} title={body.subtitle || undefined}>
+                                {body.subtitle || '\u00a0'}
+                            </p>
                             {/* 功能注释：左作者署名、右收藏徽标，同一行左右布局 */}
                             <div className={styles.goodsMetaRow}>
                                 <div className={styles.goodsAuthor} title={author.name}>

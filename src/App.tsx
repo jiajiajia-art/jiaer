@@ -229,6 +229,8 @@ function App() {
           <Route path="/operator/avatars" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/locations" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/location-assets" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/audio-library" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/art-styles" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/components" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/play-mods" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/ai-model-center" element={<Navigate to="/operator/ai-model-center/models" replace />} />
@@ -307,6 +309,7 @@ function App() {
           <Route path="/admin/themes/featured" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/lottery" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/avatars" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/art-styles" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/components" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/play-mods" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/comments" element={<AdminRoute><CommentAdminPage /></AdminRoute>} />

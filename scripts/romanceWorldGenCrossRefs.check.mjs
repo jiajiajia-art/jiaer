@@ -287,9 +287,10 @@ test('crossRefs_主线条件不自动补fame_只认已有属性', async () => {
     }],
   }, { content: baseContent, settingText: '' });
   const nodes = out.storylines[0].nodes;
-  assert.deepEqual(nodes[0].conds, []);
+  // 条件被筛空时按天数兜底，避免节点一开始判定就直接完成
+  assert.deepEqual(nodes[0].conds, [{ kind: 'time', unit: 'day', op: 'gte', value: 7 }]);
   assert.deepEqual(nodes[1].conds, [{ kind: 'metric', key: 'c:insight', op: 'gte', value: 30 }]);
-  assert.deepEqual(nodes[2].conds, []);
+  assert.deepEqual(nodes[2].conds, [{ kind: 'time', unit: 'day', op: 'gte', value: 14 }]);
   assert.doesNotMatch(JSON.stringify(out), /fame/);
 });
 
@@ -360,7 +361,11 @@ test('crossRefs_第2次请求带第1次id与完整基调_世界书不在第1次�
             prompt: '清晨的旅店第一次开门，海风灌进前厅，账本摊在柜台上等你签字。',
             effects: [{ kind: 'stat', key: 'insight', delta: 2 }, { kind: 'metric', key: 'fame', delta: 3 }],
           }],
-          storylines: [{ id: 'main', name: '主线', nodes: [{ id: 'n1', name: '接手', desc: '熟悉账本', conds: [] }] }],
+          storylines: [{ id: 'main', name: '主线', nodes: [
+            { id: 'n1', name: '接手', desc: '熟悉账本', conds: [{ kind: 'event', key: 'fx_1' }] },
+            { id: 'n2', name: '站稳', desc: '客人认可', conds: [{ kind: 'metric', key: 'charm', op: 'gte', value: 60 }] },
+          ] }],
+          endings: [{ id: 'e1', title: '灯火长明' }],
         },
       });
     },

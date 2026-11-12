@@ -18,8 +18,11 @@ export type AttrDef = {
   label: string;
   icon?: string; // emoji
   init: number; // 固定开局值；勾选「固定数值」时用；不勾则开局在 min～max 随机
-  /** 开局取值：缺省 / fixed = 用 init；random = 最小～最大随机；dice 为旧稿，开局按 random 处理 */
-  initMode?: "fixed" | "random" | "dice";
+  /** 开局取值：缺省 / fixed = 作者锁定用 init；random = 最小～最大随机（玩家可重掷）；
+   * choice = 玩家从 options 里选；custom = 玩家在最小～最大内自填；dice 为旧稿，开局按 random 处理 */
+  initMode?: "fixed" | "random" | "dice" | "choice" | "custom";
+  /** 功能注释：initMode=choice 时的选项（选中即取 value 作开局值；label 会写进主角档案给 AI 看） */
+  options?: AttrOption[];
   /** @deprecated 旧「投骰子」面数；新 UI 已改为范围随机，读档时忽略 */
   dice?: number;
   min?: number; // 下限（缺省 0）
@@ -33,6 +36,8 @@ export type AttrDef = {
   tierEvent?: boolean; // 升到新档位时触发一段 AI 剧情
   desc?: string; // 给 AI 的说明：这个属性代表什么、何时增减
 };
+
+export type AttrOption = { label: string; value: number; desc?: string };
 
 export type Trait = {
   name: string;
@@ -129,6 +134,7 @@ export type Segment =
 
 export type Turn = {
   scene?: string; // 本回合转场到的新地点名（galgame 式转场卡）
+  room?: string; // 本回合发生时主角所在地点 id：正文区只显示当前地点的剧情（换场景即翻篇，记录本身保留）
   id: string;
   role: "player" | "ai";
   segments: Segment[];
@@ -197,6 +203,8 @@ export type WeekDiaryEntry = {
   text?: string;
   req: import("./ai").ChatMsg[];
   ts: number;
+  /** 功能注释：写这篇周记时的回合数；下一篇用它界定「本周」与主角的往来 */
+  turn?: number;
 };
 
 export type GameState = {
@@ -215,6 +223,10 @@ export type GameState = {
   options: Option[];
   world: World;
   memory: string; // 压缩后的主线记忆
+  theaters?: TheaterPiece[]; // 魔法棒 · 小剧场合集（番外，不进正文；梗概记入剧情记忆，标明番外）
+  chronicle?: import("./chronicle").ChronicleEvent[]; // 剧情事件线（带游戏日 / 地点 / 人物 / 重要度，按需召回）
+  sceneMem?: Record<string, import("./chronicle").SceneMem>; // 各地点陈设与状态（变化驱动）
+  looks?: Record<string, string>; // 人物当前穿着（只注入在场者，不在界面显示）
   npcKb?: Record<string, import("../game/npcKnowledge").NpcKnowledge>; // 每个 NPC 的私有知识库（严格隔离）
   allowance?: import("../game/npcKnowledge").AllowanceState; // 生活费发放 / 协商记录
   turnCount: number;
@@ -233,6 +245,7 @@ export type GameState = {
   endingCommentAvatar?: string; // 评定人头像
   endingGrade?: { grade: string; score: number; verdict: string; items: { label: string; score: number; detail: string }[] }; // 人生评级
   endingKind?: "manual" | "ai" | "bankrupt" | "finish"; // 结局来源：手动结束 / AI 判定 / 破产 / 时限
+  epiloguePending?: boolean; // 已用本地后记先进结局页，AI 后记仍在后台生成
   createdAt: number;
   updatedAt: number;
   sim: SimState; // 确定性数值引擎（八维/日程/通告/攻略线）
@@ -754,7 +767,10 @@ export type WorldBookEntry = {
   bindNpcs?: string[]; // 依赖人物（本作品 npcs id，可多选）
   group?: string; // 互斥组：同组只注入一条（已在有效期内的优先，其次检索得分最高的）
   weight?: number; // 检索权重（缺省 100）：得分 = 命中关键词长度 × 权重 / 100，长词优先
+  _mem?: boolean; // 由剧情记忆自动写入的关键往事（玩家可改可删）
 };
+/* 小剧场：番外短剧（存档内收藏，可回看 / 重演 / 删除） */
+export type TheaterPiece = { id: string; title: string; topic?: string; format?: string; html?: string; cast: string[]; prose: string; summary: string; day: number; time?: string; ts: number };
 export type WorldBookMode = "keyword" | "constant" | "once";
 export type WorldBookMem = { used?: string[]; until?: Record<string, number> };
 
@@ -874,7 +890,8 @@ export type AIStep = {
   narrative?: string; // 本回合剧情文本（= narration）
   state_diff?: { world?: Partial<World>; player_changes?: AIStep["player_changes"]; npc_changes?: AIStep["npc_changes"]; intimate?: string[]; game_end?: boolean };
   tabs?: Record<string, unknown>; // 分发给各 Tab 的数据（仅作展示提示，事实以状态中枢为准）
-  memory_updates?: { scope?: "main" | "npc"; npc?: string; text: string }[] | string[];
+  memory_updates?: { scope?: "main" | "npc"; npc?: string; text: string; imp?: number; who?: string[]; keys?: string[] }[] | string[];
+  scene_memory?: import("./chronicle").SceneUpdate; // 此地陈设 / 状态与在场者穿着的变化（无变化省略）
   save_summary?: string;
   need_clarification?: string[];
 };

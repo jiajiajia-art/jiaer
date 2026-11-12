@@ -15,15 +15,14 @@ test('Create_更多服务应在今日赚积分下方且为网格布局', () => {
   const panel = read('src/components/Profile/ProfileFunctionPanel.tsx');
   const css = read('src/page/Profile.module.css');
 
-  assert.match(
-    create,
-    /<TodayEarnPointsPanel\s*\/>\s*<ProfileFunctionPanel\s*\/>/,
-  );
+  // 今日赚积分已迁到独立页，更多服务紧跟邀请卡片
+  assert.match(create, /<InviteCampaignCard\s*\/>\s*<ProfileFunctionPanel\s*\/>/);
   assert.doesNotMatch(create, /className=\{styles\.worksSection\}[\s\S]*<ProfileFunctionPanel/);
   assert.match(panel, /functionGrid/);
   assert.match(panel, /functionGridItem/);
   assert.match(panel, /MdOutlineHistory|MdOutlineReceiptLong|MdOutlinePlayCircle/);
-  assert.match(panel, /profile\.purchaseRecords/);
+  // 消费记录并入资产明细页（/asset/details）
+  assert.match(create, /navigate\('\/asset\/details'\)/);
   assert.doesNotMatch(panel, /personalAsset\(/);
   assert.match(css, /\.functionGrid\s*\{[^}]*grid-template-columns:\s*repeat\(4/);
   assert.match(css, /\.functionGridItem\s*\{[^}]*flex-direction:\s*column/);

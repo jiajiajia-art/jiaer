@@ -22,7 +22,7 @@ import {
 } from '../utils/constants';
 import { consumeShelfResumeOnce, readGameDetailPreview, readShelfResume } from '../utils/gameDetailNavigation';
 import { recordBrowsingHistory } from '../utils/browsingHistory';
-import { MdContentCopy } from 'react-icons/md';
+import { MdContentCopy, MdOutlineHistory } from 'react-icons/md';
 import AuthModal from '../components/AuthModal';
 import LoadSaveListModal from '../components/CreateGame/LoadSaveListModal';
 import SavePreviewModal from '../components/CreateGame/SavePreviewModal';
@@ -1935,6 +1935,7 @@ const GameDetail: React.FC = () => {
                                 className={styles.replayButton}
                                 onClick={() => { void handleOpenLoadSave(); }}
                             >
+                                <MdOutlineHistory className={styles.replayButtonIcon} aria-hidden="true" />
                                 <span>{t('gameDetail.loadSave')}</span>
                             </button>
                         ) : null}

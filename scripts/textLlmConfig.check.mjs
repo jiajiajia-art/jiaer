@@ -75,8 +75,10 @@ test('ModelConfigHub_同页双轨配置且模型只能拉取导入', () => {
   assert.match(hub, /listModels/);
   assert.match(hub, /ModelImportDialog/);
   assert.match(hub, /activateModel/);
-  assert.match(hub, /type="password"/);
-  assert.match(hub, /页面不会回显明文/);
+  // 密钥默认以密码框展示；只有管理员点「显示 API 密钥」才向后端读取明文（getApiKey）
+  assert.match(hub, /type=\{apiKeyVisible\[pane\] \? 'text' : 'password'\}/);
+  assert.match(hub, /autoComplete="new-password"/);
+  assert.match(hub, /apiKeyVisible, setApiKeyVisible\] = useState<Record<Pane, boolean>>\(\{ text: false, image: false \}\)/);
   assert.doesNotMatch(hub, /gatewayKeys|selectPresetTextModel|role="radiogroup"/);
   assert.match(hub, /role="tablist"/);
   assert.match(hub, /ModelConfigHub\.module\.css/);

@@ -56,7 +56,6 @@ function EntityDetail({ refr, onClose }: { refr: EntityRef; onClose: () => void 
     return (
       <Modal panelClassName="ui-dialog-game" title="人物档案" onClose={onClose}>
         <PersonProfile pid={n.id} known={known} />
-        <p className="mt-4 border-t border-line pt-3 text-[11px] text-ink-soft">{n.identity}{n.relation ? ` · ${n.relation}` : ""} · 点选人物只查看档案；要交谈或经营关系，请到 TA 所在地点当面进行。</p>
       </Modal>
     );
   }

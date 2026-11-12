@@ -1,10 +1,22 @@
 import { getWorldMap, getWorldRooms } from "../mods/registry";
 import type { MapEdits } from "../lib/types";
 
+/** 功能注释：作者在编辑器大地图上点的点位（rooms[id].mapX/mapY） */
+export function roomPin(id: string): { x: number; y: number } | undefined {
+  const r = getWorldRooms()[id];
+  return typeof r?.mapX === "number" && typeof r?.mapY === "number" ? { x: r.mapX, y: r.mapY } : undefined;
+}
+/** 功能注释：手绘坐标 = 地图配置 hotspots → 作者点位 */
+function handPos(mode: "panorama" | "single"): Record<string, { x: number; y: number }> {
+  const out: Record<string, { x: number; y: number }> = {};
+  for (const id of Object.keys(getWorldRooms())) { const p = roomPin(id); if (p) out[id] = p; }
+  return { ...out, ...(getWorldMap().hotspots?.[mode] ?? {}) };
+}
+
 /* 自动点位：没有手绘坐标的地点，逐个挑选离已有点位（手绘 + 已排好的）最远的空位，避免标签互相遮挡 */
 const autoCache = new Map<string, Record<string, { x: number; y: number }>>();
 export function autoPos(id: string, mode: "panorama" | "single"): { x: number; y: number } {
-  const hand = getWorldMap().hotspots?.[mode] ?? {};
+  const hand = handPos(mode);
   const ids = Object.keys(getWorldRooms()).filter((r) => !(r in hand));
   const key = `${mode}|${Object.keys(hand).join(",")}|${ids.join(",")}`;
   let placed = autoCache.get(key);
@@ -34,6 +46,6 @@ export function autoPos(id: string, mode: "panorama" | "single"): { x: number; y
 /** 地点在地图上的实际位置：编辑坐标 → 手绘坐标 → 自动排布（与游玩时一致） */
 export function spotPos(edits: MapEdits | undefined, id: string, mode: "panorama" | "single") {
   const e = edits?.[id];
-  const d = getWorldMap().hotspots?.[mode]?.[id] ?? autoPos(id, mode);
+  const d = getWorldMap().hotspots?.[mode]?.[id] ?? roomPin(id) ?? autoPos(id, mode);
   return { x: e?.x ?? d.x, y: e?.y ?? d.y };
 }

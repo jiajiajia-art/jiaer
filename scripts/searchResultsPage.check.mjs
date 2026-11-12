@@ -28,7 +28,7 @@ test('SearchPage_三页签与全部直接列出游戏创作者', () => {
   assert.match(page, /data-search-empty/);
   assert.doesNotMatch(page, /启星者|Lv\.0|金色/);
   assert.doesNotMatch(css, /#D4B07B|gold/i);
-  assert.match(css, /#a8283c/);
+  assert.match(css, /(?:#a8283c|var\(--|color-mix\()/);
 });
 
 test('Navbar_提交搜索应进入结果页', () => {

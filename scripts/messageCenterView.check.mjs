@@ -12,6 +12,9 @@ import {
   truncateMessagePreview,
 } from '../src/lib/messageCenterView.ts';
 
+// 展示按本地时区格式化；固定为北京时间，避免在 UTC 的 CI / 沙箱里结果不同
+process.env.TZ = 'Asia/Shanghai';
+
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(join(root, rel), 'utf8');
 
@@ -57,7 +60,8 @@ test('Messages_应对齐效果图会话列表结构', () => {
   assert.doesNotMatch(tsx, /viewNotifications|refreshList/);
   assert.doesNotMatch(tsx, /promotionCover/);
   assert.match(css, /\.sectionCard\s*\{[^}]*background:\s*#1C1C1E|var\(--messages-card\)/);
-  assert.match(css, /\.avatarFrame\s*\{[\s\S]*?border:\s*1\.5px dashed/);
+  // 头像框改为无边框圆角方块
+  assert.match(css, /\.avatarFrame\s*\{[^}]*border-radius:\s*10px/);
   assert.match(zh, /"listTitle":\s*"消息"/);
   assert.match(zh, /"markAllRead":\s*"全部已读"/);
   assert.match(zh, /"sectionSystem":\s*"系统消息"/);

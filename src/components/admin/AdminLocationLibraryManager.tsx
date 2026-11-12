@@ -8,6 +8,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { locationLibraryApi, type LocationLibraryItem } from '../../api/galgame/locationLibrary';
 import { getImageUrl } from '../../utils/constants';
 import ConfirmModal from '../CommonModal/ConfirmModal';
+import LocationPinPlacer from './LocationPinPlacer';
 import styles from './AdminLocationLibraryManager.module.css';
 
 type FormState = {
@@ -109,7 +110,7 @@ export default function AdminLocationLibraryManager() {
       toast.error('请上传或填写大地图封面图');
       return;
     }
-    type TreePayload = { rooms: { key: string; name: string; description?: string; imageUrl?: string; parentKey?: string | null; order?: number }[] };
+    type TreePayload = { rooms: { key: string; name: string; description?: string; imageUrl?: string; parentKey?: string | null; order?: number; mapX?: number; mapY?: number; innerMapUrl?: string }[] };
     let treeJson: TreePayload | null = null;
     const treeRaw = form.treeJsonText.trim();
     if (treeRaw) {
@@ -214,6 +215,22 @@ export default function AdminLocationLibraryManager() {
           />
           <span className={styles.meta}>留空则导入时只生成一个与大地图同名的顶层地点。rooms[].key 唯一；parentKey 指向父节点 key。</span>
         </div>
+        {form.imageUrl ? (
+          <div className={styles.formRow}>
+            <span className={styles.label}>大地图点位</span>
+            <LocationPinPlacer
+              imageUrl={form.imageUrl}
+              treeJsonText={form.treeJsonText}
+              onChange={(text) => setForm((f) => ({ ...f, treeJsonText: text }))}
+              onUpload={async (file) => {
+                if (!token) return null;
+                const res = await locationLibraryApi.upload(token, file).catch(() => null);
+                if (!res?.success || !res?.data?.imageUrl) { toast.error(res?.message || '上传失败'); return null; }
+                return String(res.data.imageUrl);
+              }}
+            />
+          </div>
+        ) : null}
         <div className={styles.formRow}>
           <span className={styles.label}>排序（越小越靠前）</span>
           <input className={styles.input} value={form.sortOrder} onChange={(e) => setForm((f) => ({ ...f, sortOrder: e.target.value }))} />

@@ -67,7 +67,12 @@ export function applyFreeStyle(f?: FreeStyle, d?: DialogDiy, tb?: TopbarDiy) {
 
 /* —— 图床 / 素材库：全局保存，不进存档 —— */
 /* 功能注释：temp = 生图自动收进来的临时素材，7 天内没被使用就自动清除；收藏（去掉 temp）后长期保留 */
-export type Asset = { id: string; name: string; url: string; at: number; temp?: boolean; usedAt?: number };
+/* 功能注释：kind = 素材分类（头像 / 地点 / 封面 / 其他）；旧素材没有 kind 时归「其他」 */
+export type AssetKind = "avatar" | "location" | "cover" | "other";
+export const ASSET_KINDS: readonly AssetKind[] = ["avatar", "location", "cover", "other"];
+export const ASSET_KIND_LABEL: Record<AssetKind, string> = { avatar: "头像", location: "地点", cover: "封面", other: "其他" };
+export const assetKindOf = (a: Pick<Asset, "kind">): AssetKind => (a.kind && ASSET_KINDS.includes(a.kind) ? a.kind : "other");
+export type Asset = { id: string; name: string; url: string; at: number; temp?: boolean; usedAt?: number; kind?: AssetKind };
 const K_ASSETS = "star:assets", K_HOST = "star:imghost";
 export const TEMP_ASSET_TTL = 7 * 24 * 3600 * 1000;
 const lastUse = (a: Asset) => Math.max(a.at, a.usedAt ?? 0);
@@ -83,28 +88,35 @@ export const loadAssets = (): Asset[] => {
 };
 const newId = () => Math.random().toString(36).slice(2, 9);
 /** 功能注释：P8 采用生图后进「我的素材库」；同 URL 去重，写入后广播 star:assets。ImagePicker 与批量生图共用，勿各写一份。 */
-export function rememberImageAsset(url: string, name = "图片"): void {
-  if (!url) return;
+export function rememberImageAsset(url: string, name = "图片", kind?: AssetKind): boolean {
+  if (!url) return false;
   const a = loadAssets();
-  if (a.some((x) => x.url === url)) return;
-  saveAssets([{ id: newId(), name: name.slice(0, 24) || "图片", url, at: Date.now() }, ...a]);
+  const hit = a.find((x) => x.url === url);
+  // 功能注释：已在库里则转长期保留并补分类，不重复写
+  if (hit) {
+    delete hit.temp;
+    if (kind && !hit.kind) hit.kind = kind;
+    const ok = saveAssets(a);
+    emitAssets();
+    return ok;
+  }
+  const ok = saveAssets([{ id: newId(), name: name.slice(0, 24) || "图片", url, at: Date.now(), ...(kind ? { kind } : {}) }, ...a]);
   emitAssets();
+  return ok;
 }
 /** 生图结果自动收进素材库（临时）；已存在则只刷新使用时间 */
-export function addTempAsset(url: string, name = "AI 生图") {
+export function addTempAsset(url: string, name = "AI 生图", kind?: AssetKind): boolean {
   const a = loadAssets();
   const hit = a.find((x) => x.url === url);
-  if (hit) { hit.usedAt = Date.now(); saveAssets(a); }
-  else saveAssets([{ id: newId(), name: name.slice(0, 24), url, at: Date.now(), temp: true }, ...a]);
+  let ok: boolean;
+  if (hit) { hit.usedAt = Date.now(); if (kind && !hit.kind) hit.kind = kind; ok = saveAssets(a); }
+  else ok = saveAssets([{ id: newId(), name: name.slice(0, 24), url, at: Date.now(), temp: true, ...(kind ? { kind } : {}) }, ...a]);
   emitAssets();
+  return ok;
 }
 /** 收藏：长期保留（不在库里则直接加入） */
-export function keepAsset(url: string, name = "AI 生图") {
-  const a = loadAssets();
-  const hit = a.find((x) => x.url === url);
-  if (hit) { delete hit.temp; saveAssets(a); }
-  else saveAssets([{ id: newId(), name: name.slice(0, 24), url, at: Date.now() }, ...a]);
-  emitAssets();
+export function keepAsset(url: string, name = "AI 生图", kind?: AssetKind): boolean {
+  return rememberImageAsset(url, name, kind);
 }
 export const isAssetKept = (url: string) => loadAssets().some((x) => x.url === url && !x.temp);
 /** 素材被用上时刷新使用时间，临时素材重新计 7 天 */
@@ -147,12 +159,12 @@ export async function uploadToHost(file: File, host: ImgHost): Promise<string> {
 }
 
 /* 统一上传入口：配置了图床就传图床（公网链接），否则本地压缩；结果同时收进素材库 */
-export async function uploadImage(file: File, max = 1600): Promise<{ url: string; hosted: boolean }> {
+export async function uploadImage(file: File, max = 1600, kind?: AssetKind): Promise<{ url: string; hosted: boolean }> {
   const host = loadHost();
   const hosted = host.kind === "imgbb" && !!host.key;
   const url = hosted ? await uploadToHost(file, host) : await compressImage(file, max);
   const a = loadAssets();
-  if (!a.some((x) => x.url === url)) saveAssets([{ id: Math.random().toString(36).slice(2, 9), name: file.name.replace(/\.[^.]+$/, "").slice(0, 24) || "图片", url, at: Date.now() }, ...a]);
+  if (!a.some((x) => x.url === url)) saveAssets([{ id: Math.random().toString(36).slice(2, 9), name: file.name.replace(/\.[^.]+$/, "").slice(0, 24) || "图片", url, at: Date.now(), ...(kind ? { kind } : {}) }, ...a]);
   window.dispatchEvent(new Event("star:assets")); // 通知素材库面板刷新
   return { url, hosted };
 }

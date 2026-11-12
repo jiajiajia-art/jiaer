@@ -6,6 +6,7 @@ import type { RoomContent, Requirement } from "../worlds/star2005/content";
 import { childrenOf, cloneBranch, pathOf, rootsOf, subtreeOf, wouldCycle } from "../game/roomTree";
 import { EmptyState, Help, SearchBox, matches } from "./EditorKit";
 import ImagePicker from "./ImagePicker";
+import MapPlacer, { useImageRatio } from "./MapPlacer";
 import ModBatchImageGen from "./ModBatchImageGen";
 import { applyBatchPatch, type BatchApplyPatch } from "../lib/imageGenBatchPlan";
 import { Modal } from "./ui";
@@ -65,6 +66,10 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
   const [q, setQ] = useState("");
   const [drag, setDrag] = useState<string | null>(null);
   const [libOpen, setLibOpen] = useState(false);
+  // 功能注释：大地图标点——选中待摆放的顶层地点；为空时点空白处新建地点
+  const [pinTarget, setPinTarget] = useState<string | null>(null);
+  // 功能注释：子地点在父地点内部地图上的待摆放目标
+  const [kidPin, setKidPin] = useState<string | null>(null);
   const [libQ, setLibQ] = useState("");
   const [libLoading, setLibLoading] = useState(false);
   const [libErr, setLibErr] = useState("");
@@ -288,6 +293,53 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
               }}
             />
           </div>
+          {/* 功能注释：上传大地图图后直接在图上点点位：选地点 → 点图放置；拖图钉微调；没选时点空白处新建顶层地点 */}
+          {curMap.bg ? (() => {
+            const tops = Object.entries(mapRooms).filter(([, x]) => !x.parent);
+            const target = pinTarget && mapRooms[pinTarget] && !mapRooms[pinTarget].parent ? pinTarget : null;
+            return (
+              <div className="space-y-1.5" data-map-pins>
+                <span className={lbl}>地图点位 · 选地点后点图放置，拖动图钉微调；不选时点空白处新建地点</span>
+                <div className="flex flex-wrap gap-1">
+                  {tops.map(([id, x]) => {
+                    const placed = typeof x.mapX === "number" && typeof x.mapY === "number";
+                    const on = target === id;
+                    return (
+                      <button key={id} type="button" onClick={() => { setPinTarget(on ? null : id); setSel(id); }}
+                        className={`rounded-full border px-2.5 py-0.5 text-[11.5px] ${on ? "border-coral bg-coral text-white" : placed ? "border-jade/50 bg-jade/10 text-jade" : "border-dashed border-line text-ink-soft"}`}>
+                        {x.name || id}{placed ? "" : " · 未放"}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mx-auto w-full max-w-[280px]">
+                  <MapPlacer
+                    bg={curMap.bg}
+                    aspect="aspect-[9/16]"
+                    dots={tops.filter(([, x]) => typeof x.mapX === "number" && typeof x.mapY === "number").map(([id, x]) => ({ id, x: x.mapX!, y: x.mapY!, label: x.name || id }))}
+                    activeId={target}
+                    onPick={(id) => { setPinTarget(id); setSel(id); }}
+                    onPlace={(id, x, y) => { set(id, { mapX: x, mapY: y }); setPinTarget(null); }}
+                    onBlank={(x, y) => {
+                      const id = rid();
+                      const name = "新地点";
+                      commit({ ...allRooms, [id]: { name, desc: sceneDescFallback(name), exits: {}, mapId: curMapId, mapX: x, mapY: y } });
+                      setSel(id);
+                      setTab("base");
+                    }}
+                  />
+                </div>
+                <p className="text-[10.5px] text-ink-soft">
+                  {target ? `点地图把「${mapRooms[target]?.name || target}」放到该处` : "提示：只有顶层地点会出现在大地图上，子地点在所属地点里进入。"}
+                  {target && typeof mapRooms[target]?.mapX === "number" && (
+                    <button type="button" className="ml-2 text-coral underline" onClick={() => { set(target, { mapX: undefined, mapY: undefined }); setPinTarget(null); }}>移除点位</button>
+                  )}
+                </p>
+              </div>
+            );
+          })() : (
+            <p className="text-[10.5px] text-ink-soft">上传或生成大地图图后，可直接在图上点出各地点的位置。</p>
+          )}
         </div>
       )}
     </div>
@@ -425,6 +477,21 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
                   <button className={pill} onClick={() => add(cur)}>＋ 新增子地点</button>
                   <button className={pill} onClick={() => copyBranch(cur)}>复制「{nm(cur)}」整枝</button>
                 </div>
+                <InnerMapPins
+                  name={nm(cur)}
+                  innerMap={r.innerMap}
+                  kids={kids.map((k) => ({ id: k, name: nm(k), x: mapRooms[k]?.mapX, y: mapRooms[k]?.mapY }))}
+                  target={kidPin && kids.includes(kidPin) ? kidPin : null}
+                  setTarget={setKidPin}
+                  onMap={(url) => set(cur, { innerMap: url || undefined })}
+                  onPlace={(id, x, y) => set(id, { mapX: x, mapY: y })}
+                  onClear={(id) => set(id, { mapX: undefined, mapY: undefined })}
+                  onBlank={(x, y) => {
+                    const id = rid();
+                    const name = "新子地点";
+                    commit({ ...allRooms, [id]: { name, desc: sceneDescFallback(name), exits: {}, mapId: curMapId, parent: cur, order: kids.length, mapX: x, mapY: y } });
+                  }}
+                />
                 <label className="block"><span className={lbl}>返回上层的文案（留空 = 「返回{r.parent ? nm(r.parent) : "上层"}」）</span>
                   <input className={inp} value={r.upLabel ?? ""} placeholder={`走出${nm(cur)}，回到${r.parent ? nm(r.parent) : "上层"}`} disabled={!r.parent} onChange={(e) => set(cur, { upLabel: e.target.value || undefined })} />
                 </label>
@@ -476,6 +543,57 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
         )}
       </div>
       {libPicker}
+    </div>
+  );
+}
+
+/** 功能注释：父地点的内部地图 + 子地点标点（选子地点点图放置 / 拖图钉 / 点空白新建子地点） */
+function InnerMapPins({ name, innerMap, kids, target, setTarget, onMap, onPlace, onClear, onBlank }: {
+  name: string;
+  innerMap?: string;
+  kids: { id: string; name: string; x?: number; y?: number }[];
+  target: string | null;
+  setTarget: (id: string | null) => void;
+  onMap: (url?: string) => void;
+  onPlace: (id: string, x: number, y: number) => void;
+  onClear: (id: string) => void;
+  onBlank: (x: number, y: number) => void;
+}) {
+  const ratio = useImageRatio(innerMap);
+  const placed = (k: { x?: number; y?: number }) => typeof k.x === "number" && typeof k.y === "number";
+  const t = kids.find((k) => k.id === target);
+  return (
+    <div className="space-y-1.5 rounded-2xl border border-line bg-paper-2 p-2" data-inner-map>
+      <span className={lbl}>「{name}」内部地图 · 上传俯视图 / 全景图后给子地点标点，玩家在此地可展开地图点选进入</span>
+      <ImagePicker value={innerMap} onChange={(url) => onMap(url)} label={`${name}内部地图`} max={1920} thumb="h-14 w-20" />
+      {innerMap ? (
+        <>
+          <div className="flex flex-wrap gap-1">
+            {kids.map((k) => {
+              const on = target === k.id;
+              return (
+                <button key={k.id} type="button" onClick={() => setTarget(on ? null : k.id)}
+                  className={`rounded-full border px-2.5 py-0.5 text-[11.5px] ${on ? "border-coral bg-coral text-white" : placed(k) ? "border-jade/50 bg-jade/10 text-jade" : "border-dashed border-line text-ink-soft"}`}>
+                  {k.name}{placed(k) ? "" : " · 未放"}
+                </button>
+              );
+            })}
+          </div>
+          <MapPlacer
+            bg={innerMap}
+            ratio={ratio}
+            dots={kids.filter(placed).map((k) => ({ id: k.id, x: k.x!, y: k.y!, label: k.name }))}
+            activeId={target}
+            onPick={(id) => setTarget(id)}
+            onPlace={(id, x, y) => { onPlace(id, x, y); setTarget(null); }}
+            onBlank={onBlank}
+          />
+          <p className="text-[10.5px] text-ink-soft">
+            {t ? `点地图把「${t.name}」放到该处` : "选子地点后点图放置，拖动图钉微调；不选时点空白处新建子地点。"}
+            {t && placed(t) && <button type="button" className="ml-2 text-coral underline" onClick={() => { onClear(t.id); setTarget(null); }}>移除点位</button>}
+          </p>
+        </>
+      ) : null}
     </div>
   );
 }

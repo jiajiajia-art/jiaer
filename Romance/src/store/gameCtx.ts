@@ -54,6 +54,13 @@ export type Ctx = {
   startNew: (player: Player, simChar?: SimChar, contract?: SigningContract, worldRules?: import("../lib/types").WorldRules, opts?: StartOpts) => void;
   loadState: (s: GameState) => void;
   submit: (input: string, asPopup?: boolean) => Promise<void>;
+  /** 魔法棒：推进 / 切换视角推进 / 后日谈（幕后指令，不显示玩家气泡） */
+  directTurn: (kind: "advance" | "pov" | "after", povName?: string) => void;
+  /** 魔法棒 · 小剧场：番外短剧，弹窗展示，不进正文、不结算、不进记忆 */
+  theaterTurn: (theme?: string, format?: string) => Promise<string | null>; // 返回新小剧场 id（失败 null）
+  removeTheater: (id: string) => void;
+  /** 摇一摇的网友约见面：加入人物名单并在主角所在地上演见面剧情 */
+  meetStranger: (pid: string) => boolean;
   setPlayerAvatar: (dataUrl: string) => void;
   setNpcAvatar: (id: string, dataUrl: string) => void;
   setNpcPortrait: (id: string, url: string) => void;

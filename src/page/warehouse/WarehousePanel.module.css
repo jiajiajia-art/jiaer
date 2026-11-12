@@ -1645,3 +1645,75 @@
   flex: 1;
   min-width: 110px;
 }
+
+/* ===== 功能注释：手机端视觉精修（暗夜织梦）=====
+   工具区去掉外框卡片：搜索独占一行，导入/新建并排；
+   题材筛选更轻；空状态去虚线框改为柔光插画式 */
+@media (max-width: 980px) {
+  .toolbar {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 10px;
+    padding: 0;
+    background: none;
+    border: none;
+    box-shadow: none;
+  }
+  .toolbar > .search { grid-column: 1 / -1; }
+  .search {
+    height: 44px;
+    border-radius: 999px;
+    padding-left: 18px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+  }
+  .search:focus {
+    border-color: color-mix(in srgb, var(--color-primary) 60%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+  }
+  .primaryBtn,
+  .ghostBtn {
+    height: 44px;
+    border-radius: 999px;
+    font-size: 14px;
+  }
+  .ghostBtn {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+  }
+  .primaryBtn {
+    background-image: var(--main-background);
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--color-primary) 32%, transparent);
+  }
+  .tags { gap: 8px; margin-top: 4px; }
+  .tag,
+  .tagActive {
+    min-height: 32px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 13px;
+  }
+  .tag {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+  }
+  .tagActive {
+    background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
+    color: var(--color-primary-fg);
+    font-weight: 700;
+  }
+  .emptyStage {
+    width: 100%;
+    margin: 32px 0 0;
+    padding: 40px 20px;
+    border: none;
+    border-radius: 20px;
+    background:
+      radial-gradient(260px 160px at 50% 30%, color-mix(in srgb, var(--color-primary) 14%, transparent), transparent 70%);
+  }
+  .emptyStage h2 { font-size: 18px; margin-top: 4px; }
+  .emptyStage p { font-size: 13px; color: var(--color-text-muted); max-width: 260px; margin-inline: auto; }
+}

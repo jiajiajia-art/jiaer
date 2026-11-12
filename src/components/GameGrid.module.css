@@ -248,7 +248,7 @@
     width: 15.12px;
     height: 20.16px;
     flex-shrink: 0;
-    color: var(--color-text);
+    color: var(--color-on-media);
     opacity: 0.96;
 }
 
@@ -256,7 +256,7 @@
     width: 16.8px;
     height: 15.12px;
     flex-shrink: 0;
-    color: var(--color-text);
+    color: var(--color-on-media);
     opacity: 0.96;
 }
 
@@ -497,10 +497,6 @@
         border-radius: 0;
     }
 
-    .goodsImg::after {
-        height: var(--mobile-content-image-guard-height);
-        background: var(--mobile-content-image-guard-dark-gradient);
-    }
 
     .goodsImg > img {
         /* 封面标题贴在顶部，禁止沿用上移放大（会把第一行字裁出卡片） */
@@ -672,3 +668,25 @@
     flex-shrink: 0;
     color: var(--color-primary-fg, var(--color-primary));
 }
+
+/* 功能注释：底部渐变下探 1px 盖住封面与正文之间的亚像素缝，消除横线 */
+.goodsInfo { bottom: -1px; }
+
+/* 功能注释：封面统计改为深色玻璃小胶囊——浅色模式下底部渐变发白，白字会看不清 */
+.goodsInfo { padding-top: 28px; }
+.goodsInfo .goodsInfoItem {
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(12, 8, 16, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #fff;
+    font-size: 12px;
+    text-shadow: none;
+}
+.goodsInfoStats { gap: 6px; }
+.goodsInfo .goodsInfoItem svg,
+.goodsInfo .goodsInfoFlame,
+.goodsInfo .goodsInfoHeart { color: #fff; }
+.goodsInfo .goodsInfoBookmark { color: var(--color-primary-light); }
+.goodsDesc { color: var(--color-text-secondary); }

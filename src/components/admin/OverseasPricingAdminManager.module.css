@@ -1,0 +1,39 @@
+.multiplierField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.multiplierField input { min-width: 0; width: 100%; }
+.multiplierPrefix {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+.table {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 1.4fr 0.8fr;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+.row + .row { border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); }
+.headRow {
+  padding-block: 8px;
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+.planLabel { font-weight: 600; }
+.price { text-align: right; }
+.headRow span:last-child { text-align: right; }

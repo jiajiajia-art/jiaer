@@ -2266,3 +2266,275 @@
     border-radius: 14px;
     background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
+
+/* 功能注释：档位标题行 + 海外币种标识 */
+.sectionHeadRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.sectionHeadRow .sectionHeading { margin: 0; }
+.currencyBadge {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+    color: var(--color-primary-fg);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.amountPriceMeta {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    font-variant-numeric: tabular-nums;
+}
+.amountPriceRef {
+    color: var(--color-text-muted);
+    font-size: 10px;
+}
+
+/* 功能注释：移动端放松间距，避免各区块挤在一起 */
+@media (max-width: 768px) {
+    .form { gap: 16px; padding-bottom: 8px; }
+    .regionSummary { min-height: 40px; margin-bottom: 12px; padding: 0 12px; font-size: 12px; }
+    .regionSummary strong { font-size: 12px; }
+    .rechargeTabs { margin-bottom: 14px; }
+    .sectionHeading { margin-bottom: 10px; }
+    .sectionHeadRow { margin-bottom: 10px; }
+    .amountsGrid { gap: 8px; }
+    .amountBtn, .customAmountTile { min-height: 76px; padding: 10px 6px; }
+    .amountTopSection { gap: 4px; }
+    .amountMainPoints { font-size: 0.95rem; }
+    .amountPriceMeta { font-size: 0.75rem; }
+    .firstChargeMeta { font-size: 11px; }
+    .customLabel { margin-bottom: 4px; font-size: 0.75rem; }
+    .customAmountNotice { margin-top: 0; font-size: 11px; line-height: 1.5; }
+    .orderSummary { padding: 0 12px; }
+    .orderSummary > div { min-height: 40px; font-size: 12px; }
+    .submitBtn, .membershipSubmitBtn { min-height: 48px; font-size: 14px; }
+    .paymentNotice { font-size: 11px; line-height: 1.5; text-align: center; }
+}
+
+/* 功能注释：充值确认弹窗主信息区；首充与非首充同结构，仅标签配色不同 */
+.confirmHero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 14px;
+    padding: 18px 16px 16px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
+    text-align: center;
+}
+.confirmHeroFirst {
+    border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+    background:
+        radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--color-primary) 22%, transparent), transparent 70%),
+        color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+.confirmHeroLabel {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+}
+.confirmHeroValue {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    color: var(--color-text);
+    font-size: 32px;
+    line-height: 1.1;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.confirmHeroValue small {
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+}
+.confirmHeroChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    min-height: 24px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 7%, transparent);
+    color: var(--color-text-muted);
+    font-size: 12px;
+    line-height: 1;
+}
+.confirmHeroChipFirst {
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+    color: var(--color-primary-fg);
+}
+.confirmHeroChipFirst strong {
+    color: var(--color-text);
+    font-weight: 700;
+}
+@media (max-width: 768px) {
+    .confirmationPanel { padding: 20px 18px; }
+    .confirmHero { padding: 14px 12px; margin-bottom: 12px; }
+    .confirmHeroValue { font-size: 28px; }
+}
+
+/* ===== 功能注释：充值档位卡片（首充 / 非首充同结构） ===== */
+.amountsGrid .tile,
+.amountsGrid .tileCustom {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    min-height: 112px;
+    padding: 16px 6px 0;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
+    border-radius: 14px;
+    background: linear-gradient(180deg,
+        color-mix(in srgb, var(--color-text) 7%, transparent),
+        color-mix(in srgb, var(--color-text) 3%, transparent));
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+.amountsGrid .tile:hover {
+    border-color: color-mix(in srgb, var(--color-text) 20%, transparent);
+    background: linear-gradient(180deg,
+        color-mix(in srgb, var(--color-text) 10%, transparent),
+        color-mix(in srgb, var(--color-text) 4%, transparent));
+}
+.amountsGrid .tile:active { transform: scale(0.98); }
+.amountsGrid .tileFirst {
+    border-color: color-mix(in srgb, var(--color-primary) 28%, transparent);
+    background:
+        radial-gradient(110% 70% at 50% 0%, color-mix(in srgb, var(--color-primary) 16%, transparent), transparent 75%),
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--color-text) 7%, transparent),
+            color-mix(in srgb, var(--color-text) 3%, transparent));
+}
+.amountsGrid .tile.tileActive {
+    border-color: var(--color-primary);
+    background:
+        radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--color-primary) 34%, transparent), transparent 80%),
+        color-mix(in srgb, var(--color-primary) 10%, transparent);
+    box-shadow:
+        0 0 0 1px var(--color-primary),
+        0 8px 24px color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+.tileRibbon {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 3px 8px 4px 10px;
+    border-bottom-left-radius: 10px;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+}
+.tileCoins {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+    color: var(--color-text);
+    font-variant-numeric: tabular-nums;
+}
+.tileCoins b {
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.01em;
+}
+.tileCoins small {
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+}
+.tileBonus {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--color-text-muted);
+    font-size: 10.5px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.tileBonusFirst {
+    background: color-mix(in srgb, var(--color-primary) 20%, transparent);
+    color: var(--color-primary-fg);
+}
+.tilePrice {
+    margin-top: auto;
+    align-self: stretch;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 4px;
+    min-height: 32px;
+    padding: 7px 4px 8px;
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
+    color: var(--color-text);
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.tilePrice small {
+    color: var(--color-text-muted);
+    font-size: 10px;
+    font-weight: 500;
+}
+.tileActive .tilePrice {
+    border-top-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+.amountsGrid .tileCustom {
+    justify-content: center;
+    padding: 12px 10px;
+    border-style: dashed;
+    border-color: color-mix(in srgb, var(--color-text) 18%, transparent);
+    background: color-mix(in srgb, var(--color-text) 3%, transparent);
+}
+.amountsGrid .tileCustom:focus-within {
+    border-style: solid;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 1px var(--color-primary);
+}
+.amountsGrid .tileCustom.inputError { border-color: var(--color-primary); }
+.tileCustom .customLabel {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+}
+.tileCustom .customInputWrapper {
+    width: 100%;
+    min-height: 34px;
+    padding: 0 10px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+.tileCustom .currencySymbol { margin-right: 4px; font-size: 14px; }
+.tileCustom .customInput { padding: 6px 0; font-size: 14px; font-weight: 600; }
+
+@media (max-width: 768px) {
+    .amountsGrid .tile,
+    .amountsGrid .tileCustom { min-height: 100px; padding-top: 14px; gap: 6px; border-radius: 12px; }
+    .amountsGrid .tileCustom { padding: 10px 8px; }
+    .tileCoins b { font-size: 19px; }
+    .tileBonus { min-height: 18px; padding: 0 6px; font-size: 10px; }
+    .tilePrice { min-height: 28px; padding: 5px 4px 6px; font-size: 12px; }
+    .tileRibbon { font-size: 9px; padding: 2px 6px 3px 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .amountsGrid .tile { transition: none; }
+    .amountsGrid .tile:active { transform: none; }
+}

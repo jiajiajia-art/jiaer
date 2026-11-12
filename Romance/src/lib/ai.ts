@@ -1,4 +1,6 @@
 import { nextTurnCueBlock } from "./eventNotices.ts";
+import { mobsHere } from "../game/mud";
+import { applyMemory, chronicleFallbackSummary, memoryBlock } from "./chronicle";
 import { parseStepJson, type StepParseFail } from "./stepParse.ts";
 import { affinityCapOf } from "../worlds/star2005/content";
 import { clampAffinity, engineRulesBlock, fillPlaceholders, oocText, parseRp, rulesOf, seqRandom } from "../game/engineRules";
@@ -10,7 +12,7 @@ import { evalFixedCond, storylineBrief } from "../game/fixedEvents";
 import { sidelineBrief } from "./sidelines";
 import { hasWorldGigs, getWorldPromptHeader, getWorldPromptFragment, getWorldNpcs, getWorldRuleDims, promptFrag, term, getWorldSlot, worldItemsOfRoom, worldItemById, worldActivitiesOfRoom, worldRoom, worldLocOf, getWorldSidelines } from "../mods/registry";
 import { customActsOf, customItemsOf, findCustomItem, firedOf, spotDesc, spotEventsOf, spotName } from "../game/mapedits";
-import { drawAvatar, randomPools } from "../game/avatarPools";
+import { drawProfileAvatar, randomPools, systemPools } from "../game/avatarPools";
 import { ruleEffects, orderIncome } from "../game/worldRules";
 /* ————— AI 接入：配置校验 / SSE 流式 / 结构化解析 / 记忆压缩 / mock 兜底 ————— */
 import { ensureFertility, rollIntimacy } from "../game/pregnancy";
@@ -541,8 +543,8 @@ function customAttrLine(state: GameState): string {
 export function playPrefsOf(state: Pick<GameState, "playPrefs">): import("./types").PlayPrefs {
   const d = getWorldSlot("play");
   return {
-    // 功能注释：剧情模式暂未开放，固定游戏模式（世界观默认 / 旧存档里的剧情模式也按游戏模式）
-    mode: "game" as const,
+    // 功能注释：游戏模式暂未开放，固定剧情模式（世界观默认 / 旧存档里的游戏模式也按剧情模式）
+    mode: "novel" as const,
     pov: state.playPrefs?.pov ?? d?.pov,
     // 功能注释：横竖屏暂不支持选择，旧存档里的横屏也按竖屏
     orient: "portrait" as const,
@@ -564,7 +566,9 @@ function playPrefsBlock(state: GameState): string {
 
 /* 头像池：剧本勾了「随机池」时，让 AI 给首次出场的新人物挑一个最贴合的池名 */
 function avatarPoolBlock(): string {
-  const names = randomPools().map((p) => p.name);
+  // 功能注释：本剧没开随机池时，用平台头像库分类名（青年女性 / 成熟男性…）让 AI 按性别年龄挑
+  const own = randomPools().map((p) => p.name);
+  const names = own.length ? own : systemPools().filter((p) => Array.isArray(p.images) && p.images.length).map((p) => p.name);
   return names.length ? `【新人物头像池】首次出场的新人物在 npc_changes 里加 "avatar_variant"，从下列池名中挑一个最贴合其性别、年龄与气质的（须与池名一字不差）：${names.join("、")}。拿不准就省略，系统会随机抽图。\n\n` : "";
 }
 
@@ -620,7 +624,8 @@ ${state.memory || "（游戏刚刚开始）"}
   "narrative": "本回合剧情文本（与正文一致的纯文本）",
   "state_diff": {"world": {}, "player_changes": {}, "npc_changes": []},
   "tabs": {"story":"本回合一句话摘要","character":"主角状态变化要点","npc":"相关人物动向","map":"地点/事件变化","settings":"可省略"},
-  "memory_updates": [{"scope":"main","text":"值得长期记住的事实"},{"scope":"npc","npc":"角色名","text":"该角色应记住的事"}],
+  "memory_updates": [{"scope":"main","text":"本回合真正发生、值得长期记住的事（一句话，写清谁做了什么）","imp":1,"who":["相关人物全名"],"keys":["可选：日后提起时可能出现的关键词"]},{"scope":"npc","npc":"角色名","text":"该角色应记住的事"}],
+  "scene_memory": {"facts":["仅当此地陈设/状态有新出现或改变时写，如：前台的铜铃坏了"],"looks":[{"name":"在场人物全名","outfit":"仅当其穿着变化或首次描写时写"}]},
   "save_summary": "30字内的存档摘要：时间·地点·关键进展",
   "need_clarification": ["仅当玩家指令信息不足、无法判定结果时列出要补充的问题，否则给空数组"],
   "narration": "同 narrative（兼容字段）",
@@ -635,6 +640,7 @@ ${state.memory || "（游戏刚刚开始）"}
   "game_end": false,
   "epilogue": "仅当你判定结局到来时给出，≥1000字的主角生平后记"
 }
+2.0 记忆：memory_updates 里 scope=main 只记本回合真正发生的新事实（不写猜测、不复述旧事），imp 为重要度：1 日常、2 重要（关系转折、承诺、秘密）、3 关键（改变剧情走向、日后必须记得的事，极少使用）；who 填相关人物全名。scene_memory 只在此地陈设、状态或在场者穿着发生变化时填写，没有变化整个省略。
 2.1 state_diff 与下方的 world / player_changes / npc_changes 等价，二选一填写即可，不要两边重复写同一变动。
 2.2 禁止剧情重复：不得复述上一回合已经写过的段落、台词或情节，每回合都必须推进新的事件或新的情绪。
 2.4 台词与旁白去 AI 味：人物说话必须符合其身份、年龄、性格与当下处境，像真实活人在日常开口——口语化、自然平实、有烟火气；严禁书面腔、严禁排比与金句堆砌、严禁拿人物职业硬拗生硬比喻（如用修桥、算账、做菜去硬套人生哲理），严禁「把这话说得很轻，轻得像……」「那口气只有……才懂」「眼底闪过一丝不易察觉的……」「先说清楚/我只说一次」等矫揉造作的 AI 惯用语；段落结尾严禁旁白对玩家总结、喊话或抒情收尾（如「接下来怎么走，全看你自己」「故事才刚刚开始」「这一天注定不平凡」），停在具体的动作、台词或画面上即可。
@@ -809,11 +815,29 @@ export function mapSpotBlock(state: GameState): string {
   return `【当前场景物件 · 行动 · 随身行囊】（须将以下地点物件、行动与行囊物品融入叙事；玩家互动、拾取、使用物件或执行地点行动时，据此生动演绎并在 options 中提供贴合场景物件/行动的后续选项）\n${lines.join("\n")}`;
 }
 
-/* 本回合可能开口的角色：与主角同处一地 + 玩家输入里点名的，最多 4 位 */
-function sceneNpcIds(state: GameState, input: string): string[] {
+/* 此刻真实在场的人物：按代码实时记录的人物所在地（与底部在场人物条同一口径）判定，AI 不能改 */
+export function presentNpcIds(state: GameState): string[] {
   const room = state.sim?.room;
-  const here = room ? Object.entries(state.sim?.mobs ?? {}).filter(([, r]) => r === room).map(([id]) => id) : [];
-  const named = state.npcs.filter((n) => n.name && input.includes(n.name)).map((n) => n.id);
+  if (!room || !state.sim) return [];
+  return mobsHere(state.sim, room, state.npcs).filter((p) => p.present).map((p) => p.id);
+}
+
+/* 在场约束：只传「此刻与主角同处此地」的人物（代码实时位置），AI 只能让这些人当面出场 */
+function presenceBlock(state: GameState): string {
+  const room = state.sim?.room;
+  const roomName = room ? spotName(state, room) ?? worldLocOf(room)?.name ?? room : "未知";
+  const hereIds = new Set(presentNpcIds(state));
+  const here = state.npcs.filter((n) => n.name && hereIds.has(n.id)).map((n) => n.name);
+  return `【此地在场人物】（由代码实时记录，必须严格遵守）
+主角所在：${roomName}
+在场：${here.length ? here.join("、") : "除主角外无人"}
+规则：只有以上在场的人能当面出现、说话、做动作、写进 thoughts；不得让名单外的人物当面出场（路人只可一笔带过，不给台词）。`;
+}
+
+/* 本回合可能开口的角色：只取代码判定在场的人；玩家点名的在场者优先，最多 4 位（点名不在场的人不会让 TA 开口） */
+function sceneNpcIds(state: GameState, input: string): string[] {
+  const here = presentNpcIds(state);
+  const named = state.npcs.filter((n) => n.name && input.includes(n.name) && here.includes(n.id)).map((n) => n.id);
   // 群聊裁决：同一回合最多几位角色开口（底层规则，缺省 4）
   return Array.from(new Set([...named, ...here])).filter((id) => state.npcs.some((n) => n.id === id)).slice(0, Math.max(1, rulesOf(state).ai.maxSpeakers));
 }
@@ -830,18 +854,28 @@ export function buildMessages(state: GameState, userInput: string, wbPick?: Worl
   // 世界书：唯一设定通道（含原详细设定 / 节日）；地点·人物在场或关键词命中才注入
   const wb = worldBookBlock(state, input, {}, wbPick);
   if (wb) msgs.push({ role: "system", content: wb });
-  // 进行中的事件：持续到结束关键词；主线 / 支线进度 flags 在 sim 上
+  // 功能注释：「当前状态」类块（进行中事件 / 主线支线进度 / 下回合提示 / 当前点位 / 在场人物）
+  // 放在最近剧情原文之后、玩家输入之前：模型最后读到的是此刻真实状态，不会被更早的剧情带偏
+  const stateBlocks: string[] = [];
   const quest = state.sim ? storylineBrief(state.sim) : "";
   const side = state.sim ? sidelineBrief(getWorldSidelines(), state.sim) : "";
-  for (const block of [activeEventsBlock(state), quest && `【主线进度】（由代码判定，剧情须围绕当前目标推进，不得自行宣布完成）\n${quest}`, side && `【进行中的支线】（额外任务，由代码判定成败，可顺带推进，不得自行宣布完成，也不影响主线）\n${side}`]) if (block) msgs.push({ role: "system", content: block });
-  // 功能注释：上回合之后由代码判定发生的事 + 当前可展开的特殊事件（不自动开写，只在玩家下次行动时交给 AI）
+  for (const block of [activeEventsBlock(state), quest && `【主线进度】（由代码判定，剧情须围绕当前目标推进，不得自行宣布完成）\n${quest}`, side && `【进行中的支线】（额外任务，由代码判定成败，可顺带推进，不得自行宣布完成，也不影响主线）\n${side}`]) if (block) stateBlocks.push(block);
+  // 上回合之后由代码判定发生的事 + 当前可展开的特殊事件（不自动开写，只在玩家下次行动时交给 AI）
   {
     const cue = nextTurnCueBlock(state.pendingCues, state.eventNotices, state.sim?.day ?? 0, (room) => (room ? spotName(state, room) ?? worldLocOf(room)?.name ?? room : ""));
-    if (cue) msgs.push({ role: "system", content: cue });
+    if (cue) stateBlocks.push(cue);
   }
   // 地图编辑器：当前点位的玩家自定义（改名/描述/物件），让叙事与所见场景一致
   const ms = mapSpotBlock(state);
-  if (ms) msgs.push({ role: "system", content: ms });
+  if (ms) stateBlocks.push(ms);
+  // 剧情记忆：最近事件（相对时间）+ 按在场 / 地点 / 关键词召回的往事 + 此地现状（变化驱动）
+  {
+    const roomName = (id?: string) => (id ? spotName(state, id) ?? worldLocOf(id)?.name ?? id : "");
+    const mb = memoryBlock(state, wbHay(state, input), presentNpcIds(state), roomName);
+    if (mb) stateBlocks.push(mb);
+  }
+  // 在场名单由代码决定并下发给 AI，剧情只能按真实在场的人写
+  stateBlocks.push(presenceBlock(state));
   // 私有知识库：只注入在场 / 被点名的角色，每人一块、互不可见
   const cardHay = `${input} ${state.story.filter((t) => !t.error).slice(-2).map((t) => t.segments.map((s) => s.text).join("")).join(" ")}`;
   for (const id of sceneNpcIds(state, input)) {
@@ -849,12 +883,17 @@ export function buildMessages(state: GameState, userInput: string, wbPick?: Worl
     const card = cn ? fillPlaceholders(charCardBlock(cn.name, cn.persona, cardHay), { ...phCtx(state), char: cn.name }) : "";
     msgs.push({ role: "system", content: `${kbBlock(state, id)}${card ? `\n${card}` : ""}\n【隔离规则】以上内容只能在扮演「${state.npcs.find((n) => n.id === id)?.name ?? id}」时使用；其他角色不知道这些，不得借他人之口说出。同一话题，不同角色须按各自知识库给出不同的回应。` });
   }
-  // 只带最近若干回合原文，早期靠 memory
-  const recent = state.story.filter((t) => !t.error).slice(-4);
+  // 只带最近若干回合原文，早期靠 memory。
+  // 功能注释：runTurn 会先把本回合玩家气泡写进 story 再拼提示词——末尾那条就是本回合输入，这里剔除，避免玩家输入在提示里出现两次
+  const hist = state.story.filter((t) => !t.error);
+  const lastT = hist[hist.length - 1];
+  if (lastT?.role === "player" && lastT.segments.map((x) => x.text).join("").trim() === input.trim()) hist.pop();
+  const recent = hist.slice(-4);
   for (const t of recent) {
     const text = t.segments.map((s) => (s.kind === "dialogue" ? `「${s.speaker}」：${s.text}` : s.text)).join("\n");
     msgs.push({ role: t.role === "player" ? "user" : "assistant", content: text });
   }
+  for (const b of stateBlocks) msgs.push({ role: "system", content: b });
   // OOC：按底层规则的标记符识别，作为场外话交给模型，不推进剧情
   const ooc = oocText(input, rulesOf(state).narrative.oocMarks);
   // RP 文本标记：*动作* /「台词」标注后交给模型，区分玩家动作与玩家台词
@@ -881,7 +920,9 @@ ${transcript.slice(-4000)}`;
       /* 失败则退回本地压缩 */
     }
   }
-  // 本地兜底：截取最近关键句
+  // 本地兜底：优先按剧情事件线保留（重要事件优先），没有事件线时才截取最近原文
+  const fromEvents = chronicleFallbackSummary(state);
+  if (fromEvents) return `${state.memory ? `${state.memory.slice(-400)}\n` : ""}${fromEvents}`.slice(-1200);
   const merged = (state.memory + " " + transcript).replace(/\s+/g, " ").trim();
   return merged.slice(-600);
 }
@@ -1003,7 +1044,8 @@ export function applyStep(state: GameState, step: AIStep): { next: GameState; ch
         interactions: [],
       };
       // 头像：AI 指定的同名池优先，否则从本剧随机池抽（都没开 → 留空，沿用首字头像）
-      const av = drawAvatar(npc.id, typeof nc.avatar_variant === "string" ? nc.avatar_variant : undefined);
+      // 功能注释：本剧池抽不到时套用平台头像库（按性别 / 年龄段分类）
+      const av = drawProfileAvatar(npc.id, { name: ncName, age: nc.age, identity: nc.identity, bio: nc.bio, variant: typeof nc.avatar_variant === "string" ? nc.avatar_variant : undefined });
       if (av.url) { npc.avatar = av.url; npc.avatarVariant = av.variant; }
       npc = ensureBirthday(npc, next.sim?.day ?? 0);
       next.npcs.push(npc);
@@ -1101,7 +1143,15 @@ export function applyStep(state: GameState, step: AIStep): { next: GameState; ch
     if (!text) continue;
     const who = mu.scope === "npc" && mu.npc ? findNpc(next.npcs, mu.npc, mu.npc) : undefined;
     if (who) { if (rulesOf(next).npc.writeMemory) Object.assign(next, remember(next, who.id, "player", text, time)); } // 底层规则可关闭 NPC 私有记忆写入
-    else if (!(next.memory ?? "").includes(text)) next.memory = `${next.memory ? `${next.memory}\n` : ""}· ${text}`.slice(-4000);
+  }
+  // 功能注释：主线记忆 → 剧情事件线（游戏日 / 地点 / 人物 / 重要度，关键事件同步进本存档世界书）；场景变化 → 场景记忆 / 在场者穿着
+  {
+    const mains = (Array.isArray(step.memory_updates) ? step.memory_updates : [])
+      .map((m) => (typeof m === "string" ? { scope: "main" as const, text: m } : m))
+      .filter((m) => m && m.scope !== "npc" && String(m.text ?? "").trim());
+    const roomName = (id?: string) => (id ? spotName(next, id) ?? worldLocOf(id)?.name ?? id : "");
+    const mem = applyMemory(next, mains, step.scene_memory, { roomName, defaultBook: defaultWorldBook });
+    if (mem !== next) Object.assign(next, mem);
   }
   if (typeof step.save_summary === "string" && step.save_summary.trim()) next.saveSummary = step.save_summary.trim().slice(0, 60);
   // tabs 分发：只收文字摘要写进状态中枢，各 Tab 读取展示；数值事实一律来自上面已结算的状态，Tab 不自行决定

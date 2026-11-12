@@ -222,7 +222,7 @@
     justify-content: center;
     gap: 8px;
     font-size: 0.9rem;
-    color: color-mix(in srgb, var(--color-shadow) 60%, transparent);
+    color: var(--color-text-muted);
 }
 
 .switchBtn {

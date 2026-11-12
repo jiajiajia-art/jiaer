@@ -18,9 +18,9 @@ test('Create_KK币统计行不再展示提现且新页面复用提现流程', ()
 
   assert.doesNotMatch(create, /primaryStatWithdrawLink|primaryStatLabelSep/);
   assert.doesNotMatch(createCss, /\.primaryStatWithdrawLink\s*\{|\.primaryStatLabelSep\s*\{/);
-  assert.match(incentive, /WithdrawFlowModal/);
-  assert.match(incentive, /setIsWithdrawModalOpen\(true\)/);
-  assert.match(incentive, /create\.withdraw/);
+  // 提现改由创作者中心的收益总览发起：CreatorEarningsOverview.onWithdraw → CreatorEarningsWithdrawalModal
+  assert.match(incentive, /<CreatorEarningsWithdrawalModal/);
+  assert.match(incentive, /onWithdraw=\{\(\) => setWithdrawOpen\(true\)\}/);
   assert.match(incentiveCss, /\.withdrawButton\s*\{[\s\S]*?min-height:\s*44px/);
   assert.match(incentiveCss, /\.settlementGrid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4,/);
   assert.doesNotMatch(

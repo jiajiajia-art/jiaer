@@ -64,6 +64,7 @@ const StoryQuestPanel = lazyPanel(() => import("./StoryQuestPanel"));
 import MudChrome, { menuItems, NavTabsEditor, type MudTab } from "./MudChrome";
 import ScheduleBoard from "./ScheduleBoard";
 import { Chip, Modal, toneColor } from "./ui";
+import NewSpotImagePrompt from "./NewSpotImagePrompt";
 import { useConfirm } from "./EditorKit";
 import { IconBook, IconCamera, IconClose, IconFlag, IconHeart, IconMenu, IconMoon, IconMusic, IconPin, IconPlay, IconSave, IconScroll, IconSettings, IconSpark, IconSparkle, IconStar, IconSun, IconUser, IconWallet, IconClock } from "../lib/icons";
 import { Segments, CastRow } from "./StoryTab";
@@ -76,6 +77,8 @@ import { topbarSummary } from "../lib/topbarDiy";
 import { defaultWorldBook } from "../game/worldbook";
 import { EntityProvider } from "./EntityText";
 import { listManualSaves, saveToSlot, deleteSlot, renameSlot, getSlot, MAX_SLOTS, AUTO_SLOT_ID, type SaveSlot, defaultTheme } from "../lib/store";
+import { syncCloudSaves } from "../lib/storage";
+import CloudSaveStatus from "./CloudSaveStatus";
 import { isAuthorPreview } from "../lib/authorPreview";
 import { homeMainQuest } from "../lib/homeMainQuest";
 import { dayDateLabel } from "../game/logic";
@@ -808,12 +811,14 @@ export default function GameShell() {
       : {}),
   };
 
-  const refreshSaves = async () => {
+  const refreshSaves = async (pull = false) => {
+    // 功能注释：打开面板时先拉云端（换设备继续玩），存/删后只刷本机列表
+    if (pull) await syncCloudSaves();
     const [manual, auto] = await Promise.all([listManualSaves(), getSlot(AUTO_SLOT_ID)]);
     setSaves(manual);
     setAutoSlot(auto);
   };
-  const openSaves = () => { void refreshSaves(); setEditId(null); setSavesOpen(true); };
+  const openSaves = () => { void refreshSaves().then(() => refreshSaves(true)); setEditId(null); setSavesOpen(true); };
   // 立即存档：把当前进度刷入自动存档槽
   const quickSave = async () => {
     const ok = await saveNow();
@@ -859,6 +864,8 @@ export default function GameShell() {
 
   return (
     <EntityProvider>
+    {/* 功能注释：剧情出现新地点且素材库无图时，提示玩家生成场景图 */}
+    <NewSpotImagePrompt />
     {landscape && (
       /* ═══════════ 横屏 · 橙光式版式 ═══════════
          直接以真正的「世界」页（HomeTab）作为顶天立地的主场景，
@@ -1343,6 +1350,7 @@ export default function GameShell() {
               <p className="truncate text-[11.5px] text-ink-soft">{game.world.time} · {game.world.location} · 第 {game.turnCount} 回合</p>
               {saveMsg === "ok" && <p className="mt-0.5 text-[11px] text-jade">已写入本地大容量存档</p>}
               {saveMsg === "fail" && <p className="mt-0.5 text-[11px] text-danger">存档失败：本地存储不可用</p>}
+              <CloudSaveStatus />
             </div>
             <button
               onClick={() => void quickSave()}

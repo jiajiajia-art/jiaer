@@ -1,10 +1,11 @@
 import AiRoutePicker from "./AiRoutePicker";
-import { addTempAsset, keepAsset, isAssetKept } from "../lib/freeStyle";
+import { addTempAsset, keepAsset, isAssetKept, type AssetKind } from "../lib/freeStyle";
 import { useEffect, useRef, useState } from "react";
 import { compressImage } from "../lib/freeStyle";
 import { generatePlatformImage, platformImageConfigured } from "../lib/platformImageGen";
-import { composePositivePrompt, type EditorImagePromptParts } from "../lib/editorImagePrompts";
+import { composePositivePrompt, mergeNegativePrompt, rememberArtStyleSample, type EditorImagePromptParts } from "../lib/editorImagePrompts";
 import { useGame } from "../store/gameCtx";
+import ArtStylePicker from "./ArtStylePicker";
 
 const MAX_REFS = 2;
 
@@ -40,6 +41,8 @@ export default function AiImageGen({
   autoRun = false,
   autoApply = false,
   onPhaseChange,
+  assetKind,
+  assetName = "AI 生图",
 }: {
   onPick: (src: string) => void;
   placeholder?: string;
@@ -54,6 +57,9 @@ export default function AiImageGen({
   autoApply?: boolean;
   /** 功能注释：供外层 Modal 改标题（生成结果）或锁定关闭 */
   onPhaseChange?: (phase: AiImageGenPhase) => void;
+  /** 功能注释：存进素材库时的分类与名称（如人物头像 = avatar + 人物名） */
+  assetKind?: AssetKind;
+  assetName?: string;
 }) {
   const { cfg } = useGame();
   const [prompt, setPrompt] = useState(initialPrompt ?? "");
@@ -89,7 +95,10 @@ export default function AiImageGen({
   }, [initialPrompt]);
 
   // 功能注释：有三层时，正向 = 画风 + 主体；没有则沿用单段 prompt
-  const positive = layered ? composePositivePrompt({ style, subject }) : prompt.trim();
+  // 功能注释：单段模式也可选画风；选了就拼在提示词前
+  const positive = layered
+    ? composePositivePrompt({ style, subject })
+    : (style.trim() ? composePositivePrompt({ style, subject: prompt }) : prompt.trim());
 
   // 功能注释：生成中显示已用秒数，驱动进度条缓升（不到 100%，完成后再满）
   useEffect(() => {
@@ -123,16 +132,18 @@ export default function AiImageGen({
     try {
       const url = await generatePlatformImage(cfg, p, size, {
         referenceImages: refs,
-        negativePrompt: layered ? negative.trim() : undefined,
+        negativePrompt: negative.trim() || undefined,
         signal: ac.signal,
         feature: "image:ai-image-gen",
       });
       if (ac.signal.aborted) return;
       setImg(url);
-      addTempAsset(url);
+      if (!addTempAsset(url, assetName, assetKind)) setErr("本地存储空间不足，这张图没能存进素材库；可删掉一些本地图片或配置图床");
+      rememberArtStyleSample(style, url);
       setKept(false);
       // 功能注释：仅显式 autoApply 时跳过结果页（旧调用兼容）；默认要玩家点「使用这张图」
       if (autoApply) {
+        keepAsset(url, assetName, assetKind);
         onPickRef.current(url);
         goPhase("done");
       } else {
@@ -215,7 +226,12 @@ export default function AiImageGen({
             </button>
             <button
               type="button"
-              onClick={() => onPick(img)}
+              onClick={() => {
+                // 功能注释：用上的生图转长期保留，避免 7 天后从素材库消失
+                keepAsset(img, assetName, assetKind);
+                setKept(true);
+                onPick(img);
+              }}
               className="rounded-full bg-ink py-2.5 text-[13px] font-bold text-paper transition"
             >
               使用这张图
@@ -228,7 +244,7 @@ export default function AiImageGen({
             <button
               type="button"
               disabled={kept || isAssetKept(img)}
-              onClick={() => { keepAsset(img); setKept(true); }}
+              onClick={() => { keepAsset(img, assetName, assetKind); setKept(true); }}
               className="shrink-0 rounded-full border border-ink/20 bg-paper px-3 py-1 text-[11.5px] font-bold text-ink transition disabled:opacity-50"
             >
               {kept || isAssetKept(img) ? "已收藏" : "收藏到素材库"}
@@ -280,6 +296,28 @@ export default function AiImageGen({
                 e.target.value = "";
               }}
             />
+          </div>
+
+          {/* 功能注释：画风快捷选择，所有生图入口共用 */}
+          <div>
+            <p className="mb-1.5 text-[11px] font-bold tracking-wide text-ink-soft">选择画风 · 点选填入，可再手改</p>
+            <ArtStylePicker value={style} disabled={locked} onChange={(v, preset) => {
+              setStyle(v);
+              // 功能注释：选中画风时并入该画风的负面词（排除三次元 / 低质）
+              if (preset) setNegative((n) => mergeNegativePrompt(n, preset.negative));
+            }} />
+            {!layered && (
+              <textarea
+                rows={2}
+                value={style}
+                readOnly={locked}
+                onChange={(e) => setStyle(e.target.value)}
+                placeholder="选填：自定义画风；留空则按提示词生成"
+                className={`mt-1.5 w-full rounded-lg border border-line px-2.5 py-1.5 text-[12.5px] text-ink outline-none focus:border-coral ${
+                  locked ? "cursor-not-allowed bg-paper-2 text-ink-soft" : "bg-paper"
+                }`}
+              />
+            )}
           </div>
 
           {layered ? (

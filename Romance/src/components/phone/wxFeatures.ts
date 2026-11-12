@@ -1,7 +1,8 @@
 /* 绿信扩展：表情包贴纸 / 气泡样式 / 摇一摇陌生人 / AI 主动发消息 */
+import { A_DEFAULTS, bubbleThemeOf, ensureBubbleCss, type BubbleTheme } from "./bubbleThemes";
 import { commTerm, isAncientComm } from "../../lib/commSkin";
 import { msgPrefOf } from "../../game/msgPref";
-import { loadData, saveData, onClearPlayerMemory, onLoadPlayerData } from "../../lib/saveScope";
+import { loadData, saveData, loadGlobal, saveGlobal, onClearPlayerMemory, onLoadPlayerData } from "../../lib/saveScope";
 import { useEffect, useRef, useSyncExternalStore, type CSSProperties } from "react";
 import { withAlpha, type WxChatStyle } from "./wxSettings";
 import { useGame } from "../../store/gameCtx";
@@ -19,7 +20,7 @@ import { liveTerm as T } from "../../mods/live";
 
 /* 扩展消息：kind 区分贴纸 / 相册图片 / 通话记录（老消息无 kind，按原逻辑渲染） */
 export type XMsg = ChatMsg & {
-  kind?: "sticker" | "photo" | "call" | "voice" | "redpacket" | "transfer" | "recall";
+  kind?: "sticker" | "photo" | "call" | "voice" | "redpacket" | "transfer" | "recall" | "pat";
   dur?: number; // 语音秒数
   amount?: number; // 红包 / 转账金额（游戏资金）
   note?: string; // 红包祝福语 / 转账说明
@@ -243,8 +244,31 @@ export const BUBBLE_STYLES: BubbleStyle[] = [
 export const bubbleStyleOf = (id?: string) => BUBBLE_STYLES.find((b) => b.id === id) ?? BUBBLE_STYLES[0];
 
 /** 聊天外观：全局「聊天样式」+ 会话自定义（会话优先）→ 气泡类名 / 内联样式 / 背景 / 头像圆角 */
-export function chatLook(g: WxChatStyle, threadCustom?: { bubble?: string; bg?: string }) {
-  const b = bubbleStyleOf(threadCustom?.bubble ?? g.bubble);
+export function chatLook(g: WxChatStyle, threadCustom?: { bubble?: string; bg?: string }, opts?: { previewCss?: string }) {
+  const id = threadCustom?.bubble ?? g.bubble;
+  // 功能注释：新版 A/B 气泡主题 + 自定义 CSS（旧预设 classic / cream … 仍按下方旧逻辑渲染，老设置不变样）
+  const theme = bubbleThemeOf(id);
+  if (theme) {
+    ensureBubbleCss(g.customCss ?? "", opts?.previewCss);
+    const isA = theme.kind === "A";
+    const custom = theme.id === "custom" ? (opts?.previewCss != null ? "wxb-custom-preview" : "wxb-custom") : "";
+    const cls = (mine: boolean) => `wxb wxb-${theme.kind} wxb-${theme.id} ${custom} ${mine ? "wxb-me" : "wxb-them"} px-3 py-[9px]`;
+    const style = (mine: boolean, fontPx?: number): CSSProperties => {
+      if (!isA) return fontPx ? { fontSize: fontPx } : {};
+      const bg = (mine ? g.meColor : g.themColor) || (mine ? A_DEFAULTS.meBg : A_DEFAULTS.themBg);
+      const fg = (mine ? g.meText : g.themText) || (mine ? A_DEFAULTS.meFg : A_DEFAULTS.themFg);
+      return {
+        ...(fontPx ? { fontSize: fontPx } : {}),
+        ["--wxb-bg" as string]: withAlpha(bg, g.alpha),
+        ["--wxb-fg" as string]: fg,
+        borderRadius: g.radius,
+        ...(g.border ? { border: `1.5px solid ${g.borderColor}` } : {}),
+        ...(g.alpha < 100 ? { backdropFilter: "blur(8px)" } : {}),
+      } as CSSProperties;
+    };
+    return { bubble: bubbleStyleOf("classic"), theme, cls, style, bg: bgCss(threadCustom?.bg ?? (g.chatBg || undefined)), avatarRadius: g.avatarRadius };
+  }
+  const b = bubbleStyleOf(id);
   const tail = b.tail && g.radius <= 6 && !g.border && !g.meColor && !g.themColor;
   const cls = (mine: boolean) => `${tail ? `wx-bubble ${mine ? "wx-bubble-right" : "wx-bubble-left"}` : ""} px-3 py-[9px] ${mine ? b.me : b.them}`;
   const style = (mine: boolean, fontPx?: number): CSSProperties => {
@@ -259,11 +283,11 @@ export function chatLook(g: WxChatStyle, threadCustom?: { bubble?: string; bg?: 
       ...(g.alpha < 100 && col ? { backdropFilter: "blur(8px)" } : {}),
     };
   };
-  return { bubble: b, cls, style, bg: bgCss(threadCustom?.bg ?? (g.chatBg || undefined)), avatarRadius: g.avatarRadius };
+  return { bubble: b, theme: undefined as BubbleTheme | undefined, cls, style, bg: bgCss(threadCustom?.bg ?? (g.chatBg || undefined)), avatarRadius: g.avatarRadius };
 }
 
 /* ── 陌生人（摇一摇）：资料存 localStorage，会话/联系人存 game.phone ── */
-export type Stranger = { id: string; name: string; age: number; gender: "男" | "女"; occupation: string; persona: string; signature: string; avatar: string; mem: string[] };
+export type Stranger = { id: string; name: string; age: number; gender: "男" | "女"; occupation: string; persona: string; signature: string; avatar: string; mem: string[]; met?: boolean };
 const ST_KEY = "star2005.wx.strangers";
 function loadSt(): Record<string, Stranger> {
   return loadData<Record<string, Stranger>>(ST_KEY, {}) || {};
@@ -320,6 +344,60 @@ export async function generateStranger(cfg: AIConfig, game: GameState): Promise<
   }
   // 没有 AI / 生成失败：不拿预设人物顶替
   throw new Error(isConfigured(cfg) ? "附近暂时没人，再摇一次试试" : "接入 AI 后才能摇到附近的人");
+}
+
+/* ── 自定义表情包：玩家自己添加（全局保存，跨存档可用）；AI 可用的表情包 = 内置（开关）+ 自定义（开关）── */
+export type CustomSticker = { id: string; name: string; src: string };
+const CS_KEY = "star2005.wx.customStickers";
+let customStickers: CustomSticker[] = loadGlobal<CustomSticker[]>(CS_KEY, []) || [];
+const csSubs = new Set<() => void>();
+function saveCs() { saveGlobal(CS_KEY, customStickers); csSubs.forEach((f) => f()); }
+export function useCustomStickers(): CustomSticker[] {
+  return useSyncExternalStore((f) => { csSubs.add(f); return () => { csSubs.delete(f); }; }, () => customStickers);
+}
+export function addCustomSticker(name: string, src: string) {
+  const nm = name.replace(/[[\]【】：:]/g, "").trim().slice(0, 8) || "表情";
+  customStickers = [...customStickers, { id: `cs_${Date.now().toString(36)}`, name: nm, src }].slice(-60);
+  saveCs();
+}
+export function removeCustomSticker(id: string) { customStickers = customStickers.filter((s) => s.id !== id); saveCs(); }
+/** 玩家此刻能用的表情包（面板用） */
+export function usableStickers(st: { builtinStickers: boolean }): { id: string; name: string; src: string }[] {
+  return [...(st.builtinStickers ? STICKER_SET : []), ...customStickers];
+}
+/** 提示给 AI 的表情包（名字列表）：内置开着就给；自定义需打开「启用为提示词」 */
+export function aiStickers(st: { builtinStickers: boolean; customStickerPrompt: boolean }): { id: string; name: string; src: string }[] {
+  return [...(st.builtinStickers ? STICKER_SET : []), ...(st.customStickerPrompt ? customStickers : [])];
+}
+/** AI 回复里单独一条「[表情包：名字]」→ 对应表情包；名字不在可用列表里返回 null（按普通文字处理） */
+export function stickerFromBubble(text: string, list: { id: string; name: string; src: string }[]): { name: string; src: string } | null {
+  const m = text.trim().match(/^[[【]表情包?[：:]\s*([^\]】]+)[\]】]$/);
+  if (!m) return null;
+  const hit = list.find((s) => s.name === m[1].trim());
+  return hit ? { name: hit.name, src: hit.src } : null;
+}
+
+/* ── 摇一摇 → 约见面：聊满一定条数后可约在主角所在地见面，见面后正式加入人物名单（有地点、好感、剧情记忆）── */
+export const MEET_MIN_MSGS = 12;
+/** 主角在与 TA 的私聊里发过的消息条数（约见面门槛） */
+export function meetProgress(g: GameState, pid: string): number {
+  const t = (g.phone?.threads ?? []).find((x) => x.kind !== "group" && x.personId === pid);
+  return (t?.msgs ?? []).filter((m) => m.role === "me").length;
+}
+/** 见面：把陌生人写进人物名单并落座到见面地点；聊天记录与 TA 记住的事一并带上 */
+export function promoteStranger(g: GameState, s: Stranger, room: string): GameState {
+  const base = strangerNpc(s);
+  const npc: Npc = {
+    ...base,
+    home: room,
+    affinity: Math.max(base.affinity ?? 0, 10),
+    relation: "摇一摇认识的网友，已线下见过面",
+    persona: { gender: s.gender, text: `${s.persona}（你和主角通过「摇一摇」在网上认识，聊过一阵后约出来见了面，现在是现实里的朋友）` },
+  } as Npc;
+  const npcs = g.npcs.some((n) => n.id === s.id) ? g.npcs.map((n) => (n.id === s.id ? { ...n, ...npc } : n)) : [...g.npcs, npc];
+  const met = Array.from(new Set([...(g.sim.metPeople ?? []), s.id]));
+  saveStranger({ ...s, met: true });
+  return { ...g, npcs, sim: { ...g.sim, metPeople: met, mobs: { ...(g.sim.mobs ?? {}), [s.id]: room } } };
 }
 
 /* 把陌生人包装成临时 Npc，复用 requestChatReply 的人设扮演 */

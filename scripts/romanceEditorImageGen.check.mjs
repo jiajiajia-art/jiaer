@@ -216,7 +216,7 @@ test('AiImageGen_三层可编辑_正向画风加主体_负面词单独传_重绘
   assert.match(gen, /本张主体 · 只写这一张/);
   assert.match(gen, /负面词 · 不想出现的内容/);
   assert.match(gen, /composePositivePrompt\(\{ style, subject \}\)/);
-  assert.match(gen, /negativePrompt: layered \? negative\.trim\(\) : undefined/);
+  assert.match(gen, /negativePrompt: negative\.trim\(\) \|\| undefined/);
   assert.match(gen, /onPartsCommit/);
   // 功能注释：参考图初始值取 initialRefs 前 MAX_REFS 张，创作者可移除
   assert.match(gen, /useState<string\[\]>\(\(\) => \(initialRefs \?\? \[\]\)\.filter\(Boolean\)\.slice\(0, MAX_REFS\)\)/);
@@ -247,12 +247,12 @@ test('人物卡_生图用外观描述三层_重绘默认带当前头像', () => 
   const panel = read('components/ModEditorPanel.tsx');
   assert.match(panel, /buildNpcAvatarPromptParts/);
   assert.match(panel, /from ["']\.\.\/lib\/editorImagePrompts["']/);
-  assert.match(panel, /aiGen=\{\{[\s\S]*initialParts: buildNpcAvatarPromptParts/);
+  assert.match(panel, /<AiImageGen[\s\S]*initialParts=\{buildNpcAvatarPromptParts/);
   assert.match(panel, /appearancePrompt: n\.appearancePrompt/);
   // 功能注释：头像生图主体不再喂小传 / 关系
-  assert.doesNotMatch(panel, /initialParts: buildNpcAvatarPromptParts\([\s\S]{0,260}bio: n\.bio/);
-  assert.match(panel, /size: NPC_AVATAR_GEN_SIZE/);
-  assert.match(panel, /initialRefs: n\.avatar \? \[n\.avatar\] : undefined/);
+  assert.doesNotMatch(panel, /initialParts=\{buildNpcAvatarPromptParts\([\s\S]{0,260}bio: n\.bio/);
+  assert.match(panel, /size=\{NPC_AVATAR_GEN_SIZE\}/);
+  assert.match(panel, /initialRefs=\{n\.avatar \? \[n\.avatar\] : undefined\}/);
   assert.match(panel, /n\.avatar/);
   const content = read('worlds/star2005/content.ts');
   assert.match(content, /avatar\?: string/);

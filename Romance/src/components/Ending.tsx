@@ -1012,6 +1012,11 @@ export default function Ending({ snap }: { snap?: Snap }) {
               >
                 结局后记
               </Tag>
+              {game.epiloguePending && !snap && (
+                <p className="mb-2 text-center text-[11.5px] text-[var(--e-soft)]" aria-live="polite">
+                  正在为你撰写完整后记，写好后会自动替换下方内容…
+                </p>
+              )}
               {d.paras.length ? (
                 <div
                   className={`end-lines text-[13.5px] text-[var(--e-ink)] ${

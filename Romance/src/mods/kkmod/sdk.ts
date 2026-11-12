@@ -97,8 +97,8 @@ export function parseKkmodJson(raw: string): KkmodPackage {
 }
 
 /* 属性 SDK：自定义属性定义 / 引用写法 / 校验 / AI 规范说明 */
-export * from "./attrs";
+export * from "./attrs.ts";
 /* 文件 SDK：材质包式虚拟目录（同路径覆盖原版） */
-export * from "./files";
+export * from "./files.ts";
 /* 手机应用 SDK：kkapp@1 配置式可交互应用 */
-export * from "./phoneApp";
+export * from "./phoneApp.ts";

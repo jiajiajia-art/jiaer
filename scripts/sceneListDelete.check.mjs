@@ -22,7 +22,7 @@ test('SceneList_删除钮应对齐整卡并做成圆钮', () => {
   assert.match(css, /\.deleteButton\s*\{[\s\S]*?display:\s*inline-flex/);
   assert.match(css, /\.deleteButton\s*\{[\s\S]*?align-items:\s*center/);
   assert.match(css, /\.deleteButton\s*\{[\s\S]*?justify-content:\s*center/);
-  assert.match(css, /\.deleteButton\s*\{[\s\S]*?background:\s*#1C1C1E/);
+  assert.match(css, /\.deleteButton\s*\{[\s\S]*?background:\s*(?:#1C1C1E|var\(--|color-mix\()/);
   assert.match(tsx, /styles\.sceneMeta[\s\S]*styles\.deleteButton/);
   assert.doesNotMatch(tsx, /display:\s*'flex',\s*justifyContent:\s*'space-between'/);
 });

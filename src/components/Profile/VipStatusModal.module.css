@@ -1,38 +1,67 @@
+/* 功能注释：「我的会员」风格化 —— 暗夜绯红丝绒 + 会员卡质感（光泽扫过、细金描边），桌面与手机均为居中卡片 */
 .overlay {
+    --vip-red: #e2455f;
+    --vip-red-deep: #9e1f37;
+    --vip-gold: #f3c98b;
+    --vip-ink: #141217;
     position: fixed;
     inset: 0;
     z-index: 2050;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 24px;
     box-sizing: border-box;
-    background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
-    backdrop-filter: blur(6px);
-    animation: fadeIn 0.2s ease;
+    background:
+        radial-gradient(60% 40% at 50% 30%, rgba(226, 69, 95, 0.16), transparent 70%),
+        rgba(6, 5, 8, 0.72);
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.22s ease;
 }
 
 .modal {
     position: relative;
-    width: min(460px, calc(100vw - 40px));
-    max-height: calc(100dvh - 40px);
+    width: min(400px, 100%);
+    max-height: calc(100dvh - 64px);
     overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
     box-sizing: border-box;
-    padding: 20px;
-    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
-    border-radius: 20px;
-    background: var(--color-surface);
-    color: var(--color-text);
-    box-shadow: 0 30px 80px color-mix(in srgb, var(--color-shadow) 60%, transparent);
-    animation: rise 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+    padding: 18px 18px 16px;
+    border-radius: 22px;
+    background:
+        radial-gradient(120% 60% at 50% -10%, rgba(226, 69, 95, 0.22), transparent 55%),
+        linear-gradient(180deg, #1d1a20 0%, var(--vip-ink) 100%);
+    color: #f4f1f3;
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.06),
+        0 1px 0 rgba(255, 255, 255, 0.08) inset,
+        0 30px 80px rgba(0, 0, 0, 0.6),
+        0 0 60px rgba(226, 69, 95, 0.12);
+    animation: rise 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+.modal::-webkit-scrollbar { display: none; }
+
+/* 顶部一道绯红光边 */
+.modal::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 18%;
+    right: 18%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--vip-red), var(--vip-gold), var(--vip-red), transparent);
+    opacity: 0.9;
+}
+
+/* —— 头部 —— */
 .header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 16px;
+    gap: 12px;
+    margin-bottom: 14px;
 }
 
 .header > div {
@@ -43,44 +72,48 @@
 
 .header h2 {
     margin: 0;
-    font-size: 18px;
-    font-weight: 700;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
 }
 
 .vipMark {
     display: inline-flex;
     align-items: center;
-    height: 22px;
-    padding: 0 8px;
+    height: 20px;
+    padding: 0 7px;
     border-radius: 6px;
-    background: var(--main-background);
-    color: var(--color-on-primary);
-    font-size: 11px;
+    background: linear-gradient(135deg, var(--vip-gold), #d99a55);
+    color: #3a1f0c;
+    font-size: 10.5px;
     font-weight: 900;
-    letter-spacing: 0.06em;
+    font-style: italic;
+    letter-spacing: 0.08em;
+    box-shadow: 0 2px 10px rgba(243, 201, 139, 0.3);
 }
 
 .closeButton {
     position: relative;
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
     flex-shrink: 0;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 50%;
-    background: color-mix(in srgb, var(--color-text) 6%, transparent);
-    color: var(--color-text-secondary);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(244, 241, 243, 0.6);
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s, color 0.15s, transform 0.2s;
 }
 
 .closeButton span::before,
 .closeButton span::after {
     content: '';
     position: absolute;
-    top: 15px;
-    left: 10px;
-    width: 12px;
+    top: 50%;
+    left: 50%;
+    width: 11px;
     height: 1.5px;
+    margin: -0.75px 0 0 -5.5px;
     border-radius: 2px;
     background: currentColor;
 }
@@ -90,170 +123,244 @@
 
 .closeButton:hover,
 .closeButton:focus-visible {
-    background: color-mix(in srgb, var(--color-text) 12%, transparent);
-    color: var(--color-text);
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    transform: rotate(90deg);
+    outline: none;
 }
 
+/* —— 周卡 / 月卡切换 —— */
 .planTabs {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 4px;
-    margin-bottom: 14px;
-    padding: 4px;
-    border-radius: 12px;
-    background: color-mix(in srgb, var(--color-text) 5%, transparent);
+    margin-bottom: 12px;
+    padding: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.3);
 }
 
 .planTab {
     min-width: 0;
-    height: 36px;
+    height: 32px;
     border: 0;
-    border-radius: 9px;
+    border-radius: 999px;
     background: transparent;
-    color: var(--color-text-secondary);
-    font-size: 14px;
-    font-weight: 600;
+    color: rgba(244, 241, 243, 0.55);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
     cursor: pointer;
-    transition: background 0.2s, color 0.2s;
+    transition: background 0.25s, color 0.2s, box-shadow 0.25s;
 }
 
-.planTab:hover { color: var(--color-text); }
+.planTab:hover { color: #fff; }
 
 .planTabSelected {
-    background: color-mix(in srgb, var(--color-text) 12%, transparent);
-    color: var(--color-text);
-    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 30%, transparent);
+    background: linear-gradient(135deg, var(--vip-red), var(--vip-red-deep));
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(226, 69, 95, 0.35), 0 1px 0 rgba(255, 255, 255, 0.2) inset;
 }
 
 .planTab:focus-visible {
-    outline: 2px solid var(--color-primary-light);
+    outline: 2px solid var(--vip-gold);
     outline-offset: -2px;
 }
 
+/* —— 会员卡 —— */
 .hero {
     position: relative;
     overflow: hidden;
-    padding: 18px;
-    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    isolation: isolate;
+    padding: 16px;
     border-radius: 16px;
-    background: color-mix(in srgb, var(--color-text) 4%, transparent);
+    background:
+        radial-gradient(90% 120% at 100% 0%, rgba(243, 201, 139, 0.16), transparent 50%),
+        linear-gradient(140deg, #3a1520 0%, #24121a 45%, #17121a 100%);
+    box-shadow:
+        0 0 0 1px rgba(243, 201, 139, 0.16) inset,
+        0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* 卡面细纹 */
+.hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 7px);
+}
+
+/* 光泽扫过 */
+.hero::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -60%;
+    z-index: -1;
+    width: 40%;
+    height: 200%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+    transform: rotate(18deg);
+    animation: sheen 5.5s ease-in-out infinite;
 }
 
 .heroActive {
-    border-color: color-mix(in srgb, var(--color-primary) 50%, transparent);
+    box-shadow:
+        0 0 0 1px rgba(243, 201, 139, 0.45) inset,
+        0 12px 30px rgba(0, 0, 0, 0.35),
+        0 0 28px rgba(226, 69, 95, 0.25);
 }
 
 .heroTop {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
+    gap: 10px;
 }
 
 .heroEyebrow {
-    margin: 0 0 4px;
-    color: var(--color-text-secondary);
-    font-size: 12px;
+    margin: 0 0 3px;
+    color: var(--vip-gold);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    opacity: 0.85;
 }
 
 .heroTop h3 {
     margin: 0;
-    font-size: 22px;
-    font-weight: 800;
-    letter-spacing: 0.02em;
+    font-size: 19px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    background: linear-gradient(180deg, #fff 30%, #f6d7dc);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
 
 .heroValue {
-    margin: 10px 0 16px;
-    color: var(--color-text-secondary);
-    font-size: 13px;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin: 10px 0 12px;
+    color: rgba(244, 241, 243, 0.62);
+    font-size: 12px;
 }
 
 .heroValue strong {
     margin: 0 2px;
-    color: var(--color-primary-fg);
-    font-size: 20px;
-    font-weight: 800;
+    background: linear-gradient(180deg, #ffe3b3, var(--vip-gold) 55%, #d9924b);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-size: 26px;
+    font-weight: 900;
+    line-height: 1;
     font-variant-numeric: tabular-nums;
 }
 
 .statusBadge {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    height: 24px;
-    padding: 0 10px;
+    gap: 5px;
+    height: 22px;
+    padding: 0 9px;
     border-radius: 999px;
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 10.5px;
+    font-weight: 700;
     white-space: nowrap;
+    backdrop-filter: blur(4px);
 }
 
 .statusBadge i {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     background: currentColor;
 }
 
 .status_active {
-    background: color-mix(in srgb, var(--color-primary) 16%, transparent);
-    color: var(--color-primary);
+    background: rgba(243, 201, 139, 0.14);
+    box-shadow: 0 0 0 1px rgba(243, 201, 139, 0.35) inset;
+    color: var(--vip-gold);
 }
+
+.status_active i { box-shadow: 0 0 6px currentColor; }
 
 .status_expired,
 .status_inactive {
-    background: color-mix(in srgb, var(--color-shadow) 30%, transparent);
-    color: var(--color-text-secondary);
+    background: rgba(0, 0, 0, 0.35);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+    color: rgba(244, 241, 243, 0.6);
 }
 
 .timeGrid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     margin: 0;
-    border-radius: 12px;
-    background: color-mix(in srgb, var(--color-text) 4%, transparent);
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.28);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
 }
 
 .timeGrid > div {
     min-width: 0;
-    padding: 10px 12px;
+    padding: 8px 10px;
 }
 
 .timeGrid > div + div {
-    border-left: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+    border-left: 1px dashed rgba(255, 255, 255, 0.08);
 }
 
 .timeGrid dt {
-    margin-bottom: 4px;
-    color: var(--color-text-muted);
-    font-size: 11px;
+    margin-bottom: 3px;
+    color: rgba(244, 241, 243, 0.42);
+    font-size: 10.5px;
 }
 
 .timeGrid dd {
     margin: 0;
-    color: color-mix(in srgb, var(--color-text) 92%, transparent);
-    font-size: 12px;
-    font-weight: 600;
+    color: rgba(244, 241, 243, 0.92);
+    font-size: 11.5px;
+    font-weight: 700;
     font-variant-numeric: tabular-nums;
     word-break: break-all;
 }
 
+/* —— 福利 —— */
 .benefits {
-    margin-top: 18px;
+    margin-top: 14px;
+    padding: 12px 12px 10px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.025);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 }
 
 .benefits h4 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin: 0 0 10px;
-    color: color-mix(in srgb, var(--color-text) 90%, transparent);
-    font-size: 14px;
-    font-weight: 700;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+}
+
+.benefits h4::before {
+    content: '';
+    width: 3px;
+    height: 12px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, var(--vip-gold), var(--vip-red));
 }
 
 .benefits ul {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -262,10 +369,10 @@
 .benefits li {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
-    color: var(--color-text-secondary);
-    font-size: 13px;
-    line-height: 1.5;
+    gap: 8px;
+    color: rgba(244, 241, 243, 0.72);
+    font-size: 12px;
+    line-height: 1.55;
 }
 
 .check {
@@ -273,60 +380,87 @@
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     margin-top: 1px;
     border-radius: 50%;
-    background: color-mix(in srgb, var(--color-primary) 20%, transparent);
-    color: var(--color-primary-fg);
+    background: linear-gradient(135deg, var(--vip-red), var(--vip-red-deep));
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(226, 69, 95, 0.35);
 }
 
+.check svg { width: 10px; height: 10px; }
+
 .sharedNote {
-    margin: 18px 0 0;
-    color: var(--color-text-muted);
-    font-size: 11px;
+    margin: 12px 4px 0;
+    color: rgba(244, 241, 243, 0.38);
+    font-size: 10.5px;
     line-height: 1.6;
     text-align: center;
 }
 
+/* —— 开通按钮 —— */
 .purchaseButton {
+    position: relative;
+    overflow: hidden;
     width: 100%;
-    height: 48px;
+    height: 44px;
     margin-top: 10px;
     border: none;
-    border-radius: 12px;
-    background: var(--main-background);
-    color: var(--color-on-primary);
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #f0607a 0%, var(--vip-red) 45%, var(--vip-red-deep) 100%);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
     cursor: pointer;
-    transition: transform 0.15s, filter 0.15s;
+    box-shadow: 0 8px 22px rgba(226, 69, 95, 0.38), 0 1px 0 rgba(255, 255, 255, 0.25) inset;
+    transition: transform 0.15s, filter 0.15s, box-shadow 0.2s;
+}
+
+.purchaseButton::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -40%;
+    width: 30%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+    transform: skewX(-20deg);
+    animation: btnSheen 3.2s ease-in-out infinite;
 }
 
 .purchaseButton:hover,
 .purchaseButton:focus-visible {
     filter: brightness(1.08);
+    box-shadow: 0 10px 28px rgba(226, 69, 95, 0.5), 0 1px 0 rgba(255, 255, 255, 0.25) inset;
+    outline: none;
 }
 
-.purchaseButton:active {
-    transform: scale(0.98);
-}
+.purchaseButton:active { transform: scale(0.98); }
 
 @keyframes fadeIn { from { opacity: 0; } }
-@keyframes rise { from { opacity: 0; transform: translateY(16px); } }
+@keyframes rise { from { opacity: 0; transform: translateY(14px) scale(0.98); } }
+@keyframes sheen { 0%, 60% { left: -60%; } 100% { left: 130%; } }
+@keyframes btnSheen { 0%, 55% { left: -40%; } 100% { left: 120%; } }
 
+@media (prefers-reduced-motion: reduce) {
+    .hero::after, .purchaseButton::after { animation: none; display: none; }
+}
+
+/* 功能注释：手机端仍居中，左右留边，整体再收一点 */
 @media (max-width: 640px) {
-    .overlay {
-        align-items: flex-end;
-        padding: 0;
-    }
+    .overlay { padding: 20px; }
 
     .modal {
-        width: 100%;
-        max-height: calc(100dvh - 20px);
-        padding: 18px 16px calc(16px + env(safe-area-inset-bottom));
-        border-radius: 20px 20px 0 0;
-        border-bottom: none;
+        width: min(360px, 100%);
+        max-height: calc(100dvh - 96px);
+        padding: 16px 14px 14px;
+        border-radius: 20px;
     }
+
+    .hero { padding: 14px; }
+    .heroTop h3 { font-size: 17px; }
+    .heroValue strong { font-size: 23px; }
+    .purchaseButton { height: 42px; }
 }

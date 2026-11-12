@@ -1,28 +1,29 @@
 /* 微信：仿原生四栏（微信 / 通讯录 / 发现 / 我），微信绿 #07c160、圆角方头像、灰底会话表 */
+import { A_DEFAULTS, BUBBLE_THEMES, CUSTOM_CSS_HINT, bubbleThemeOf } from "./bubbleThemes";
 import { commTerm, commPromptHint } from "../../lib/commSkin";
 import { canInitiate, isBlocked, MSG_PREFS, msgPrefLabel, msgPrefOf, setMsgPref, type MsgPref } from "../../game/msgPref";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useGame } from "../../store/gameCtx";
 import { Avatar } from "../ui";
-import { ensurePhone, threadFor, openThread, createGroup, toggleLike, pushMsg, msgId, gameMinutes, gameTimeLabel, togglePinned, markRead, setThreadCustom, type Thread } from "../../game/phone";
+import { ensurePhone, threadFor, openThread, createGroup, pushMsg, msgId, gameMinutes, gameTimeLabel, togglePinned, markRead, setThreadCustom, type Thread } from "../../game/phone";
 import { LIVE_PERSON_BY_ID as PERSON_BY_ID } from "../../mods/registry";
-import { Empty, LoadMoreButton, seenOf } from "./shared";
+import { Empty } from "./shared";
 import { ChatView } from "./chat";
 import { Moments, addFeedMoments, type FeedMoment } from "./Moments";
-import { useWorldSync, syncJson, loadFeed, saveFeed } from "./worldSync";
+import { useWorldSync, syncJson } from "./worldSync";
 import ProfileView from "./ProfileView";
 import { useWxSettings, setWxSettings, setWxChat, WX_CHAT_DEFAULT, WX_FONT_LABEL, WX_FONT_ORDER, WX_FONT_PX } from "./wxSettings";
 import { BUBBLE_STYLES, CHAT_BGS, bgCss, chatLook, chatBgOptions } from "./wxFeatures";
 import { fileToDataUrl } from "./chat";
 import { generateStranger, saveStranger, useStrangers, customOf, msgPreview, wxTime, initialOf, zhCompare, useFavs, removeFav, incomingReqs, addIncomingReq, resolveIncomingReq, type Stranger, type XCustom } from "./wxFeatures";
 import type { GameState } from "../../lib/types";
-import { IconSearch, IconPlus, IconWallet, IconStar, IconImage, IconGear, IconVideo, IconChevron, IconPlay } from "./icons";
+import { IconSearch, IconPlus, IconWallet, IconStar, IconImage, IconGear, IconChevron } from "./icons";
 import { liveTerm as T } from "../../mods/live";
 import WalletBinder, { peekWalletRequest, takeWalletRequest } from "./WalletBinder";
 import { walletDef, wallet } from "../../game/wallet";
 import { logNpcNet } from "../../game/phoneLink";
 import { affinityOf, romanceBlock } from "../../game/npcKnowledge";
-import { IconCheck, IconHeart, IconMessage } from "../../lib/icons";
+import { IconCheck, IconMessage } from "../../lib/icons";
 import { useCommsBrand } from "./commsBrand";
 
 const WX_GREEN = "var(--wx-accent, #07c160)"; // 功能注释：古风「传讯」皮肤由 .comm-ancient 改写为朱砂
@@ -385,7 +386,7 @@ function ShakePage({ onBack, onOpenChat }: { onBack: () => void; onOpenChat: (th
   );
 }
 
-/* 发现：仿原生分组菜单（朋友圈 / 视频号 / 扫一扫 / 摇一摇 / 看一看 / 搜一搜 / 附近 / 购物 / 小程序），朋友圈进入动态流 */
+/* 发现：朋友圈 / 摇一摇 / 搜一搜（视频号已下线），朋友圈进入动态流 */
 function DiscoverPage({ onSearch, onOpenChat }: { onSearch: () => void; onOpenChat: (threadId: string, greet?: string) => void }) {
   const { momentsPush } = useWxSettings();
   const { game } = useGame();
@@ -393,11 +394,10 @@ function DiscoverPage({ onSearch, onOpenChat }: { onSearch: () => void; onOpenCh
   const letterSkin = useCommsBrand().skin === "letter";
   const [inMoments, setInMoments] = useState(false);
   const [profile, setProfile] = useState<string | null>(null);
-  const [sub, setSub] = useState<"channels" | "shake" | null>(null);
+  const [sub, setSub] = useState<"shake" | null>(null);
   const recent = game!.npcs.slice(0, 3);
 
   if (profile) return <div className="absolute inset-0 z-30 bg-white"><ProfileView pid={profile} onBack={() => setProfile(null)} /></div>;
-  if (sub === "channels") return <div className="absolute inset-0 z-30 bg-white"><WxChannelsPage onBack={() => setSub(null)} /></div>;
   if (sub === "shake") return <div className="absolute inset-0 z-30 bg-white"><ShakePage onBack={() => setSub(null)} onOpenChat={onOpenChat} /></div>;
 
   if (inMoments) {
@@ -436,11 +436,6 @@ function DiscoverPage({ onSearch, onOpenChat }: { onSearch: () => void; onOpenCh
       )}
       {letterSkin && (
         <div><Item icon={<IconImage size={20} className="text-[#2ca35b]" />} label={commTerm("moments")} onClick={() => setInMoments(true)} thumbs={momentsPush} /></div>
-      )}
-      {!letterSkin && (
-        <div>
-          <Item icon={<IconVideo size={20} className="text-[#fa7b2c]" />} label="视频号" onClick={() => setSub("channels")} />
-        </div>
       )}
       {!letterSkin && (
         <div>
@@ -492,12 +487,47 @@ function WxGeneralPage({ onBack }: { onBack: () => void }) {
           <WxSetRow label="多语言" right="简体中文" />
           <WxSetRow label="字体大小" right={WX_FONT_LABEL[st.font]} onClick={nextFont} />
         </div>
-        <div>
-          <WxSetRow label="按下 Enter 键发送消息" right={<WxToggle on={st.enterSend} onChange={(v) => setWxSettings({ enterSend: v })} />} />
+        <div className="space-y-2">
+          <div className="bg-white">
+            <WxSetRow label="回车自动发送" right={<WxToggle on={st.enterSend} onChange={(v) => setWxSettings({ enterSend: v })} />} />
+            <p className="-mt-1 px-4 pb-2.5 text-[11.5px] leading-snug text-ink-soft">开启后，在输入框内按回车键将直接发送消息。</p>
+          </div>
+          <div className="bg-white">
+            <WxSetRow label="攒几条再回（羽毛回复）" right={<WxToggle on={st.batchReply} onChange={(v) => setWxSettings({ batchReply: v })} />} />
+            <p className="-mt-1 px-4 pb-2.5 text-[11.5px] leading-snug text-ink-soft">开启后，发送只是发出；连发几条后点输入栏左侧的羽毛按钮，对方一次回复。关闭则每发一条对方就回。</p>
+          </div>
+          <div className="bg-white">
+            <WxSetRow label="启用拍一拍" right={<WxToggle on={st.pat} onChange={(v) => setWxSettings({ pat: v })} />} />
+            <p className="-mt-1 px-4 pb-2.5 text-[11.5px] leading-snug text-ink-soft">双击好友头像拍一拍。关闭后，AI 将不会收到拍一拍的提示，聊天界面也不会显示拍一拍消息。</p>
+          </div>
+          <div className="bg-white">
+            <WxSetRow label="群聊显示自己名字" right={<WxToggle on={st.groupShowMyName} onChange={(v) => setWxSettings({ groupShowMyName: v })} />} />
+            <p className="-mt-1 px-4 pb-2.5 text-[11.5px] leading-snug text-ink-soft">开启后，你在群聊中发送的消息上方会显示你的名字。</p>
+          </div>
+          <div className="bg-white">
+            <WxSetRow label="私聊显示名字" right={<WxToggle on={st.privateShowNames} onChange={(v) => setWxSettings({ privateShowNames: v })} />} />
+            <p className="-mt-1 px-4 pb-2.5 text-[11.5px] leading-snug text-ink-soft">开启后，私聊时双方的消息上方都会显示名字。</p>
+          </div>
+          <div className="bg-white">
+            <WxSetRow label="气泡显示时间" right={<WxToggle on={st.bubbleTime} onChange={(v) => setWxSettings({ bubbleTime: v })} />} />
+            <p className="-mt-1 px-4 pb-2.5 text-[11.5px] leading-snug text-ink-soft">开启后，在普通消息、引用消息、语音消息的气泡下方显示发送时间。</p>
+          </div>
+          <div className="bg-white">
+            <WxSetRow label="内置表情包" right={<WxToggle on={st.builtinStickers} onChange={(v) => setWxSettings({ builtinStickers: v })} />} />
+            <p className="-mt-1 px-4 pb-2.5 text-[11.5px] leading-snug text-ink-soft">启用后可使用内置表情包，AI 也会知道这些表情包的名字并偶尔发送；关闭后无法使用，AI 也不再收到这些表情的提示。</p>
+          </div>
+          <div className="bg-white">
+            <WxSetRow label="自定义表情启用为提示词" right={<WxToggle on={st.customStickerPrompt} onChange={(v) => setWxSettings({ customStickerPrompt: v })} />} />
+            <p className="-mt-1 px-4 pb-2.5 text-[11.5px] leading-snug text-ink-soft">开启后，你在表情包面板里添加的所有表情包名字会提示给 AI，让 TA 也能发；表情包过多会影响回复速度和消耗。</p>
+          </div>
         </div>
-        <p className="px-6 text-center text-[11px] text-ink-soft/70">
-          点击「字体大小」可切换聊天文字大小；关闭 Enter 发送后，Enter 换行、点「发送」发出。
-        </p>
+        <div className="mx-3 rounded-xl bg-white px-4 py-3 text-[12px] leading-relaxed text-ink-soft">
+          <p className="mb-1 font-semibold text-ink">聊天小技巧</p>
+          <p>· 长按对方最新的回复：选「重新生成」让 TA 换一种回法。</p>
+          <p>· 单击好友头像：看 TA 最近的心声、心事与随笔；双击：拍一拍。</p>
+          <p>· 长按消息气泡：复制、引用、收藏、删除，自己发的还能撤回。</p>
+          <p>· 主角头像请在角色资料里更换。</p>
+        </div>
       </div>
     </div>
   );
@@ -508,7 +538,13 @@ function WxChatStylePage({ onBack }: { onBack: () => void }) {
   const { game } = useGame();
   const st = useWxSettings();
   const c = st.chat;
-  const look = chatLook(c);
+  // 功能注释：自定义 CSS 编辑——三个存档位；「预览」只作用于上方效果预览，「应用」才写进设置
+  const [slot, setSlot] = useState(0);
+  const [cssDraft, setCssDraft] = useState(() => c.customSlots?.[0] || c.customCss || "");
+  const [previewing, setPreviewing] = useState(false);
+  const look = previewing ? chatLook({ ...c, bubble: "custom" }, undefined, { previewCss: cssDraft }) : chatLook(c);
+  const curTheme = bubbleThemeOf(c.bubble);
+  const colorsOn = !curTheme || curTheme.kind === "A"; // 颜色只对 A 类（及旧预设）生效
   const fileRef = useRef<HTMLInputElement>(null);
   const fpx = WX_FONT_PX[st.font];
   const sec = "rounded-xl bg-white p-3";
@@ -519,6 +555,7 @@ function WxChatStylePage({ onBack }: { onBack: () => void }) {
       {label}
       <span className="flex items-center gap-2">
         {value && <button type="button" onClick={(e) => { e.preventDefault(); onChange(""); }} className="text-[11px] text-ink-soft">恢复预设</button>}
+        <span className="font-mono text-[11px] uppercase text-ink-soft">{value || fallback}</span>
         <span className="relative h-7 w-7 overflow-hidden rounded-[6px] border border-black/15" style={{ background: value || fallback }}>
           <input type="color" value={value || fallback} onChange={(e) => onChange(e.target.value)} className="absolute inset-0 cursor-pointer opacity-0" />
         </span>
@@ -536,7 +573,8 @@ function WxChatStylePage({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex h-full flex-col bg-[#ededed]">
       <WxSubHeader title="聊天样式" onBack={onBack} />
-      {/* 实时预览 */}
+      {/* 效果预览 */}
+      <p className="mx-4 mt-1 flex items-center justify-between text-[11px] text-ink-soft"><span>效果预览</span>{previewing && <button type="button" onClick={() => setPreviewing(false)} className="text-[#07a050]">退出自定义预览</button>}</p>
       <div className="mx-3 mt-1 space-y-2.5 overflow-hidden rounded-xl border border-black/10 p-3" style={{ background: look.bg }}>
         <Bub mine={false} text="几点的？" />
         <Bub mine text="两点多，应该要俩小时。" />
@@ -544,19 +582,61 @@ function WxChatStylePage({ onBack }: { onBack: () => void }) {
       </div>
       <div className="mt-3 flex-1 space-y-2.5 overflow-y-auto px-3 pb-6">
         <div className={sec}>
-          <p className={h}>气泡预设</p>
-          <div className="grid grid-cols-3 gap-2">
-            {BUBBLE_STYLES.map((b) => {
-              const on = c.bubble === b.id;
-              return (
-                <button key={b.id} onClick={() => setWxChat({ bubble: b.id })} className={`flex flex-col items-center gap-1.5 rounded-lg border p-2 ${on ? "border-[#07c160] ring-2 ring-[#07c160]/40" : "border-black/10"} ${b.id === "dark" ? "bg-[#1d2028]" : b.id === "frost" ? "bg-gradient-to-br from-[#dcecff] to-[#f4f9ff]" : "bg-[#f3f3f3]"}`}>
-                  <span className={`self-start rounded-lg px-2 py-0.5 text-[11px] ${b.them}`} style={b.themStyle}>你好</span>
-                  <span className={`self-end rounded-lg px-2 py-0.5 text-[11px] ${b.me}`} style={b.meStyle}>在呢～</span>
-                  <span className={`text-[11px] ${on ? "font-semibold text-[#07a050]" : b.id === "dark" ? "text-white/70" : "text-ink-soft"}`}>{b.label}</span>
-                </button>
-              );
-            })}
+          <p className={h}>聊天字体大小</p>
+          <div className="flex gap-1.5">
+            {WX_FONT_ORDER.map((f) => <button key={f} className={seg(st.font === f)} onClick={() => setWxSettings({ font: f })}>{WX_FONT_LABEL[f]}</button>)}
           </div>
+          <p className="mt-1.5 text-[10.5px] text-ink-soft">聊天字体大小同时还取决于自定义字体因素影响。</p>
+        </div>
+
+        <div className={sec}>
+          <p className={h}>聊天气泡样式</p>
+          {(["A", "B"] as const).map((kind) => (
+            <div key={kind} className="mb-2.5 last:mb-0">
+              <p className="mb-1.5 text-[11px] text-ink-soft">{kind === "A" ? "A 类 · 可自定义颜色" : "B 类 · 成套风格（颜色固定）"}</p>
+              <div className="grid grid-cols-3 gap-2">
+                {BUBBLE_THEMES.filter((t) => t.kind === kind).map((t) => {
+                  const on = c.bubble === t.id;
+                  const tl = chatLook({ ...c, bubble: t.id, border: false });
+                  return (
+                    <button key={t.id} onClick={() => { setPreviewing(false); setWxChat({ bubble: t.id }); }} aria-pressed={on}
+                      className={`relative flex flex-col items-stretch gap-1 rounded-lg border bg-[#f3f3f3] p-2 transition ${on ? "border-[#07c160] ring-2 ring-[#07c160]/40" : "border-black/10"}`}>
+                      <span className={`absolute left-1 top-1 rounded px-1 text-[9px] font-black leading-[14px] ${kind === "A" ? "bg-[#07c160]/15 text-[#07a050]" : "bg-[#576b95]/15 text-[#576b95]"}`}>{kind}</span>
+                      {t.id === "custom" ? (
+                        <span className="flex h-[46px] items-center justify-center text-[11px] text-ink-soft">CSS</span>
+                      ) : (<>
+                        <span className={`self-start text-[11px] leading-snug ${tl.cls(false)}`} style={{ ...tl.style(false), padding: "2px 8px" }}>你好</span>
+                        <span className={`self-end text-[11px] leading-snug ${tl.cls(true)}`} style={{ ...tl.style(true), padding: "2px 8px" }}>在呢～</span>
+                      </>)}
+                      <span className={`text-center text-[11px] ${on ? "font-semibold text-[#07a050]" : "text-ink-soft"}`}>{t.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          {!curTheme && <p className="mt-1 text-[10.5px] text-ink-soft">当前用的是旧版预设「{BUBBLE_STYLES.find((b) => b.id === c.bubble)?.label ?? c.bubble}」，选上面任意样式即可切换。</p>}
+        </div>
+
+        <div className={sec}>
+          <p className={h}>自定义气泡样式</p>
+          <div className="mb-2 flex gap-1.5" role="tablist" aria-label="自定义样式存档">
+            {[0, 1, 2].map((i) => (
+              <button key={i} role="tab" aria-selected={slot === i} className={seg(slot === i)} onClick={() => { setSlot(i); setCssDraft(c.customSlots?.[i] ?? ""); }}>
+                存档 {i + 1}{c.customSlots?.[i] ? " ·" : ""}
+              </button>
+            ))}
+          </div>
+          <textarea value={cssDraft} onChange={(e) => setCssDraft(e.target.value)} spellCheck={false} rows={6}
+            placeholder={`在此处输入您的自定义CSS代码...\n\n${CUSTOM_CSS_HINT}`}
+            className="w-full resize-y rounded-[6px] border border-black/10 bg-[#fafafa] p-2 font-mono text-[11.5px] leading-relaxed text-ink outline-none focus:border-[#07c160]" />
+          <div className="mt-2 grid grid-cols-4 gap-1.5">
+            <button className={seg(false)} onClick={() => { setCssDraft(""); setPreviewing(false); }}>清空</button>
+            <button className={seg(previewing)} disabled={!cssDraft.trim()} onClick={() => setPreviewing((v) => !v)}>预览</button>
+            <button className={seg(false)} onClick={() => { const slots = [0, 1, 2].map((i) => (i === slot ? cssDraft : c.customSlots?.[i] ?? "")); setWxChat({ customSlots: slots }); }}>保存</button>
+            <button className="flex-1 rounded-[6px] bg-[#07c160] py-1.5 text-[12.5px] font-semibold text-white disabled:opacity-40" disabled={!cssDraft.trim()} onClick={() => { setPreviewing(false); setWxChat({ customCss: cssDraft, bubble: "custom" }); }}>应用</button>
+          </div>
+          <p className="mt-1.5 text-[10.5px] leading-relaxed text-ink-soft">用 <code>.wxb-me</code>（我的）和 <code>.wxb-them</code>（好友）写样式，只作用于聊天气泡；「保存」存进当前存档位，「应用」后气泡切到「自定义」。</p>
         </div>
 
         <div className={sec}>
@@ -581,22 +661,19 @@ function WxChatStylePage({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className={sec}>
-          <p className={h}>颜色（留空 = 跟随预设）</p>
-          <ColorRow label="我的气泡底色" value={c.meColor} fallback="#95ec69" onChange={(v) => setWxChat({ meColor: v })} />
-          <ColorRow label="我的文字颜色" value={c.meText} fallback="#1a1a1a" onChange={(v) => setWxChat({ meText: v })} />
-          <ColorRow label="对方气泡底色" value={c.themColor} fallback="#ffffff" onChange={(v) => setWxChat({ themColor: v })} />
-          <ColorRow label="对方文字颜色" value={c.themText} fallback="#1a1a1a" onChange={(v) => setWxChat({ themText: v })} />
-          <div className={`mt-2 ${c.meColor || c.themColor ? "" : "opacity-40"}`}>
-            <p className="mb-1 text-[12px] text-ink">气泡不透明度 <span className="text-ink-soft">{c.alpha}%</span></p>
-            <input type="range" min={20} max={100} step={5} value={c.alpha} disabled={!c.meColor && !c.themColor} onChange={(e) => setWxChat({ alpha: Number(e.target.value) })} className="w-full accent-[#07c160]" />
-            <p className="text-[10.5px] text-ink-soft">调低后能透出聊天背景（需先设置自定义底色）。</p>
+          <p className={h}>气泡颜色（限 A 类气泡）</p>
+          {!colorsOn && <p className="mb-1.5 text-[10.5px] text-ink-soft">当前是 B 类成套风格，颜色固定；换成 A 类样式后这里的颜色才会生效。</p>}
+          <div className={colorsOn ? "" : "pointer-events-none opacity-40"}>
+            <ColorRow label="好友消息背景" value={c.themColor} fallback={curTheme ? A_DEFAULTS.themBg : "#ffffff"} onChange={(v) => setWxChat({ themColor: v })} />
+            <ColorRow label="我的消息背景" value={c.meColor} fallback={curTheme ? A_DEFAULTS.meBg : "#95ec69"} onChange={(v) => setWxChat({ meColor: v })} />
+            <p className="mb-0.5 mt-2 text-[11px] text-ink-soft">聊天气泡字体颜色</p>
+            <ColorRow label="好友消息" value={c.themText} fallback={curTheme ? A_DEFAULTS.themFg : "#1a1a1a"} onChange={(v) => setWxChat({ themText: v })} />
+            <ColorRow label="我的消息" value={c.meText} fallback={curTheme ? A_DEFAULTS.meFg : "#1a1a1a"} onChange={(v) => setWxChat({ meText: v })} />
           </div>
-        </div>
-
-        <div className={sec}>
-          <p className={h}>文字大小</p>
-          <div className="flex gap-1.5">
-            {WX_FONT_ORDER.map((f) => <button key={f} className={seg(st.font === f)} onClick={() => setWxSettings({ font: f })}>{WX_FONT_LABEL[f]}</button>)}
+          <div className={`mt-2 ${(curTheme ? colorsOn : c.meColor || c.themColor) ? "" : "opacity-40"}`}>
+            <p className="mb-1 text-[12px] text-ink">气泡不透明度 <span className="text-ink-soft">{c.alpha}%</span></p>
+            <input type="range" min={20} max={100} step={5} value={c.alpha} disabled={curTheme ? !colorsOn : !c.meColor && !c.themColor} onChange={(e) => setWxChat({ alpha: Number(e.target.value) })} className="w-full accent-[#07c160]" />
+            <p className="text-[10.5px] text-ink-soft">调低后能透出聊天背景（需先设置自定义底色）。</p>
           </div>
         </div>
 
@@ -688,68 +765,6 @@ function WxSettingsPage({ onBack }: { onBack: () => void }) {
   );
 }
 
-/* 微信 · 视频号：竖排短视频卡片流（虚构内容） */
-const CHANNEL_FEED = [
-  { get author() { return `${T("city")}美食地图`; }, title: "本周探店 · 弄堂口那家生煎", tag: "美食", likes: "1.2万" },
-  { author: "片场那些事", title: "偶遇剧组转场，围观了半小时", tag: "娱乐", likes: "8973" },
-  { author: "老唱片收藏家", title: "2005 年最好听的十首华语金曲", tag: "音乐", likes: "3.4万" },
-  { author: "城市夜跑团", title: "沿江夜跑十公里，风景绝了", tag: "运动", likes: "622" },
-  { author: "手作小店", title: "手冲一杯挂耳，慢下来的下午", tag: "生活", likes: "2156" },
-];
-type ChannelItem = { author: string; title: string; tag: string; likes: string };
-function WxChannelsPage({ onBack }: { onBack: () => void }) {
-  const { game, cfg, commitGame } = useGame();
-  const likeSet = new Set(game!.phone?.likes ?? []);
-  const [more, setMore] = useState<ChannelItem[]>(() => loadFeed<ChannelItem[]>("wechat.channels.more") ?? []);
-  const [moreLoading, setMoreLoading] = useState(false);
-  const [toast, setToast] = useState("");
-  const flash = (t: string) => { setToast(t); setTimeout(() => setToast(""), 1800); };
-  const feed: ChannelItem[] = [...CHANNEL_FEED, ...more];
-  /* 底部「查看更多」：结合剧情再生成一批视频号内容，接在末尾（持久化） */
-  const loadMore = async () => {
-    if (moreLoading) return;
-    setMoreLoading(true);
-    try {
-      const seen = seenOf(feed.map((v) => v.title));
-      const r = await syncJson<{ videos?: unknown }>(cfg, game!, "wechat-channels", "视频号", `再生成 5 条视频号推荐视频，作者可以是圈内人物（用本名）或各类账号，标题贴合最近剧情或生活日常。返回 JSON：{"videos":[{"author":"作者","title":"视频标题≤24字","tag":"分类2字","likes":"如 3.2万 或 8721"}]}；不要与这些已有内容重复：${seen}`);
-      if (!r) { flash("未配置 AI，暂无更多"); return; }
-      const str = (v: unknown, n: number) => (typeof v === "string" || typeof v === "number" ? String(v).trim().slice(0, n) : "");
-      const fresh: ChannelItem[] = (Array.isArray(r.videos) ? r.videos : []).map((x: any) => ({ author: str(x?.author, 16) || "视频号", title: str(x?.title, 30), tag: str(x?.tag, 4) || "推荐", likes: str(x?.likes, 8) || "1024" })).filter((v) => v.title);
-      if (!fresh.length) { flash("生成失败，请重试"); return; }
-      const next = [...more, ...fresh].slice(-60);
-      setMore(next); saveFeed("wechat.channels.more", next);
-      flash(`新加载 ${fresh.length} 条`);
-    } catch { flash("加载失败，请重试"); } finally { setMoreLoading(false); }
-  };
-  return (
-    <div className="relative flex h-full flex-col bg-white">
-      <WxSubHeader title="视频号" onBack={onBack} />
-      <div className="flex-1 overflow-y-auto">
-        {feed.map((v, i) => {
-          const liked = likeSet.has(`wx:ch:${i}`);
-          return (
-          <div key={i} className="border-b border-black/[0.06] px-4 py-3">
-            <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#07c160]/15 text-[13px] font-bold text-[#07c160]">{v.author[0]}</span>
-              <span className="text-[14px] font-semibold text-ink">{v.author}</span>
-              <span className="ml-auto rounded-full bg-black/[0.05] px-2 py-0.5 text-[11px] text-ink-soft">{v.tag}</span>
-            </div>
-            <p className="mt-2 text-[14px] text-ink">{v.title}</p>
-            <div className="mt-2 flex aspect-video items-center justify-center rounded-lg bg-gradient-to-br from-[#1f2937] to-[#0b1220] text-white/80">
-              <IconPlay size={34} />
-            </div>
-            <div className="mt-2 flex items-center gap-4 text-[13px] text-ink-soft">
-              <button onClick={() => commitGame(toggleLike(game!, `wx:ch:${i}`))} className={liked ? "text-[#e0533d]" : ""}><span className="inline-flex items-center gap-0.5"><IconHeart size={12} /> {liked ? "已赞" : v.likes}</span></button>
-            </div>
-          </div>
-          );
-        })}
-        <LoadMoreButton loading={moreLoading} onClick={loadMore} color="#07c160" />
-      </div>
-      {toast && <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center"><span className="rounded-full bg-black/75 px-3.5 py-1.5 text-[12px] text-white">{toast}</span></div>}
-    </div>
-  );
-}
 
 /* 我 · 收藏：长按消息「收藏」的内容，可删除 */
 function WxFavsPage({ onBack }: { onBack: () => void }) {
@@ -793,7 +808,7 @@ function WxWalletPage({ onBack }: { onBack: () => void }) {
 
 /* 我：个人资料卡 */
 function MePage() {
-  const { game, commitGame } = useGame();
+  const { game } = useGame();
   const brand = useCommsBrand();
   const favs = useFavs();
   const [sub, setSub] = useState<"settings" | "favs" | "wallet" | null>(() => (takeWalletRequest() ? "wallet" : null));
@@ -816,7 +831,8 @@ function MePage() {
     <div className="space-y-2">
       <div className="flex w-full items-center gap-4 bg-white px-6 pb-8 pt-6 text-left">
         <div className="overflow-hidden rounded-[8px]">
-          <Avatar src={game!.player.avatar} name={game!.player.name} size={64} onPick={(src) => commitGame({ ...game!, player: { ...game!.player, avatar: src } })} />
+          {/* 功能注释：主角头像统一在角色资料里更换，手机里只展示 */}
+          <Avatar src={game!.player.avatar} name={game!.player.name} size={64} editable={false} />
         </div>
         <div className="min-w-0">
           <p className="truncate text-[21px] font-semibold text-[#181818]">{game!.player.name}</p>

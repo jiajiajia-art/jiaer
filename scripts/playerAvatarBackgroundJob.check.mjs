@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readBackend, skipNoBackend } from './_backendRepo.mjs';
 import {
   mergeIncomingSessionPlayerProfile,
   mergePlayerAvatarIntoProfile,
@@ -132,11 +133,8 @@ test('Galgame_订阅头像生成完成写回档案', () => {
   assert.match(src, /头像已生成并保存/);
 });
 
-test('backend_player-avatar落盘重读session只补丁头像', () => {
-  const src = readFileSync(
-    join(root, '../Interactive-fiction-backend/interface/handlers/visual/sessionPlayerProfiles.js'),
-    'utf8',
-  );
+test('backend_player-avatar落盘重读session只补丁头像', { skip: skipNoBackend }, () => {
+  const src = readBackend('interface/handlers/visual/sessionPlayerProfiles.js');
   assert.match(src, /落盘前重读 session，只补丁头像字段/);
   assert.match(src, /avatarNeedsRegen:\s*false/);
   assert.doesNotMatch(

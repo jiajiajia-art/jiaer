@@ -1,6 +1,4 @@
 /* 主题入口：新增主题 = 新增一个同名变量的 theme-<name>.css，并加入 lib/theme.ts 的 THEMES */
 @import './theme-base.css';
 @import './theme-default.css';
-@import './theme-ocean.css';
-@import './theme-amber.css';
 @import './theme-crimson.css';

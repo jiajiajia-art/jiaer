@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { EMBED_MB, playableSrc } from "../game/audioLib";
-import { PLATFORM_AUDIO } from "../game/platformAudio";
+import { usePlatformAudio } from "../game/platformAudio";
 import { addBgm, localTrackBlob, localTracks } from "./BgmPanel";
 import { applyMusicRows, bgmSourceOf, musicRows, SOURCE_LABEL, type MusicRow, type MusicSlice } from "../lib/modMusic";
 import { useGame } from "../store/gameCtx";
@@ -21,6 +21,7 @@ const TAB_LABEL: Record<UploadTab, string> = {
 };
 
 export default function ModBgmEditor({ bgm, audioRefs, platformAudioRefs, platformAutoplay, musicOrder, onChange }: MusicSlice & { onChange: (patch: ReturnType<typeof applyMusicRows>) => void }) {
+  const PLATFORM_AUDIO = usePlatformAudio(); // 运营后台音频库（加载完成后自动刷新）
   const { game } = useGame();
   const author = (game?.audio ?? []).map((a) => ({ id: a.id, name: a.name, src: a.src }));
   const look = { author, platform: PLATFORM_AUDIO };

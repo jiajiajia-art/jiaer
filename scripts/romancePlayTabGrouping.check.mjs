@@ -21,6 +21,9 @@ function sectionOpen(title) {
   return panel.slice(Math.max(0, at - 80), at);
 }
 
+// 浏览器端到端：需本机装 playwright 并起好页面；没装时跳过而不是报红
+const playwright = await import('playwright').catch(() => null);
+
 test('未保存顶栏为创建世界_已保存仍为编辑名称', () => {
   assert.match(panel, /persisted \? `编辑「\$\{m\.name \|\| initial\.name\}」` : "创建世界"/);
   assert.doesNotMatch(panel, /新建模组/);
@@ -63,7 +66,7 @@ test('玩法配置区块在基础页_时间推进的行动点留在基础', () =
   assert.doesNotMatch(panel, /title="开局封面"/);
   assert.match(sectionOpen('皮肤美化'), /g="look"/);
   assert.match(sectionOpen('开场剧情'), /g="look"/);
-  assert.match(sectionOpen('剧情美化'), /g="look"/);
+  assert.match(sectionOpen('剧情美化'), /g="story"/); // 剧情美化随条件切换外观，已归入④剧情
   assert.match(sectionOpen('底栏页签'), /g="look"/);
   assert.match(sectionOpen('手机应用配置'), /g="look"/);
   const baseCount = panel.slice(panel.indexOf('base: n('), panel.indexOf('role: n('));
@@ -130,8 +133,8 @@ test('syncFeaturesFromPlayModInstalls_添加座驾孕育即开_移除即关', as
   assert.equal(off.cars, false);
 });
 
-test('线上编辑器_创建世界五页签且基础含玩法无功能开关', { timeout: 90_000 }, async () => {
-  const { chromium } = await import('playwright');
+test('线上编辑器_创建世界五页签且基础含玩法无功能开关', { timeout: 90_000, skip: playwright ? false : '未安装 playwright，跳过浏览器端到端' }, async () => {
+  const { chromium } = playwright;
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1100, height: 900 } });
   const session = {

@@ -15,7 +15,8 @@ import { loadData, saveData } from "../lib/saveScope";
 const PER_TURN = 2;
 type Line = { who: "me" | "npc" | "sys"; text: string };
 
-const GENERIC = ["最近圈里有什么动静？", "你觉得我现在该做什么？", "你最近在忙什么？"];
+/* 功能注释：通用追问不带任何题材措辞（娱乐圈「圈里」等），所有世界观通用 */
+const GENERIC = ["最近有什么新鲜事吗？", "你觉得我现在该做什么？", "你最近在忙什么？"];
 
 export default function IntelAsk({ pid, name, role, intel }: { pid: string; name: string; role?: string; intel: IntelView[] }) {
   const { game, cfg, patchGame, simAskIntel } = useGame();
@@ -53,7 +54,7 @@ export default function IntelAsk({ pid, name, role, intel }: { pid: string; name
     try {
       const g0 = game;
       const npc = g0.npcs.find((n) => n.id === pid);
-      const persona = npc ? `${npc.identity}，对主角好感${npc.affinity}，心情${npc.mood || "平常"}${npc.persona?.text ? `，人设：${npc.persona.text}` : ""}${npc.persona?.voice ? `，口吻：${npc.persona.voice}` : ""}` : role || "圈内人";
+      const persona = npc ? `${npc.identity}，对主角好感${npc.affinity}，心情${npc.mood || "平常"}${npc.persona?.text ? `，人设：${npc.persona.text}` : ""}${npc.persona?.voice ? `，口吻：${npc.persona.voice}` : ""}` : role || "本地人";
       const must = fresh.map((it) => `- [${it.id}]「${it.topic}」要点：${it.text}`).join("\n");
       const tease = locked.map((it) => `- 「${it.topic}」（时机未到：${it.hint || "条件不足"}，只能卖关子，绝不透露内容）`).join("\n");
       const out = await complete(cfg, [

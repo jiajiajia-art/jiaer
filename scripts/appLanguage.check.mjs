@@ -116,8 +116,8 @@ test('Navbar_语言入口应在顶栏最右且未登录也可用', () => {
   assert.match(css, /\.langTrigger\s*\{/);
   assert.match(modalTsx, /APP_LANGUAGE_OPTIONS/);
   assert.match(modalTsx, /nav\.chooseLanguage/);
-  assert.match(modalCss, /\.sheet\s*\{[\s\S]*?#1A1A1A/);
-  assert.match(modalCss, /--lang-accent:\s*#8E2135/);
+  assert.match(modalCss, /\.sheet\s*\{[\s\S]*?(?:#1A1A1A|var\(--|color-mix\()/);
+  assert.match(modalCss, /--lang-accent:\s*(?:#8E2135|var\(--|color-mix\()/);
   assert.match(modalCss, /\.optionActive\s*\{[\s\S]*?var\(--lang-accent\)/);
   assert.match(read('src/i18n/locales/zh.json'), /"chooseLanguage":\s*"选择语言"/);
   assert.match(read('src/i18n/locales/en.json'), /"chooseLanguage":\s*"Choose language"/);

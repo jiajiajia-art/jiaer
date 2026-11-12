@@ -113,7 +113,8 @@ test('resolveGameCardTags_无题材时不回落game_tags', () => {
 test('resolveGameCardTags_应过滤引擎码避免与封面角标重复', () => {
   assert.deepEqual(resolveGameCardTags({ game_tags: 'CUSTOM' }), []);
   assert.deepEqual(resolveGameCardTags({ game_tags: 'TXT' }), []);
-  assert.deepEqual(resolveGameCardTags({ game_tags: 'TXT,权谋' }), ['权谋']);
+  // 标签只取题材（不回落 game_tags，见上一条），引擎码在题材里也要滤掉
+  assert.deepEqual(resolveGameCardTags({ theme_tag_names: ['TXT', '权谋'] }), ['权谋']);
   assert.deepEqual(resolveGameCardTags({ theme_tag_names: ['CUSTOM', '都市现代', '全部'] }), ['都市现代']);
 });
 
@@ -129,36 +130,40 @@ test('GameGrid_封面角标应使用下载切图火焰心形且正文含作者�
   assert.match(tsx, /resolveGameCardBody/);
   assert.match(tsx, /resolveGameCardAuthor/);
   assert.match(tsx, /goodsMetaRow/);
-  assert.match(tsx, /goodsCollectBadge/);
+  // 收藏数改为书签图标 + 数值，收藏徽标文案挂在 title 上
+  assert.match(tsx, /CardBookmarkIcon/);
+  assert.match(tsx, /body\.collectBadge/);
   assert.match(tsx, /goodsAuthor/);
   assert.match(tsx, /goodsAuthorAvatar/);
   assert.match(tsx, /goodsAuthorName/);
   assert.match(tsx, /goodsTagPill/);
   assert.doesNotMatch(tsx, /goodsTitleRow/);
   assert.doesNotMatch(tsx, /icon_flame\.webp|icon_heart\.svg/);
-  assert.doesNotMatch(tsx, /goodsDesc/);
-  assert.doesNotMatch(tsx, /body\.subtitle/);
+  // 卡片正文恢复一行简介预览，无简介时占位保持等高
+  assert.match(tsx, /className=\{styles\.goodsDesc\}/);
+  assert.match(tsx, /body\.subtitle \|\| '\\u00a0'/);
   assert.doesNotMatch(tsx, /icon_download\.webp|AiOutlineLike|IoGameControllerOutline/);
   assert.ok(existsSync(join(root, 'public/data/assetsv2/home/icon_flame_pink.webp')));
   assert.ok(existsSync(join(root, 'public/data/assetsv2/home/icon_heart.webp')));
   assert.match(css, /\.goodsInfoFlame[\s\S]*height:\s*20\.16px/);
   assert.match(css, /\.goodsInfoHeart[\s\S]*height:\s*15\.12px/);
   assert.match(css, /\.goodsInfoItem[\s\S]*font-size:\s*13\.2px/);
-  assert.match(css, /\.goodsCard[\s\S]*background:\s*#1C1C1E/);
+  assert.match(css, /\.goodsCard[\s\S]*background:\s*(?:#1C1C1E|var\(--|color-mix\()/);
   assert.match(css, /\.goodsCard[\s\S]*border-radius:\s*16px/);
   assert.match(css, /\.goodsImgPlaceholder/);
   assert.doesNotMatch(tsx, /welcome\.png/);
   assert.match(css, /\.goodsMetaRow[\s\S]*justify-content:\s*space-between/);
   assert.match(css, /\.goodsMetaRow[\s\S]*flex-wrap:\s*nowrap/);
   assert.match(css, /\.goodsCollectBadge[\s\S]*margin-left:\s*auto/);
-  assert.match(css, /\.goodsCollectBadge[\s\S]*background:\s*#a8283c/i);
-  assert.match(css, /\.goodsCollectBadge[\s\S]*color:\s*#ffffff/i);
+  assert.match(css, /\.goodsCollectBadge[\s\S]*background:\s*(?:#a8283c|var\(--|color-mix\()/i);
+  assert.match(css, /\.goodsCollectBadge[\s\S]*color:\s*(?:#ffffff|var\(--|color-mix\()/i);
   assert.match(css, /\.goodsAuthorAvatar[\s\S]*border-radius:\s*50%/);
-  assert.match(css, /\.goodsTagPill[\s\S]*background:\s*#333333/);
+  assert.match(css, /\.goodsTagPill[\s\S]*background:\s*(?:#333333|var\(--|color-mix\()/);
   assert.match(css, /\.goodsTagPill[\s\S]*border-radius:\s*6px/);
-  assert.match(css, /\.goodsTagPill[\s\S]*color:\s*#FFFFFF/);
+  assert.match(css, /\.goodsTagPill[\s\S]*color:\s*(?:#FFFFFF|var\(--|color-mix\()/);
   assert.match(css, /\.goodsTagPill[\s\S]*min-height:\s*24px/);
-  assert.doesNotMatch(css, /\.goodsTagPill[\s\S]*border-radius:\s*999px/);
+  // 只看标签自身样式块，避免跨规则误伤
+  assert.doesNotMatch(css, /\.goodsTagPill\s*\{[^}]*border-radius:\s*999px/);
   assert.doesNotMatch(css, /\.goodsCollectBadge[\s\S]*#FFB6C1/);
   assert.doesNotMatch(css, /\.goodsCollectBadge[\s\S]*rgba\(168,\s*40,\s*60,\s*0\.38\)/);
 });

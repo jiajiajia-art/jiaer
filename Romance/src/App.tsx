@@ -211,7 +211,7 @@ function Root() {
     ensurePlayModCreateQuery();
   }, [playModCreateOpen]);
 
-  const closeWorldGen = () => {
+  const closeWorldGen = (keepMounted = false) => {
     // 功能注释：挂了平台 draftId 的作品保留本机会话，书架按 ID 续编可先命中本地；无 draftId 的临时向导仍清掉
     let keepByDraft = false;
     try {
@@ -221,7 +221,8 @@ function Root() {
     }
     if (!keepByDraft) clearWorldGenSession();
     clearWorldGenQuery();
-    setWorldGenOpen(false);
+    // 功能注释：离开去平台页时不卸向导，否则跳转前会先渲染 PlayScreens，闪现游戏本体
+    if (!keepMounted) setWorldGenOpen(false);
   };
 
   // 功能注释：向导「上一步」直接回平台创作类型页；不用 history.back()，编辑器预览等无历史场景会落到本地游戏页
@@ -232,9 +233,9 @@ function Root() {
     location.replace(`${base}/create/new`);
   };
 
-  const closePlayModCreate = () => {
+  const closePlayModCreate = (keepMounted = false) => {
     clearPlayModCreateQuery();
-    setPlayModCreateOpen(false);
+    if (!keepMounted) setPlayModCreateOpen(false);
   };
 
   // 模组界面风格：进入某世界时套用一次（记录已套用的世界+配置，玩家之后自改不再覆盖）
@@ -364,7 +365,7 @@ function Root() {
         >
           <PlayModCreateShell
             onClose={() => {
-              closePlayModCreate();
+              closePlayModCreate(true);
               leaveToPlatformCreate();
             }}
           />
@@ -379,7 +380,7 @@ function Root() {
         >
           <WorldGenWizard
             onBack={() => {
-              closeWorldGen();
+              closeWorldGen(true);
               leaveToPlatformCreate();
             }}
             onComplete={() => {

@@ -2,7 +2,7 @@
  * 功能注释：游玩页 AI 线路悬浮球（AI 文游 / 酒馆卡 / Romance 游玩共用）。
  * - 默认用平台默认线路；点开弹窗可看余额、切换线路，确认后下一次生成生效。
  * - 悬浮球可拖动；松手贴左 / 右边；拖到屏幕边缘收成半隐藏小标签，点一下弹回。位置记在本机。
- * - 后端没有可选线路时不显示（全部走平台默认）。
+ * - 后端暂无可选线路时仍显示（标「平台默认」），弹窗里说明暂无可切换线路；入口不再消失。
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -112,8 +112,8 @@ const AiRouteFab: React.FC<{ label?: string }> = ({ label = 'AI 线路' }) => {
     }
   };
 
-  // 功能注释：没有可选线路时整个入口不出现
-  if (!routes || routes.length === 0) return null;
+  // 功能注释：线路接口还没返回前不渲染；返回空列表也照常显示入口（走平台默认）
+  if (!routes) return null;
 
   const style: React.CSSProperties = drag
     ? { left: drag.x - SIZE / 2, top: drag.y - SIZE / 2 }

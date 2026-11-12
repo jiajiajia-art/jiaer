@@ -92,12 +92,15 @@ test('CharacterProfileForm_头像确认含风格选择与外貌补充_无英文�
 
 test('Navbar_手机用户菜单含仓库入口在个人中心下', () => {
   const src = readFileSync(join(root, 'src/components/Layout/Navbar.tsx'), 'utf8');
-  assert.match(src, /nav\.profile[\s\S]*!isDesktopLayout[\s\S]*nav\.warehouse[\s\S]*nav\.favorites/);
+  // 手机端点头像直接进个人中心，仓库入口在个人中心功能面板里
+  assert.match(src, /if \(!isDesktopLayout\) \{\s*runLeaveAction\(\(\) => navigate\('\/profile'\)\);/);
+  const panel = readFileSync(join(root, 'src/components/Profile/ProfileFunctionPanel.tsx'), 'utf8');
+  assert.match(panel, /navigate\('\/warehouse'\)/);
 });
 
 test('Navbar_小程序web-view点击头像也要弹出用户菜单', () => {
   const src = readFileSync(join(root, 'src/components/Layout/Navbar.tsx'), 'utf8');
-  assert.match(src, /小程序 web-view 也要下拉菜单/);
+  // 小程序 web-view 属于手机布局：点头像进个人中心（不再弹下拉），关键是不能因 web-view 直接失效
   assert.match(src, /setShowUserMenu\(\(prev\) => !prev\)/);
   assert.doesNotMatch(
     src,

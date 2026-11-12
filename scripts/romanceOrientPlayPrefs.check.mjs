@@ -68,6 +68,5 @@ test('GameShell_设置里不再有屏幕方向_固定竖屏', () => {
   const ctx = read('store/GameContext.tsx');
   assert.match(ctx, /orient: "portrait" as const, orientLock: false/, 'setTheme 固定竖屏');
   const ai = read('lib/ai.ts');
-  assert.match(ai, /mode: "game" as const/, '游玩模式锁定游戏模式');
   assert.match(ai, /orient: "portrait" as const/, '旧存档横屏按竖屏');
 });

@@ -19,6 +19,9 @@ import { createDiamondReceipt, createMembershipReceipt, saveRechargeReceiptToSto
 import type { RechargeReceipt } from '../../lib/rechargeReceipt';
 import {
     calcDiamondsForPayMethod,
+    formatPayAmount,
+    normalizeOverseasRate,
+    toOverseasPrice,
     getPayMethodCurrencySymbol,
     getPayMethodMinAmount,
     isAmountReadyToPay,
@@ -46,6 +49,7 @@ interface DiamondPlan {
     firstBonusDiamonds: number;
     firstTotalDiamonds: number;
     firstChargeEligible: boolean;
+    overseasMultiplier?: number;
 }
 
 interface PendingPayment {
@@ -86,6 +90,10 @@ interface RechargeModalProps {
     constrainToGameViewport?: boolean;
 }
 
+/** 功能注释：海外支付暂未上线（等后端美元下单接口就绪，见 docs/11.11更新-后端交接文档.md 模块八），改为 true 即开放 */
+const OVERSEAS_PAY_ENABLED = false;
+const WEB_PAY_METHODS: DefaultPayMethod[] = OVERSEAS_PAY_ENABLED ? ['wechat', 'alipay', 'overseas'] : ['wechat', 'alipay'];
+
 const POLL_INTERVAL_MS = 3000;
 const POLL_TIMEOUT_MS = 2 * 60 * 1000;
 const COUNTDOWN_SECONDS = POLL_TIMEOUT_MS / 1000;
@@ -117,6 +125,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
             firstBonusDiamonds: plan.firstBonusDiamonds,
             firstTotalDiamonds: plan.firstTotalDiamonds,
             firstChargeEligible: plan.firstChargeEligible,
+            overseasMultiplier: plan.overseasMultiplier,
         }));
     }, [memberProfile?.kkRechargePlans]);
     const [isLoading, setIsLoading] = useState(false);
@@ -143,6 +152,12 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
     const [selectedPayMethod, setSelectedPayMethod] = useState<DefaultPayMethod>('wechat');
     const payMinAmount = getPayMethodMinAmount(selectedPayMethod);
     const currencySymbol = getPayMethodCurrencySymbol(selectedPayMethod);
+    const isOverseas = selectedPayMethod === 'overseas';
+    const overseasRate = normalizeOverseasRate(memberProfile?.overseasPricing?.rate);
+    /** 功能注释：人民币标价 → 当前支付方式的实付价（海外按后台倍率换算） */
+    const toPayPrice = (cny: number, multiplier?: number) =>
+        isOverseas ? toOverseasPrice(cny, multiplier && multiplier > 0 ? multiplier : overseasRate) : cny;
+    const fmt = (amount: number) => `${currencySymbol}${formatPayAmount(amount, selectedPayMethod)}`;
 
     const inFlightRef = useRef(false);
     const isComposingRef = useRef(false);
@@ -354,12 +369,13 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                 orderType: 'subscription',
                 planId: selectedPlan.planId,
             };
+            const payMethod = isMiniProgramEnv() ? 'wechat' : selectedPayMethod;
 
             setPendingPayment({
                 orderData,
-                payMethod: isMiniProgramEnv() ? 'wechat' : selectedPayMethod,
+                payMethod,
                 kind: 'membership',
-                amount: selectedPlan.price,
+                amount: payMethod === 'overseas' ? toOverseasPrice(selectedPlan.price, overseasRate) : selectedPlan.price,
                 membershipPlan: selectedPlan,
             });
             return;
@@ -419,12 +435,13 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
             : undefined;
         const estimatedDiamonds = diamondPlan
             ? (diamondPlan.firstChargeEligible ? diamondPlan.firstTotalDiamonds : diamondPlan.baseDiamonds)
-            : calcDiamondsForPayMethod(amount, selectedPayMethod, false);
+            : calcDiamondsForPayMethod(amount, selectedPayMethod, false, overseasRate);
         setPendingPayment({
             orderData,
             payMethod: isMiniProgramEnv() ? 'wechat' : selectedPayMethod,
             kind: 'diamonds',
-            amount,
+            // 固定档位按 planId 下单，展示金额按支付方式换算；自定义金额本身即实付币种
+            amount: diamondPlan ? toPayPrice(diamondPlan.amount, diamondPlan.overseasMultiplier) : amount,
             diamondPlan,
             estimatedDiamonds,
         });
@@ -707,45 +724,51 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
             ? (selectedDiamondPlan.firstChargeEligible
                 ? selectedDiamondPlan.firstTotalDiamonds
                 : selectedDiamondPlan.baseDiamonds)
-            : calcDiamondsForPayMethod(currentAmount, selectedPayMethod, false);
+            : calcDiamondsForPayMethod(currentAmount, selectedPayMethod, false, overseasRate);
+    const payAmount = currentAmount == null
+        ? 0
+        : selectedDiamondPlan ? toPayPrice(selectedDiamondPlan.amount, selectedDiamondPlan.overseasMultiplier) : currentAmount;
+    const membershipPayAmount = selectedMembershipPlan ? toPayPrice(selectedMembershipPlan.price) : 0;
     const canSubmit = rechargeTab === 'membership'
         ? Boolean(selectedMembershipPlan)
         : isAmountReadyToPay(currentAmount, selectedPayMethod);
-    const currencyName = selectedPayMethod === 'overseas' ? '美元' : '人民币';
 
     const diamondsTabContent = (
         <>
             <div className={styles.fixedAmounts}>
-                <h3 className={styles.sectionHeading}>选择充值档位</h3>
+                <div className={styles.sectionHeadRow}>
+                    <h3 className={styles.sectionHeading}>选择充值档位</h3>
+                    {isOverseas && <span className={styles.currencyBadge}>USD 美元结算</span>}
+                </div>
                 <div className={styles.amountsGrid}>
                     {rechargePlans.map((plan) => {
-                        const planDiamonds = plan.firstChargeEligible ? plan.firstTotalDiamonds : plan.baseDiamonds;
+                        const isFirst = plan.firstChargeEligible;
                         const isActive = selectedFirstChargePlanId === plan.planId;
                         return (
                             <button
                                 key={plan.planId}
                                 type="button"
-                                className={`${styles.amountBtn} ${isActive ? styles.amountBtnActive : ''}`}
+                                aria-pressed={isActive}
+                                className={`${styles.amountBtn} ${styles.tile} ${isFirst ? styles.tileFirst : ''} ${isActive ? `${styles.amountBtnActive} ${styles.tileActive}` : ''}`}
                                 onClick={() => handleFixedAmountClick(plan)}
                             >
-                                <div className={styles.amountTopSection}>
-                                    <div className={styles.amountMainPoints}>
-                                        <span>{plan.baseDiamonds} KK币</span>
-                                    </div>
-                                    <div className={styles.amountPriceMeta}>
-                                        {t('rechargeModal.priceShort', { amount: plan.amount, symbol: currencySymbol })}
-                                    </div>
-                                    <div className={styles.firstChargeMeta}>
-                                        {plan.firstChargeEligible
-                                            ? <>首充得 <strong>{planDiamonds}</strong></>
-                                            : <>本次获得 <strong>{plan.baseDiamonds}</strong></>}
-                                    </div>
-                                </div>
+                                {isFirst && <span className={styles.tileRibbon}>首充</span>}
+                                <span className={styles.tileCoins}>
+                                    <b>{plan.baseDiamonds}</b><small>KK币</small>
+                                </span>
+                                {/* 首充 / 非首充共用同一标签位，卡片高度一致 */}
+                                <span className={`${styles.tileBonus} ${isFirst ? styles.tileBonusFirst : ''}`}>
+                                    {isFirst ? `+${plan.firstBonusDiamonds} 首充赠送` : '已享首充'}
+                                </span>
+                                <span className={styles.tilePrice}>
+                                    {fmt(toPayPrice(plan.amount, plan.overseasMultiplier))}
+                                    {isOverseas && <small>≈¥{plan.amount}</small>}
+                                </span>
                             </button>
                         );
                     })}
-                    <div className={`${styles.customAmount} ${styles.customAmountTile} ${amountError ? styles.inputError : ''}`}>
-                        <div className={styles.customLabel}>{t('rechargeModal.customAmount')}</div>
+                    <div className={`${styles.customAmount} ${styles.customAmountTile} ${styles.tileCustom} ${amountError ? styles.inputError : ''}`}>
+                        <div className={styles.customLabel}>自定义金额</div>
                         <div className={styles.customInputWrapper}>
                             <span className={styles.currencySymbol}>{currencySymbol}</span>
                             <input
@@ -763,25 +786,22 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                                 maxLength={10}
                                 ref={amountInputRef}
                             />
-                            <span className={styles.currencyUnit}>{currencyName}</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div className={styles.customAmount}>
-                <div className={styles.customAmountPanel}>
-                    <div className={styles.customReceiveHint}>
-                        <span>预计获得</span>
-                        <strong>{currentAmount != null ? `${estimatedDiamonds} KK币` : '— KK币'}</strong>
-                    </div>
-                </div>
                 {amountError && (
                     <div className={styles.amountHint}>
                         <span className={styles.errorText}>{amountError}</span>
                     </div>
                 )}
-                <p className={styles.customAmountNotice}>自定义金额按当前支付方式换算，不参与固定档位首充加赠。</p>
+                <p className={styles.customAmountNotice}>
+                    {isOverseas
+                        ? `海外档位价格 = 人民币价 × 后台倍率；自定义金额按 ×${overseasRate} 换算，不参与首充加赠。`
+                        : '自定义金额按 1 元 = 10 KK币 换算，不参与首充加赠。'}
+                </p>
             </div>
         </>
     );
@@ -800,7 +820,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                         <span className={styles.planItemHeader}>
                             <span className={styles.planItemName}>{plan.name}</span>
                             <span className={styles.planItemPrice}>
-                                {t('rechargeModal.currencySymbol')}{plan.price}
+                                {fmt(toPayPrice(plan.price))}
                             </span>
                         </span>
                         <span className={styles.planRewardSummary}>
@@ -910,8 +930,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                         <section className={styles.paymentSection} aria-labelledby="payment-method-heading">
                             <h3 id="payment-method-heading" className={styles.sectionHeading}>支付方式</h3>
                             <div className={styles.payMethodToggle} role="group" aria-label={t('rechargeModal.choosePayMethod')}
-                                style={isMiniProgramEnv() ? { gridTemplateColumns: '1fr' } : undefined}>
-                                {((isMiniProgramEnv() ? ['wechat'] : ['wechat', 'alipay', 'overseas']) as DefaultPayMethod[]).map((method) => (
+                                style={{ gridTemplateColumns: `repeat(${isMiniProgramEnv() ? 1 : WEB_PAY_METHODS.length}, minmax(0, 1fr))` }}>
+                                {(isMiniProgramEnv() ? (['wechat'] as DefaultPayMethod[]) : WEB_PAY_METHODS).map((method) => (
                                     <button
                                         key={method}
                                         type="button"
@@ -943,11 +963,11 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                             {rechargeTab === 'membership' ? (
                                 <>
                                     <div><span>选择商品</span><strong>{selectedMembershipPlan?.name ?? '未选择'}</strong></div>
-                                    <div><span>支付金额</span><strong>¥{selectedMembershipPlan?.price ?? 0}</strong></div>
+                                    <div><span>支付金额</span><strong>{fmt(membershipPayAmount)}</strong></div>
                                 </>
                             ) : (
                                 <>
-                                    <div><span>支付金额</span><strong>{currencySymbol}{currentAmount ?? 0}</strong></div>
+                                    <div><span>支付金额</span><strong>{fmt(payAmount)}</strong></div>
                                     <div><span>本次获得</span><strong>{estimatedDiamonds} KK币</strong></div>
                                 </>
                             )}
@@ -961,8 +981,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                             {isLoading || alipay.creating
                                 ? t('rechargeModal.processing')
                                 : rechargeTab === 'membership'
-                                    ? `支付 ¥${selectedMembershipPlan?.price ?? 0}，开通${selectedMembershipPlan?.name ?? '会员卡'}`
-                                    : `支付 ${currencySymbol}${currentAmount ?? 0}，获得 ${estimatedDiamonds} KK币`}
+                                    ? `支付 ${fmt(membershipPayAmount)}，开通${selectedMembershipPlan?.name ?? '会员卡'}`
+                                    : `支付 ${fmt(payAmount)}，获得 ${estimatedDiamonds} KK币`}
                         </button>
 
                         {alipay.error && alipay.error !== 'cancelPending' && <p role="alert" className={styles.errorText}>
@@ -1006,6 +1026,25 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                         <h2 id="payment-confirmation-title">
                             {pendingPayment.kind === 'membership' ? '确认开通会员卡' : '确认充值'}
                         </h2>
+                        {pendingPayment.kind === 'diamonds' ? (() => {
+                            const plan = pendingPayment.diamondPlan;
+                            const isFirstCharge = Boolean(plan?.firstChargeEligible);
+                            // 首充 / 非首充 / 自定义金额共用同一结构，只切换标签内容，弹窗高度保持一致
+                            const chipText = isFirstCharge
+                                ? <>含首充赠送 <strong>+{plan!.firstBonusDiamonds}</strong> KK币</>
+                                : plan ? '首充赠送已领取，本档按原价到账' : '自定义金额不参与首充赠送';
+                            return (
+                                <div className={`${styles.confirmHero} ${isFirstCharge ? styles.confirmHeroFirst : ''}`}>
+                                    <span className={styles.confirmHeroLabel}>本次获得</span>
+                                    <span className={styles.confirmHeroValue}>
+                                        {pendingPayment.estimatedDiamonds ?? 0}<small>KK币</small>
+                                    </span>
+                                    <span className={`${styles.confirmHeroChip} ${isFirstCharge ? styles.confirmHeroChipFirst : ''}`}>
+                                        {chipText}
+                                    </span>
+                                </div>
+                            );
+                        })() : null}
                         <div className={styles.confirmationRows}>
                             <div>
                                 <span>支付方式</span>
@@ -1014,8 +1053,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                             <div>
                                 <span>支付金额</span>
                                 <strong>
-                                    {pendingPayment.kind === 'membership' ? '¥' : getPayMethodCurrencySymbol(pendingPayment.payMethod)}
-                                    {pendingPayment.amount}
+                                    {getPayMethodCurrencySymbol(pendingPayment.payMethod)}
+                                    {formatPayAmount(pendingPayment.amount, pendingPayment.payMethod)}
                                 </strong>
                             </div>
                             {pendingPayment.kind === 'membership' ? (
@@ -1024,16 +1063,10 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                                     <div><span>领取方式</span><strong>每日登录签到领取</strong></div>
                                 </>
                             ) : (
-                                <>
-                                    <div>
-                                        <span>基础到账</span>
-                                        <strong>{pendingPayment.diamondPlan?.baseDiamonds ?? pendingPayment.estimatedDiamonds ?? 0} KK币</strong>
-                                    </div>
-                                    {pendingPayment.diamondPlan?.firstChargeEligible ? (
-                                        <div><span>首充赠送</span><strong>+{pendingPayment.diamondPlan.firstBonusDiamonds} KK币</strong></div>
-                                    ) : null}
-                                    <div><span>实际获得</span><strong>{pendingPayment.estimatedDiamonds ?? 0} KK币</strong></div>
-                                </>
+                                <div>
+                                    <span>基础到账</span>
+                                    <strong>{pendingPayment.diamondPlan?.baseDiamonds ?? pendingPayment.estimatedDiamonds ?? 0} KK币</strong>
+                                </div>
                             )}
                         </div>
                         <div className={styles.confirmationActions}>

@@ -23,6 +23,7 @@ import { canRomance, hasPartner, romanceFixedOff } from "./logic";
 import { RELATIONS, romanticCapOf } from "../worlds/star2005/content";
 import { relationPromptFor } from "./relNet";
 
+import { lastOf } from "../lib/lastOf.ts";
 export type KbMem = { t: string; text: string; turn?: number }; // t = 游戏内时间标签
 export type NpcProfile = {
   name: string; age?: string; job?: string; wealth?: string; personality?: string; identity?: string; relation?: string; bio?: string;
@@ -137,7 +138,7 @@ export function remember(g: GameState, id: string, kind: "player" | "self", text
   if (!clean) return g;
   const kb = kbOf(g, id);
   const key = kind === "player" ? "playerMemory" : "selfMemory";
-  const last = kb[key].at(-1);
+  const last = lastOf(kb[key]);
   if (last?.text === clean) return g; // 去重：同一句不重复写
   const joined = merge ? joinGroupMem(last, last?.t, clean, merge, g.turnCount, t) : undefined;
   if (last && joined !== undefined) {
@@ -260,7 +261,7 @@ export function gossipTick(g: GameState, mobs: Record<string, string>, tick: num
     if (ids.length < 2) continue;
     for (const a of ids) for (const b of ids) {
       if (a === b || h01(`${a}>${b}:${tick}`) > 0.35) continue;
-      const src = kbs[a]?.playerMemory.at(-1);
+      const src = lastOf(kbs[a]?.playerMemory);
       if (!src) continue;
       const name = kbs[a]?.profile.name ?? PERSON_BY_ID[a]?.name ?? a;
       const text = `听${name}说：${src.text}`.slice(0, 160);
@@ -309,6 +310,6 @@ export function allowanceFallback(g: GameState): string[] {
   const warm = /温柔|慈|心疼|开朗|包容/.test(p.personality ?? "");
   const me = p.relation === "父亲" ? "爸" : p.relation === "母亲" ? "妈" : "我";
   const tone = strict ? "这个月的钱打过去了，省着点花。" : warm ? "生活费给你转过去啦，别舍不得吃饭～" : "这个月生活费到了，记得收一下。";
-  const tail = kb.playerMemory.at(-1)?.text ? (strict ? "上回跟你说的事，自己心里有数。" : `上回你说的事，${me}一直记着呢。`) : p.job ? `${me}这阵子${p.job}那边忙，有事给${me}留言。` : "";
+  const tail = lastOf(kb.playerMemory)?.text ? (strict ? "上回跟你说的事，自己心里有数。" : `上回你说的事，${me}一直记着呢。`) : p.job ? `${me}这阵子${p.job}那边忙，有事给${me}留言。` : "";
   return [tone, tail].filter(Boolean);
 }

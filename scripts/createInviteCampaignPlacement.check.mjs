@@ -18,9 +18,10 @@ test('Create_邀请卡片应在账户面板底部且离开功能列表', () => {
   const authTypes = read('src/api/account/auth.type.ts');
 
   assert.match(create, /import InviteCampaignCard from '\.\.\/components\/Profile\/InviteCampaignCard'/);
+  // 「今日可赚织梦豆」已迁到独立页 /points/earn，账户面板底部只剩邀请卡片 + 功能面板
   assert.match(
     create,
-    /<\/div>\s*<InviteCampaignCard\s*\/>\s*<TodayEarnPointsPanel\s*\/>\s*<ProfileFunctionPanel\s*\/>\s*<\/div>/,
+    /<\/div>\s*<InviteCampaignCard\s*\/>\s*<ProfileFunctionPanel\s*\/>\s*<\/div>/,
   );
   assert.doesNotMatch(
     create,
@@ -33,10 +34,11 @@ test('Create_邀请卡片应在账户面板底部且离开功能列表', () => {
   assert.match(card, /inviteCampaignFields/);
   assert.match(card, /inviteCampaignCodeTray|inviteCampaignCodeRow/);
   assert.match(card, /inviteCampaignRedeemRow/);
-  assert.doesNotMatch(card, /InviteRewardModal|getInviteStats|inviteStats|claimPoints/);
+  // 邀请统计改由用户信息下发（user.inviteStats），不再单独请求 / 领取
+  assert.doesNotMatch(card, /InviteRewardModal|getInviteStats|claimPoints/);
   assert.doesNotMatch(card, /inviteCampaignFooterRow|inviteCampaignMeta|inviteCampaignRewardBtn/);
   assert.doesNotMatch(authApi, /getInviteStats|claimInviteReward|\/auth\/invite\/stats|\/auth\/invite\/claim/);
-  assert.doesNotMatch(authTypes, /InviteRewardItem|InviteStats|InviteClaimResult/);
+  assert.doesNotMatch(authTypes, /InviteRewardItem|InviteClaimResult/);
   assert.match(authApi, /api\.post<ApiResponse<InviteCodeUseResult>>\('\/auth\/invite\/use-code'/);
   assert.match(authTypes, /interface InviteCodeUseResult[\s\S]*?diamondsAdded:\s*number[\s\S]*?remainingDiamonds:\s*number[\s\S]*?inviterName:\s*string/);
   assert.equal(existsSync(join(root, 'src/components/InviteRewardModal.tsx')), false);
@@ -49,8 +51,9 @@ test('Create_邀请卡片应在账户面板底部且离开功能列表', () => {
 
   const en = read('src/i18n/locales/en.json');
   const zh = read('src/i18n/locales/zh.json');
-  assert.match(en, /"inviteCampaignTitle":\s*"Invite a friend and you both get 30 KK Coins!"/);
-  assert.match(zh, /"inviteCampaignTitle":\s*"邀请好友，双方各得 30 KK币！"/);
+  // 奖励数额改为参数，且为限时 KK 币
+  assert.match(en, /"inviteCampaignTitle":\s*"Invite a friend and you both get \{\{amount\}\} limited-time KK Coins!"/);
+  assert.match(zh, /"inviteCampaignTitle":\s*"邀请好友，双方各得 \{\{amount\}\} 限时KK币！"/);
   assert.doesNotMatch(en, /"inviteStatsText"|\n  "inviteReward": \{/);
   assert.doesNotMatch(zh, /"inviteStatsText"|\n  "inviteReward": \{/);
 
@@ -59,6 +62,6 @@ test('Create_邀请卡片应在账户面板底部且离开功能列表', () => {
   assert.doesNotMatch(panel, /InviteRewardModal/);
   assert.doesNotMatch(panel, /getInviteStats/);
   assert.doesNotMatch(panel, /useInviteCode|redeemInviteCode|showInputInviteCode/);
-  assert.match(panel, /profile\.purchaseRecords/);
-  assert.match(panel, /\/asset\/details/);
+  // 消费记录并入资产明细页（/asset/details 的「消费」筛选），入口在账户面板
+  assert.match(create, /navigate\('\/asset\/details'\)/);
 });

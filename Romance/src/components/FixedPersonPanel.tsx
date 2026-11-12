@@ -1,4 +1,4 @@
-import { synthSpeech, voiceOf } from "./phone/screenShare";
+import { synthSpeech, ttsAvailable, voiceOf } from "./phone/screenShare";
 import { loadConfig } from "../lib/store";
 import { NpcMemory } from "./NpcKbPanel";
 import { kbOf } from "../game/npcKnowledge";
@@ -271,9 +271,9 @@ function Editor({ npc, onSave }: { npc: Npc; onSave: (p: NpcPersona) => void }) 
         <p className={label}>TA 的声音 <span className="text-[11px] font-normal text-ink-soft">语音模型的音色名；留空沿用编辑器 / 设置里的默认</span></p>
         <div className="flex items-center gap-2">
           <input value={draft.ttsVoice ?? ""} onChange={(e) => setDraft({ ...draft, ttsVoice: e.target.value })}
-            placeholder={voiceOf(npc.id) ? `当前：${voiceOf(npc.id)}` : loadConfig().ttsModel ? "如 nova / onyx" : "需先在设置里配置语音模型"}
+            placeholder={voiceOf(npc.id) ? `当前：${voiceOf(npc.id)}` : ttsAvailable() ? "留空用线路默认音色" : "未登录平台，将使用浏览器朗读"}
             className={`${field} flex-1 px-3 py-2`} />
-          <button type="button" disabled={!loadConfig().ttsModel || tts === "busy"}
+          <button type="button" disabled={!ttsAvailable() || tts === "busy"}
             onClick={async () => { setTts("busy"); try { const u = await synthSpeech(loadConfig(), `我是${npc.name}。`, draft.gender || (game ? personGender(game, npc.id) : undefined), draft.ttsVoice?.trim() || voiceOf(npc.id)); await new Audio(u).play(); setTts(""); } catch (e) { setTts(e instanceof Error ? e.message : "试听失败"); } }}
             className="shrink-0 rounded-full border border-jade px-3 py-1.5 text-[12px] font-bold text-jade transition hover:bg-jade/10 disabled:opacity-40">{tts === "busy" ? "合成中…" : "试听"}</button>
         </div>

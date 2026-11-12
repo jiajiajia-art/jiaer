@@ -3,6 +3,7 @@ import { FrameOverlay } from "./FrameDiy";
 import { useEffect, useMemo, useState } from "react";
 import { useGame } from "../store/gameCtx";
 import { deleteSlot, listSaves, type CoverDiy, type SaveSlot } from "../lib/store";
+import { syncCloudSaves } from "../lib/storage";
 import { Modal } from "./ui";
 const AIConfigPanel = lazyPanel(() => import("./AIConfigPanel"));
 import { IconHeart, IconPlay, IconRefresh, IconSettings, IconSpark } from "../lib/icons";
@@ -255,7 +256,10 @@ export default function Cover() {
   const [saves, setSaves] = useState<SaveSlot[]>([]);
   const cv: CoverCopy = {};
 
-  const refresh = async () => setSaves(await listSaves());
+  const refresh = async () => {
+    setSaves(await listSaves());
+    if (await syncCloudSaves()) setSaves(await listSaves());
+  };
   const openContinue = () => {
     void refresh();
     setModal("continue");

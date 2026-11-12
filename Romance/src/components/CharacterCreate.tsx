@@ -19,11 +19,13 @@ import NamePicker from "./NamePicker";
 import { factionSigningOffers, rollSigningOffers, type SigningContract } from "../worlds/star2005/content";
 import { creationVars, fillParts, fillText } from "../game/creationText";
 import { normalizeGenderOptions } from "../game/creationSystemFields";
-import { formatCreatorAttrPreview, rollCreatorAttrStarts, visibleCreatorAttrs } from "../lib/creationItems";
-import { attrUsesRandomStart } from "../lib/attrInit";
+import { rollCreatorAttrStarts, visibleCreatorAttrs } from "../lib/creationItems";
+import { attrChoiceOptions, attrStartMode, attrStartValue, attrUsesRandomStart, clampAttrStart } from "../lib/attrInit";
+import type { AttrDef } from "../lib/types";
 import { shouldShowPathPicker } from "../lib/pathPicker";
 import { isAuthorPreview, requestAuthorPreviewEnd } from "../lib/authorPreview";
 import { deleteSlot, listSaves, type SaveSlot } from "../lib/store";
+import { syncCloudSaves } from "../lib/storage";
 import { asModArray } from "../lib/asModArray";
 import PathRouteMap from "./PathRouteMap";
 import { pathRouteNodes } from "../lib/pathRoute";
@@ -107,6 +109,8 @@ export default function CharacterCreate() {
   useEffect(() => {
     if (previewing) return;
     void listSaves().then(setSaves);
+    // 功能注释：再拉一次云端，换设备时也能看到「继续游戏」
+    void syncCloudSaves().then((n) => { if (n) void listSaves().then(setSaves); });
   }, [previewing]);
   useEffect(() => {
     const h = () => setPathLockTick((n) => n + 1);
@@ -151,10 +155,16 @@ export default function CharacterCreate() {
   }, [creatorAttrsKey, modSel.world]);
   /** 功能注释：仅当至少一项可随机时显示骰子；全固定则隐藏，避免点了无变化（3.16） */
   const canRerollAttrs = creatorAttrs.some((a) => attrUsesRandomStart(a));
+  // 功能注释：整组重掷只动「开局随机」项；锁定 / 玩家选择 / 玩家自定义的值保持不变
   const rerollAttrs = () => {
     if (!canRerollAttrs) return;
-    setAttrStarts(rollCreatorAttrStarts(creatorAttrs));
+    const fresh = rollCreatorAttrStarts(creatorAttrs.filter((a) => attrStartMode(a) === "random"));
+    setAttrStarts((cur) => ({ ...cur, ...fresh }));
   };
+  const rerollOne = (a: AttrDef) => setAttrStarts((cur) => ({ ...cur, [a.id]: attrStartValue(a) }));
+  const setAttrValue = (a: AttrDef, v: number) => setAttrStarts((cur) => ({ ...cur, [a.id]: clampAttrStart(a, v) }));
+  // 功能注释：玩家自定义输入框的草稿（失焦时夹进范围）
+  const [attrDraft, setAttrDraft] = useState<Record<string, string>>({});
   /* 创作者自定义字段：仅按人物线路过滤；系统四项始终显示、不进此列 */
   const CUSTOM = asModArray<CreationField>(cc.fields).filter((f) => f.label && (!asModArray(f.paths).length || asModArray<string>(f.paths).includes(curPath)));
   const [customVals, setCustomVals] = useState<Record<string, string>>({});
@@ -174,9 +184,9 @@ export default function CharacterCreate() {
   /* 开局游玩偏好：世界观默认预选模式/视角；屏幕方向默认竖屏，换世界观时保留玩家已选方向 */
   const playSlot = selectedSlot("play");
   const playKey = JSON.stringify(playSlot ?? {});
-  const [prefs, setPrefs] = useState<PlayPrefs>(() => ({ mode: "game", pov: playSlot?.pov, orient: "portrait" }));
+  const [prefs, setPrefs] = useState<PlayPrefs>(() => ({ mode: "novel", pov: playSlot?.pov, orient: "portrait" }));
   useEffect(() => {
-    setPrefs(() => ({ mode: "game", pov: playSlot?.pov, orient: "portrait" }));
+    setPrefs(() => ({ mode: "novel", pov: playSlot?.pov, orient: "portrait" }));
   }, [playKey]); // eslint-disable-line react-hooks/exhaustive-deps
   // 功能注释：开局日期只用创作者填的那天；进入建角时清掉上一局可能残留的玩家日期覆盖
   useEffect(() => { setStartDateOverride(undefined); }, []);
@@ -263,6 +273,11 @@ export default function CharacterCreate() {
     const extra = [
       ...(selectedFeature("career") && path?.name ? [{ label: "人物线路", value: path.name }] : []),
       { label: bl("birthday", "生日"), value: `${form.birthMonth}月${form.birthDay}日` },
+      // 功能注释：玩家选择的属性写进档案（如 出身：书香门第），AI 可读到选了什么
+      ...creatorAttrs.filter((a) => attrStartMode(a) === "choice").flatMap((a) => {
+        const o = attrChoiceOptions(a).find((x) => clampAttrStart(a, x.value) === attrStarts[a.id]);
+        return o ? [{ label: a.label, value: o.desc ? `${o.label}（${o.desc}）` : o.label }] : [];
+      }),
       ...CUSTOM.filter((f) => cv(f).trim()).map((f) => {
         const note = fxOf(f)?.note?.trim();
         return { label: f.label, value: [cv(f), note && `（${note}）`, f.desc && `（${f.desc}）`].filter(Boolean).join("") };
@@ -502,12 +517,54 @@ export default function CharacterCreate() {
               ) : null}
             </div>
             <ul className="space-y-1.5">
-              {creatorAttrs.map((a) => (
-                <li key={a.id} className="flex items-center gap-2 rounded-xl border border-line/70 bg-paper px-3 py-2">
-                  <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">{a.label}</span>
-                  <span className="shrink-0 text-[12px] text-ink-soft">{formatCreatorAttrPreview(a, attrStarts[a.id])}</span>
-                </li>
-              ))}
+              {creatorAttrs.map((a) => {
+                const mode = attrStartMode(a);
+                const v = attrStarts[a.id];
+                const maxN = Number(a.max);
+                const range = `${a.min ?? 0}~${Number.isFinite(maxN) && maxN > 0 ? maxN : "∞"}`;
+                return (
+                  <li key={a.id} className="rounded-xl border border-line/70 bg-paper px-3 py-2" data-attr-mode={mode}>
+                    <div className="flex items-center gap-2">
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">{a.label}</span>
+                      {mode === "custom" ? (
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          aria-label={`${a.label}（${range}）`}
+                          className="w-20 rounded-lg border border-line bg-paper-2 px-2 py-1 text-right text-[13px] font-bold text-ink outline-none focus:border-jade"
+                          value={attrDraft[a.id] ?? String(v ?? "")}
+                          onChange={(e) => setAttrDraft((d) => ({ ...d, [a.id]: e.target.value }))}
+                          onBlur={(e) => { setAttrValue(a, Number(e.target.value)); setAttrDraft((d) => { const n = { ...d }; delete n[a.id]; return n; }); }}
+                        />
+                      ) : (
+                        <span className="shrink-0 text-[13px] font-bold tabular-nums text-ink">{typeof v === "number" ? v : "—"}</span>
+                      )}
+                      <span className="shrink-0 text-[11px] text-ink-soft">{mode === "custom" ? range : Number.isFinite(maxN) && maxN > 0 ? `/ ${maxN}` : ""}</span>
+                      {mode === "random" ? (
+                        <button type="button" onClick={() => rerollOne(a)} title={`重掷${a.label}（${range}）`} aria-label={`重掷${a.label}`}
+                          className="grid h-7 w-7 place-items-center rounded-full text-ink-soft transition hover:bg-ink/5 hover:text-jade">
+                          <IconDiceDuo size={15} />
+                        </button>
+                      ) : mode === "locked" ? (
+                        <span className="grid h-7 w-7 place-items-center text-ink-soft/70" title="作者已锁定" aria-label="作者已锁定"><LockGlyph /></span>
+                      ) : null}
+                    </div>
+                    {mode === "choice" && (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5" role="radiogroup" aria-label={a.label}>
+                        {attrChoiceOptions(a).map((o) => {
+                          const on = clampAttrStart(a, o.value) === v;
+                          return (
+                            <button key={o.label} type="button" role="radio" aria-checked={on} title={o.desc} onClick={() => setAttrValue(a, o.value)}
+                              className={`rounded-full border px-3 py-1 text-[12px] font-semibold transition ${on ? "border-jade bg-jade/10 text-jade" : "border-line bg-paper-2 text-ink-soft hover:border-jade/50"}`}>
+                              {o.label}<span className="ml-1 text-[10.5px] opacity-70">{o.value}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ) : null}

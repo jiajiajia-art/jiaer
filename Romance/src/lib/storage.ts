@@ -18,6 +18,8 @@ import localforage from "localforage";
 import type { GameState } from "./types";
 import { exportSaveData, loadGlobal, removeGlobal, purgeSaveData, getCurrentSaveId } from "./saveScope";
 import { AUTHOR_PREVIEW_AUTO_SLOT, isAuthorPreview } from "./authorPreview";
+import { resolveRomancePlayMode } from "./platformRomancePlay";
+import { cloudDelete, cloudOffReason, cloudRename, flushCloudPushes, pullCloudSaves, queueCloudPush } from "./cloudSaves";
 
 /* ───────────── 顶部统一配置区（改这里即可） ───────────── */
 export const DB_NAME = "gameSaveDB"; // 独立数据库实例名
@@ -66,19 +68,35 @@ export type SaveSlot = {
   updatedAt: number; // 最近写入时间戳
   auto?: boolean; // 是否为自动存档槽
   state: GameState; // 完整游戏状态（大容量 JSON）
+  gameId?: string; // 所属作品（平台 fileId；本机调试 = "local"）。旧存档没有此字段
 };
 
-const slotKey = (id: string) => `slot:${id}`;
+/* ───────────── 按作品隔离 ─────────────
+ * 旧版所有作品共用一个自动存档 + 6 个手动槽，玩 B 会覆盖 A 的自动存档。
+ * 现在 key = slot:<gameId>:<id>；旧 key slot:<id> 仍可读（列表里标「旧版」），覆盖同槽时迁到新 key。 */
+export function currentSaveGameId(search = typeof location !== "undefined" ? location.search : ""): string {
+  return resolveRomancePlayMode(search).fileId || "local";
+}
+const isPreviewSlotId = (id: string) => id === AUTHOR_PREVIEW_AUTO_SLOT || id.startsWith("__author_preview");
+const legacyKey = (id: string) => `slot:${id}`;
+// 功能注释：作者预览测试槽保持旧 key（全局唯一，clearAuthorPreviewSave 按固定 id 清）
+const slotKey = (id: string, gameId = currentSaveGameId()) => (isPreviewSlotId(id) ? legacyKey(id) : `slot:${gameId}:${id}`);
 
 /* 列出全部存档：自动存档置顶，其余按更新时间倒序；作者测试槽不出现在正式列表 */
 export async function listSaves(): Promise<SaveSlot[]> {
   return guard(
     "listSaves",
     async () => {
-      const out: SaveSlot[] = [];
+      const gameId = currentSaveGameId();
+      const mine = new Map<string, SaveSlot>();
+      const legacy: SaveSlot[] = [];
       await gameSaveDB.iterate<SaveSlot, void>((v) => {
-        if (v && v.id && v.id !== AUTHOR_PREVIEW_AUTO_SLOT && !String(v.id).startsWith("__author_preview")) out.push(v);
+        if (!v || !v.id || isPreviewSlotId(String(v.id))) return;
+        if (v.gameId === gameId) mine.set(v.id, v);
+        else if (!v.gameId) legacy.push(v);
       });
+      // 功能注释：旧版未分作品的存档仍列出（同 id 已有新档时隐藏），避免老玩家进度「消失」
+      const out: SaveSlot[] = [...mine.values(), ...legacy.filter((v) => !mine.has(v.id))];
       out.sort((a, b) => {
         if (a.auto && !b.auto) return -1;
         if (b.auto && !a.auto) return 1;
@@ -100,17 +118,28 @@ export async function writeSlot(slot: SaveSlot): Promise<boolean> {
   return guard(
     "writeSlot",
     async () => {
-      await gameSaveDB.setItem(slotKey(slot.id), slot);
+      const gameId = slot.gameId ?? currentSaveGameId();
+      const row: SaveSlot = isPreviewSlotId(slot.id) ? slot : { ...slot, gameId };
+      await gameSaveDB.setItem(slotKey(slot.id, gameId), row);
+      // 功能注释：覆盖旧版同 id 槽后删掉旧 key，完成迁移
+      if (!isPreviewSlotId(slot.id)) await gameSaveDB.removeItem(legacyKey(slot.id));
       return true;
     },
     false,
   );
 }
 
+/* 本机写入成功后排队上传云端（未登录 / 无作品 / 预览 / 后端未开通时自动跳过） */
+async function writeAndSync(slot: SaveSlot): Promise<boolean> {
+  const ok = await writeSlot(slot);
+  if (ok) queueCloudPush(currentSaveGameId(), slot, isAuthorPreview());
+  return ok;
+}
+
 /* 写入自动存档（固定槽位，持续覆盖）；作者预览写入独立测试槽，不覆盖正式自动存档 */
 export async function writeAutosave(state: GameState): Promise<boolean> {
   const preview = isAuthorPreview();
-  return writeSlot({
+  return writeAndSync({
     id: preview ? AUTHOR_PREVIEW_AUTO_SLOT : AUTO_SLOT_ID,
     name: preview
       ? `作者测试 · ${state.player?.name ?? "未命名"}`
@@ -132,7 +161,7 @@ export async function saveToSlot(id: string, state: GameState, name?: string): P
   // 作者预览禁止写入正式手动槽，一律落测试自动档
   if (isAuthorPreview()) return writeAutosave(state);
   // 覆盖：整槽替换（名称随新进度刷新，除非显式传入）
-  return writeSlot({
+  return writeAndSync({
     id,
     name: name ?? `${state.player?.name ?? "存档"} · ${state.world?.time || "序章"}`,
     updatedAt: Date.now(),
@@ -144,7 +173,11 @@ const withPrivate = (state: GameState): GameState => ({ ...state, privateData: e
 
 /* 读取单个槽 */
 export async function getSlot(id: string): Promise<SaveSlot | null> {
-  return guard("getSlot", async () => (await gameSaveDB.getItem<SaveSlot>(slotKey(id))) ?? null, null);
+  return guard(
+    "getSlot",
+    async () => (await gameSaveDB.getItem<SaveSlot>(slotKey(id))) ?? (await gameSaveDB.getItem<SaveSlot>(legacyKey(id))) ?? null,
+    null,
+  );
 }
 
 /* 删除一个槽 */
@@ -152,8 +185,11 @@ export async function deleteSlot(id: string): Promise<boolean> {
   return guard(
     "deleteSlot",
     async () => {
-      const gone = (await gameSaveDB.getItem<SaveSlot>(slotKey(id)))?.state?.id;
+      const gone = (await getSlot(id))?.state?.id;
       await gameSaveDB.removeItem(slotKey(id));
+      await gameSaveDB.removeItem(legacyKey(id));
+      const gameId = currentSaveGameId();
+      if (!isPreviewSlotId(id) && !cloudOffReason(gameId, isAuthorPreview())) void cloudDelete(gameId, id).catch(() => undefined);
       // 该局已无任何存档位（含自动存档）且不在游玩中 → 清理它残留的私有数据，释放本地空间
       if (gone && gone !== getCurrentSaveId() && !(await listSaves()).some((x) => x.state?.id === gone)) purgeSaveData(gone);
       return true;
@@ -166,7 +202,11 @@ export async function deleteSlot(id: string): Promise<boolean> {
 export async function renameSlot(id: string, name: string): Promise<boolean> {
   const slot = await getSlot(id);
   if (!slot) return false;
-  return writeSlot({ ...slot, name: name.trim() || slot.name });
+  const next = { ...slot, name: name.trim() || slot.name };
+  const ok = await writeSlot(next);
+  const gameId = currentSaveGameId();
+  if (ok && !isPreviewSlotId(id) && !cloudOffReason(gameId, isAuthorPreview())) void cloudRename(gameId, id, next.name).catch(() => undefined);
+  return ok;
 }
 
 /* ───────────── 防抖存档 ───────────── */
@@ -201,7 +241,18 @@ export async function flushAutosave(): Promise<boolean> {
   }
   const s = pendingState;
   pendingState = null;
-  return s ? writeAutosave(s) : true;
+  const ok = s ? await writeAutosave(s) : true;
+  void flushCloudPushes();
+  return ok;
+}
+
+/** 功能注释：打开存档列表前调用——把云端比本机新的存档拉回本机（换设备继续玩） */
+export async function syncCloudSaves(): Promise<number> {
+  const gameId = currentSaveGameId();
+  const local = new Map((await listSaves()).filter((s) => s.gameId === gameId).map((s) => [s.id, s.updatedAt] as const));
+  return pullCloudSaves(gameId, isAuthorPreview(), local, (slot) =>
+    writeSlot({ ...(slot as SaveSlot), gameId, auto: slot.id === AUTO_SLOT_ID || slot.auto }),
+  );
 }
 
 /* ───────────── 旧版 localStorage 存档一次性迁移 ───────────── */

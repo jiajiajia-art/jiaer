@@ -1,4 +1,7 @@
 /* 通用聊天：useChat（发消息 → AI 逐条回复落库）+ ChatView（微信/短信共用视图） */
+import { BUBBLE_THEMES } from "./bubbleThemes";
+import { aiStickers, stickerFromBubble, usableStickers, useCustomStickers, addCustomSticker, removeCustomSticker } from "./wxFeatures";
+import { getWxSettings } from "./wxSettings";
 import { commTerm, isAncientComm } from "../../lib/commSkin";
 import { isBlocked } from "../../game/msgPref";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -30,8 +33,9 @@ import { relOf } from "../../game/relations";
 import { isConfigured } from "../../lib/ai";
 import type { GameState } from "../../lib/types";
 import { delay, Dot, fmtDur } from "./shared";
-import { CHAT_BGS, chatBgOptions, bgCss, chatLook, STICKER_SET, BUBBLE_STYLES, bubbleStyleOf, aiView, getStranger, speakerGender, isStrangerId, addStrangerMemory, useStrangers, patchMsg, patchThread, customOf, wxTime, addFav, msgPreview, giftMsg, isPendingMoney, isReceipt, moneyDesc, pendingMoney, settleMoney, type XMsg, type XCustom } from "./wxFeatures";
-import { ShareSheet, speakOut, stopSpeech } from "./screenShare";
+import { MEET_MIN_MSGS, meetProgress } from "./wxFeatures";
+import { CHAT_BGS, chatBgOptions, bgCss, chatLook, aiView, getStranger, speakerGender, isStrangerId, addStrangerMemory, useStrangers, patchMsg, patchThread, customOf, wxTime, addFav, msgPreview, giftMsg, isPendingMoney, isReceipt, moneyDesc, pendingMoney, settleMoney, type XMsg, type XCustom } from "./wxFeatures";
+import { speakOut, stopSpeech } from "./screenShare";
 import { allowanceOn, payerId } from "../../game/npcKnowledge";
 import { talkAllowance } from "../../lib/allowance";
 import { IconPlus, IconArrowUp, IconSmiley } from "./icons";
@@ -49,8 +53,10 @@ export function useChat() {
   const [typingIn, setTypingIn] = useState<string | null>(null);
   const [busyStatus, setBusyStatus] = useState<string>("");
 
-  async function send(threadId: string, text: string, img?: string, kind?: XMsg["kind"], extra?: Partial<XMsg>): Promise<boolean> {
-    if (!text.trim() && !img && !extra?.amount) return false;
+  /* mode.queue：只发出、不让对方回（攒几条再回）；mode.trigger：不新发消息，让对方回复这些已发的消息 id（羽毛 / 重新生成 / 拍一拍，text 为交给 AI 的内容） */
+  async function send(threadId: string, text: string, img?: string, kind?: XMsg["kind"], extra?: Partial<XMsg>, mode: { queue?: boolean; trigger?: string[] } = {}): Promise<boolean> {
+    const trigger = mode.trigger;
+    if (!trigger && !text.trim() && !img && !extra?.amount) return false;
     if (!isConfigured(cfg)) {
       setBusyStatus("需要先在右上角接入 AI，对方才能回复你");
       setTimeout(() => setBusyStatus(""), 2600);
@@ -68,7 +74,7 @@ export function useChat() {
         return false;
       }
     }
-    const amount = extra?.amount ?? 0;
+    const amount = trigger ? 0 : extra?.amount ?? 0;
     if (amount > 0) {
       if (wallet.balance(g) < amount) {
         setBusyStatus(`${wallet.name(g, "零钱")}余额不足`);
@@ -90,10 +96,14 @@ export function useChat() {
       : kind === "transfer" ? `[主角给你转账 ${gave}]`
       : extra?.quote ? `[引用「${extra.quote}」] ${t0}` : t0;
     const aiImg = kind ? undefined : img;
-    // 红包 / 转账先扣款，再写入这条消息
-    step((cur) => pushMsg(amount > 0 ? wallet.add(cur, -amount) : cur, threadId, mine));
-    await delay(350);
-    step((cur) => setMsgStatus(cur, threadId, [mine.id], "unread"));
+    // 本次让对方回应的消息：新发的这条；trigger 模式下是之前已发出的那几条
+    const ids = trigger ?? [mine.id];
+    if (!trigger) {
+      // 红包 / 转账先扣款，再写入这条消息
+      step((cur) => pushMsg(amount > 0 ? wallet.add(cur, -amount) : cur, threadId, mine));
+      await delay(350);
+      step((cur) => setMsgStatus(cur, threadId, [mine.id], "unread"));
+    }
     // 主角之前给出、超过一天（游戏时间）还没人收的钱：像微信一样自动退回，不再拿去问
     for (const m of g.phone?.threads.find((t) => t.id === threadId)?.msgs ?? []) {
       if (m.id !== mine.id && m.role === "me" && isPendingMoney(m) && gameMinutes(g) - m.gt >= 1440) step((cur) => settleMoney(cur, threadId, m.id, false, []));
@@ -101,13 +111,15 @@ export function useChat() {
 
     const thread = ensurePhone(g).phone!.threads.find((t) => t.id === threadId);
     // 给 AI 的上下文不含刚发的这条：它会作为最后一条 user 消息单独传入，带上就成了「同一句话连发两遍」
-    const aiThread = thread && { ...thread, msgs: thread.msgs.filter((m) => m.id !== mine.id) };
+    const aiThread = thread && { ...thread, msgs: thread.msgs.filter((m) => !ids.includes(m.id)) };
     // 手机流水：和谁聊了什么（连续发送合并为一条）；聊天消耗线下时间，下回合线下剧情会知晓
     const bit = kind === "redpacket" ? `[红包 ${wallet.fmt(amount, g)}]` : kind === "transfer" ? `[转账 ${wallet.fmt(amount, g)}]`
       : kind === "sticker" ? "[表情包]" : kind === "photo" ? `[图片]${t0 ? " " + t0 : ""}` : kind === "voice" ? `[语音] ${t0}` : t0;
-    step((cur) => logAct(cur, { app: brand.appName, text: thread?.kind === "group" ? `在群「${thread.title}」里说` : `和${thread?.title ?? "好友"}聊${brand.appName}`, pid: thread?.personId, key: `wx:${threadId}`, bit, min: 2 }));
+    if (!trigger) step((cur) => logAct(cur, { app: brand.appName, text: thread?.kind === "group" ? `在群「${thread.title}」里说` : `和${thread?.title ?? "好友"}聊${brand.appName}`, pid: thread?.personId, key: `wx:${threadId}`, bit, min: 2 }));
     // 明明当面在一起，却低头给对方发消息：对方可能直接打断你，转入线下当面交谈
-    if (thread?.kind === "private" && thread.personId && rollInterrupt(g, thread.personId)) {
+    // 攒着再回：只发出，等玩家点羽毛
+    if (mode.queue) return true;
+    if (!trigger && thread?.kind === "private" && thread.personId && rollInterrupt(g, thread.personId)) {
       step((cur) => pushMsg(setMsgStatus(cur, threadId, [mine.id], "read"), threadId, { id: msgId(), role: "sys", text: `${thread.title}就在你身边，放下手机看向了你——`, ts: Date.now(), gt: gameMinutes(cur), label: gameTimeLabel(cur) }));
       emitInterrupt({ pid: thread.personId, name: thread.title, what: bit || "发消息" });
       return true;
@@ -115,6 +127,7 @@ export function useChat() {
     // 发送失败：标红色叹号；红包 / 转账退回零钱
     const fail = (msg: string) => {
       step((cur) => {
+        if (trigger) return setMsgStatus(cur, threadId, ids, "unread");
         const x = patchMsg(cur, threadId, mine.id, { failed: true, status: undefined });
         return amount > 0 ? wallet.add(x, amount) : x;
       });
@@ -122,9 +135,14 @@ export function useChat() {
       setTimeout(() => setBusyStatus(""), 2600);
     };
     // 这次要对方表态的钱：刚发的这笔；否则是之前留着没收的那笔（对方当时在忙 / 没拿定主意）
-    const ask = kind === "redpacket" || kind === "transfer" ? mine : pendingMoney(aiThread);
+    const queuedMoney = trigger ? (thread?.msgs ?? []).filter((m) => ids.includes(m.id) && isPendingMoney(m)).pop() as XMsg | undefined : undefined;
+    const ask = !trigger && (kind === "redpacket" || kind === "transfer") ? mine : queuedMoney ?? pendingMoney(aiThread);
     const money = ask ? moneyDesc(g, ask) : undefined;
-    const fresh = ask?.id === mine.id;
+    const fresh = !!ask && ids.includes(ask.id);
+    const stickerList = aiStickers(getWxSettings());
+    const stickerNames = stickerList.map((x) => x.name);
+    // 对方回的一条：「[表情包：名字]」且名字可用 → 表情包消息；否则普通文字
+    const asMsg = (txt: string): Partial<XMsg> => { const sk = stickerFromBubble(txt, stickerList); return sk ? { kind: "sticker", text: sk.name, img: sk.src } : { text: txt }; };
     const nameOf = (id?: string) => (id && (gRef.current.npcs.find((n) => n.id === id)?.name ?? getStranger(id)?.name)) || (thread?.kind === "group" ? "群友" : thread?.title ?? "对方");
     // 收下 → 红包已领取 / 转账已收款；不收 → 原路退回钱包（settleMoney 只结算还没落定的，不会重复退款）
     const settle = async (x: XMsg, take: boolean, who: string[]) => {
@@ -135,8 +153,8 @@ export function useChat() {
     if (thread?.kind === "group") {
       setTypingIn(threadId);
       try {
-        const r = await requestGroupReply(cfg, g, aiView(g, aiThread).thread!, aiText, aiImg, money ? { money } : undefined);
-        step((cur) => setMsgStatus(cur, threadId, [mine.id], "read"));
+        const r = await requestGroupReply(cfg, g, aiView(g, aiThread).thread!, aiText, aiImg, { ...(money ? { money } : {}), stickers: stickerNames });
+        step((cur) => setMsgStatus(cur, threadId, ids, "read"));
         // 主角的红包：AI 点名领了的人依次领取；AI 没给 grab 时看谁说了收下的话；没人领就先留着，下次说话时再问
         if (ask) {
           const who = r.grab ?? r.lines.filter((l) => moneyStance(l.text) === "accept" && (fresh || /红包|抢|领/.test(l.text))).map((l) => l.id);
@@ -145,7 +163,7 @@ export function useChat() {
         for (const l of r.lines) {
           await delay(600 + Math.min(1400, (l.text || "红包").length * 45));
           if (l.text) step((cur) => isBlocked(cur, l.id) ? cur : pushMsg(cur, threadId, {
-            id: msgId(), role: "npc", from: l.id, text: l.text, ts: Date.now(), gt: gameMinutes(cur), label: gameTimeLabel(cur),
+            id: msgId(), role: "npc", from: l.id, text: l.text, ts: Date.now(), gt: gameMinutes(cur), label: gameTimeLabel(cur), ...asMsg(l.text),
             ...(l.emotion ? { emo: l.emotion, bpm: bpmOf(l.emotion) } : {}), ...(l.inner_os ? { os: l.inner_os } : {}),
           }));
           // 成员当场发给主角的红包（频率、上限由 chatMoney 校正，不该发的不落卡片）
@@ -174,14 +192,14 @@ export function useChat() {
     let reply;
     try {
       const v = aiView(g, aiThread);
-      reply = await requestChatReply(cfg, v.g, v.thread!, aiText, aiImg);
+      reply = await requestChatReply(cfg, v.g, v.thread!, aiText, aiImg, { ...(money ? { money } : {}), stickers: stickerNames });
     } catch {
       setTypingIn(null);
       fail(aiImg ? "对方没能看到图片：当前 AI 模型可能不支持识图，换一个多模态模型试试" : "消息发送失败，检查一下网络或 AI 配置");
       return true;
     }
 
-    step((cur) => setMsgStatus(cur, threadId, [mine.id], "read"));
+    step((cur) => setMsgStatus(cur, threadId, ids, "read"));
     // 对方对那笔钱的态度：收下的先落定；不收的等话说完再退；没表态 / 在忙 → 先留着，下次说话时再问
     const verdict = ask && !reply.busy ? moneyDecision(reply.accept_money, reply.bubbles.join("\n"), fresh) : undefined;
     if (ask && verdict === "accept") await settle(ask, true, [pid]);
@@ -189,7 +207,7 @@ export function useChat() {
     if (reply.busy) {
       await delay(600);
       setTypingIn(null);
-      step((cur) => setMsgStatus(cur, threadId, [mine.id], "busy"));
+      step((cur) => setMsgStatus(cur, threadId, ids, "busy"));
     }
 
     const stranger = isStrangerId(pid);
@@ -199,7 +217,7 @@ export function useChat() {
       const lastOne = bi === reply.bubbles.length - 1;
       step((cur) => {
         const nm: ChatMsg = {
-          id: msgId(), role: "npc", text: b, ts: Date.now(), gt: gameMinutes(cur), label: gameTimeLabel(cur),
+          id: msgId(), role: "npc", text: b, ts: Date.now(), gt: gameMinutes(cur), label: gameTimeLabel(cur), ...(asMsg(b) as object),
           ...(lastOne && reply.emotion ? { emo: reply.emotion, bpm: bpmOf(reply.emotion) } : {}),
           ...(lastOne && reply.inner_os ? { os: reply.inner_os } : {}),
         };
@@ -265,7 +283,7 @@ function ChatSettingsSheet({ thread, onClose }: { thread: Thread; onClose: () =>
   const { game, commitGame } = useGame();
   const c = (thread.custom ?? {}) as XCustom;
   const patch = (p: Partial<XCustom>) => commitGame(setThreadCustom(game!, thread.id, p as Partial<NonNullable<Thread["custom"]>>));
-  const curBubble = bubbleStyleOf(c.bubble).id;
+  const wxGlobal = useWxSettings();
   const fileRef = useRef<HTMLInputElement>(null);
   const upload = (f?: File) => {
     if (!f) return;
@@ -302,14 +320,18 @@ function ChatSettingsSheet({ thread, onClose }: { thread: Thread; onClose: () =>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => upload(e.target.files?.[0])} />
         </Sec>
         <Sec t="聊天气泡">
+          {/* 功能注释：本聊天单独用的气泡（留空跟随全局「聊天样式」）；A 类颜色沿用全局设置的颜色 */}
+          <button onClick={() => patch({ bubble: undefined })} className={`mb-2 w-full rounded-lg border py-1.5 text-[12px] ${!c.bubble ? "border-[#07c160] bg-[#07c160]/10 font-semibold text-[#07a050]" : "border-black/10 text-ink"}`}>跟随全局样式</button>
           <div className="grid grid-cols-3 gap-2">
-            {BUBBLE_STYLES.map((b) => {
-              const on = curBubble === b.id;
+            {BUBBLE_THEMES.filter((t) => t.id !== "custom" || !!wxGlobal.chat.customCss).map((t) => {
+              const on = c.bubble === t.id;
+              const tl = chatLook({ ...wxGlobal.chat, border: false }, { bubble: t.id });
               return (
-                <button key={b.id} onClick={() => patch({ bubble: b.id })} className={`flex flex-col items-center gap-1.5 rounded-lg border p-2 ${on ? "border-[#07c160] ring-2 ring-[#07c160]/40" : "border-black/10"} ${b.id === "dark" ? "bg-[#1d2028]" : "bg-[#f3f3f3]"}`}>
-                  <span className={`self-start rounded-lg px-2 py-0.5 text-[11px] ${b.them}`} style={b.themStyle}>你好</span>
-                  <span className={`self-end rounded-lg px-2 py-0.5 text-[11px] ${b.me}`} style={b.meStyle}>在呢～</span>
-                  <span className={`text-[11px] ${on ? "font-semibold text-[#07a050]" : b.id === "dark" ? "text-white/70" : "text-ink-soft"}`}>{b.label}</span>
+                <button key={t.id} onClick={() => patch({ bubble: t.id })} className={`relative flex flex-col items-stretch gap-1 rounded-lg border bg-[#f3f3f3] p-2 ${on ? "border-[#07c160] ring-2 ring-[#07c160]/40" : "border-black/10"}`}>
+                  <span className={`absolute left-1 top-1 rounded px-1 text-[9px] font-black leading-[14px] ${t.kind === "A" ? "bg-[#07c160]/15 text-[#07a050]" : "bg-[#576b95]/15 text-[#576b95]"}`}>{t.kind}</span>
+                  <span className={`self-start text-[11px] leading-snug ${tl.cls(false)}`} style={{ ...tl.style(false), padding: "2px 8px" }}>你好</span>
+                  <span className={`self-end text-[11px] leading-snug ${tl.cls(true)}`} style={{ ...tl.style(true), padding: "2px 8px" }}>在呢～</span>
+                  <span className={`text-center text-[11px] ${on ? "font-semibold text-[#07a050]" : "text-ink-soft"}`}>{t.label}</span>
                 </button>
               );
             })}
@@ -518,9 +540,15 @@ const IcoEmoji = () => <CircleIco><path d="M9.6 16.3a5.2 5.2 0 0 0 8.8 0" /><cir
 const IcoPlus = () => <CircleIco><path d="M14 8.5v11M8.5 14h11" /></CircleIco>;
 
 /* ⊕ 面板图标 */
+/* 羽毛（线性）：让对方回复 */
+function IcoFeather() {
+  return <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20.2 3.8a6 6 0 0 0-8.5 0L5 10.5V19h8.5l6.7-6.7a6 6 0 0 0 0-8.5Z" /><path d="M16 8 2 22" /><path d="M17.5 15H9" /></svg>;
+}
+
 function TileIco({ k, size = 28 }: { k: string; size?: number }) {
   const p = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
   switch (k) {
+    case "meet": return <svg {...p}><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z" /><circle cx="12" cy="10" r="2.4" /></svg>;
     case "photo": return <svg {...p}><rect x="3" y="4.5" width="18" height="15" rx="2" /><circle cx="8.5" cy="9.5" r="1.6" /><path d="m3.5 17 5-4.5 4 3.5 3-2.5 5 4" /></svg>;
     case "camera": return <svg {...p}><path d="M4 8h3l1.6-2.5h6.8L17 8h3a1 1 0 0 1 1 1v9.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" /><circle cx="12" cy="13.3" r="3.6" /></svg>;
     case "call": return <svg {...p}><path d="M20.5 16.4v2.7a1.8 1.8 0 0 1-2 1.8A17.6 17.6 0 0 1 3.1 5.5a1.8 1.8 0 0 1 1.8-2h2.7a1.8 1.8 0 0 1 1.8 1.5c.1.8.3 1.6.6 2.4a1.8 1.8 0 0 1-.4 1.9l-1.1 1.1a14.4 14.4 0 0 0 5.1 5.1l1.1-1.1a1.8 1.8 0 0 1 1.9-.4c.8.3 1.6.5 2.4.6a1.8 1.8 0 0 1 1.5 1.8Z" /></svg>;
@@ -794,8 +822,12 @@ const WATCH_CUE =
 
 export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; onBack: () => void; sms?: boolean; autoSend?: string }) {
   const wxSet = useWxSettings();
-  const { game, commitGame, patchGame, cfg } = useGame();
-  const { send, typingIn, busyStatus } = useChat();
+  const { game, commitGame, patchGame, cfg, meetStranger } = useGame();
+  const { send: rawSend, typingIn, busyStatus } = useChat();
+  // 功能注释：「攒几条再回」开着时，所有发出的消息（文字 / 表情包 / 图片 / 语音 / 红包）都只发出，点羽毛才让对方回复
+  const send = (tid: string, text: string, img?: string, kind?: XMsg["kind"], extra?: Partial<XMsg>) => rawSend(tid, text, img, kind, extra, wxSet.batchReply ? { queue: true } : {});
+  const [meetAsk, setMeetAsk] = useState(false);
+  const [innerOpen, setInnerOpen] = useState<string | null>(null); // 看心声的人 id // 摇一摇网友 · 约见面确认
   const liveRef = useRef(game);
   liveRef.current = game;
   const [allowOpen, setAllowOpen] = useState(false);
@@ -806,7 +838,6 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
   const [showEmoji, setShowEmoji] = useState(false);
   const [setOpen, setSetOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
   const [shareErr, setShareErr] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
   const pid = thread.personId!;
@@ -862,8 +893,11 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
       void send(thread.id, cap, url, "photo");
     } catch { setShareErr("图片读取失败，换一张试试"); setTimeout(() => setShareErr(""), 2400); }
   };
+  const customStk = useCustomStickers();
+  const stickerOptions = usableStickers(wxSet);
+  const stkFileRef = useRef<HTMLInputElement>(null);
   const sendSticker = (sid: string) => {
-    const sk = STICKER_SET.find((x) => x.id === sid);
+    const sk = stickerOptions.find((x) => x.id === sid);
     if (sk) void send(thread.id, sk.name, sk.src, "sticker");
   };
   const isGroup = thread.kind === "group";
@@ -873,7 +907,52 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
   const quicks = quickReplies(hasReal);
   const accent = sms ? "#0b8aff" : WX_GREEN;
   const lastEmo = [...thread.msgs].reverse().find((m) => m.role === "npc" && m.emo);
-  const setMyAvatar = (src: string) => commitGame({ ...game!, player: { ...game!.player, avatar: src } });
+  // 末尾还没被回复的「我的消息」（最后一条对方消息之后）
+  const pendingMine = (): ChatMsg[] => {
+    const out: ChatMsg[] = [];
+    for (let i = thread.msgs.length - 1; i >= 0; i--) {
+      const m = thread.msgs[i];
+      if (m.role === "npc") break;
+      if (m.role === "me" && !(m as XMsg).failed) out.unshift(m);
+    }
+    return out;
+  };
+  const aiTextOf = (m: ChatMsg) => { const x = m as XMsg; return x.kind === "sticker" ? `[表情包：${m.text}]` : x.kind === "photo" ? `[图片]${m.text ? " " + m.text : ""}` : x.kind === "voice" ? `[语音消息] ${m.text}` : x.kind === "redpacket" ? `[主角给你发了一个红包]` : x.kind === "transfer" ? `[主角给你转账]` : x.quote ? `[引用「${x.quote}」] ${m.text}` : m.text; };
+  // 羽毛：让对方一次回复攒下的几条
+  const replyNow = () => {
+    const mine = pendingMine();
+    if (!mine.length) { flash("先发几条消息吧"); return; }
+    void rawSend(thread.id, mine.map(aiTextOf).join("\n"), undefined, undefined, undefined, { trigger: mine.map((m) => m.id) });
+  };
+  // 长按对方最新回复 →「重新生成」：撤掉对方最新那轮回复，按同样的消息重新生成
+  const regenerate = () => {
+    if (typingIn === thread.id) return;
+    let lastMe = -1;
+    for (let i = thread.msgs.length - 1; i >= 0; i--) if (thread.msgs[i].role === "me") { lastMe = i; break; }
+    if (lastMe < 0) { flash("还没有可以重新生成的回复"); return; }
+    let start = lastMe;
+    while (start > 0 && thread.msgs[start - 1].role !== "npc") start--;
+    const mine = thread.msgs.slice(start, lastMe + 1).filter((m) => m.role === "me" && !(m as XMsg).failed);
+    const after = thread.msgs.slice(lastMe + 1);
+    if (!after.some((m) => m.role === "npc")) { flash(wxSet.batchReply ? "对方还没回复，点羽毛让 TA 回" : "对方还没回复"); return; }
+    const keepIds = new Set(after.filter((m) => m.role === "sys" && /红包|收款|退还/.test(m.text)).map((m) => m.id)); // 钱的回执保留，避免账对不上
+    commitGame(patchThread(game!, thread.id, (t) => ({ ...t, msgs: t.msgs.filter((m, i) => i <= lastMe || keepIds.has(m.id)) })));
+    flash("正在重新生成");
+    setTimeout(() => void rawSend(thread.id, mine.map(aiTextOf).join("\n"), undefined, undefined, undefined, { trigger: mine.map((m) => m.id) }), 50);
+  };
+  // 拍一拍：显示「你拍了拍 TA」，并把这个动作交给 AI（关闭后都不做）
+  const patTap = (pid?: string) => {
+    if (!wxSet.pat || !pid || typingIn === thread.id) return;
+    const who = (isGroup ? game!.npcs.find((n) => n.id === pid)?.name : thread.title) ?? "TA";
+    commitGame(pushMsg(game!, thread.id, { id: msgId(), role: "sys", kind: "pat", text: `你拍了拍「${who}」`, ts: Date.now(), gt: gameMinutes(game!), label: gameTimeLabel(game!) } as XMsg));
+    setTimeout(() => void rawSend(thread.id, isGroup ? `[主角在群里拍了拍${who}]` : "[主角拍了拍你]", undefined, undefined, undefined, { trigger: [] }), 50);
+  };
+  // 好友头像：单击看心声，双击拍一拍
+  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onFriendAvatar = (pid?: string) => {
+    if (tapTimer.current) { clearTimeout(tapTimer.current); tapTimer.current = null; patTap(pid); return; }
+    tapTimer.current = setTimeout(() => { tapTimer.current = null; if (pid) setInnerOpen(pid); }, 260);
+  };
   const ph = ensurePhone(game!).phone!;
   const otherUnread = sms ? 0 : ph.threads.reduce((a, t) => a + (t.id !== thread.id && !customOf(t).muted ? t.unread : 0), 0);
 
@@ -984,6 +1063,11 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
   };
   const msgMenu = (m: XMsg) => {
     const items: { label: string; on: () => void }[] = [];
+    // 功能注释：对方最新那轮回复可「重新生成」（主角头像只展示，不再承担任何操作）
+    if (!sms && m.role === "npc") {
+      const lastMeIdx = thread.msgs.map((x) => x.role).lastIndexOf("me");
+      if (lastMeIdx >= 0 && thread.msgs.findIndex((x) => x.id === m.id) > lastMeIdx) items.push({ label: "重新生成", on: regenerate });
+    }
     if (m.text && !m.kind?.match(/sticker|redpacket|transfer/)) items.push({ label: "复制", on: () => { void navigator.clipboard?.writeText(m.text).then(() => flash("已复制"), () => {}); } });
     if (!m.kind?.match(/redpacket|transfer/)) items.push({ label: "引用", on: () => { const who = m.role === "me" ? game!.player.name : speaker(m)?.name ?? thread.title; setQuote(`${who}：${msgPreview(m).slice(0, 60)}`); setVoiceMode(false); setShowEmoji(false); setMoreOpen(false); setTimeout(() => taRef.current?.focus(), 0); } });
     if (!m.kind?.match(/redpacket|transfer/)) items.push({ label: "收藏", on: () => { addFav({ id: m.id, from: m.role === "me" ? game!.player.name : speaker(m)?.name ?? thread.title, text: m.kind === "voice" ? `[语音] ${m.text}` : m.text, img: m.kind === "photo" || m.kind === "sticker" ? m.img : undefined, ts: Date.now() }); flash("已收藏"); } });
@@ -1086,13 +1170,6 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
       )}
       <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={(e) => { void pickPhoto(e.target.files?.[0]); e.target.value = ""; }} />
       <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { void pickPhoto(e.target.files?.[0]); e.target.value = ""; }} />
-      {shareOpen && (
-        <ShareSheet
-          onClose={() => setShareOpen(false)}
-          onError={(m) => { setShareErr(m); setTimeout(() => setShareErr(""), 2400); }}
-          onPick={(img) => { void send(thread.id, draft, img); setDraft(""); }}
-        />
-      )}
       {sms ? (
         <div className="flex items-center gap-2 border-b border-black/5 bg-white/90 px-3 py-2 backdrop-blur">
           <button onClick={onBack} className="text-[15px]" style={{ color: "#0b8aff" }}>‹ 返回</button>
@@ -1124,6 +1201,7 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
       <div ref={scroller} onClick={() => { setShowEmoji(false); setMoreOpen(false); }} className="flex-1 space-y-3 overflow-y-auto px-3 py-3">
         {thread.msgs.map((m0, i) => {
           const m = m0 as XMsg;
+          if (m.kind === "pat" && !wxSet.pat) return null; // 关闭拍一拍：不显示拍一拍消息
           // 旧记录里模型写成的「（已读不回）」/第三人称旁白：不当消息显示
           if (m.role === "npc" && !m.kind && !m.img && notAMessage(m.text, speaker(m)?.name ?? "")) return null;
           const prev = thread.msgs[i - 1];
@@ -1147,11 +1225,13 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
                 <div className={`bubble-in flex items-start gap-2.5 ${right ? "flex-row-reverse" : ""}`}>
                   <div className="shrink-0 overflow-hidden" style={{ borderRadius: sms ? 4 : look.avatarRadius }}>
                     {!right
-                      ? <Avatar src={speaker(m)?.avatar} name={speaker(m)?.name ?? thread.title} size={40} editable={false} />
-                      : <Avatar src={game!.player.avatar} name={game!.player.name} size={40} onPick={setMyAvatar} />}
+                      ? <button type="button" onClick={() => !sms && onFriendAvatar(isGroup ? m.from : pid)} aria-label={`${speaker(m)?.name ?? thread.title}：单击看心声，双击拍一拍`} className="block"><Avatar src={speaker(m)?.avatar} name={speaker(m)?.name ?? thread.title} size={40} editable={false} /></button>
+                      : <Avatar src={game!.player.avatar} name={game!.player.name} size={40} editable={false} />}
                   </div>
                   <div className={`flex max-w-[70%] flex-col ${right ? "items-end" : "items-start"}`}>
-                    {isGroup && !right && <span className="mb-1 text-[12px] text-[#9a9a9a]">{speaker(m)?.name ?? "成员"}</span>}
+                    {!sms && ((isGroup && !right) || (isGroup && right && wxSet.groupShowMyName) || (!isGroup && wxSet.privateShowNames)) && (
+                      <span className="mb-1 text-[12px] text-[#9a9a9a]">{right ? game!.player.name : speaker(m)?.name ?? (isGroup ? "成员" : thread.title)}</span>
+                    )}
                     <div className="flex items-center gap-2" style={{ flexDirection: right ? "row-reverse" : "row" }}>
                     <Pressable right={right} open={menuFor === m.id} onOpen={() => !sms && !isCall && setMenuFor(m.id)} onClose={() => setMenuFor(null)} menu={menuFor === m.id ? msgMenu(m) : []}>
                     {isCall ? (
@@ -1200,6 +1280,10 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
                     </div>
                     {m.quote && (
                       <div className="mt-1 max-w-full truncate rounded-[3px] bg-black/[0.06] px-2 py-1 text-[12px] text-[#7f7f7f]">{m.quote}</div>
+                    )}
+                    {/* 功能注释：气泡显示时间（普通 / 引用 / 语音消息） */}
+                    {wxSet.bubbleTime && !sms && !isCall && !(m as XMsg).kind?.match(/sticker|photo|redpacket|transfer/) && (
+                      <span className="mt-0.5 text-[10.5px] tabular-nums text-[#b2b2b2]">{wxTime(game!, m.gt, true)}</span>
                     )}
                     {m.kind === "voice" && showTr[m.id] && (
                       <div className="mt-1.5 max-w-full rounded-[4px] bg-white px-3 py-2 text-[14px] leading-snug text-ink">{m.text}</div>
@@ -1314,6 +1398,13 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
         <div className="border-t border-black/[0.08] bg-[#f7f7f7]">
           {/* 微信输入条：语音 / 输入框 / 表情 / 加号，有字才显示绿色「发送」 */}
           <div className="flex items-end gap-2 px-2 py-2 text-[#181818]">
+            {/* 功能注释：羽毛——攒着的消息一次交给对方回复（「攒几条再回」开启时出现） */}
+            {wxSet.batchReply && (
+              <button onClick={replyNow} disabled={typingIn === thread.id} className="relative mb-[4px] shrink-0 text-[#07a050] disabled:opacity-40" aria-label="让对方回复">
+                <IcoFeather />
+                {pendingMine().length > 0 && <span className="absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-[#fa5151] px-1 text-[10px] font-bold leading-none text-white">{pendingMine().length}</span>}
+              </button>
+            )}
             {SR && (
               <button onClick={() => { setVoiceMode((v) => !v); setShowEmoji(false); setMoreOpen(false); }} className="mb-[4px] shrink-0" aria-label={voiceMode ? "键盘" : "语音"}>{voiceMode ? <IcoKeyboard /> : <IcoVoice />}</button>
             )}
@@ -1355,11 +1446,32 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
             <div className="border-t border-black/[0.06]">
               {panel === "sticker" ? (
                 <div className="grid max-h-52 grid-cols-4 gap-2 overflow-y-auto px-3 py-2">
-                  {STICKER_SET.map((sk) => (
-                    <button key={sk.id} onClick={() => sendSticker(sk.id)} className="rounded-lg p-1 transition active:scale-95 active:bg-black/10" title={sk.name}>
-                      <img src={(sk.src) || undefined} alt={sk.name} className="aspect-square w-full" />
-                    </button>
-                  ))}
+                  {stickerOptions.map((sk) => {
+                    const own = customStk.some((c) => c.id === sk.id);
+                    return (
+                      <div key={sk.id} className="relative">
+                        <button onClick={() => sendSticker(sk.id)} className="w-full rounded-lg p-1 transition active:scale-95 active:bg-black/10" title={sk.name}>
+                          <img src={(sk.src) || undefined} alt={sk.name} className="aspect-square w-full object-contain" />
+                          {own && <span className="block truncate text-center text-[10px] text-ink-soft">{sk.name}</span>}
+                        </button>
+                        {own && (
+                          <button onClick={() => removeCustomSticker(sk.id)} aria-label={`删除表情包「${sk.name}」`} className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-black/45 text-white">
+                            <IconClose size={14} />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {/* 功能注释：添加自定义表情包（从相册选图，名字取文件名，可在「设置」里决定是否提示给 AI） */}
+                  <button onClick={() => stkFileRef.current?.click()} className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg border border-dashed border-black/20 text-[#7f7f7f] transition active:bg-black/5" aria-label="添加表情包">
+                    <TileIco k="sticker" size={22} />
+                    <span className="text-[10px]">添加</span>
+                  </button>
+                  <input ref={stkFileRef} type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                    const f = e.target.files?.[0]; e.target.value = "";
+                    if (!f) return;
+                    try { addCustomSticker(f.name.replace(/\.[^.]+$/, ""), await fileToDataUrl(f)); flash("已添加表情包"); } catch { flash("图片读取失败"); }
+                  }} />
                 </div>
               ) : (
                 <div className="grid max-h-52 grid-cols-8 gap-1 overflow-y-auto px-2 py-2">
@@ -1387,7 +1499,13 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
                 { k: "red", label: commTerm("red"), on: () => setMoney("redpacket") },
                 ...(!isGroup ? [{ k: "transfer", label: commTerm("transfer"), on: () => setMoney("transfer") }] : []),
                 { k: "sticker", label: "表情包", on: () => { setMoreOpen(false); setPanel("sticker"); setShowEmoji(true); } },
-                { k: "share", label: "屏幕共享", on: () => { setMoreOpen(false); setShareOpen(true); } },
+                // 功能注释：摇一摇网友聊满门槛后可约见面，见面后正式进入游戏世界
+                ...(!isGroup && st && !st.met ? [{ k: "meet", label: "约见面", on: () => {
+                  setMoreOpen(false);
+                  const n = meetProgress(game!, pid);
+                  if (n < MEET_MIN_MSGS) { flash(`再多聊聊吧（${n}/${MEET_MIN_MSGS}）`); return; }
+                  setMeetAsk(true);
+                } }] : []),
               ].map((a) => (
                 <button key={a.k} onClick={a.on} className="flex flex-col items-center gap-1.5">
                   <span className="flex h-[58px] w-[58px] items-center justify-center rounded-[14px] bg-white text-[#3c3c3c]"><TileIco k={a.k} /></span>
@@ -1396,6 +1514,50 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
               ))}
             </div>
           )}
+        </div>
+      )}
+      {innerOpen && (() => {
+        const p0 = game!.npcs.find((n) => n.id === innerOpen);
+        const nm = p0?.name ?? getStranger(innerOpen)?.name ?? thread.title;
+        // 功能注释：心声 = 各聊天里 TA 消息附带的 inner_os；随笔 = TA 的日记；心事 = 线下剧情里 TA 的心事
+        const os = (game!.phone?.threads ?? []).flatMap((t) => t.msgs.filter((m) => m.role === "npc" && m.os && (t.kind === "group" ? m.from === innerOpen : t.personId === innerOpen)).map((m) => ({ text: m.os!, gt: m.gt, where: t.kind === "group" ? `群「${t.title}」` : "私聊" }))).sort((a, b) => b.gt - a.gt).slice(0, 8);
+        const diaries = (game!.diaries ?? []).filter((d) => d.npcId === innerOpen).slice(-4).reverse();
+        const thoughts = game!.story.flatMap((t) => (t.thoughts ?? []).filter((x) => x.name === nm).map((x) => x.text)).slice(-4).reverse();
+        return (
+          <div className="absolute inset-0 z-50 flex flex-col justify-end bg-black/40" onClick={() => setInnerOpen(null)}>
+            <div className="max-h-[78%] overflow-y-auto rounded-t-2xl bg-[#f7f4ff] px-4 pb-6 pt-4" onClick={(e) => e.stopPropagation()}>
+              <div className="mb-3 flex items-center gap-3">
+                <div className="overflow-hidden rounded-full"><Avatar src={p0?.avatar ?? getStranger(innerOpen)?.avatar} name={nm} size={44} editable={false} /></div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[16px] font-semibold text-ink">{nm}</p>
+                  <p className="text-[11.5px] text-[#7b68a6]">TA 最近的心声与随笔</p>
+                </div>
+                {wxSet.pat && <button onClick={() => { const id = innerOpen; setInnerOpen(null); patTap(id); }} className="rounded-full border border-[#c9b6f2] px-3 py-1 text-[12px] text-[#5b3f86]">拍一拍</button>}
+              </div>
+              {!os.length && !diaries.length && !thoughts.length && <p className="py-6 text-center text-[12.5px] text-ink-soft">还没有捕捉到 TA 的心声，多聊几句吧。</p>}
+              {os.length > 0 && (<>
+                <p className="mb-1.5 mt-1 text-[11.5px] font-semibold text-[#7b68a6]">心声</p>
+                <ul className="space-y-1.5">{os.map((o, i) => <li key={i} className="rounded-xl border border-dashed border-[#c9a3ff] bg-white/80 px-3 py-2 text-[13px] leading-snug text-[#5b3f86]">{o.text}<span className="ml-1.5 text-[10.5px] text-[#a99bc7]">{o.where} · {wxTime(game!, o.gt)}</span></li>)}</ul>
+              </>)}
+              {thoughts.length > 0 && (<>
+                <p className="mb-1.5 mt-3 text-[11.5px] font-semibold text-[#7b68a6]">心事</p>
+                <ul className="space-y-1.5">{thoughts.map((t, i) => <li key={i} className="rounded-xl bg-white/80 px-3 py-2 text-[13px] leading-snug text-ink">{t}</li>)}</ul>
+              </>)}
+              {diaries.length > 0 && (<>
+                <p className="mb-1.5 mt-3 text-[11.5px] font-semibold text-[#7b68a6]">随笔</p>
+                <ul className="space-y-2">{diaries.map((d) => <li key={d.id} className="rounded-xl bg-white px-3 py-2.5 text-[13px] leading-relaxed text-ink"><span className="mb-1 block text-[10.5px] text-ink-soft">{d.time}</span>{d.text}</li>)}</ul>
+              </>)}
+            </div>
+          </div>
+        );
+      })()}
+      {meetAsk && st && (
+        <div className="absolute inset-0 z-50 flex flex-col justify-end bg-black/40" onClick={() => setMeetAsk(false)}>
+          <div className="bg-[#f7f7f7]" onClick={(e) => e.stopPropagation()}>
+            <p className="bg-white px-6 py-4 text-center text-[13px] leading-relaxed text-ink-soft">约「{st.name}」在你现在所在的地方见面？<br />见面后 TA 会成为现实里认识的人，出现在世界里，有好感与剧情记忆。</p>
+            <button onClick={() => { setMeetAsk(false); if (meetStranger(pid)) { flash("已约好，回到剧情看看吧"); onBack(); } }} className="block w-full border-t border-[#e5e5e5] bg-white py-3.5 text-[17px] font-medium" style={{ color: WX_GREEN }}>约见面</button>
+            <button onClick={() => setMeetAsk(false)} className="mt-2 block w-full bg-white py-3.5 pb-5 text-[17px] text-ink">再聊聊</button>
+          </div>
         </div>
       )}
     </div>

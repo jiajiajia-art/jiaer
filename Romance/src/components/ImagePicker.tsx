@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
-import { assetDaysLeft, loadAssets, rememberImageAsset, saveAssets, touchAsset, uploadImage } from "../lib/freeStyle"
+import { assetDaysLeft, loadAssets, rememberImageAsset, saveAssets, touchAsset, uploadImage, type AssetKind } from "../lib/freeStyle"
+import AssetKindTabs, { filterAssetsByKind, type AssetKindFilter } from "./AssetKindTabs"
 import { displayableImageSrc } from "../lib/displayableImageSrc"
 import { mediaCheck } from "../game/engineRules"
 import {
@@ -51,6 +52,7 @@ export default function ImagePicker({
   scenePortrait = false,
   aiGen,
   platformAssetPurpose,
+  assetKind,
 }: {
   value?: unknown
   onChange: (url?: string) => void
@@ -64,6 +66,8 @@ export default function ImagePicker({
   aiGen?: ImagePickerAiGen
   /** 功能注释：有值时「素材库」打开平台地点素材库（按用途筛），不走本地素材格。 */
   platformAssetPurpose?: LocationAssetPurpose
+  /** 功能注释：存进素材库的分类；缺省时地点竖图 = 地点、标签含「封面」= 封面、「头像」= 头像 */
+  assetKind?: AssetKind
 }) {
   const ref = useRef<HTMLInputElement>(null)
   const [mode, setMode] = useState<"" | "lib" | "link">("")
@@ -78,7 +82,11 @@ export default function ImagePicker({
   const [broken, setBroken] = useState(false)
   useEffect(() => { setBroken(false) }, [src])
   const show = Boolean(src) && !broken
-  const assets = mode === "lib" && !platformAssetPurpose ? loadAssets() : []
+  const kind: AssetKind | undefined = assetKind
+    ?? (scenePortrait ? "location" : /封面/.test(label) ? "cover" : /头像/.test(label) ? "avatar" : undefined)
+  const [kindFilter, setKindFilter] = useState<AssetKindFilter>(kind ?? "all")
+  const allAssets = mode === "lib" && !platformAssetPurpose ? loadAssets() : []
+  const assets = filterAssetsByKind(allAssets, kindFilter)
   const portraitHint = scenePortrait ? SCENE_PORTRAIT_HINT : hint
   // 功能注释：地点场景用「生图」替换「链接」；封面等仍可同时有生图+链接
   const genOpts: ImagePickerAiGen | undefined = aiGen
@@ -88,7 +96,7 @@ export default function ImagePicker({
   const showGen = Boolean(genOpts)
   const showLink = !scenePortrait
 
-  const rememberAsset = (url: string, name = label) => rememberImageAsset(url, name)
+  const rememberAsset = (url: string, name = label) => rememberImageAsset(url, name, kind)
 
   const applyUrl = async (url: string) => {
     setBusy(true)
@@ -126,7 +134,7 @@ export default function ImagePicker({
         rememberAsset(fitted, f.name.replace(/\.[^.]+$/, ""))
         setMode("")
       } else {
-        onChange((await uploadImage(f, max)).url)
+        onChange((await uploadImage(f, max, kind)).url)
         setMode("")
       }
     } catch (e) {
@@ -252,6 +260,9 @@ export default function ImagePicker({
           </button>
         </div>
       )}
+      {mode === "lib" && !platformAssetPurpose && allAssets.length > 0 && (
+        <div className="mt-2"><AssetKindTabs assets={allAssets} value={kindFilter} onChange={setKindFilter} /></div>
+      )}
       {mode === "lib" && !platformAssetPurpose &&
         (assets.length ? (
           <div className="mt-2 grid max-h-44 grid-cols-5 gap-1.5 overflow-y-auto rounded-xl border border-line bg-paper-2 p-1.5 sm:grid-cols-7">
@@ -280,7 +291,7 @@ export default function ImagePicker({
           </div>
         ) : (
           <p className="mt-2 rounded-xl border border-dashed border-line px-3 py-2 text-[11px] text-ink-soft">
-            素材库还是空的，点「上传」选一张，会自动收进素材库。
+            {allAssets.length ? "这个分类下还没有素材，换个分类看看。" : "素材库还是空的，点「上传」选一张，会自动收进素材库。"}
           </p>
         ))}
       {platformLibOpen && platformAssetPurpose ? (
@@ -324,6 +335,8 @@ export default function ImagePicker({
             autoRun={genOpts.autoRun === true}
             autoApply={genOpts.autoApply === true}
             onPhaseChange={setGenPhase}
+            assetKind={kind}
+            assetName={label}
             onPick={(url) => {
               void applyUrl(url).then(() => {
                 setGenOpen(false)

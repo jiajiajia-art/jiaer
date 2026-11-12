@@ -7,7 +7,8 @@ import { ageLabel, moodLine, ownField } from "@/lib/npcIdentity";
 import { useGame } from "../store/gameCtx";
 import { Chip, Modal } from "./ui";
 import { feature, LIVE_PERSON_BY_ID as PERSON_BY_ID, worldPersonById as profileOf } from "../mods/registry";
-import { IconHeart, IconScroll, IconSend } from "../lib/icons";
+import { IconHeart, IconScroll, IconSend, IconVolume } from "../lib/icons";
+import { speakOut, voiceOf } from "./phone/screenShare";
 import {
   ActionTile,
   BondMeterRow,
@@ -43,6 +44,7 @@ export default function PersonProfile({ pid, name, known = true }: { pid: string
   const tags = [gender, affil].filter(Boolean) as string[];
   // 功能注释：所属势力只读作者在人物卡选的真实势力，不从身份文字推断
   const fac = npcFactionOf(pid, wp?.factionId);
+  const catchphrase = known ? wp?.catchphrase?.trim() : undefined;
   const factionList = (game?.factions ?? []).filter((f) => f.name?.trim());
   const romanceOn = canRomance(s, pid);
   const romanceFixed = romanceFixedOff(s, pid);
@@ -121,6 +123,20 @@ export default function PersonProfile({ pid, name, known = true }: { pid: string
                 </label>
               )}
             </div>
+            {/* 功能注释：常用语——名字下方一句口头禅，点小喇叭用该人物音色朗读 */}
+            {catchphrase && (
+              <div className="mt-1 flex min-w-0 items-center gap-1.5">
+                <p className="min-w-0 truncate text-[12.5px] italic text-ink-soft">「{catchphrase}」</p>
+                <button
+                  type="button"
+                  onClick={() => speakOut(catchphrase, gender, pid, n?.persona?.ttsVoice || voiceOf(pid))}
+                  aria-label="朗读常用语"
+                  className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-coral transition hover:bg-coral/10"
+                >
+                  <IconVolume width={14} height={14} aria-hidden />
+                </button>
+              </div>
+            )}
             {/* 功能注释：作品有势力时显示并允许玩家自由修改；改动写进存档，对话 / 事件条件 / 资料同步生效 */}
             {factionList.length > 0 && (
               <label className="mt-1.5 flex items-center gap-1.5 text-[11.5px] text-ink-soft">

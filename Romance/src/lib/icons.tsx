@@ -83,6 +83,16 @@ import {
   Sun,
   User,
   Users,
+  Volume2,
+  WandSparkles,
+  Drama,
+  Aperture,
+  MessagesSquare,
+  NotebookPen,
+  Tv,
+  StickyNote,
+  FastForward,
+  Hourglass,
   Wallet,
   X,
   Zap,
@@ -230,6 +240,16 @@ export const IconAlert = adapt(AlertTriangle);
 export const IconStar = adapt(Star);
 export const IconMenu = adapt(Menu);
 export const IconMusic = adapt(Music);
+export const IconVolume = adapt(Volume2);
+export const IconWand = adapt(WandSparkles);
+export const IconDrama = adapt(Drama);
+export const IconAperture = adapt(Aperture);
+export const IconThreads = adapt(MessagesSquare);
+export const IconDiary = adapt(NotebookPen);
+export const IconLive = adapt(Tv);
+export const IconMemo = adapt(StickyNote);
+export const IconForward = adapt(FastForward);
+export const IconHourglass = adapt(Hourglass);
 export const IconThought = adapt(Brain);
 export const IconMessage = adapt(MessageCircle);
 export const IconEye = adapt(Eye);

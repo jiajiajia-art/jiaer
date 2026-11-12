@@ -15,7 +15,6 @@ import { PomodoroApp, ClockApp, CalculatorApp, NotesApp, WeatherApp } from "./Ut
 import MusicApp from "./MusicApp";
 import BossZhipinApp from "./BossZhipinApp";
 import XianyuApp from "./XianyuApp";
-import ForumApp from "./ForumApp";
 import PeekApp from "./PeekApp";
 import CoupleApp from "./CoupleApp";
 import MailApp from "./MailApp";
@@ -109,7 +108,6 @@ export default function LivePhoneAppPreview({ id, onBack }: { id: string; onBack
   if (id === "cloudmusic") return <MusicApp onBack={onBack} />;
   if (id === "bosspin") return <BossZhipinApp onBack={onBack} />;
   if (id === "xianyu") return <XianyuApp onBack={onBack} />;
-  if (id === "forum") return <ForumApp onBack={onBack} />;
   if (id === "couple") return <CoupleApp onBack={onBack} />;
   if (id === "mail") return <MailApp onBack={onBack} />;
   if (id === "read") return <ReadApp onBack={onBack} />;

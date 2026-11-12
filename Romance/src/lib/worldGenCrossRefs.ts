@@ -7,6 +7,7 @@ import { asModArray } from "./asModArray.ts";
 import { asTrimmedString } from "./asTrimmedString.ts";
 import { formatStartDate, parseStartDateParts } from "./startDateFields.ts";
 import { coerceWorldGenStartDate } from "./worldGenStartDate.ts";
+import { WORLD_GEN_AUTO_COND_NODES } from "./worldGenPlayability.ts";
 
 /** 功能注释：软校验的「宽松区间」上限——建议条数之外仍接受，但防止灌爆；下限只要求非空。 */
 export const WORLD_GEN_NPCS_SOFT_MAX = 12;
@@ -110,7 +111,8 @@ function resolveAlias(raw: string, ids: Set<string>, alias?: Map<string, string>
  */
 function normalizeRefRow(row: Rec, refs: WorldGenRefIds, flags: RefFlags, roomKind: string): Rec | null {
   const rawKind = asTrimmedString(row.kind);
-  const key = asTrimmedString(row.key);
+  // 功能注释：AI 有时照抄引擎写法 c:<id>，先剥前缀再对账
+  const key = asTrimmedString(row.key).replace(/^c:/, "");
   if (!key) return null;
   const attr = resolveAlias(key, refs.attrIds, refs.attrAlias);
   const npc = flags.allowRel ? resolveAlias(key, refs.npcIds, refs.npcAlias) : "";
@@ -160,7 +162,8 @@ export function collectWorldGenRefIds(patch: Rec, ctx?: WorldGenRefContext): Wor
     npcIds: idSetOf(npcSrc),
     roomIds: new Set(Object.keys(roomsMapOf(patch, ctx))),
     factionIds: idSetOf(factionSrc),
-    eventIds: idSetOf(patch.fixedEvents),
+    // 功能注释：主线条件可引用本批或上一批已落盘的固定事件
+    eventIds: new Set([...idSetOf(patch.fixedEvents), ...idSetOf(content?.fixedEvents)]),
     attrAlias: aliasMapOf(attrSrc),
     npcAlias: aliasMapOf(npcSrc, ["name"]),
     roomAlias: roomAliasOf(roomsMapOf(patch, ctx)),
@@ -303,10 +306,27 @@ export function applyWorldGenEventRefs(patch: Rec, refs: WorldGenRefIds, flags: 
 export function applyWorldGenQuestRefs(patch: Rec, refs: WorldGenRefIds, flags: RefFlags): Rec {
   if (!Array.isArray(patch.storylines) || !refs.known) return patch;
   const out: Rec = { ...patch };
+  const used = new Set<string>();
+  for (const line of objList(patch.storylines)) {
+    for (const node of objList(line.nodes)) {
+      for (const c of objList(node.conds)) if (asTrimmedString(c.kind) === "event") used.add(asTrimmedString(c.key));
+    }
+  }
+  const eventPool = [...refs.eventIds].filter((id) => !used.has(id));
+  let timeStep = 0;
   out.storylines = objList(patch.storylines).map((line) => ({
     ...line,
     nodes: objList(line.nodes).map((node) => {
       const next: Rec = { ...node, conds: filterWorldGenCondsByRefs(node.conds, refs, flags) };
+      // 功能注释：条件全被筛掉时兜底——依次挂一条尚未用过的固定事件「已触发」，没有事件则按天数推进；
+      // 否则节点无条件，一开始判定就直接完成，主线形同虚设
+      if (!(next.conds as Rec[]).length) {
+        const ev = eventPool.shift();
+        next.conds = ev
+          ? [{ kind: "event", key: ev }]
+          : [{ kind: "time", unit: "day", op: "gte", value: 7 * (++timeStep) }];
+        WORLD_GEN_AUTO_COND_NODES.add(next);
+      }
       if (Array.isArray(node.failConds)) {
         const fail = filterWorldGenCondsByRefs(node.failConds, refs, flags);
         if (fail.length) next.failConds = fail;
@@ -315,6 +335,27 @@ export function applyWorldGenQuestRefs(patch: Rec, refs: WorldGenRefIds, flags: 
       return next;
     }),
   }));
+  return out;
+}
+
+/** 功能注释：玩法规则的条件/效果同样对回真实 id；对完后既无效果又无事件的分支与规则丢弃，避免「未挂钩事件」空壳 */
+export function applyWorldGenRuleRefs(patch: Rec, refs: WorldGenRefIds, flags: RefFlags): Rec {
+  if (!Array.isArray(patch.gameRules) || !refs.known) return patch;
+  const out: Rec = { ...patch };
+  const rules = objList(patch.gameRules)
+    .map((rule) => {
+      const branches = objList(rule.branches)
+        .map((b): Rec & { effects: Rec[] } => ({
+          ...b,
+          conds: filterWorldGenCondsByRefs(b.conds, refs, flags),
+          effects: filterWorldGenEffectsByRefs(b.effects, refs, flags),
+        }))
+        .filter((b) => b.effects.length > 0 || !!asTrimmedString(b.eventId));
+      return { ...rule, branches };
+    })
+    .filter((rule) => rule.branches.length > 0);
+  if (rules.length) out.gameRules = rules;
+  else delete out.gameRules;
   return out;
 }
 
@@ -450,7 +491,7 @@ export function alignWorldGenAgesAndStartDate(patch: Rec, ctx?: WorldGenRefConte
 
 /**
  * 功能注释：人物写出后回填线路——hero 必须是有效人物 id，room 必须是有效地点 id；
- * 找不到对应人物的线路整条丢弃；用完即删 npc.pathId 辅助字段。
+ * 一人只当一条线路主角；对不上的线路依次分给未占用人物，人物不够才丢弃；用完即删 npc.pathId 辅助字段。
  */
 export function fillWorldGenPaths(patch: Rec, ctx?: WorldGenRefContext): Rec {
   if (!Array.isArray(patch.npcs)) return patch;
@@ -470,13 +511,37 @@ export function fillWorldGenPaths(patch: Rec, ctx?: WorldGenRefContext): Rec {
   });
   if (!Array.isArray(rawPaths)) return out;
   const filled: Rec[] = [];
-  for (const p of objList(rawPaths)) {
+  const pathRows = objList(rawPaths);
+  // 功能注释：一个人物只当一条线路的主角；按「显式 hero → npc.pathId → 简介里提到的名字」三轮分配，
+  // 前一轮占用的人物后一轮不再用，避免多条线路挂同一人或被简介里顺带提到的配角抢走
+  const used = new Set<string>();
+  const heroes: (Rec | undefined)[] = pathRows.map(() => undefined);
+  const take = (i: number, n: Rec | undefined) => {
+    if (!n || heroes[i]) return;
+    const id = asTrimmedString(n.id);
+    if (!id || used.has(id)) return;
+    heroes[i] = n;
+    used.add(id);
+  };
+  pathRows.forEach((p, i) => {
+    const hid = asTrimmedString(p.hero) ? resolveNpcId(p.hero, npcs) : "";
+    take(i, npcs.find((n) => asTrimmedString(n.id) === hid));
+  });
+  pathRows.forEach((p, i) => {
     const pid = asTrimmedString(p.id);
+    if (pid) take(i, npcs.find((n) => asTrimmedString(n.pathId) === pid && !used.has(asTrimmedString(n.id))));
+  });
+  pathRows.forEach((p, i) => {
     const blob = [p.name, p.about, p.blurb, p.tag].map((x) => asTrimmedString(x)).join("\n");
-    const hero =
-      npcs.find((n) => resolveNpcId(p.hero, [n]) === asTrimmedString(n.id) && asTrimmedString(p.hero))
-      ?? (pid ? npcs.find((n) => asTrimmedString(n.pathId) === pid) : undefined)
-      ?? npcs.find((n) => asTrimmedString(n.name) && blob.includes(asTrimmedString(n.name)));
+    take(i, npcs.find((n) => asTrimmedString(n.name) && !used.has(asTrimmedString(n.id)) && blob.includes(asTrimmedString(n.name))));
+  });
+  // 功能注释：仍没主角的线路依次分给未占用的人物，人物不够时才丢弃，避免第 1 次写好的线路骨架整批消失
+  pathRows.forEach((_, i) => {
+    take(i, npcs.find((n) => !used.has(asTrimmedString(n.id))));
+  });
+  for (let i = 0; i < pathRows.length; i += 1) {
+    const p = pathRows[i]!;
+    const hero = heroes[i];
     if (!hero) continue;
     const room =
       resolveWorldGenRoomId(p.room, rooms)
@@ -567,6 +632,7 @@ export function applyWorldGenCrossRefs(
   out = applyWorldGenEventRefs(out, refs, flags);
   const refsAfterEvents = collectWorldGenRefIds(out, ctx);
   out = applyWorldGenQuestRefs(out, { ...refsAfterEvents, factionIds: refs.factionIds }, flags);
+  out = applyWorldGenRuleRefs(out, { ...refsAfterEvents, factionIds: refs.factionIds }, flags);
   return out;
 }
 

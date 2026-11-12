@@ -74,13 +74,14 @@ test('共享弹窗包含模式、可访问性与错误重试约束', () => {
 });
 
 test('展开月历延长周历同一容器，不渲染第二个独立卡框', () => {
-  const weekRuleIndex = modalSource.indexOf('className={styles.weekRule}');
+  // 结构：周历网格 → 展开按钮 → 同一容器里的月历区块（月度奖励已上移到周历上方）
+  const weekGridIndex = modalSource.indexOf('className={styles.weekGrid}');
   const expandButtonIndex = modalSource.indexOf('className={styles.expandButton}');
   const monthSectionIndex = modalSource.indexOf('className={styles.monthSection}');
-  const monthRewardIndex = modalSource.indexOf('className={styles.monthReward}');
-  assert.ok(weekRuleIndex > -1 && expandButtonIndex > weekRuleIndex);
-  assert.ok(monthSectionIndex > expandButtonIndex && monthRewardIndex > monthSectionIndex);
-  assert.doesNotMatch(modalSource.slice(weekRuleIndex, expandButtonIndex), /<\/section>/);
+  assert.ok(weekGridIndex > -1 && expandButtonIndex > weekGridIndex);
+  assert.ok(monthSectionIndex > expandButtonIndex);
+  // 周历到月历之间不得关闭外层卡片（不渲染第二个独立卡框）
+  assert.doesNotMatch(modalSource.slice(weekGridIndex, monthSectionIndex), /<\/section>/);
 
   const monthSectionRule = modalStyles.match(/\.monthSection\s*\{([\s\S]*?)\}/)?.[1] ?? '';
   assert.doesNotMatch(monthSectionRule, /\bborder:\s*1px/);
