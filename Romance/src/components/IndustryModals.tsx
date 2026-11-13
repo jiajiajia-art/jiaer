@@ -1,3 +1,4 @@
+import { liveTerm as T } from "../mods/live";
 import { useGame } from "../store/gameCtx";
 import { canRomance, type NPC } from "../game/logic";
 import { MOVIE_TITLES, companyMeta, type FamilyRef } from "../worlds/star2005/content";
@@ -12,16 +13,16 @@ import { StatBars, WorksChips, ProfileBasics, ProfileRelations, ProfileGroup, Pr
 export function CompanyModal({ companyId, roster, onOpenStar, onClose }: { companyId: string; roster: NPC[]; onOpenStar: (id: string) => void; onClose: () => void }) {
   const meta = companyMeta(companyId);
   return (
-    <Modal title={meta.name} onClose={onClose}>
+    <Modal panelClassName="ui-dialog-game" title={meta.name} onClose={onClose}>
       <div className="mb-3 flex items-center gap-2">
         <Chip tone="gold">声望 {meta.prestige}</Chip>
-        <span className="text-[12px] text-ink-soft">旗下 {roster.length} 位艺人</span>
+        <span className="text-[12px] text-ink-soft">旗下 {roster.length} 位{T("member")}</span>
       </div>
       {meta.blurb && <p className="mb-4 text-[13px] leading-relaxed text-ink/90">{meta.blurb}</p>}
 
       {/* 掌舵人 / 老板 */}
       {meta.boss && (
-        <div className="mb-4 rounded-sm border border-dashed border-gold/60 bg-gold/[0.06] p-3">
+        <div className="mb-4 rounded-[var(--radius-ui-sm)] border border-dashed border-gold/60 bg-gold/[0.06] p-3">
           <p className="mb-1.5 text-[12px] font-bold tracking-[0.2em] text-gold">▌掌舵人</p>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[14px] font-bold text-ink">{meta.boss.name}</span>
@@ -33,13 +34,13 @@ export function CompanyModal({ companyId, roster, onOpenStar, onClose }: { compa
         </div>
       )}
 
-      <p className="mb-2 text-[12px] font-bold tracking-[0.2em] text-jade">▌旗下艺人</p>
+      <p className="mb-2 text-[12px] font-bold tracking-[0.2em] text-jade">▌旗下{T("member")}</p>
       <div className="grid gap-1.5 sm:grid-cols-2">
         {roster.map((n) => (
           <button
             key={n.id}
             onClick={() => onOpenStar(n.id)}
-            className="flex items-center justify-between gap-2 rounded-sm border border-dashed border-line px-3 py-2 text-left transition hover:border-jade hover:bg-jade/5"
+            className="flex items-center justify-between gap-2 rounded-[var(--radius-ui-sm)] border border-dashed border-line px-3 py-2 text-left transition hover:border-jade hover:bg-jade/5"
           >
             <span className="min-w-0">
               <span className="block truncate text-[13px] font-semibold text-ink">{n.name}</span>
@@ -90,10 +91,10 @@ export function StarModal({ star, onOpenStar, onClose }: { star: NPC; onOpenStar
   const hasContact = (game?.phone?.contacts ?? []).includes(star.id);
   const tile = "flex flex-col items-start gap-0.5 rounded-xl px-3 py-2.5 text-left transition active:scale-[0.98]";
   return (
-    <Modal title={`${star.name} · 人物资料`} onClose={onClose}>
+    <Modal panelClassName="ui-dialog-game" title={`${star.name} · 人物资料`} onClose={onClose}>
       <ProfileHero
         name={star.name}
-        sub={`艺人 · ${star.dir}`}
+        sub={`${T("member")} · ${star.dir}`}
         avatar={<Avatar name={star.name} size={96} square editable={false} />}
         tags={<>
           <RelTag text="同行" />

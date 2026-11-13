@@ -38,7 +38,7 @@ export default function BranchSheet() {
 
   return createPortal(
     <div className="ui-overlay z-50">
-      <section role="dialog" aria-modal="true" aria-label={b.title} className="ui-sheet ui-dialog animate-pop">
+      <section role="dialog" aria-modal="true" aria-label={b.title} className="ui-sheet ui-dialog ui-dialog-game animate-pop">
         {/* 顶部：支线身份 + 体力规则 */}
         <header className="relative shrink-0 border-b border-line/70 px-4 pb-3 pt-2.5 sm:px-5">
           <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-line sm:hidden" />

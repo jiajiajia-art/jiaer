@@ -137,43 +137,32 @@ export default function AIConfigPanel() {
       </div>
 
       {/* 语音模型：小手机语音消息、通话的朗读；不填模型就用浏览器自带朗读 */}
+      {/* 功能注释：语音只走平台后台配置的语音线路（可选倍率）；创作扣织梦豆、游玩扣 KK 币。不再填个人语音接口 */}
       <div className="space-y-3 rounded-xl border border-line bg-paper-2/60 p-3">
-        <p className="text-[13px] font-bold text-ink">语音模型 <span className="ml-1 text-[11px] font-normal text-ink-soft">用于语音消息 / 通话朗读；模型留空则用浏览器自带朗读（免费、本地）</span></p>
-        <div>
-          <label className={label}>语音 API Base URL（留空沿用上方）</label>
-          <input className={field} value={draft.ttsBaseUrl ?? ""} onChange={(e) => upd({ ttsBaseUrl: e.target.value })} placeholder="https://api.openai.com/v1" />
-        </div>
-        <div>
-          <label className={label}>语音 API Key（留空沿用上方）</label>
-          <input className={field} type="password" value={draft.ttsApiKey ?? ""} onChange={(e) => upd({ ttsApiKey: e.target.value })} placeholder="sk-..." />
-        </div>
-        <div>
-          <label className={label}>语音模型（OpenAI 兼容 /audio/speech）</label>
-          <input className={field} value={draft.ttsModel ?? ""} onChange={(e) => upd({ ttsModel: e.target.value })} placeholder="gpt-4o-mini-tts / tts-1 / FunAudioLLM/CosyVoice2-0.5B" />
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className={label}>女声音色</label>
-            <input className={field} value={draft.ttsVoiceFemale ?? ""} onChange={(e) => upd({ ttsVoiceFemale: e.target.value })} placeholder="nova / shimmer" />
-          </div>
-          <div>
-            <label className={label}>男声音色</label>
-            <input className={field} value={draft.ttsVoiceMale ?? ""} onChange={(e) => upd({ ttsVoiceMale: e.target.value })} placeholder="onyx / echo" />
-          </div>
-        </div>
+        <p className="text-[13px] font-bold text-ink">语音朗读 <span className="ml-1 text-[11px] font-normal text-ink-soft">语音消息 / 通话 / 常用语朗读</span></p>
+        {hasPlatformPlayAuth() ? (
+          <>
+            <AiRoutePicker capability="tts" title="语音线路" />
+            <p className="text-[11px] leading-snug text-ink-soft">创作与预览按线路倍率扣织梦豆，正式游玩扣 KK 币。</p>
+          </>
+        ) : (
+          <p className="text-[11.5px] leading-snug text-ink-soft">未登录平台，将使用浏览器自带朗读（免费），人物专属音色不生效。</p>
+        )}
         <div>
           <label className={label}>语速 · {(draft.ttsSpeed ?? 1).toFixed(2)}×</label>
           <input type="range" min={0.5} max={2} step={0.05} value={draft.ttsSpeed ?? 1} onChange={(e) => upd({ ttsSpeed: Number(e.target.value) })} className="w-full accent-jade" />
         </div>
-        <div className="flex items-center gap-2">
-          <button type="button" disabled={!draft.ttsModel || ttsBusy} onClick={async () => {
-            setTtsMsg(""); setTtsBusy(true);
-            try { const url = await synthSpeech(draft, "你好呀，今天的声乐课别迟到哦。"); await new Audio(url).play(); setTtsMsg("试听成功"); }
-            catch (e) { setTtsMsg(e instanceof Error ? e.message : "试听失败"); }
-            finally { setTtsBusy(false); }
-          }} className="rounded-full border border-jade px-3 py-1 text-[12px] font-bold text-jade transition hover:bg-jade/10 disabled:opacity-40">{ttsBusy ? "合成中…" : "试听"}</button>
-          {ttsMsg && <span className={`text-[11.5px] ${ttsMsg === "试听成功" ? "text-jade" : "text-danger"}`}>{ttsMsg}</span>}
-        </div>
+        {hasPlatformPlayAuth() && (
+          <div className="flex items-center gap-2">
+            <button type="button" disabled={ttsBusy} onClick={async () => {
+              setTtsMsg(""); setTtsBusy(true);
+              try { const url = await synthSpeech(draft, "你好呀，今天也要好好的。"); await new Audio(url).play(); setTtsMsg("试听成功"); }
+              catch (e) { setTtsMsg(e instanceof Error ? e.message : "试听失败"); }
+              finally { setTtsBusy(false); }
+            }} className="rounded-full border border-jade px-3 py-1 text-[12px] font-bold text-jade transition hover:bg-jade/10 disabled:opacity-40">{ttsBusy ? "合成中…" : "试听"}</button>
+            {ttsMsg && <span className={`text-[11.5px] ${ttsMsg === "试听成功" ? "text-jade" : "text-danger"}`}>{ttsMsg}</span>}
+          </div>
+        )}
       </div>
 
       {/* 生图模型：封面、CG 等「AI 生成图片」共用 */}

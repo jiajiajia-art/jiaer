@@ -12,7 +12,7 @@ const move = <T,>(xs: T[], from: number, to: number) => {
 };
 
 /**
- * 功能注释：紧凑关系档位编辑器，嵌在「人物」列表上方统一配一次。
+ * 功能注释：紧凑关系档位编辑器，全作品共用，放在「人物」卡片列表之后单独成块。
  * 创作者只配档位；旧 metrics 字段保存时写空，界面不再提供数值条配置。
  */
 export default function ContactsPanel({ value, onChange }: {
@@ -33,8 +33,8 @@ export default function ContactsPanel({ value, onChange }: {
     <div className="space-y-3 rounded-xl border border-line bg-paper-2/60 p-2.5">
       <div className="flex flex-wrap items-center justify-between gap-1.5">
         <div>
-          <p className="text-[12.5px] font-bold text-ink">关系档位</p>
-          <p className="text-[10.5px] text-ink-soft">统一配一次；档位只按关系值分段显示人物列表</p>
+          <p className="text-[12.5px] font-bold text-ink">关系档位 · 全作品共用</p>
+          <p className="text-[10.5px] text-ink-soft">对本作品所有人物生效，不属于某一个人；按关系值把人脉列表分段</p>
         </div>
         <button type="button" className={btn} onClick={() => onChange(undefined)}>恢复默认</button>
       </div>

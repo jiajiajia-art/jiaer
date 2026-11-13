@@ -23,7 +23,8 @@ export type GlyphName = "world" | "star" | "clipboard" | "people" | "book" | "ge
 /* 矢量水晶图标：点击前为柔白细描边，点击后换成水晶渐变描边并发光。
  * 描边式 glyph 在选中态填入 url(#crystalGrad) 渐变，未选中态用 currentColor。 */
 export function NavGlyph({ name, active, size = 20 }: { name: GlyphName; active: boolean; size?: number }) {
-  const stroke = active ? "url(#crystalGrad)" : "currentColor";
+  // 功能注释：选中态改用实色 currentColor（随按钮文字色 = 主题深色），不再依赖 url(#渐变) 引用；渐变引用在部分皮肤/预览里会解析失败，导致选中图标整枚消失
+  const stroke = "currentColor";
   const common = { fill: "none", stroke, strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
   const paths: Record<GlyphName, ReactNode> = {
     world: (
@@ -77,6 +78,7 @@ export function NavGlyph({ name, active, size = 20 }: { name: GlyphName; active:
   };
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} className={`relative transition-transform duration-300 ${active ? "scale-110 drop-shadow-[0_0_6px_var(--crystal-glow)]" : "group-hover:scale-105"}`} aria-hidden>
+
       {paths[name]}
     </svg>
   );
@@ -255,7 +257,7 @@ export default function MudChrome({ tab, setTab }: { tab: MudTab; setTab: (t: Mu
         <span aria-hidden className={`nav-hl pointer-events-none absolute inset-0 rounded-full transition-all duration-300 ${active ? "nav-hl-on nav-pill bg-gradient-to-r from-jade/22 to-coral/18 opacity-100 shadow-[0_0_14px_-3px_var(--crystal-glow)]" : "scale-75 opacity-0 group-hover:scale-90 group-hover:bg-ink-soft/8 group-hover:opacity-100"}`} />
         {/* 选中瞬间：一圈水晶光晕向外扩散后消失 */}
         {active && nav.ripple !== false && <span aria-hidden className="nav-ripple pointer-events-none absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,var(--crystal-glow),transparent_70%)]" />}
-        <span className={`nav-ico relative grid place-items-center ${active ? "nav-ico-on drop-shadow-[0_2px_6px_var(--crystal-glow)]" : ""}`}>
+        <span className={`nav-ico relative z-[1] grid place-items-center ${active ? "nav-ico-on drop-shadow-[0_2px_6px_var(--crystal-glow)]" : ""}`}>
           {(() => {
             // 自定义图标：选中 / 未选中各一张；只设了一张时两态共用（未选中略降透明度）
             const ic = nav.icons?.[id];

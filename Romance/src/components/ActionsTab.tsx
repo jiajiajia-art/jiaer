@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useGame } from "../store/gameCtx";
 import { IconChevronDown, IconChevronUp, IconPin, IconSparkle, StarRating } from "../lib/icons";
 import { industryBoards, leaderboard, gigCategory, type GigCat } from "../game/logic";
+import { gigConfig } from "../game/gigConfig";
 import { GIG_POOL, STAT_LABELS, attrLabelOf, type StatKey } from "../game/data";
 import { AD_BRANDS, MOVIE_TITLES, companyMeta, industryAwards, renderStarBuzz } from "../worlds/star2005/content";
 import { complete, isConfigured } from "../lib/ai";
@@ -52,7 +53,7 @@ export default function ActionsTab() {
   const [selCompany, setSelCompany] = useState<string | null>(null);
   const [movie, setMovie] = useState<{ title: string; starName: string; company: string; value: number } | null>(null);
   const [fameAll, setFameAll] = useState(false);
-  const [gigCat, setGigCat] = useState<GigCat>("ad");
+  const [gigCatPick, setGigCat] = useState<GigCat>("");
   if (!game) return null;
   const s = game.sim;
   const board = leaderboard(s);
@@ -138,7 +139,7 @@ export default function ActionsTab() {
         <BoardHead code="AWARD" cn="年度奖项 · 当前得主" />
         <div className="grid gap-1.5 sm:grid-cols-2">
           {awards.map((a) => (
-            <div key={a.ceremony + a.category} className="flex items-center justify-between gap-2 rounded-2xl border border-line bg-paper/70 shadow-[0_2px_10px_-6px_rgba(0,0,0,0.12)] px-3 py-2">
+            <div key={a.ceremony + a.category} className="ui-card flex items-center justify-between gap-2 px-3 py-2">
               <div className="min-w-0">
                 <p className="truncate text-[12px] text-ink-soft">{a.ceremony}</p>
                 <p className="truncate text-[13px] font-semibold text-ink">{a.category}</p>
@@ -154,8 +155,8 @@ export default function ActionsTab() {
       {/* 人气榜 */}
       {view === "fame" && (
       <section className="mb-6">
-        <BoardHead code="FAME" cn="艺人人气榜" note={`你排第 ${myRank} 名`} />
-        <div className="rounded-2xl border border-line bg-paper/70 shadow-[0_2px_10px_-6px_rgba(0,0,0,0.12)] p-3">
+        <BoardHead code="FAME" cn={`${T("member")}${T("fame")}榜`} note={`你排第 ${myRank} 名`} />
+        <div className="ui-card p-3">
           <div className="space-y-0.5">
             {(fameAll ? board : board.slice(0, 10)).map((r, i) => (
               <div key={r.name} className={`flex items-center justify-between rounded-xl px-2 py-1.5 text-[13px] ${r.isPlayer ? "bg-jade/10 font-bold text-jade" : i % 2 ? "text-ink" : "bg-paper-2/40 text-ink"}`}>
@@ -170,7 +171,7 @@ export default function ActionsTab() {
           {board.length > 10 && (
             <button
               onClick={() => setFameAll((v) => !v)}
-              className="mt-2 w-full rounded-2xl border border-line bg-paper/70 shadow-[0_2px_10px_-6px_rgba(0,0,0,0.12)] py-1.5 text-[12px] font-medium text-jade transition hover:border-jade hover:bg-jade/5"
+              className="ui-card mt-2 w-full py-1.5 text-[12px] font-medium text-jade transition hover:border-jade hover:bg-jade/5"
             >
               {fameAll ? <span className="inline-flex items-center justify-center gap-1">收起 <IconChevronUp size={12} /></span> : <span className="inline-flex items-center justify-center gap-1">查看全部 {board.length} 位 <IconChevronDown size={12} /></span>}
             </button>
@@ -194,7 +195,7 @@ export default function ActionsTab() {
                 tabIndex={0}
                 onClick={() => setMovie({ title, starName: m.starName, company, value: m.value })}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setMovie({ title, starName: m.starName, company, value: m.value }); } }}
-                className="flex w-full cursor-pointer items-center gap-3 rounded-2xl border border-line bg-paper/70 shadow-[0_2px_10px_-6px_rgba(0,0,0,0.12)] px-3 py-2 text-left transition hover:border-coral hover:bg-coral/5"
+                className="ui-card flex w-full cursor-pointer items-center gap-3 px-3 py-2 text-left transition hover:border-coral hover:bg-coral/5"
               >
                 <span className={`w-5 text-right font-mono text-[13px] ${i < 3 ? "text-gold" : "text-ink-soft"}`}>{i + 1}</span>
                 <div className="min-w-0 flex-1">
@@ -215,7 +216,7 @@ export default function ActionsTab() {
         <BoardHead code="AD" cn="当红代言榜" note="身价·年" />
         <div className="grid gap-1.5 sm:grid-cols-2">
           {ads.map((a) => (
-            <div key={a.starId} className="flex items-center gap-2.5 rounded-2xl border border-line bg-paper/70 shadow-[0_2px_10px_-6px_rgba(0,0,0,0.12)] px-3 py-2">
+            <div key={a.starId} className="ui-card flex items-center gap-2.5 px-3 py-2">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[13px] font-semibold text-ink">{AD_BRANDS[a.titleIndex % AD_BRANDS.length]}</p>
                 <p className="truncate text-[11px] text-ink-soft">代言人 <NameBtn name={a.starName} className="text-ink-soft" /></p>
@@ -230,7 +231,7 @@ export default function ActionsTab() {
       {/* 经纪公司 */}
       {view === "co" && (
       <section className="mb-6">
-        <BoardHead code="CO" cn="经纪公司" note="点开看旗下艺人" />
+        <BoardHead code="CO" cn={T("company")} note={`点开看旗下${T("member")}`} />
         <div className="grid gap-1.5 sm:grid-cols-2">
           {s.companies?.slice().sort((a, b) => b.prestige - a.prestige).map((c) => {
             const meta = companyMeta(c.id);
@@ -239,14 +240,14 @@ export default function ActionsTab() {
               <button
                 key={c.id}
                 onClick={() => { setSelStar(null); setSelCompany(c.id); }}
-                className="rounded-2xl border border-line bg-paper/70 shadow-[0_2px_10px_-6px_rgba(0,0,0,0.12)] p-3 text-left transition hover:border-jade hover:bg-jade/5"
+                className="ui-card p-3 text-left transition hover:border-jade hover:bg-jade/5"
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate text-[13.5px] font-bold text-ink">{meta.name}</p>
                   <Chip tone="gold">声望 {c.prestige}</Chip>
                 </div>
                 <p className="mt-0.5 line-clamp-2 text-[11.5px] text-ink-soft">{meta.blurb}</p>
-                <p className="mt-1 text-[11px] text-jade">旗下 {roster.length} 位艺人 →</p>
+                <p className="mt-1 text-[11px] text-jade">旗下 {roster.length} 位{T("member")} →</p>
               </button>
             );
           })}
@@ -256,20 +257,18 @@ export default function ActionsTab() {
 
       {/* 通告库 · 全部可接通告（广告/电视剧/电影/唱片各 100 档） */}
       {view === "gig" && (() => {
-        const CATS: { id: GigCat; label: string }[] = [
-          { id: "ad", label: "广告" },
-          { id: "tv", label: "电视剧" },
-          { id: "film", label: "电影" },
-          { id: "record", label: "唱片" },
-        ];
+        // 功能注释：分类来自作品的通告设置；只列出确实有内容的分类
+        const gcfg = gigConfig();
+        const CATS = gcfg.cats.filter((c) => GIG_POOL.some((g) => gigCategory(g) === c.id));
+        const gigCat = CATS.some((c) => c.id === gigCatPick) ? gigCatPick : CATS[0]?.id ?? "";
         const used = new Set(s.usedGigs ?? []);
         const catList = GIG_POOL.filter((g) => gigCategory(g) === gigCat);
         const doneCount = catList.filter((g) => used.has(g.id)).length;
         return (
         <section className="mb-6">
-          <BoardHead code="GIG" cn={`${T("gig")}库 · 全部${T("gig")}`} note={`共 ${GIG_POOL.length} 档 · 已拍过的不再出现`} />
+          <BoardHead code="GIG" cn={`${T("gig")}库 · 全部${T("gig")}`} note={`共 ${GIG_POOL.length} 档 · 完成过的不再出现`} />
           <p className="mb-3 text-[12px] leading-relaxed text-ink-soft">
-            {T("city")}经纪圈流通的{T("gig")}全表，分<span className="text-jade">广告 · 电视剧 · 电影 · 唱片</span>四类，每类 100 档。影视类标注题材与男女主/男女配角阵容；接下并结算后即计入<span className="text-coral">「已拍」</span>，之后不会再被派到你名下。此处仅供<span className="text-jade">浏览全表</span>——真正接单要<span className="text-coral">踩地图</span>去对应公司找负责人「接洽{T("gig")}」当面交涉。
+            {T("city")}{T("industry")}流通的{T("gig")}全表，分<span className="text-jade">{CATS.map((c) => c.label).join(" · ")}</span>{CATS.length} 类{gcfg.roles.length ? `，部分标注${gcfg.roles.map((r) => r.label).join("/")}阵容` : ""}；接下并结算后即计入<span className="text-coral">「已完成」</span>，之后不会再被派到你名下。此处仅供<span className="text-jade">浏览全表</span>——真正接单要<span className="text-coral">踩地图</span>去对应公司找负责人「接洽{T("gig")}」当面交涉。
           </p>
 
           {/* 分类切换 */}
@@ -288,7 +287,7 @@ export default function ActionsTab() {
               );
             })}
           </div>
-          {doneCount > 0 && <p className="mb-2 text-[11px] text-ink-soft">本类已拍 {doneCount} / {catList.length} 档。</p>}
+          {doneCount > 0 && <p className="mb-2 text-[11px] text-ink-soft">本类已完成 {doneCount} / {catList.length} 档。</p>}
 
           <div className="space-y-4">
             {[1, 2, 3, 4, 5].map((tier) => {
@@ -299,7 +298,7 @@ export default function ActionsTab() {
                   <p className="mb-1.5 text-[11.5px] font-bold tracking-[0.15em] text-gold">
                     <StarRating n={tier} />
                     <span className="ml-2 font-normal text-ink-soft">
-                      {tier === 1 ? `起步${T("gig")}` : tier === 2 ? "崭露头角" : tier === 3 ? "小有名气" : tier === 4 ? "当红一线" : "顶流大咖"}
+                      {gcfg.tierNames[tier - 1]}
                     </span>
                   </p>
                   <div className="grid gap-1.5">
@@ -308,23 +307,22 @@ export default function ActionsTab() {
                       const isActive = g.id === s.activeGigId;
                       const onOffer = (s.offers ?? []).includes(g.id);
                       return (
-                      <div key={g.id} className={`rounded-2xl border bg-paper/70 px-3 py-2.5 ${isUsed ? "border-line/60 bg-black/[0.02] opacity-55" : isActive ? "border-coral bg-coral/5" : "border-line"}`}>
+                      <div key={g.id} className={`rounded-[var(--radius-ui)] border bg-paper/70 px-3 py-2.5 ${isUsed ? "border-line/60 bg-black/[0.02] opacity-55" : isActive ? "border-coral bg-coral/5" : "border-line"}`}>
                         <div className="flex items-baseline justify-between gap-2">
                           <p className={`min-w-0 flex-1 truncate text-[13.5px] font-bold ${isUsed ? "text-ink-soft line-through" : "text-ink"}`}>{g.name}</p>
-                          {isUsed ? <Chip>已拍</Chip> : isActive ? <Chip tone="coral">在拍</Chip> : onOffer ? <Chip tone="coral">本周可交涉</Chip> : <Chip tone="jade">{g.genre ?? g.type}</Chip>}
+                          {isUsed ? <Chip>已完成</Chip> : isActive ? <Chip tone="coral">在拍</Chip> : onOffer ? <Chip tone="coral">本周可交涉</Chip> : <Chip tone="jade">{g.genre ?? g.type}</Chip>}
                         </div>
                         {g.note && <p className="mt-1 text-[12px] leading-relaxed text-ink-soft">{g.note}</p>}
-                        {g.cast && (
+                        {g.cast && gcfg.roles.some((r) => g.cast?.[r.key]) && (
                           <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-ink-soft">
-                            <span>男主 <span className="text-ink">{g.cast.maleLead}</span></span>
-                            <span>女主 <span className="text-ink">{g.cast.femaleLead}</span></span>
-                            <span>男配 <span className="text-ink">{g.cast.maleSupport}</span></span>
-                            <span>女配 <span className="text-ink">{g.cast.femaleSupport}</span></span>
+                            {gcfg.roles.filter((r) => g.cast?.[r.key]).map((r) => (
+                              <span key={r.key}>{r.label} <span className="text-ink">{g.cast?.[r.key]}</span></span>
+                            ))}
                           </div>
                         )}
                         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px]">
-                          <span className="text-coral">片酬 {fmtWan(g.pay / 10000)}</span>
-                          <span className="text-gold">名气 +{g.fame}</span>
+                          <span className="text-coral">{T("fee")} {fmtWan(g.pay / 10000)}</span>
+                          <span className="text-gold">{T("fame")} +{g.fame}</span>
                           <span className="text-ink-soft">档期 {g.days} 天</span>
                         </div>
                         <div className="mt-1.5 text-[11px] text-ink-soft">
@@ -401,7 +399,7 @@ function MovieModal({ title, starName, company, value, cfg, onClose }: { title: 
   useEffect(() => { void gen(); /* 打开即生成一次 */ }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <Modal title={`《${title}》`} onClose={onClose}>
+    <Modal panelClassName="ui-dialog-game" title={`《${title}》`} onClose={onClose}>
       <div className="mb-3 flex flex-wrap items-center gap-2 text-[13px]">
         <Chip tone="coral">本周票房 {fmtWan(value)}</Chip>
         <span className="text-ink-soft">主演</span><span className="font-bold text-ink">{starName}</span>
@@ -424,7 +422,7 @@ function MovieModal({ title, starName, company, value, cfg, onClose }: { title: 
       {comments.length ? (
         <ul className="space-y-1.5">
           {comments.map((c, i) => (
-            <li key={i} className="rounded-2xl border border-line bg-paper/70 shadow-[0_2px_10px_-6px_rgba(0,0,0,0.12)] px-3 py-2 text-[13px] text-ink">“{c}”</li>
+            <li key={i} className="ui-card px-3 py-2 text-[13px] text-ink">“{c}”</li>
           ))}
         </ul>
       ) : (

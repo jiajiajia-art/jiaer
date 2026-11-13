@@ -2,7 +2,8 @@
  * 功能注释：创作者侧把「玩法 Mod / 手机应用」草稿打成专属 .kkmod，供 Mod 商店安装引用。
  */
 import type { Mod } from "../mods/types.ts";
-import { packModFiles } from "../mods/kkmod/files";
+import { packModFiles } from "../mods/kkmod/files.ts";
+import { PLAY_MOD_SDK_VERSION, derivePlayModEditorPanels, sanitizeConflictIds, stripForbiddenPlayFields } from "../mods/playModGuard.ts";
 import {
   packKkmod,
   type ComponentKind,
@@ -37,6 +38,7 @@ function baseManifest(
     editorPanels?: string[];
     navLabel?: string;
     needsNav?: boolean;
+    dependencies?: KkmodManifest["dependencies"];
   },
 ): KkmodManifest {
   const slug = slugifyCreatorId(input.slug || input.id, kind === "phone_app" ? "app" : "play");
@@ -47,7 +49,7 @@ function baseManifest(
     version: String(input.version || "0.1.0").trim() || "0.1.0",
     kind,
     description: String(input.description || "").trim().slice(0, 500),
-    dependencies: [],
+    dependencies: input.dependencies ?? [],
     permissions: input.permissions?.length
       ? input.permissions
       : kind === "phone_app"
@@ -65,16 +67,30 @@ function baseManifest(
   };
 }
 
-/** 功能注释：玩法叠加包 Mod → gameplay .kkmod；payload 带完整 mod，游戏世界可安装引用。 */
+/**
+ * 功能注释：玩法叠加包 Mod → gameplay .kkmod；payload 带完整 mod（含 ext 游戏内页面），游戏世界可安装引用。
+ * 世界本体字段在这里最后再剥一次；editorPanels 按包里实际写的槽推导，装进世界才会出现对应配置区。
+ */
 export function kkmodPackageFromPlayMod(mod: Mod): KkmodPackage {
+  const { content } = stripForbiddenPlayFields(mod.content);
+  const plainDeps = (mod.dependencies || []).filter((d): d is string => typeof d === "string" && !!d);
+  const verDeps = (mod.deps || []).filter((d) => d && typeof d.id === "string" && d.id);
+  const manifestDeps: KkmodManifest["dependencies"] = [
+    ...verDeps.map((d) => (d.min ? { id: d.id, minVersion: d.min } : d.id)),
+    ...plainDeps.filter((id) => !verDeps.some((d) => d.id === id)),
+  ];
   const manifest = baseManifest("gameplay", {
     id: mod.id,
     slug: mod.id,
     name: mod.name,
     version: mod.version,
     description: mod.description,
-    editorPanels: [],
+    editorPanels: derivePlayModEditorPanels(content),
+    dependencies: manifestDeps,
   });
+  const conflictsWith = sanitizeConflictIds(mod.conflictsWith, mod.id);
+  manifest.compatMin = PLAY_MOD_SDK_VERSION;
+  if (conflictsWith.length) manifest.conflictsWith = conflictsWith;
   return {
     manifest,
     payload: {
@@ -86,11 +102,17 @@ export function kkmodPackageFromPlayMod(mod: Mod): KkmodPackage {
         description: mod.description,
         kind: "addon",
         slotMerge: mod.slotMerge || "merge",
-        dependencies: mod.dependencies || [],
-        content: mod.content || {},
+        dependencies: plainDeps,
+        ...(conflictsWith.length ? { conflictsWith } : {}),
+        ...(verDeps.length ? { deps: verDeps } : {}),
+        ...(mod.nativeDeps?.length ? { nativeDeps: mod.nativeDeps } : {}),
+        ...(mod.cover ? { cover: mod.cover } : {}),
+        content,
+        // 功能注释：游戏内页面（vars / panels / actions / skin …）在 ext；漏打包会导致上架后页面消失
+        ...(mod.ext && Object.keys(mod.ext).length ? { ext: mod.ext } : {}),
       },
       // 功能注释：材质包式文件目录（同路径覆盖原版）；旧客户端继续读 payload.mod
-      ...packModFiles(mod.content as Record<string, unknown> | undefined),
+      ...packModFiles(content as Record<string, unknown> | undefined),
     },
   };
 }

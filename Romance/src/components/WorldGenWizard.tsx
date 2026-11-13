@@ -68,6 +68,7 @@ import { discardDraftById, fmtDraftTime, peekDraft, resolveSavedVersionAt, write
 import {
   buildRomancePlatformDraftContent,
   commitRomancePlatformDraftWithContent,
+  publishRomancePlatformDraft,
   fetchRomancePlatformDraftContent,
   putRomancePlatformDraftContent,
   readRomancePlatformDraftId,
@@ -1154,6 +1155,14 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
               savedVersionAt={resolveSavedVersionAt(worldGenDraftId, loadWorldGenSession()?.updatedAt ?? null)}
               onLiveChange={onEditorLiveChange}
               onCommitted={onEditorCommitted}
+              onPublish={readRomancePlatformDraftId() ? async (input) => {
+                const fileId = readRomancePlatformDraftId();
+                const current = modRef.current ?? mod;
+                // 功能注释：先确认最新正文已落平台，审核才看得到这一版
+                const synced = await commitRomancePlatformDraftWithContent(fileId, { title: current.name, mod: current, draft: draftRef.current ?? draft, s1 });
+                if (!synced) return { ok: false, message: "保存到平台失败，请检查网络后重试" };
+                return publishRomancePlatformDraft(fileId, input);
+              } : undefined}
               onAiChat={(m) => setWorkshop({ mod: m, isNew: true })}
               onClose={(savedName) => {
                 onComplete(modRef.current ?? mod, draft, savedName);

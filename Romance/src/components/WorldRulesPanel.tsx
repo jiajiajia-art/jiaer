@@ -34,7 +34,7 @@ export function WorldRuleCards({ rules, onChange, female }: { rules: WorldRules;
             <div role="radiogroup" aria-label={d.label} className="grid overflow-hidden rounded-lg border border-line" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
               {options.map((o, j) => {
                 if (!o) return null;
-                const on = o.id === cur;
+                const on = !!o.id && o.id === cur;
                 return (
                   <button key={o.id} type="button" role="radio" aria-checked={on} title={o.desc}
                     onClick={() => pick(d.id, o.id)}

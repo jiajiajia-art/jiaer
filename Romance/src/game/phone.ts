@@ -10,6 +10,7 @@ import { joinGroupMem, remember } from "./npcKnowledge";
 import { blankRel, ensureRelations } from "./relations";
 import { romanticCapOf } from "../worlds/star2005/content";
 
+import { lastOf } from "../lib/lastOf.ts";
 export type ChatStatus = "sending" | "unread" | "read" | "busy";
 export type ChatRole = "me" | "npc" | "sys";
 
@@ -413,7 +414,7 @@ export function applyChatEffects(
   if (npc) {
     if (eff.mood) npc.mood = eff.mood;
     if (memory) {
-      const last = npc.interactions.at(-1);
+      const last = lastOf(npc.interactions);
       const joined = tag ? joinGroupMem(last, last?.time, memory, tag, next.turnCount, gameTimeLabel(g)) : undefined;
       if (last && joined !== undefined) last.text = joined;
       else npc.interactions.push({ turn: next.turnCount, time: gameTimeLabel(g), text: memory });

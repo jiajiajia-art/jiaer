@@ -24,6 +24,7 @@ export type ModManifest = {
   icon?: string; // 模组图标（图片地址 / data URL）
   kind: ModKind;
   dependencies?: string[]; // 依赖的模组 id（addon 常依赖某个 world）
+  conflictsWith?: string[]; // 互斥的玩法包 id：同时启用时后者不生效，安装时直接拦截
   /* 列表类内容槽（头衔 / 课程 / 打工 / 周末活动 / 建角选项…）的合并方式：
    * replace（缺省）= 整槽替换下层；merge = 按 id 追加 / 替换同 id 条目，保留下层其余条目 */
   slotMerge?: "replace" | "merge";
@@ -118,6 +119,8 @@ export type FeatureFlags = {
   transport?: boolean; // 交通系统：出行方式 / 车费 / 耗时差异；关闭=点哪去哪，免费
   /** 关系玩法（表白 / 婚礼 / 牵线 / 伴侣加成）；须添加 pack-relations，未声明=关 */
   relationsPlay?: boolean;
+  /** 阵营声望（声望数值 / 建角加入势力 / 按声望调价 / 好感外溢 / 声望条件与效果）；须添加 pack-faction-rep，未声明=关 */
+  factionRep?: boolean;
 };
 
 /* UI 术语：键为引擎内部概念，值为本世界的叫法。
@@ -128,7 +131,9 @@ export type TermKey =
   | "tabWorld" | "tabIndustry" | "tabNpc" | "tabPhone" | "tabImage" | "tabSim"
   | "hintWorld" | "hintIndustry" | "hintNpc" | "hintImage" | "hintSim" | "hintPhone"
   | "gig" | "fans" | "reputation" | "fame" | "money" | "works" | "advance"
-  | "city" | "industry" | "celebrity"; // 城市名 / 行业名 / 「明星」的叫法（不从娱乐圈回退）
+  | "city" | "industry" | "celebrity" // 城市名 / 行业名 / 「明星」的叫法（不从娱乐圈回退）
+  // 功能注释：玩法包可复用叫法——机构（经纪公司）/ 成员（艺人）/ 报酬（片酬）/ 合约名
+  | "company" | "member" | "fee" | "contract";
 
 /** 手机应用配置（模组编辑器 · 小手机预览写入；缺省=引擎目录默认） */
 export type PhoneAppAvail = import("../lib/phoneAppsConfig").PhoneAppAvail;
@@ -256,6 +261,7 @@ export type ContentSlots = {
   pregnancy?: import("../game/data").PregnancySlot; // 孕育参数（孕期 / 受孕率 / 察觉时间 / 孩子名字池）
   meals?: import("../game/data").MealPlan[]; // 饮食生活：每周吃什么（周日随账单结算；缺省=无此玩法）
   gigPrices?: GigPriceTable; // 通告库价目表（按星级 1~5）
+  gigConfig?: import("../game/gigConfig").GigConfig; // 通告结构：分类 / 阵容角色 / 星级称号（缺省=原版娱乐圈）
   allowance?: import("../game/npcKnowledge").AllowanceSlot;
   avatars?: import("../lib/types").AvatarSlot; // 头像库：池开关 + 本剧匹配优先级（私人/公共优先 · 通用兜底）；随模组导入导出
   play?: import("../lib/types").PlaySlot; // 开局游玩偏好（模式 / 叙事视角）· 年龄随日历
@@ -269,7 +275,7 @@ export const SLOT_KEYS = [
   "encounters", "sideQuests", "sideQuestCast", "relations", "calendar", "travel", "contracts", "projects",
   "imageCrisis", "industry", "help", "opening", "cover", "weeklyPaper", "eventGroups",
   "styles", "identities", "backgrounds", "directions", "school", "parentJobs", "creation", "lore", "festivals",
-  "weekendActs", "schedule", "fameTiers", "titles", "cars", "npcPool", "bills", "meals", "pregnancy", "gigPrices", "allowance", "tuning", "play", "avatars", "contacts", "metricBind",
+  "weekendActs", "schedule", "fameTiers", "titles", "cars", "npcPool", "bills", "meals", "pregnancy", "gigPrices", "gigConfig", "allowance", "tuning", "play", "avatars", "contacts", "metricBind",
 ] as const satisfies readonly (keyof ContentSlots)[];
 export type SlotKey = (typeof SLOT_KEYS)[number];
 
@@ -339,10 +345,21 @@ export type Mod = ModManifest & { content: ModContent; ext?: ModExt; builtin?: b
 export type ModTheme = Partial<Pick<ThemePref, "skin" | "accent" | "font" | "mode">>;
 
 /* 合并后的「当前生效世界」 */
+/* 加载报告：哪些叠加包没进链、为什么；谁和谁撞名 */
+export type LoadIssue =
+  | { kind: "missing"; mod: string }
+  | { kind: "missingDep"; mod: string; deps: string[] }
+  | { kind: "cycle"; mods: string[] }
+  | { kind: "conflict"; mod: string; with: string }
+  | { kind: "idClash"; mod: string; slot: string; id: string; with: string }
+  | { kind: "forbiddenField"; mod: string; fields: string[] };
+export type LoadReport = { chain: string[]; skipped: string[]; issues: LoadIssue[] };
+
 export type ResolvedWorld = {
   worldId: string;
   addonIds: string[];
   chain: Mod[]; // 合并顺序：world → addons
+  report?: LoadReport;
   content: Required<Pick<ModContent, "rooms" | "npcs" | "items" | "gigs" | "events" | "fixedEvents" | "endings" | "worldBook" | "worldRules" | "income" | "gameRules" | "storylines" | "sidelines" | "lookRules">> & {
     startRoom?: string;
     worldMaps?: import("../lib/worldMaps").WorldMapDef[];

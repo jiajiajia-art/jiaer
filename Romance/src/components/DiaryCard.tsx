@@ -1,8 +1,9 @@
+import { wallet } from "../game/wallet";
 import type { Diary } from "../store/gameCtx";
 
 /* 推进手记：横格纸日记页，写明时间解析、这几天的日程，以及属性变化与缘由 */
 export default function DiaryCard({ d }: { d: Diary }) {
-  const fmt = (label: string, v: number) => (label === "资金" ? `¥${v.toLocaleString("zh-CN")}` : String(v));
+  const fmt = (label: string, v: number) => (label === wallet.name() || label === "资金" ? wallet.fmt(v) : String(v));
   const up = (r: Diary["rows"][number]) => (r.label === "压力" ? r.to < r.from : r.to > r.from);
   return (
     <article className="opening-note relative mb-4 overflow-hidden rounded-[6px] border border-line bg-paper py-4 pl-11 pr-4">

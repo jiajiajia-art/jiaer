@@ -1,3 +1,4 @@
+import { normalizeGigConfig, resolveGigCat, type GigConfig } from "../game/gigConfig";
 import { StarRating } from "../lib/icons";
 import { useMemo, useState } from "react";
 import { STAT_LABELS, type Gig, type MealPlan, type PregnancySlot } from "../game/data";
@@ -118,8 +119,10 @@ export function ModMealsEditor({ value, onChange, customAttrs }: {
 
 /* —— 通告库：搜索 / 星级与类型筛选 / 分页；每条可改门槛、收益、成长 —— */
 const PAGE = 15;
-export function ModGigsEditor({ value, prices, onChange, onPrices, customAttrs }: {
+export function ModGigsEditor({ value, prices, onChange, onPrices, customAttrs, config }: {
   value?: Gig[]; prices?: GigPriceTable;
+  /** 功能注释：作品的通告结构（分类 / 阵容角色）；用于分类下拉与阵容输入 */
+  config?: GigConfig;
   /** 功能注释：能力门槛 / 成长只认作品建角属性 */
   customAttrs?: AttrDef[];
   /** @deprecated 已无用 */
@@ -128,6 +131,7 @@ export function ModGigsEditor({ value, prices, onChange, onPrices, customAttrs }
 }) {
   const list = value ?? [];
   const attrKeys = packAttrKeys(customAttrs);
+  const gcfg = normalizeGigConfig(config);
   const [q, setQ] = useState("");
   const [star, setStar] = useState(0);
   const [type, setType] = useState("");
@@ -213,8 +217,29 @@ export function ModGigsEditor({ value, prices, onChange, onPrices, customAttrs }
                       <Num label="天数" value={g.days} onChange={(v) => set(i, { days: Math.max(1, v ?? 1) })} />
                       <Num label="固定开机周" value={g.fixedWeek} placeholder="不固定" onChange={(v) => set(i, { fixedWeek: v || undefined })} />
                       <label className="block text-[10.5px] text-ink-soft">题材 / 品类<input className={inp} value={g.genre ?? ""} placeholder="如 古风 / 美妆" onChange={(e) => set(i, { genre: e.target.value || undefined })} /></label>
-                      <label className="block text-[10.5px] text-ink-soft">出演角色<input className={inp} value={g.role ?? ""} placeholder="影视类，如 女配角" onChange={(e) => set(i, { role: e.target.value || undefined })} /></label>
+                      <label className="block text-[10.5px] text-ink-soft">玩家的角色<input className={inp} value={g.role ?? ""} placeholder="选填，如 主角 / 助手" onChange={(e) => set(i, { role: e.target.value || undefined })} /></label>
+                      <label className="block text-[10.5px] text-ink-soft">分类
+                        <select className={inp} value={g.cat ?? ""} onChange={(e) => set(i, { cat: e.target.value || undefined })}>
+                          <option value="">按类型自动（{resolveGigCat(g, gcfg.cats).label}）</option>
+                          {gcfg.cats.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                        </select>
+                      </label>
                     </div>
+                    {gcfg.roles.length > 0 && (
+                      <div className="text-[10.5px] text-ink-soft">阵容 <span className="text-ink-soft/70">· 选填，留空的角色不显示</span>
+                        <div className="mt-0.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                          {gcfg.roles.map((r) => (
+                            <label key={r.key} className="block">{r.label}
+                              <input className={inp} value={g.cast?.[r.key] ?? ""} onChange={(e) => {
+                                const cast = { ...(g.cast ?? {}) };
+                                if (e.target.value) cast[r.key] = e.target.value; else delete cast[r.key];
+                                set(i, { cast: Object.keys(cast).length ? cast : undefined });
+                              }} />
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <label className="block text-[10.5px] text-ink-soft">简介<textarea rows={2} className={inp} value={g.note ?? ""} onChange={(e) => set(i, { note: e.target.value || undefined })} /></label>
                     <div className="text-[10.5px] text-ink-soft">能力门槛<div className="mt-0.5"><BonusRow value={g.statReq as Record<string, number>} keys={attrKeys} onChange={(v) => set(i, { statReq: (clean(v ?? {}) ?? {}) as Gig["statReq"] })} /></div></div>
                     <div className="text-[10.5px] text-ink-soft">完成后成长<div className="mt-0.5"><BonusRow value={g.grow as Record<string, number>} keys={attrKeys} onChange={(v) => set(i, { grow: (clean(v ?? {}) ?? {}) as Gig["grow"] })} /></div></div>

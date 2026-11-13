@@ -1,3 +1,4 @@
+import { liveTerm as T } from "../mods/live";
 import { wallet } from "../game/wallet";
 import { useEffect, useRef, useState } from "react";
 import { useGame } from "../store/gameCtx";
@@ -101,11 +102,11 @@ export default function BreachDialog() {
 
   // 场景设定 —— 供 AI 扮演该负责人（带其专属人设）；本地脚本作后备
   const sys = (): string =>
-    `你在扮演华语影视/娱乐行业的负责人「${b?.producer}」（隶属${b?.loc}）。` +
+    `你在扮演${T("industry")}的负责人「${b?.producer}」（隶属${b?.loc}）。` +
     `人物性格：${persona?.tone ?? "专业、克制而有压迫感"}。` +
-    `艺人未能在合同约定的档期内完成《${b?.gigName}》（${b?.gigType}），构成违约，已被迫换人并造成损失。` +
+    `对方（${T("member")}）未能在合同约定的档期内完成《${b?.gigName}》（${b?.gigType}），构成违约，已被迫换人并造成损失。` +
     `你现在登门追责，既表达失望也明确要求对方承担违约责任（违约金约${feeText}）。务必贴合上述性格说话。` +
-    `每次只说 1–3 句中文，像真实对话，不要旁白、不要括号动作、不要 JSON、不要列表。可以就艺人的解释适度回应，但立场不松动。`;
+    `每次只说 1–3 句中文，像真实对话，不要旁白、不要括号动作、不要 JSON、不要列表。可以就对方的解释适度回应，但立场不松动。`;
 
   const opener = b
     ? `${b.producer}：${persona ? persona.opener(b.gigName) : `《${b.gigName}》你没能按约定拍完，损失不小。这事，你打算怎么给我一个交代？`}`
@@ -166,8 +167,8 @@ export default function BreachDialog() {
   };
 
   return (
-    <Modal title="违约追责 · 制片人登门" onClose={() => {}}>
-      <div className="mb-3 rounded-lg border border-danger/40 bg-danger/5 px-3 py-2.5 text-[12.5px] leading-relaxed text-ink">
+    <Modal panelClassName="ui-dialog-game" title="违约追责 · 制片人登门" onClose={() => {}}>
+      <div className="mb-3 rounded-[var(--radius-ui-sm)] border border-danger/40 bg-danger/5 px-3 py-2.5 text-[12.5px] leading-relaxed text-ink">
         你未能在约定档期内拍完 <b className="text-danger">《{b.gigName}》</b>，构成违约。
         <b className="text-danger">{b.producer}</b>（{b.loc}）找上门来。你可以与其周旋几句，但最终须赔付
         <b className="text-danger"> 违约金 {feeText}</b> 才能了结此事。
@@ -208,7 +209,7 @@ export default function BreachDialog() {
           }}
           rows={2}
           placeholder="回应他几句（Enter 发送）"
-          className="min-w-0 flex-1 resize-none rounded-lg border border-line bg-paper px-3 py-2 text-[13px] text-ink outline-none placeholder:text-ink-soft/60 focus:border-coral/60"
+          className="ui-card min-w-0 flex-1 resize-none px-3 py-2 text-[13px] text-ink outline-none placeholder:text-ink-soft/60 focus:border-coral/60"
         />
         <button
           onClick={() => void send()}

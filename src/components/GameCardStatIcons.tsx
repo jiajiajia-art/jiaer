@@ -56,3 +56,20 @@ export function CardFlameIcon({ className, style }: IconProps) {
 export function CardHeartIcon({ className, style }: IconProps) {
   return <MaskIcon className={className} style={style} maskUrl={GAME_CARD_HEART_MASK_URL} />;
 }
+
+/** 功能注释：封面收藏——内联 SVG 书签（实心，currentColor 着色） */
+export function CardBookmarkIcon({ className, style }: IconProps) {
+  return (
+    <svg
+      className={className}
+      style={style}
+      viewBox="0 0 14 16"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M2.5 0h9A2.5 2.5 0 0 1 14 2.5v12.3a1 1 0 0 1-1.6.8L7 11.6l-5.4 4a1 1 0 0 1-1.6-.8V2.5A2.5 2.5 0 0 1 2.5 0Z" />
+    </svg>
+  );
+}

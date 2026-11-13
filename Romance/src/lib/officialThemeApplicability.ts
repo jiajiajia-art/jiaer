@@ -9,6 +9,7 @@ export type ThemeApplicabilityCode = "universal" | "modern" | "ancient";
 /** 功能注释：官方玩法默认适用题材（语义 code，可多选） */
 export const OFFICIAL_PLAY_MOD_THEME_CODES: Readonly<Record<string, readonly ThemeApplicabilityCode[]>> = Object.freeze({
   "pack-relations": ["universal"],
+  "pack-faction-rep": ["universal"],
   "pack-pregnancy": ["universal"],
   "pack-transport": ["universal"],
   "pack-titles": ["universal"],

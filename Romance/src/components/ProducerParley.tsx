@@ -1,3 +1,4 @@
+import { wallet } from "../game/wallet";
 import { StarRating, IconCheck, StatusMark } from "../lib/icons";
 import type React from "react";
 import { useGame } from "../store/gameCtx";
@@ -35,7 +36,7 @@ export default function ProducerParley({ pid, name }: { pid: string; name: strin
         {projs.map((tpl) => {
           const inst = (s.projects ?? []).find((x) => x.templateId === tpl.id);
           const total = Math.round(tpl.feeYuan * tpl.roleSlot.rewardMultiplier);
-          const w = (n: number) => `¥${(n / 10000).toFixed(1)}万`;
+          const w = (n: number) => wallet.short(n);
           const row = (label: string, known: boolean, val: React.ReactNode, maskKey: string) => (
             <div className="flex gap-2 text-[12.5px]">
               <span className="w-14 shrink-0 text-ink-soft">{label}</span>
@@ -43,7 +44,7 @@ export default function ProducerParley({ pid, name }: { pid: string; name: strin
             </div>
           );
           return (
-            <div key={tpl.id} className="rounded-xl border border-line bg-paper p-3">
+            <div key={tpl.id} className="ui-card p-3">
               <p className="mb-2 font-serif text-[15px] font-bold text-ink">{knows(s, tpl.id, "starLevel") ? <><StarRating n={tpl.starLevel} className="mr-1 inline-flex" /> </> : null}{tpl.title}</p>
               <div className="space-y-1">
                 {row("类别", knows(s, tpl.id, "category"), categoryLabel(tpl.category), "starLevel")}
@@ -58,7 +59,7 @@ export default function ProducerParley({ pid, name }: { pid: string; name: strin
                     ))}
                   </span>
                 ), "requirements")}
-                {row("片酬", knows(s, tpl.id, "exactFee"), `总额 ${w(total)}（签约金 ${w(Math.round(total * tpl.advanceRate))} · 拍毕尾款 ${w(total - Math.round(total * tpl.advanceRate))}）`, knows(s, tpl.id, "feeRange") ? "exactFee" : "feeRange")}
+                {row(T("fee"), knows(s, tpl.id, "exactFee"), `总额 ${w(total)}（签约金 ${w(Math.round(total * tpl.advanceRate))} · 拍毕尾款 ${w(total - Math.round(total * tpl.advanceRate))}）`, knows(s, tpl.id, "feeRange") ? "exactFee" : "feeRange")}
                 {knows(s, tpl.id, "feeRange") && !knows(s, tpl.id, "exactFee") && (
                   <div className="flex gap-2 text-[12.5px]"><span className="w-14 shrink-0 text-ink-soft" /><span className="text-ink-soft">约 {w(total * 0.8)}–{w(total * 1.2)}（区间）</span></div>
                 )}
@@ -76,7 +77,7 @@ export default function ProducerParley({ pid, name }: { pid: string; name: strin
                       key={q.id}
                       disabled={!met || st === "locked"}
                       onClick={() => simAskProducer(pid, tpl.id, q.id)}
-                      className="rounded-md border border-coral/40 px-2 py-1 text-[11.5px] text-coral transition hover:bg-coral/10 disabled:cursor-not-allowed disabled:border-line disabled:text-ink-soft/50"
+                      className="rounded-[var(--radius-ui-sm)] border border-coral/40 px-2 py-1 text-[11.5px] text-coral transition hover:bg-coral/10 disabled:cursor-not-allowed disabled:border-line disabled:text-ink-soft/50"
                     >
                       {q.label}
                     </button>

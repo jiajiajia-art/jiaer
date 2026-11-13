@@ -156,7 +156,6 @@ export function Moments({ onOpenProfile }: { onOpenProfile?: (pid: string) => vo
   const rootRef = useRef<HTMLDivElement>(null);
   const touchY = useRef<number | null>(null);
   const coverRef = useRef<HTMLInputElement>(null);
-  const avatarRef = useRef<HTMLInputElement>(null);
 
   // 朋友圈只看得到绿信好友：作者、点赞、评论都只从好友里出（被禁止发消息的人也不出现）
   const friendIds = new Set(friendsOf(g).map((n) => n.id));
@@ -323,10 +322,10 @@ ${MOMENT_RULE}
         </div>
         <div className="absolute -bottom-7 right-3 flex items-end gap-2.5">
           <span className="pb-9 text-right text-[16px] font-semibold text-white drop-shadow">{g.player.name}</span>
-          <button onClick={() => avatarRef.current?.click()} className="overflow-hidden rounded-[10px] ring-2 ring-white" aria-label="更换头像">
+          {/* 功能注释：主角头像统一在角色资料里更换，朋友圈只展示 */}
+          <span className="overflow-hidden rounded-[10px] ring-2 ring-white">
             <Avatar src={g.player.avatar} name={g.player.name} size={66} editable={false} />
-          </button>
-          <input ref={avatarRef} type="file" accept="image/*" className="hidden" onChange={(e) => pickFile(e, (url) => commitGame({ ...g, player: { ...g.player, avatar: url } } as GameState), 400)} />
+          </span>
         </div>
       </div>
       <div className="mt-9 px-4 text-right">

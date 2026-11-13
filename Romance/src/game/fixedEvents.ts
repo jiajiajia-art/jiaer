@@ -8,10 +8,12 @@ import { LIVE_PERSON_BY_ID as PERSON_BY_ID, worldItemById as itemById } from "..
 import type { ChainBreak, CondGroup, EventChoice, FixedEvent, FixedCond, FixedEffect, FixedEventTime, CustomEnding, IncomeRule, GameRule, Storyline, QuestState, Sideline } from "../lib/types";
 import { SIDE_STATE_LABEL, applySidelines as applySidelinesPure, sideState } from "../lib/sidelines";
 import { getWorldStorylines } from "../mods/registry";
+import { resolveAttrRef } from "./valueSources"; // 功能注释：仅在函数内调用，循环引用安全
 import { PERIODIC_TIME, TIME_UNIT_DAYS, type CmpOp } from "../lib/types";
 import type { LibraryGroup } from "./eventLibrary";
 import { attrCap } from "./wallet";
-import { applyFactionDelta, repOf } from "./factions";
+import { applyFactionDelta, factionsAtRoom, npcFactionOf, repOf } from "./factions";
+import { presentHere } from "./mud";
 import { getWorldRooms } from "../mods/registry";
 import { pathOf } from "./roomTree";
 import { rollChance, seededRandom, seqRandom } from "./engineRules";
@@ -81,7 +83,15 @@ function inClock(min: number, from: string, to: string): boolean {
 export const cmpNum = (have: number, op: CmpOp | undefined, v: number): boolean =>
   op === "lte" ? have <= v : op === "eq" ? have === v : op === "gt" ? have > v : op === "lt" ? have < v : have >= v;
 
-export function evalFixedCond(c: FixedCond, s: SimState): boolean {
+/** 功能注释：运行时兜底——AI 把作品属性写成 stat:observation 时按 metric:c:observation 读写，已发布作品无需重存 */
+function fixAttrRef<T extends { kind: string }>(x: T): T {
+  if ((x.kind !== "stat" && x.kind !== "metric") || !("key" in x)) return x;
+  const hit = resolveAttrRef(x.kind, String((x as { key?: unknown }).key ?? ""), worldCustomAttrs());
+  return hit ? { ...x, ...hit } : x;
+}
+
+export function evalFixedCond(c0: FixedCond, s: SimState): boolean {
+  const c = fixAttrRef(c0);
   switch (c.kind) {
     case "stat": {
       const have = (s.stats as Record<string, number>)[c.key] ?? 0;
@@ -122,6 +132,14 @@ export function evalFixedCond(c: FixedCond, s: SimState): boolean {
       return sideState(c.key, s) === c.state;
     case "faction":
       return cmpNum(repOf(s, c.key), c.op, c.value);
+    case "npcFaction": {
+      if (!c.faction) return false;
+      if (c.npc) return npcFactionOf(c.npc, PERSON_BY_ID[c.npc]?.factionId)?.id === c.faction;
+      // 不指定人物：当前地点有该势力的成员在场
+      return Object.values(PERSON_BY_ID).some((p) => npcFactionOf(p.id, p.factionId)?.id === c.faction && presentHere(s, s.room, p.id));
+    }
+    case "factionTerritory":
+      return !!c.faction && factionsAtRoom(s.room).some((f) => f.id === c.faction);
     case "visited": {
       const rooms = getWorldRooms();
       return (s.visited ?? []).some((r) => r === c.key || pathOf(rooms, r).includes(c.key));
@@ -305,7 +323,8 @@ export function applyEffectList(s: SimState, effects: FixedEffect[] | undefined)
     flags: { ...(s.flags ?? {}) },
   };
 
-  for (const e of effects ?? []) {
+  for (const e0 of effects ?? []) {
+    const e = fixAttrRef(e0);
     switch (e.kind) {
       case "stat": {
         const stats = next.stats as Record<string, number>;
@@ -464,22 +483,35 @@ export function pushAudio(s: SimState, c: Omit<AudioCmd, "n">) {
   s.audioQ = [...(s.audioQ ?? []), { ...c, n }].slice(-20);
 }
 export function applyFixedEffects(s: SimState, ev: FixedEvent): { next: SimState; changes: string[] } {
-  const { next, changes } = withOwner(ev._mod, () => applyEffectList(s, ev.effects));
-  // 剧情节点 BGM：上演时平滑切换（音频不存在 = 跳过，不打断当前音乐）
-  if (ev.bgm && resolveAudio(ev.bgm)) pushAudio(next, { op: "switchBgm", id: ev.bgm, from: ev._mod });
-  modLog(ev._mod, "info", `上演「${ev.name || ev.id}」${changes.length ? `：${changes.join("，")}` : ""}`);
+  const settled = settleFixedEventEffects(s, ev);
+  return { next: reserveFixedEvent(settled.next, ev, s), changes: settled.changes };
+}
 
+/** 功能注释：只结算事件数值（含剧情 BGM），不登记触发——玩家展开或过期时调用 */
+export function settleFixedEventEffects(s: SimState, ev: FixedEvent, list: FixedEffect[] | undefined = ev.effects): { next: SimState; changes: string[] } {
+  const { next, changes } = withOwner(ev._mod, () => applyEffectList(s, list));
+  // 剧情节点 BGM：上演时平滑切换（音频不存在 = 跳过，不打断当前音乐）
+  if (list === ev.effects && ev.bgm && resolveAudio(ev.bgm)) pushAudio(next, { op: "switchBgm", id: ev.bgm, from: ev._mod });
+  modLog(ev._mod, "info", `上演「${ev.name || ev.id}」${changes.length ? `：${changes.join("，")}` : ""}`);
+  return { next, changes };
+}
+
+/**
+ * 功能注释：只登记已触发（出队 / 周期 / 解锁后续 / 冷却），不结算数值——事件进入支线待玩家展开时调用，
+ * 避免同一事件被反复挑中。base 用于冷却与周期起算（缺省 = s）。
+ */
+export function reserveFixedEvent(s: SimState, ev: FixedEvent, base: SimState = s): SimState {
+  const next = { ...s };
   // 登记已触发（避免一次性事件重复触发，也供后续事件以「已触发事件」为条件）
   if (!(next.eventsFired ?? []).includes(ev.id)) next.eventsFired = [...(next.eventsFired ?? []), ev.id];
   // 周期事件：记下本周期已上演
-  const pk = isPeriodic(ev) ? fixedPeriodKey(ev, s) : null;
+  const pk = isPeriodic(ev) ? fixedPeriodKey(ev, base) : null;
   if (pk) next.eventsAt = { ...(next.eventsAt ?? {}), [ev.id]: pk };
   // 激活后续事件（供其 locked 门槛解锁）
   if (ev.nextIds?.length) next.eventsUnlocked = Array.from(new Set([...(next.eventsUnlocked ?? []), ...ev.nextIds]));
   if (next.evQueue?.includes(ev.id)) next.evQueue = next.evQueue.filter((x) => x !== ev.id);
-  if (ev.cooldown) next.flags = { ...(next.flags ?? {}), [cdKey(ev.id)]: (s.day ?? 0) + 1 };
-
-  return { next, changes };
+  if (ev.cooldown) next.flags = { ...(next.flags ?? {}), [cdKey(ev.id)]: (base.day ?? 0) + 1 };
+  return next;
 }
 
 /* ——— 事件选项：选项值带标记，玩家点击后由代码识别并结算 ——— */

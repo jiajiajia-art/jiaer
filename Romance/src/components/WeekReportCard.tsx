@@ -1,4 +1,7 @@
+import { wallet } from "../game/wallet";
 import { useState, type ReactNode } from "react";
+import { useGame } from "../store/gameCtx";
+import { isConfigured } from "../lib/ai";
 import type { Diary, WeekReport } from "../store/gameCtx";
 import { IconHeart, IconPin, IconScroll, IconSpark, IconStar, IconUser, IconUsers } from "../lib/icons";
 
@@ -46,12 +49,16 @@ function Rich({ text }: { text: string }) {
 }
 
 type Bill = { lines: { label: string; amount: number }[]; total: number; monthEnd?: boolean } | null | undefined;
-const yuan = (v: number) => `${v < 0 ? "−" : ""}¥${Math.abs(Math.round(v)).toLocaleString("zh-CN")}`;
+// 功能注释：金额跟随作品货币（wallet），不写死人民币符号
+const yuan = (v: number) => `${v < 0 ? "−" : ""}${wallet.fmt(Math.abs(Math.round(v)))}`;
 const head = "mb-1.5 text-[10.5px] font-bold tracking-[0.25em] text-ink-soft";
 
 /* 周结算报告：一张卡讲清楚——总评 → 预警 → 数值（起止） → 收支账单 → 纪事（可展开） → 结算备注 */
-export default function WeekReportCard({ report: r, changes, diary, bill, earned, onNext }: { report: WeekReport; changes: string[]; diary?: Diary; bill?: Bill; earned?: number; onNext?: () => void }) {
+export default function WeekReportCard({ report: r, changes, diary, bill, earned, onNext, onOpenDiary }: { report: WeekReport; changes: string[]; diary?: Diary; bill?: Bill; earned?: number; onNext?: () => void; onOpenDiary?: () => void }) {
   const [allEvents, setAllEvents] = useState(false);
+  const { cfg, game } = useGame();
+  // 功能注释：周属性总结纯代码驱动；周记由后台 AI 写进日记本，这里只显示状态与入口
+  const entry = (game?.weekDiaries ?? []).find((e) => e.week === r.week);
   const tone = (r.grade && GRADE_TONE[r.grade]) || "jade";
   const cs = changes.map(parseChange);
   const good = cs.filter((c) => c.sign && (c.sign > 0) !== BAD_UP.test(c.label)).length;
@@ -59,14 +66,15 @@ export default function WeekReportCard({ report: r, changes, diary, bill, earned
   const verdict = r.warnings.length ? { t: "下周需要调整", c: "danger" }
     : good > bad ? { t: `收获颇丰的${r.span ?? "一周"}`, c: "jade" } : bad > good ? { t: `有些吃力的${r.span ?? "一周"}`, c: "coral" } : { t: `平稳度过的${r.span ?? "一周"}`, c: "ink-soft" };
   const rows = diary?.rows ?? [];
-  const fmt = (label: string, v: number) => (label === "资金" ? yuan(v) : String(v));
+  const isMoney = (label: string) => label === wallet.name() || label === "资金";
+  const fmt = (label: string, v: number) => (isMoney(label) ? yuan(v) : String(v));
   const upGood = (label: string, from: number, to: number) => (BAD_UP.test(label) ? to < from : to > from);
   const shown = allEvents ? r.events : r.events.slice(0, 3);
   const showBill = !r.span && !!bill;
   return (
     <div className="space-y-4">
       {/* 总评 */}
-      <div className="flex items-center gap-3 rounded-[12px] border border-line px-4 py-3" style={{ background: `linear-gradient(135deg, color-mix(in srgb, var(--${tone}) 14%, var(--paper-2)), var(--paper-2))` }}>
+      <div className="flex items-center gap-3 rounded-[var(--radius-ui-sm)] border border-line px-4 py-3" style={{ background: `linear-gradient(135deg, color-mix(in srgb, var(--${tone}) 14%, var(--paper-2)), var(--paper-2))` }}>
         <div className="grid h-12 w-12 shrink-0 place-items-center rounded-[10px] font-serif text-white shadow-sm" style={{ background: `var(--${tone})` }}>
           <span className={`font-black leading-none ${r.span ? "text-[13px]" : "text-[20px]"}`}>{r.span ?? r.week}</span>
         </div>
@@ -96,7 +104,7 @@ export default function WeekReportCard({ report: r, changes, diary, bill, earned
       {rows.length > 0 ? (
         <section>
           <p className={head}>数值</p>
-          <ul className="divide-y divide-dashed divide-line rounded-[10px] border border-line bg-paper-2 px-3">
+          <ul className="ui-card divide-y divide-dashed divide-line px-3">
             {rows.map((x) => {
               const g = upGood(x.label, x.from, x.to);
               const d = x.to - x.from;
@@ -104,7 +112,7 @@ export default function WeekReportCard({ report: r, changes, diary, bill, earned
                 <li key={x.label} className="flex items-center gap-2 py-1.5 text-[12.5px]">
                   <span className="w-10 shrink-0 font-bold text-ink">{x.label}</span>
                   <span className="min-w-0 flex-1 truncate tabular-nums text-ink-soft">{fmt(x.label, x.from)} → <b className="text-ink">{fmt(x.label, x.to)}</b></span>
-                  <span className="shrink-0 font-mono text-[12px] font-bold" style={{ color: `var(--${g ? "jade" : "danger"})` }}>{d > 0 ? "+" : "−"}{x.label === "资金" ? yuan(Math.abs(d)).replace("¥", "¥") : Math.abs(d)}</span>
+                  <span className="shrink-0 font-mono text-[12px] font-bold" style={{ color: `var(--${g ? "jade" : "danger"})` }}>{d > 0 ? "+" : "−"}{isMoney(x.label) ? yuan(Math.abs(d)) : Math.abs(d)}</span>
                 </li>
               );
             })}
@@ -117,7 +125,7 @@ export default function WeekReportCard({ report: r, changes, diary, bill, earned
             {cs.map((c, i) => {
               const g = c.sign === 0 ? null : (c.sign > 0) !== BAD_UP.test(c.label);
               return (
-                <div key={i} className="rounded-[8px] border border-line bg-paper-2 px-2 py-1.5 text-center">
+                <div key={i} className="ui-card px-2 py-1.5 text-center">
                   <p className="truncate text-[10.5px] text-ink-soft">{c.label}</p>
                   <p className="font-serif text-[15px] font-black tabular-nums" style={{ color: `var(--${g === null ? "ink-soft" : g ? "jade" : "danger"})` }}>{c.val || "—"}</p>
                 </div>
@@ -131,8 +139,8 @@ export default function WeekReportCard({ report: r, changes, diary, bill, earned
       {showBill && (
         <section>
           <p className={head}>本周收支{bill!.monthEnd ? " · 含月度账单" : ""}</p>
-          <div className="rounded-[10px] border border-line bg-paper-2 px-3 py-1.5 text-[12.5px]">
-            {!!earned && <div className="flex justify-between py-1"><span className="text-ink-soft">通告 / 打工进账</span><span className="font-mono font-semibold text-jade">+{yuan(earned)}</span></div>}
+          <div className="ui-card px-3 py-1.5 text-[12.5px]">
+            {!!earned && <div className="flex justify-between py-1"><span className="text-ink-soft">本周进账</span><span className="font-mono font-semibold text-jade">+{yuan(earned)}</span></div>}
             {bill!.lines.map((l, i) => (
               <div key={i} className="flex justify-between py-1"><span className="text-ink-soft">{l.label}</span><span className="font-mono font-semibold text-ink">−{yuan(l.amount)}</span></div>
             ))}
@@ -166,6 +174,29 @@ export default function WeekReportCard({ report: r, changes, diary, bill, earned
         <section className="flex flex-wrap gap-1.5">
           {r.settle.map((x, i) => <span key={i} className="rounded-full border border-line bg-paper-2 px-2.5 py-1 text-[11.5px] text-ink"><Rich text={x} /></span>)}
         </section>
+      )}
+
+      {/* 日记本入口：本周周记由 AI 在后台撰写 */}
+      {isConfigured(cfg) ? (
+        <button
+          type="button"
+          onClick={onOpenDiary}
+          disabled={!onOpenDiary}
+          className="ui-card flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition hover:border-jade/50"
+        >
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gold/15 text-gold"><IconScroll size={15} /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-bold text-ink">
+              {entry?.status === "done" ? `本周日记 ·「${entry.title}」` : entry?.status === "failed" ? "本周日记没写成" : "本周日记正在写…"}
+            </span>
+            <span className="block text-[11.5px] text-ink-soft">
+              {entry?.status === "done" ? "已收进日记本，点开翻看" : entry?.status === "failed" ? "去日记本里点「重写」" : "写好会收进日记本，可以先开启下一周"}
+            </span>
+          </span>
+          <span className="shrink-0 text-[12px] font-semibold text-jade">日记本 ›</span>
+        </button>
+      ) : (
+        <p className="text-[11.5px] text-ink-soft">未配置 AI，不会生成周记；配置后每周结算会自动写一篇收进日记本。</p>
       )}
 
       {onNext && (

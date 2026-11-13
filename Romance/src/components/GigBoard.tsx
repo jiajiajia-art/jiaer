@@ -1,3 +1,5 @@
+import { gigConfig } from "../game/gigConfig";
+import { wallet } from "../game/wallet";
 import { StarRating } from "../lib/icons";
 import { useGame } from "../store/gameCtx";
 import { Chip } from "./ui";
@@ -11,7 +13,7 @@ import { liveTerm as T } from "../mods/live";
 /* 通告接洽（踩地图·当面接单）：走到对应公司找到负责人后，直接查看 TA 手上的通告
  * ——具体内容、男女主/男女配阵容、你要出演的角色、片酬与档期，重点通告还有固定开机日期，
  * 就地「交涉」争取出演，签下即回日程排「拍摄」。取代过去「打听→去养成页交涉」的绕路。 */
-const fmtWan = (yuan: number) => `¥${(yuan / 10000).toFixed(1)}万`;
+const fmtWan = (yuan: number) => wallet.short(yuan);
 
 export default function GigBoard({ pid, name }: { pid: string; name: string }) {
   const { game, simNegotiate } = useGame();
@@ -54,7 +56,7 @@ export default function GigBoard({ pid, name }: { pid: string; name: string }) {
           const eligible = gigEligible(g, s);
           const busy = !!s.activeGigId;
           return (
-            <div key={g.id} className="rounded-xl border border-line bg-paper p-3">
+            <div key={g.id} className="ui-card p-3">
               <div className="flex items-baseline justify-between gap-2">
                 <p className="min-w-0 flex-1 truncate font-serif text-[14.5px] font-bold text-ink">
                   <><StarRating n={g.star} /> {g.name}</>
@@ -65,23 +67,22 @@ export default function GigBoard({ pid, name }: { pid: string; name: string }) {
 
               {g.role && (
                 <p className="mt-1.5 text-[12px]">
-                  你出演：<span className="font-bold text-coral">{g.role}</span>
+                  你的角色：<span className="font-bold text-coral">{g.role}</span>
                 </p>
               )}
-              {g.cast && (
+              {g.cast && gigConfig().roles.some((r) => g.cast?.[r.key]) && (
                 <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-ink-soft">
-                  <span>男主 <span className="text-ink">{g.cast.maleLead}</span></span>
-                  <span>女主 <span className="text-ink">{g.cast.femaleLead}</span></span>
-                  <span>男配 <span className="text-ink">{g.cast.maleSupport}</span></span>
-                  <span>女配 <span className="text-ink">{g.cast.femaleSupport}</span></span>
+                  {gigConfig().roles.filter((r) => g.cast?.[r.key]).map((r) => (
+                    <span key={r.key}>{r.label} <span className="text-ink">{g.cast?.[r.key]}</span></span>
+                  ))}
                 </div>
               )}
 
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px]">
-                <span className="text-coral">片酬 {fmtWan(g.pay)}</span>
-                <span className="text-gold">名气 +{g.fame}</span>
+                <span className="text-coral">{T("fee")} {fmtWan(g.pay)}</span>
+                <span className="text-gold">{T("fame")} +{g.fame}</span>
                 <span className="text-ink-soft">档期 {g.days} 天</span>
-                {g.fixedWeek && <span className="text-ink-soft">开机 第 {g.fixedWeek} 周</span>}
+                {g.fixedWeek && <span className="text-ink-soft">第 {g.fixedWeek} 周开工</span>}
               </div>
               <div className="mt-1 text-[11px] text-ink-soft">
                 门槛：{g.fameReq > 0 ? `名气 ${g.fameReq}` : "名气不限"}
@@ -91,7 +92,7 @@ export default function GigBoard({ pid, name }: { pid: string; name: string }) {
               <button
                 onClick={() => simNegotiate(g.id)}
                 disabled={busy || !eligible}
-                className="mt-2.5 w-full rounded-lg border border-solid border-coral bg-coral/10 py-1.5 text-[12.5px] font-bold text-coral transition hover:bg-coral/20 disabled:cursor-not-allowed disabled:border-line disabled:text-ink-soft/60"
+                className="mt-2.5 w-full rounded-[var(--radius-ui-sm)] border border-solid border-coral bg-coral/10 py-1.5 text-[12.5px] font-bold text-coral transition hover:bg-coral/20 disabled:cursor-not-allowed disabled:border-line disabled:text-ink-soft/60"
               >
                 {busy ? `已有${T("gig")}在身 · 档期冲突` : eligible ? "交涉接单（争取出演）" : "硬性门槛未达标 · 暂无法交涉"}
               </button>

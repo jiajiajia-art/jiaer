@@ -18,7 +18,7 @@ export function useConfirm(): [(message: string, opts?: ConfirmOpts) => Promise<
   );
   const close = (v: boolean) => { ref.current?.resolve(v); setP(null); };
   const el = p ? (
-    <Modal title={p.title ?? "请确认"} onClose={() => close(false)} heavyBackdrop>
+    <Modal panelClassName="ui-dialog-game" title={p.title ?? "请确认"} onClose={() => close(false)} heavyBackdrop>
       <p className="whitespace-pre-line text-[13.5px] leading-relaxed text-ink">{p.message}</p>
       <div className="mt-5 flex justify-end gap-2">
         <button type="button" autoFocus onClick={() => close(false)} className="ui-btn ui-btn-sm">取消</button>

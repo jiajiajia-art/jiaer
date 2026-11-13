@@ -273,7 +273,8 @@ export default function TopbarDiyPanel() {
   const data: TopbarData = game ? topbarDataOf(game, world.chain[0]?.name) : SAMPLE_TOPBAR_DATA;
   const rules = d.regexRules ?? [];
   const [tab, setTab] = useState<TabKey>("combo");
-  const [orient, setOrient] = useState<"portrait" | "landscape">(theme.orient === "landscape" ? "landscape" : "portrait");
+  // 功能注释：横竖屏暂不支持选择，预览固定竖屏
+  const orient = "portrait" as "portrait" | "landscape";
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   const [lib, setLib] = useState<SavedTopbarPreset[]>(loadSavedTopbars);
   const [styleName, setStyleName] = useState("");
@@ -356,12 +357,6 @@ export default function TopbarDiyPanel() {
       <div className="overflow-hidden rounded-2xl border border-line bg-paper-2">
         <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-1.5">
           <span className="text-[11px] font-bold tracking-[0.2em] text-ink-soft">实时预览{!enabled && " · DIY 已关闭"}</span>
-          <div role="tablist" aria-label="预览方向" className="flex gap-0.5 rounded-full border border-line bg-paper p-0.5">
-            {([["portrait", "竖屏"], ["landscape", "横屏"]] as const).map(([v, l]) => (
-              <button key={v} type="button" role="tab" aria-selected={orient === v} onClick={() => setOrient(v)}
-                className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition ${orient === v ? "bg-jade text-white" : "text-ink-soft hover:text-ink"}`}>{l}</button>
-            ))}
-          </div>
         </div>
         <TopbarView preview data={data} diy={theme.topbarDiy} topbar={theme.topbar} topbarText={theme.topbarText} compact={orient === "landscape"} />
         <div className="h-6 bg-gradient-to-b from-jade/10 to-transparent" aria-hidden />
@@ -401,7 +396,7 @@ export default function TopbarDiyPanel() {
             })}
           </div>
         </Sec>
-        <Sec t="版式" d="名牌、标题与状态栏怎么摆；横屏会自动压成单行">
+        <Sec t="版式" d="名牌、标题与状态栏怎么摆">
           <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
             {LAYOUTS.map(([v, l, desc]) => (
               <button key={v} type="button" aria-pressed={c.layout === v} onClick={() => set({ layout: v })} className={`${chip(c.layout === v)} text-center`}>

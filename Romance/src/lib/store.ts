@@ -10,7 +10,7 @@ import { emptyPhone } from "../game/phone";
 import { STAT_ORDER, ALL_STAT_KEYS, startWeather, creationCopy } from "../game/data";
 import { allRooms, locOf } from "../game/mud";
 import { drawAvatar } from "../game/avatarPools";
-import { LIVE_PEOPLE as PEOPLE, getWorld, getWorldEndings, getWorldFixedEvents, getWorldGradeDims, getWorldStartRoom, getWorldTimeLimit } from "../mods/registry";
+import { LIVE_PEOPLE as PEOPLE, currentModStamp, getWorld, getWorldEndings, getWorldFixedEvents, getWorldGradeDims, getWorldStartRoom, getWorldTimeLimit } from "../mods/registry";
 import { resolveOpeningCharacterIds } from "./openingCharacters";
 
 // 轻量配置（AI 配置、界面主题）继续用原生 localStorage；
@@ -302,6 +302,7 @@ export function newGame(player: Player, simChar?: SimChar, contract?: SignedCont
     contract: signed,
     worldId: getWorld().worldId,
     addons: [...getWorld().addonIds],
+    modStamp: currentModStamp(),
     entSplit: true,
     // 功能注释：开局带入模组底栏顺序 / 显隐 / 格数（玩家仍可在设置里再改）
     ...(worldNav.navTabs?.length ? { navTabs: worldNav.navTabs.map((t) => ({ ...t })) } : {}),

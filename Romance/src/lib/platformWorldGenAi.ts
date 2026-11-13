@@ -3,7 +3,8 @@
  * 禁止读局内「AI 配置」里的个人 baseUrl / apiKey。
  * API 基址：VITE_API_BASE_URL；空串 = 同源 /api（cn-gogo 等 Aliyun 部署）。
  */
-import { aiRouteBody } from "./platformAiRoutes";
+import { aiRouteBody } from "./platformAiRoutes.ts";
+import { aiTraceBody } from "./aiTrace.ts";
 import { readFunloomAuthToken, resolveFunloomApiBase } from "./platformAvatarLibrary.ts";
 import type { WorldGenEngineId } from "./worldGenWizard.ts";
 
@@ -30,6 +31,9 @@ export type PlatformWorldGenCompleteOpts = {
   timeoutMs?: number;
   signal?: AbortSignal;
   max_tokens?: number;
+  /** 功能注释：计费溯源——功能点与任务分组（见 lib/aiTrace.ts） */
+  feature?: string;
+  traceGroupId?: string;
 };
 
 /** 功能注释：成功补全须带回本次实扣分，供前端解析失败后汇总返还 */
@@ -84,6 +88,7 @@ export async function completeViaPlatform(
         moduleId: opts.moduleId || "",
         max_tokens: opts.max_tokens || 4000,
         ...aiRouteBody("text"),
+        ...aiTraceBody("text", { feature: opts.feature || `world-gen:${opts.moduleId || "unknown"}`, traceGroupId: opts.traceGroupId }),
       }),
     });
 
@@ -146,6 +151,8 @@ export type PlatformWorldGenRefundOpts = {
   points: number;
   reason?: string;
   signal?: AbortSignal;
+  /** 功能注释：与扣费请求同一任务分组，后端按它定位要退的扣费流水（幂等） */
+  traceGroupId?: string;
 };
 
 /**
@@ -178,6 +185,7 @@ export async function refundWorldGenPointsViaPlatform(
         moduleId: opts.moduleId || "",
         points,
         reason: opts.reason || "module_failed",
+        ...aiTraceBody("text", { feature: `world-gen-refund:${opts.moduleId || "unknown"}`, traceGroupId: opts.traceGroupId }),
       }),
     });
     const rawBody = await res.text().catch(() => "");

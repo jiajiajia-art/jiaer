@@ -31,7 +31,7 @@ const pack = (id: string, name: string, description: string, content: ModContent
 export const ENT_PACK_IDS = ["pack-career", "pack-image", "pack-paper", "pack-cars", "pack-pregnancy", "pack-living", "pack-relations"];
 
 export const entPacks: Mod[] = [
-  pack("pack-career", "演艺事业包", "通告接单、签约合约、影视项目与行业榜单，附「老板直聘」App。通告门槛与成长按本作品建角属性填写。", {
+  pack("pack-career", "事业经营包", "接单、签约、长期项目与行业榜单，附「老板直聘」App。叫法、分类与阵容可在编辑器改成任何题材；门槛与成长按本作品建角属性填写。", {
     features: { career: true, industryTab: true, phoneAppsExtra: ["bosspin"] },
     get gigs() { return entOnly(() => ent().gigs); },
     get gigPrices() { return entOnly(() => ent().gigPrices); },
@@ -39,11 +39,11 @@ export const entPacks: Mod[] = [
     get projects() { return packBase("projects", () => ent().projects, () => projectsStarter.starter() as ModContent["projects"]); },
     get industry() { return packBase("industry", () => ent().industry, () => industryStarter.starter() as ModContent["industry"]); },
   }),
-  pack("pack-image", "舆情人设包", "公开人设经营与舆情危机：黑粉、热搜、公关抉择，口碑随之起落。", {
+  pack("pack-image", "声誉舆情包", "公众形象经营与声誉危机：流言、对立者、公关抉择，口碑随之起落。", {
     features: { imageCrisis: true },
     get imageCrisis() { return packBase("imageCrisis", () => ent().imageCrisis, () => imageCrisisStarter.starter() as ModContent["imageCrisis"]); },
   }),
-  pack("pack-paper", "娱乐周报包", "每周一份小报，汇总本周的热点、榜单与你的动向（需要行业数据，已一并附带）。", {
+  pack("pack-paper", "周报包", "每周一份小报，汇总本周的热点、榜单与你的动向（需要行业数据，已一并附带）。", {
     features: { weeklyPaper: true },
     get weeklyPaper() { return packBase("weeklyPaper", () => ent().weeklyPaper, () => ({ masthead: "周报" }) as ModContent["weeklyPaper"]); },
     get industry() { return packBase("industry", () => ent().industry, () => industryStarter.starter() as ModContent["industry"]); },
@@ -67,6 +67,9 @@ export const entPacks: Mod[] = [
     titles: [],
   }),
   /* 功能注释：关系玩法——表白/婚礼/牵线/伴侣加成；娱乐圈默认挂上，其它世界须从商店添加 */
+  pack("pack-faction-rep", "阵营声望", "势力声望、建角加入势力、按声望调价、好感外溢；未添加时势力只作设定与人物归属。", {
+    features: { factionRep: true },
+  }),
   pack("pack-relations", "关系玩法", "表白门槛、婚礼费用与好感、NPC 牵线、伴侣加成。未添加的剧本人物页不出现表白与婚礼入口。", {
     features: { relationsPlay: true },
   }),

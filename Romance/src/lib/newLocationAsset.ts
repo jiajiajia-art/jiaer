@@ -38,3 +38,6 @@ export async function findSceneImageForNewSpot(
   const assets = await loadSceneAssetsOnce();
   return pickSimilarSceneAsset(name, assets, opt)?.imageUrl;
 }
+
+/** 功能注释：新地点没配到素材图时派发（detail: { id, name, desc }），游玩界面据此提示玩家生图 */
+export const NEW_SPOT_NO_IMAGE_EVENT = "romance:new-spot-no-image";

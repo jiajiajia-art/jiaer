@@ -26,8 +26,16 @@ export default function Backpack({ onClose, embedded = false }: { onClose?: () =
     const base = itemById(id);
     if (base) return base;
     const custom = findCustomItem(game, id);
-    return custom ? { id: custom.id, name: custom.name, desc: custom.desc, icon: custom.icon ?? "", price: undefined } : undefined;
+    if (custom) return { id: custom.id, name: custom.name, desc: custom.desc, icon: custom.icon ?? "", price: undefined };
+    // 功能注释：卸包残留——定义已不在当前世界，用存档备忘显示，不再变成空格子
+    const memo = game.itemMemo?.[id];
+    if (memo) {
+      const from = memo.modName ? `来自已移除的玩法「${memo.modName}」` : "来自已移除的玩法";
+      return { id, name: memo.name, desc: `${memo.desc ? `${memo.desc}\n\n` : ""}${from}，重新安装后即可使用。`, icon: memo.icon ?? "", price: undefined, orphan: true as const };
+    }
+    return undefined;
   };
+  const isOrphan = (it: ReturnType<typeof resolve>) => !!it && "orphan" in it && it.orphan === true;
   const useItem = (id: string) => {
     const msg = simUseItem(id);
     if (msg) setFeedback(msg);
@@ -75,7 +83,7 @@ export default function Backpack({ onClose, embedded = false }: { onClose?: () =
             const it = resolve(cell.id);
             if (!it) return <div key={`empty-${i}`} className="flex aspect-square rounded-lg border border-dashed border-line/70 bg-black/[0.02]" aria-hidden />;
             return (
-              <button key={`${cell.id}-${i}`} onClick={() => { setFeedback(""); setOpenItem(cell.id); }} title={it.name} className="group flex aspect-square flex-col items-center justify-center gap-1 rounded-[12px] border border-line bg-paper-2 p-1 text-center transition hover:-translate-y-0.5 hover:border-gold hover:shadow-sm">
+              <button key={`${cell.id}-${i}`} onClick={() => { setFeedback(""); setOpenItem(cell.id); }} title={it.name} className={`group flex aspect-square flex-col items-center justify-center gap-1 rounded-[12px] border border-line bg-paper-2 p-1 text-center transition hover:-translate-y-0.5 hover:border-gold hover:shadow-sm ${isOrphan(it) ? "opacity-55 grayscale" : ""}`}>
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/[0.05] text-[18px]">{it.icon || <IconSpark size={18} />}</span>
                 <span className="line-clamp-1 w-full text-[10.5px] font-semibold text-ink">{it.name}</span>
               </button>
@@ -101,18 +109,18 @@ export default function Backpack({ onClose, embedded = false }: { onClose?: () =
         if (!it) return null;
         return (
           <div className="ui-overlay z-[60]" onClick={() => setOpenItem(null)}>
-            <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={it.name} className="ui-sheet ui-dialog animate-pop">
+            <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={it.name} className="ui-sheet ui-dialog ui-dialog-game animate-pop">
               <div className="flex items-center gap-3 px-5 pb-2 pt-5">
                 <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-black/[0.04] text-[24px]">{it.icon || <IconSpark size={24} />}</span>
                 <div className="min-w-0 flex-1"><p className="truncate text-[16px] font-bold text-ink">{it.name}</p>{it.price ? <p className="text-[12px] text-gold">价值 ¥{it.price}</p> : null}</div>
                 <button onClick={() => setOpenItem(null)} aria-label="关闭" className="ui-icon-btn"><IconClose /></button>
               </div>
               <div className="ui-dialog-body px-5 pb-5">
-                <p className="mt-1 text-[14px] leading-[1.6] text-ink/85">{it.desc}</p>
-                <div className="mt-4 grid grid-cols-2 gap-2">
+                <p className="mt-1 whitespace-pre-line text-[14px] leading-[1.6] text-ink/85">{it.desc}</p>
+                {!isOrphan(it) && <div className="mt-4 grid grid-cols-2 gap-2">
                   <button onClick={() => useItem(openItem)} className="ui-btn ui-btn-soft ui-btn-lg">使用</button>
                   <button onClick={() => { setGiftItem(openItem); setOpenItem(null); }} className="ui-btn ui-btn-soft ui-btn-lg tone-gold">赠送</button>
-                </div>
+                </div>}
                 <button onClick={() => setOpenItem(null)} className="ui-btn ui-btn-ghost ui-btn-block mt-2">收好</button>
               </div>
             </div>
@@ -124,7 +132,7 @@ export default function Backpack({ onClose, embedded = false }: { onClose?: () =
         if (!it) return null;
         return (
           <div className="ui-overlay z-[70]" onClick={() => setGiftItem(null)}>
-            <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`赠送${it.name}`} className="ui-sheet ui-dialog animate-pop">
+            <div onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`赠送${it.name}`} className="ui-sheet ui-dialog ui-dialog-game animate-pop">
               <div className="flex items-start gap-3 px-5 pb-2 pt-5">
                 <div className="min-w-0 flex-1">
                   <p className="text-[16px] font-bold text-ink">把「{it.name}」送给谁？</p>
@@ -149,5 +157,5 @@ export default function Backpack({ onClose, embedded = false }: { onClose?: () =
   );
 
   if (embedded) return <section>{content}{overlays}</section>;
-  return <Modal title="背包 · 行囊" onClose={onClose ?? (() => undefined)}>{content}{overlays}</Modal>;
+  return <Modal panelClassName="ui-dialog-game" title="背包 · 行囊" onClose={onClose ?? (() => undefined)}>{content}{overlays}</Modal>;
 }

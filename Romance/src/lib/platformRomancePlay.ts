@@ -3,7 +3,7 @@
  * - play=1：已上架发布镜像（非作者 live 草稿）
  * - reviewPreview=1：运营待审快照（需审核员 token）
  */
-import { resolveFunloomApiBase, readFunloomAuthToken } from "./platformAvatarLibrary";
+import { resolveFunloomApiBase, readFunloomAuthToken } from "./platformAvatarLibrary.ts";
 
 export type RomancePlayMode = "play" | "reviewPreview" | null;
 

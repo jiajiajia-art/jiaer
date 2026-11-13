@@ -30,6 +30,7 @@ export type PlayModEditorPanelId =
   | "cars"
   | "titles"
   | "relations"
+  | "factionRep"
   | "phoneApp";
 
 export type PlayModInstallConfig = {
@@ -72,11 +73,15 @@ export type LocalPlayModCatalogItem = {
   dependsOn?: string[];
   /** 功能注释：商店详情 — 作者展示名（创作者上传必填侧同步） */
   authorName: string;
+  /** 功能注释：互斥玩法 slug（双向生效）；平台 SDK 兼容区间 */
+  conflictsWith?: string[];
+  compatMin?: string;
+  compatMax?: string;
   /** 功能注释：商店详情 — 下载量（stats.installGames 前端展示） */
   downloadCount: number;
   /** 功能注释：商店详情 — 完整玩法说明（上传必填） */
   detailDescription: string;
-  /** 功能注释：商店详情 — 预览图 URL 或 local:占位（上传至少 1 张） */
+  /** 功能注释：商店详情 — 作者上传的预览图 URL（上架至少 1 张） */
   previewImages: string[];
   /** 功能注释：适用题材语义 code（C0.3）；前台解析成 applicableThemeTagIds */
   applicableThemeCodes: ThemeApplicabilityCode[];
@@ -95,7 +100,8 @@ function withStoreDetail(
     authorName: "官方",
     downloadCount: detail.downloads,
     detailDescription: detail.detail,
-    previewImages: [`local:${item.slug}-1`, `local:${item.slug}-2`],
+    // 功能注释：预览图必须由作者上传，本地种子不造占位图
+    previewImages: [],
     // 功能注释：官方包必须有至少 1 个适用题材语义；缺配置时按 modern 兜底并便于单测抓住遗漏
     applicableThemeCodes: codes?.length ? [...codes] : ["modern"],
   };
@@ -110,8 +116,8 @@ export const LOCAL_PLAY_MOD_CATALOG: LocalPlayModCatalogItem[] = [
     {
       id: "pm-pack-career",
       slug: "pack-career",
-      name: "演艺事业包",
-      description: "通告、合约、影视项目与行业生态",
+      name: "事业经营包",
+      description: "接单、签约、项目与行业生态（叫法与分类可改）",
       priceKk: 0,
       version: "1.0.0",
       defaultNavLabel: "事业",
@@ -124,15 +130,15 @@ export const LOCAL_PLAY_MOD_CATALOG: LocalPlayModCatalogItem[] = [
     {
       downloads: 4820,
       detail:
-        "演艺事业包为剧本增加通告接单、合约谈判、影视项目与行业生态。可配置触发条件与好感/属性结算，并可选挂「事业」底栏页。不改动档案、人脉、登录与存档结构。",
+        "事业经营包为剧本增加接单、合约谈判、长期项目与行业生态，适用任何题材：在编辑器里把通告、艺人、经纪公司改成委托、弟子、门派等叫法，分类与阵容角色也能自定义。可选挂「事业」底栏页，不改动档案、人脉、登录与存档结构。",
     },
   ),
   withStoreDetail(
     {
       id: "pm-pack-image",
       slug: "pack-image",
-      name: "舆情人设包",
-      description: "人设经营与舆情危机",
+      name: "声誉舆情包",
+      description: "公众形象经营与声誉危机",
       priceKk: 0,
       version: "1.0.0",
       defaultNavLabel: "形象",
@@ -145,14 +151,14 @@ export const LOCAL_PLAY_MOD_CATALOG: LocalPlayModCatalogItem[] = [
     {
       downloads: 3100,
       detail:
-        "舆情人设包提供人设经营与舆情危机事件：热搜、黑粉与公关抉择。作者可改触发与字段结算，可选挂「形象」底栏。不属于本体档案/设置能力。",
+        "声誉舆情包提供公众形象经营与声誉危机事件：流言、对立者与公关抉择，关注者、口碑等叫法跟随「玩法叫法」。作者可改触发与字段结算，可选挂「形象」底栏。",
     },
   ),
   withStoreDetail(
     {
       id: "pm-pack-paper",
       slug: "pack-paper",
-      name: "娱乐周报包",
+      name: "周报包",
       description: "每周小报",
       priceKk: 0,
       version: "1.0.0",
@@ -165,7 +171,7 @@ export const LOCAL_PLAY_MOD_CATALOG: LocalPlayModCatalogItem[] = [
     },
     {
       downloads: 1980,
-      detail: "娱乐周报包按周汇总热点、榜单与作品内动向，作为可选玩法面板；默认不占底栏，需要时可自行挂载。",
+      detail: "周报包按周汇总热点、榜单与作品内动向，作为可选玩法面板；默认不占底栏，需要时可自行挂载。",
     },
   ),
   withStoreDetail(
@@ -294,6 +300,27 @@ export const LOCAL_PLAY_MOD_CATALOG: LocalPlayModCatalogItem[] = [
         "关系玩法为可选恋爱向组件：表白门槛、婚礼费用与好感、NPC 牵线开关、伴侣加成。从商店加进作品后才出现配置区，人物页才显示表白与婚礼入口；未添加的剧本不出现整块关系玩法。",
     },
   ),
+  withStoreDetail(
+    {
+      id: "pm-pack-faction-rep",
+      slug: "pack-faction-rep",
+      name: "阵营声望",
+      description: "势力声望、建角加入势力、按声望调价、好感外溢",
+      priceKk: 0,
+      version: "1.0.0",
+      defaultNavLabel: "",
+      needsNavEntry: false,
+      editorPanels: ["factionRep"],
+      iconSvg: ICON('<path d="M4 21V4"/><path d="M4 4h12l-2 4 2 4H4"/>'),
+      romanceAddonId: "pack-faction-rep",
+      componentKind: "gameplay",
+    },
+    {
+      downloads: 1880,
+      detail:
+        "阵营声望为作品里的势力加上经营数值：主角在每个势力有 -100~100 的声望，建角时可选择加入势力并获得初始声望，在势力控制的地点购物按声望打折或加价，对势力成员的好感变化会外溢到声望；事件可按声望触发、改变声望。未添加时势力只作设定与人物归属，不出现任何声望数值。",
+    },
+  ),
 ];
 /**
  * 功能注释：玩家菜单「玩法 Mod」入口（支票/账单）是否展示。
@@ -350,6 +377,7 @@ export function recommendPlayModsFromSetting(
   if (/吃饭|伙食|生活开销|房租|账单|租房/.test(text)) add("pack-living");
   if (/头衔|称号|成就称号|佩戴头衔/.test(text)) add("pack-titles");
   if (/表白|婚礼|恋爱|结婚|伴侣|牵线|好感门槛|关系玩法/.test(text)) add("pack-relations");
+  if (/帮派|门派|宗门|阵营|派系|宫斗|站队|声望|势力/.test(text)) add("pack-faction-rep");
 
   return hits.slice(0, 6);
 }
@@ -387,6 +415,7 @@ export const PLAY_MOD_FEATURE_BY_SLUG = Object.freeze({
   "pack-transport": Object.freeze(["transport"] as const),
   "pack-cars": Object.freeze(["cars"] as const),
   "pack-relations": Object.freeze(["relationsPlay"] as const),
+  "pack-faction-rep": Object.freeze(["factionRep"] as const),
 });
 
 type PlayModFeatureKey = (typeof PLAY_MOD_FEATURE_BY_SLUG)[keyof typeof PLAY_MOD_FEATURE_BY_SLUG][number];
@@ -492,8 +521,13 @@ export function checkLocalInstallDeps(item: LocalPlayModCatalogItem, installs: P
 /**
  * 功能注释：把缺失依赖解析成创作者可读名称（如「出行与交通」），供确认弹窗文案。
  */
-export function missingPlayModDepNames(item: LocalPlayModCatalogItem, installs: PlayModInstallConfig[]): string[] {
-  return checkLocalInstallDeps(item, installs).map((slug) => catalogBySlug(slug)?.name || slug);
+export function missingPlayModDepNames(
+  item: LocalPlayModCatalogItem,
+  installs: PlayModInstallConfig[],
+  /** 功能注释：商店传入接口数据的查找函数；缺省用本地目录 */
+  lookup: (slug: string) => LocalPlayModCatalogItem | undefined = catalogBySlug,
+): string[] {
+  return checkLocalInstallDeps(item, installs).map((slug) => lookup(slug)?.name || slug);
 }
 
 /**
@@ -503,6 +537,7 @@ export function missingPlayModDepNames(item: LocalPlayModCatalogItem, installs: 
 export function resolvePlayModInstallChain(
   item: LocalPlayModCatalogItem,
   installs: PlayModInstallConfig[],
+  lookup: (slug: string) => LocalPlayModCatalogItem | undefined = catalogBySlug,
 ): LocalPlayModCatalogItem[] {
   const installed = new Set(installs.map((x) => x.slug));
   const chain: LocalPlayModCatalogItem[] = [];
@@ -511,7 +546,7 @@ export function resolvePlayModInstallChain(
     if (seen.has(node.slug) || installed.has(node.slug)) return;
     seen.add(node.slug);
     for (const depSlug of node.dependsOn || []) {
-      const dep = catalogBySlug(depSlug);
+      const dep = lookup(depSlug);
       if (dep) walk(dep);
     }
     if (!installed.has(node.slug)) chain.push(node);

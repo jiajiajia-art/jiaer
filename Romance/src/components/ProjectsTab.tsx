@@ -58,7 +58,7 @@ export default function ProjectsTab({ embedded = false }: { embedded?: boolean }
     const tpl = tplOf(p.templateId);
     if (!tpl) return null;
     return (
-      <div className="rounded-xl border border-line bg-paper-2 p-3.5">
+      <div className="ui-card p-3.5">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="flex flex-wrap items-center gap-1.5 font-semibold text-ink">
@@ -98,7 +98,7 @@ export default function ProjectsTab({ embedded = false }: { embedded?: boolean }
           <button
             key={v.id}
             onClick={() => setView(v.id)}
-            className={`rounded-lg border px-2.5 py-1.5 text-[12.5px] transition ${
+            className={`rounded-[var(--radius-ui-sm)] border px-2.5 py-1.5 text-[12.5px] transition ${
               view === v.id ? "border-coral bg-coral/10 font-semibold text-coral" : "border-line text-ink-soft hover:text-ink"
             }`}
           >
@@ -144,7 +144,7 @@ export default function ProjectsTab({ embedded = false }: { embedded?: boolean }
             )}
             <Timeline p={p} />
             {p.status === "pending_result" && (
-              <div className="mt-2.5 rounded-lg border border-gold/40 bg-gold/5 px-3 py-2 text-[12px] text-ink-soft">
+              <div className="mt-2.5 rounded-[var(--radius-ui-sm)] border border-gold/40 bg-gold/5 px-3 py-2 text-[12px] text-ink-soft">
                 资料已投递，制作方评审中。{p.resultDay != null ? `试镜结果将于 ${dayDateLabel(p.resultDay)} 公布——推进日程即可等到结果。` : "结果公布后将在此提示。"}
               </div>
             )}
@@ -153,7 +153,7 @@ export default function ProjectsTab({ embedded = false }: { embedded?: boolean }
                 {p.feeBonusRate ? (
                   <p className="text-[12px] text-jade">协商结果：报酬上浮 +{Math.round(p.feeBonusRate * 100)}%</p>
                 ) : !p.negotiated && (
-                  <button onClick={() => projNegotiate(p.id)} className="w-full rounded-lg border border-coral/50 py-2 text-[12.5px] font-medium text-coral transition hover:bg-coral/10">
+                  <button onClick={() => projNegotiate(p.id)} className="w-full rounded-[var(--radius-ui-sm)] border border-coral/50 py-2 text-[12.5px] font-medium text-coral transition hover:bg-coral/10">
                     尝试争取更高报酬（协商一次）
                   </button>
                 )}
@@ -183,13 +183,13 @@ export default function ProjectsTab({ embedded = false }: { embedded?: boolean }
                 )}
                 {today ? (
                   workId === p.id ? (
-                    <div className="mt-2.5 space-y-1.5 rounded-lg border border-jade/40 bg-jade/5 p-2.5">
+                    <div className="mt-2.5 space-y-1.5 rounded-[var(--radius-ui-sm)] border border-jade/40 bg-jade/5 p-2.5">
                       <p className="text-[12px] font-medium text-ink">今日拍摄策略：</p>
                       {STRATEGIES.map((st) => (
                         <button
                           key={st.id}
                           onClick={() => { projWorkday(p.id, st.id); setWorkId(null); }}
-                          className="w-full rounded-lg border border-line bg-paper px-2.5 py-1.5 text-left text-[12px] text-ink transition hover:border-jade"
+                          className="ui-card w-full px-2.5 py-1.5 text-left text-[12px] text-ink transition hover:border-jade"
                         >
                           <span className="font-semibold">{st.label}</span> · 压力 +{st.stress}
                           <span className="block text-[11px] text-ink-soft">{st.desc}</span>
@@ -225,7 +225,7 @@ export default function ProjectsTab({ embedded = false }: { embedded?: boolean }
           <h3 className="mb-2 mt-6 font-serif text-base font-bold text-ink">作品库</h3>
           <div className="space-y-2">
             {portfolio.map((w, i) => (
-              <div key={i} className="rounded-xl border border-line bg-paper-2 px-3 py-2 text-[12.5px]">
+              <div key={i} className="ui-card px-3 py-2 text-[12.5px]">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-ink">{w.title}</p>
@@ -245,7 +245,7 @@ export default function ProjectsTab({ embedded = false }: { embedded?: boolean }
                 {!w.released && (
                   <button
                     onClick={() => projPromote(w.projectId)}
-                    className="mt-2 w-full rounded-lg border border-coral/50 py-1.5 text-[12px] font-medium text-coral transition hover:bg-coral/10"
+                    className="mt-2 w-full rounded-[var(--radius-ui-sm)] border border-coral/50 py-1.5 text-[12px] font-medium text-coral transition hover:bg-coral/10"
                   >
                     为作品造势宣传（-¥3000 · 压力+3 · 宣传指数{w.publicityIndex}）
                   </button>
@@ -260,5 +260,5 @@ export default function ProjectsTab({ embedded = false }: { embedded?: boolean }
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="rounded-xl border border-dashed border-line px-3 py-6 text-center text-[13px] text-ink-soft">{text}</p>;
+  return <p className="rounded-[var(--radius-ui)] border border-dashed border-line px-3 py-6 text-center text-[13px] text-ink-soft">{text}</p>;
 }

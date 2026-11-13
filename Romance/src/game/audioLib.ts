@@ -7,7 +7,7 @@ import type { AudioAsset, AudioKind } from "../lib/types";
 import type { Mod } from "../mods/types";
 import { allMods, getWorld, subscribeMods } from "../mods/registry";
 import { modLog } from "../mods/ext";
-import { overlayPlatformAudio } from "./platformAudio";
+import { overlayPlatformAudio, subscribePlatformAudio, loadPlatformAudio } from "./platformAudio";
 import { asModArray } from "../lib/asModArray";
 
 export const AUDIO_KIND_LABEL: Record<AudioKind, string> = { bgm: "背景音乐", sfx: "短音效", amb: "环境氛围音" };
@@ -23,6 +23,9 @@ let author: AudioAsset[] = [];
 let ver = 0;
 const subs = new Set<() => void>();
 const bump = () => { ver++; cache = null; subs.forEach((f) => f()); };
+// 功能注释：运营后台曲库加载完成 → 重建音频库缓存，平台曲可立即播放 / 选择
+subscribePlatformAudio(bump);
+if (typeof window !== "undefined") void loadPlatformAudio();
 subscribeMods(bump);
 export function setAuthorAudio(list: AudioAsset[] | undefined) {
   const n = list ?? [];

@@ -11,6 +11,8 @@ export type DraftRefs = {
   rooms: DraftRefOpt[];
   items: DraftRefOpt[];
   factions?: DraftRefOpt[];
+  /** 功能注释：本作品是否添加了「阵营声望」玩法；关时编辑器不提供声望条件 / 效果 */
+  factionRep?: boolean;
   /** 本作品自定义属性（对应条件/效果里的 c:<id> 指标） */
   attrs: { id: string; label?: string }[];
   /** 本作品可用的主角属性键（可空：不预选） */
@@ -46,6 +48,7 @@ export function buildDraftRefs(input: {
   rooms?: Record<string, { name?: string; items?: { id: string; name?: string }[] }>;
   items?: { id: string; name?: string }[];
   factions?: { id: string; name?: string }[];
+  factionRep?: boolean;
   attrs?: { id: string; label?: string }[];
   statKeys?: string[];
   srcs?: ValueSrc[];
@@ -62,6 +65,7 @@ export function buildDraftRefs(input: {
     rooms: Object.entries(rooms).map(([id, r]) => ({ id, name: r?.name || id })),
     items,
     factions: (input.factions ?? []).map((f) => ({ id: f.id, name: f.name || f.id })),
+    factionRep: input.factionRep,
     attrs: Array.isArray(input.attrs) ? input.attrs : [],
     statKeys: input.statKeys,
     srcs: input.srcs,

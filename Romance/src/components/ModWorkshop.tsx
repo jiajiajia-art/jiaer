@@ -16,6 +16,7 @@ import ModAssetsPanel, { FileBadge, fileTitle } from "./ModAssetsPanel";
 import ModPreviewPanel from "./ModPreviewPanel";
 import { OFFICIAL_PLATFORM_APP_IDS, installedPlatformAppIds } from "../lib/phoneAppsConfig";
 import { asModArray } from "../lib/asModArray";
+import { PLAY_MOD_FORBIDDEN_FIELDS, forbiddenFieldLabels, markBaseOverrides, sanitizeConflictIds, stripForbiddenPlayFields } from "../mods/playModGuard";
 
 /** 功能注释：对话合并后立刻补缺 id / 身份占位姓名，避免顶栏长期红字「缺少 id」且保存按钮灰掉 */
 function healWorkshopDraft(mod: Mod): Mod {
@@ -111,6 +112,9 @@ ${attrPromptSpec(collectAttrSpecs(baseAttrs, draft.content.customAttrs))}
 
 可用字段（全部可省略，只写需要改的）：
 ${PLAY_FIELDS}
+玩法包禁止写下列世界本体字段（写了也会被丢弃）：${Object.keys(PLAY_MOD_FORBIDDEN_FIELDS).join("、")}。
+修改世界观已有条目时保留原 id（系统会自动标记为有意覆盖）；新建条目用新 id，不要与世界观已有 id 重名。物品只能在选项 / 事件效果里发放。
+只有作者明确说出本玩法不能和哪个玩法同时安装、并给出对方玩法 id 时，才在 manifest.conflictsWith 里写这些 id；作者没提就不要写，也不要自行推测或举例。当前互斥：${JSON.stringify(draft.conflictsWith ?? [])}
 当前草稿：
 ${draftContext(draft)}
 
@@ -167,7 +171,7 @@ const PATCH_TOOL: ToolDef = {
   parameters: {
     type: "object",
     properties: {
-      manifest: { type: "object", description: "模组信息，只写要改的", properties: { name: { type: "string" }, description: { type: "string" }, id: { type: "string", description: "小写英文 id" } } },
+      manifest: { type: "object", description: "模组信息，只写要改的", properties: { name: { type: "string" }, description: { type: "string" }, id: { type: "string", description: "小写英文 id" }, conflictsWith: { type: "array", items: { type: "string" }, description: "仅玩法 Mod：互斥的玩法 id 列表" } } },
       content: { type: "object", description: "本轮新增或修改的内容字段（结构见系统提示）", additionalProperties: true },
       remove: { type: "object", description: "要删除的条目：{字段名: [id, …]}", additionalProperties: { type: "array", items: { type: "string" } } },
     },
@@ -203,7 +207,9 @@ function applyPatch(draft: Mod, p: Patch | "bad" | null, baseContent?: Content):
     content = c as ModContent;
   }
   const id = typeof mf.id === "string" && /^[a-z0-9][a-z0-9_-]{1,40}$/.test(mf.id) && draft.id.startsWith("ai-") ? mf.id : draft.id;
-  return { ...draft, id, name: mf.name || draft.name, description: mf.description ?? draft.description, content };
+  // 功能注释：玩法互斥声明（只在 AI 明确给出数组时更新）
+  const conflictsWith = Array.isArray((mf as { conflictsWith?: unknown }).conflictsWith) ? sanitizeConflictIds((mf as { conflictsWith?: unknown }).conflictsWith, id) : draft.conflictsWith;
+  return { ...draft, id, name: mf.name || draft.name, description: mf.description ?? draft.description, content, ...(conflictsWith?.length ? { conflictsWith } : { conflictsWith: undefined }) };
 }
 
 const visible = (t: string) => t.replace(/```(?:json)?[\s\S]*?```/g, "").trim();
@@ -360,7 +366,14 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
       }
       const warn = audit && !auditOk(audit) ? `\n\n属性检查：\n${describeAudit(audit)}` : "";
       const raw = (r.text.trim() || (patch && patch !== "bad" ? "已按要求修改草稿。" : "")) + warn;
-      const patched = applyPatch(draft, patch, baseContent);
+      let patched = applyPatch(draft, patch, baseContent);
+      // 功能注释：玩法包只扩展玩法——剥掉世界本体字段并告知作者；改到底层世界已有条目的标记 override
+      let guardNote = "";
+      if (play && patched && patched !== "bad") {
+        const { content: clean, removed } = stripForbiddenPlayFields(patched.content);
+        if (removed.length) guardNote = `\n\n已丢弃世界本体字段：${forbiddenFieldLabels(removed).join("、")}（玩法包不能改世界设定，请到世界编辑器里改）。`;
+        patched = { ...patched, content: markBaseOverrides(clean, baseContent as ModContent | undefined) };
+      }
       // 玩法 Mod 始终保持叠加包 + 追加合并，避免 AI 改掉 kind
       const next = patched && patched !== "bad" && (target ? { ...patched, kind: target.mod.kind, id: target.mod.id } : play ? { ...patched, kind: "addon" as const, slotMerge: "merge" as const } : patched) || patched;
       const ok = next && next !== "bad" ? healWorkshopDraft(next) : null;
@@ -369,7 +382,7 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
         if (livePreview || embedInShell) pushLivePreview(ok);
         if (target && !target.isNew) importModJson(JSON.stringify({ ...ok, builtin: undefined }));
       }
-      setTurns([...hist, { role: "assistant", text: raw, patch: !!ok, diff: ok ? (play ? playDiff(draft, ok) : diffOf(draft, ok)) : undefined, bad: next === "bad", files: ok ? diffModFiles(draft.content as Content, ok.content as Content, baseContent) : undefined }]);
+      setTurns([...hist, { role: "assistant", text: raw + guardNote, patch: !!ok, diff: ok ? (play ? playDiff(draft, ok) : diffOf(draft, ok)) : undefined, bad: next === "bad", files: ok ? diffModFiles(draft.content as Content, ok.content as Content, baseContent) : undefined }]);
     } catch (e) {
       setErr(friendlyAIError(e).text); setLastFailed(t); setTurns(turns);
     } finally { setBusy(false); }
@@ -401,7 +414,9 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
   const removeFile = (path: string) => setDraft({ ...draft, content: removeModFile(path, draft.content as Content) as ModContent });
 
   const save = () => {
-    const healed = healWorkshopDraft({ ...draft, builtin: undefined });
+    let healed = healWorkshopDraft({ ...draft, builtin: undefined });
+    // 功能注释：旧草稿可能残留世界本体字段；玩法包保存时一并剥掉
+    if (play) healed = { ...healed, content: stripForbiddenPlayFields(healed.content).content };
     const r = importModJson(JSON.stringify(healed));
     if (!r.ok) { setErr(r.errors.join("；")); return; }
     if (!target) removeGlobal(LS_OF[mode]);

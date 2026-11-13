@@ -7,6 +7,7 @@ import { worldBookMissingDepsErrors } from "./worldBookDeps.ts";
 import { ensureWorldGenStartMoney, healCustomAttrsUnnamed } from "./worldGenCreationAttrs.ts";
 import { normalizeRuleBranches } from "./gameRuleShape.ts";
 import { asTrimmedString } from "./asTrimmedString.ts";
+import { ENGINE_STAT_KEYS, isDirtyAttrRef, resolveAttrRef } from "../game/attrRef.ts";
 
 /** 与 validateMod 对齐：这些数组条目必须有非空 id */
 const NEED_ID_KEYS = [
@@ -229,6 +230,43 @@ export function healStartMoney(content: ModContent): string[] {
   return notes;
 }
 
+/**
+ * 功能注释：清理条件 / 效果里的属性引用——
+ * 1) AI 写错类型的（stat:observation）先对回作品属性 metric:c:observation；
+ * 2) 对不回的、以及引用引擎内置属性（演技等八维、名气 / 口碑 / 黑粉 / 压力 / 精力等）的，整条删除，不留脏数据。
+ * 只处理带 op/value 或 delta 的 stat/metric 节点；作品货币 money 与 c: 作品属性保留。
+ */
+export function healAttrRefs(content: ModContent): string[] {
+  const attrs = Array.isArray(content.customAttrs) ? content.customAttrs : [];
+  let fixed = 0;
+  let removed = 0;
+  const seen = new WeakSet<object>();
+  const isRef = (o: Record<string, unknown>) =>
+    (o.kind === "stat" || o.kind === "metric") && typeof o.key === "string" && ("op" in o || "value" in o || "delta" in o);
+  const walk = (node: unknown) => {
+    if (!node || typeof node !== "object" || seen.has(node as object)) return;
+    seen.add(node as object);
+    if (Array.isArray(node)) {
+      for (let i = node.length - 1; i >= 0; i--) {
+        const o = node[i] as Record<string, unknown> | null;
+        if (o && typeof o === "object" && !Array.isArray(o) && isRef(o)) {
+          const hit = resolveAttrRef(String(o.kind), String(o.key), attrs, ENGINE_STAT_KEYS);
+          if (hit) { o.kind = hit.kind; o.key = hit.key; fixed++; }
+          else if (isDirtyAttrRef(String(o.kind), String(o.key))) { node.splice(i, 1); removed++; continue; }
+        }
+        walk(node[i]);
+      }
+      return;
+    }
+    for (const v of Object.values(node as Record<string, unknown>)) walk(v);
+  };
+  walk(content);
+  const notes: string[] = [];
+  if (fixed) notes.push(`已将 ${fixed} 处属性条件 / 效果对回本作品属性`);
+  if (removed) notes.push(`已删除 ${removed} 处引用内置属性或不存在属性的条件 / 效果`);
+  return notes;
+}
+
 /** 功能注释：保存前一次自愈；返回说明文案供顶栏轻提示（世界书未挂依赖不再自愈停用） */
 export function healModBeforeSave(content: ModContent): string[] {
   return [
@@ -238,6 +276,7 @@ export function healModBeforeSave(content: ModContent): string[] {
     ...healOpeningShape(content),
     // 功能注释：旧 AI 稿里的「未命名」空壳保存时清掉，编辑器不再显示占位行
     ...healCustomAttrsUnnamed(content),
+    ...healAttrRefs(content),
   ];
 }
 

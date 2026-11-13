@@ -12,30 +12,14 @@ import type { ScheduleCatId } from "../mods/types";
 import { asModArray } from "../lib/asModArray";
 import { TRAININGS, SIDE_JOBS, WEEKEND_ACTS, type WeekendAct, MEALS, mealOf, mealEffect, gradesOf, gradeLock, tuning, jobLock, unlockLock, STAT_LABELS, type StatKey } from "../game/data";
 import { FIXED_METRICS } from "../game/fixedEvents";
-import { dowOf, previewWeekBill, weekdayName, type GameState } from "../game/logic";
+import { dowOf, previewWeekBill, restStressValue, weekdayName, type GameState } from "../game/logic";
+import { resolveScheduleCats } from "../game/scheduleCats";
 import { liveTerm as T } from "../mods/live";
 import { StatusMark } from "../lib/icons";
 
-/* ═══ 可排入日程的活动（仿《明星志愿》：通告 / 课程 / 打工 / 休息 / 社交） ═══ */
+/* ═══ 可排入日程的活动：分类定义与编辑器共用 game/scheduleCats ═══ */
 type PlanCat = ScheduleCatId;
-const CAT_DEFAULT: Record<PlanCat, { label: string; hint: string; dot: string }> = {
-  work: { get label() { return `拍摄${T("gig")}`; }, hint: "接戏拍摄，赚片酬涨名气", dot: "#e0533d" },
-  lesson: { label: "才艺课程", hint: "分级授课 · 级别越高上限越高、单次加成越少", dot: "#c79a3a" },
-  job: { label: "打工赚钱", hint: "分级零工 · 名气越高价码越高", dot: "#b3823c" },
-  rest: { label: "休息调整", hint: "回血减压，保住状态", dot: "#3a9d78" },
-  social: { label: "外出社交", hint: "自由活动可踩地图 · 人脉与心情", dot: "#d76d77" },
-};
-const CAT_IDS: PlanCat[] = ["work", "lesson", "job", "rest", "social"];
-/* 编辑器「日程分类」覆盖：名称 / 说明 / 颜色 / 顺序 / 隐藏；未写的字段回落到内置值 */
-function catCfg(): { order: PlanCat[]; meta: Record<PlanCat, { label: string; hint: string; dot: string; hidden: boolean }> } {
-  const cfg = (getWorldSlot("schedule")?.cats ?? []).filter((c) => CAT_IDS.includes(c.id));
-  const order = [...cfg.map((c) => c.id), ...CAT_IDS.filter((id) => !cfg.some((c) => c.id === id))];
-  const meta = Object.fromEntries(CAT_IDS.map((id) => {
-    const d = CAT_DEFAULT[id]; const c = cfg.find((x) => x.id === id);
-    return [id, { label: c?.label?.trim() || d.label, hint: c?.hint?.trim() ?? d.hint, dot: c?.color || d.dot, hidden: !!c?.hidden }];
-  })) as Record<PlanCat, { label: string; hint: string; dot: string; hidden: boolean }>;
-  return { order, meta };
-}
+const catCfg = () => resolveScheduleCats(getWorldSlot("schedule")?.cats, (k) => T(k));
 const weekendCat = (w: WeekendAct): PlanCat => w.cat ?? (w.id === "recuperate" ? "rest" : "social");
 
 /* 排入槽位的一件事：解码 schedule 字符串为可展示信息（名称/分类/开销/压力）。 */
@@ -45,7 +29,10 @@ function describeAct(s: GameState, id: string | null): ActInfo | null {
   if (!id) return null;
   const meta = catCfg().meta;
   const dot = (c: PlanCat) => meta[c].dot;
-  if (id === "rest") return { id, name: "休息", cat: "rest", note: "缓解压力、调整状态", fee: 0, stress: -8, dot: dot("rest") };
+  if (id === "rest") {
+    const rs = restStressValue();
+    return { id, name: "休息", cat: "rest", note: rs == null ? "放空一段时间（本作品未设置减压效果）" : "缓解压力、调整状态", fee: 0, stress: rs == null ? 0 : -rs, dot: dot("rest") };
+  }
   if (id === "gig") {
     const g = GIG_POOL.find((x) => x.id === s.activeGigId);
     const deadline = s.gigDeadlineWeek ? `，第 ${s.gigDeadlineWeek} 周前截止` : "";
@@ -87,7 +74,7 @@ const WEEKDAY_FULL = ["周一", "周二", "周三", "周四", "周五", "周六"
 function CostBadges({ act }: { act: ActInfo }) {
   return (
     <span className="flex flex-wrap gap-1">
-      {act.fee > 0 && <span className="rounded bg-danger/10 px-1.5 py-px text-[10px] font-medium text-danger">¥{act.fee}</span>}
+      {act.fee > 0 && <span className="rounded bg-danger/10 px-1.5 py-px text-[10px] font-medium text-danger">{wallet.fmt(act.fee)}</span>}
       {act.stress !== 0 && (
         <span className={`rounded px-1.5 py-px text-[10px] font-medium ${act.stress > 0 ? "bg-coral/10 text-coral" : "bg-jade/12 text-jade"}`}>
           压力{act.stress > 0 ? "+" : ""}{act.stress}
@@ -167,7 +154,7 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
               key={wd}
               onClick={() => !isPast && setPickSeg(active ? null : i)}
               disabled={isPast}
-              className={`flex min-h-[84px] flex-col items-center gap-1 rounded-sm border border-dashed px-1 py-2 text-center transition ${
+              className={`flex min-h-[84px] flex-col items-center gap-1 rounded-[var(--radius-ui-sm)] border border-dashed px-1 py-2 text-center transition ${
                 isPast ? "cursor-default opacity-40" : "hover:border-jade"
               } ${active ? "border-solid border-jade bg-jade/10" : a ? "border-line" : "border-line/60 bg-paper/40"}`}
             >
@@ -189,7 +176,7 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
 
       {/* 活动选择面板 */}
       {pickSeg != null && (
-        <div className="mb-3 animate-pop rounded-sm border border-dashed border-jade/50 p-3">
+        <div className="mb-3 animate-pop rounded-[var(--radius-ui-sm)] border border-dashed border-jade/50 p-3">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-[14px] font-bold text-ink">{WEEKDAY_FULL[pickSeg]} · 安排什么？</p>
             <button onClick={() => chooseAct(null)} className="text-[11.5px] text-ink-soft transition hover:text-danger">留空</button>
@@ -216,7 +203,7 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
                   {CatHead}
                   <button
                     onClick={() => chooseAct("gig")}
-                    className={`flex w-full items-start rounded-sm border border-dashed p-2.5 text-left transition ${chosen ? "border-solid border-jade bg-jade/8" : "border-line hover:border-jade"}`}
+                    className={`flex w-full items-start rounded-[var(--radius-ui-sm)] border border-dashed p-2.5 text-left transition ${chosen ? "border-solid border-jade bg-jade/8" : "border-line hover:border-jade"}`}
                   >
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-1.5"><span className="font-medium text-ink">{info.name}</span>{chosen && <span className="text-[10px] text-jade"><StatusMark kind="ok">已排</StatusMark></span>}</span>
@@ -227,14 +214,15 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
               );
             }
 
-            // 才艺课程：每门课 4 个等级
+            // 课程：每门课按作者配置的等级；本作品没有课程时整类不出现
             if (c === "lesson") {
+              if (!TRAININGS.length) return null;
               return (
                 <div key={c} className="mb-3">
                   {CatHead}
                   <div className="space-y-2">
                     {TRAININGS.map((t) => (
-                      <div key={t.id} className="rounded-sm border border-line/70 p-2">
+                      <div key={t.id} className="rounded-[var(--radius-ui-sm)] border border-line/70 p-2">
                         <div className="flex items-baseline justify-between">
                           <span className="text-[12.5px] font-medium text-ink">{t.name}</span>
                           <span className="text-[10.5px] text-ink-soft">{t.effect}</span>
@@ -252,7 +240,7 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
                                 onClick={() => !lock && chooseAct(id)}
                                 disabled={!!lock}
                                 title={lock ? `未解锁：${lock}` : `上限 ${gr.cap} · 学费 ${wallet.fmt(fee)} · 已上 ${done} 次`}
-                                className={`rounded-sm border border-dashed px-1 py-1.5 text-center transition disabled:cursor-not-allowed disabled:opacity-45 ${chosen ? "border-solid border-jade bg-jade/10" : "border-line hover:border-jade"}`}
+                                className={`rounded-[var(--radius-ui-sm)] border border-dashed px-1 py-1.5 text-center transition disabled:cursor-not-allowed disabled:opacity-45 ${chosen ? "border-solid border-jade bg-jade/10" : "border-line hover:border-jade"}`}
                               >
                                 <span className="block text-[11.5px] font-semibold text-ink">{gr.label}</span>
                                 <span className="block text-[9.5px] text-ink-soft">{lock ? "未解锁" : (fee >= 10000 ? wallet.short(fee) : wallet.fmt(fee))}</span>
@@ -272,8 +260,9 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
               );
             }
 
-            // 打工：分级零工，名气不足则锁定
+            // 打工：按档位与门槛解锁；本作品没有打工时整类不出现
             if (c === "job") {
+              if (!SIDE_JOBS.length) return null;
               return (
                 <div key={c} className="mb-3">
                   {CatHead}
@@ -288,7 +277,7 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
                           key={j.id}
                           disabled={locked}
                           onClick={() => chooseAct(id)}
-                          className={`flex items-start rounded-sm border border-dashed p-2.5 text-left transition ${locked ? "cursor-not-allowed opacity-45" : chosen ? "border-solid border-jade bg-jade/8" : "border-line hover:border-jade"}`}
+                          className={`flex items-start rounded-[var(--radius-ui-sm)] border border-dashed p-2.5 text-left transition ${locked ? "cursor-not-allowed opacity-45" : chosen ? "border-solid border-jade bg-jade/8" : "border-line hover:border-jade"}`}
                         >
                           <span className="min-w-0 flex-1">
                             <span className="flex items-center gap-1.5">
@@ -297,7 +286,7 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
                             </span>
                             <span className="mt-0.5 block text-[11px] leading-snug text-ink-soft">{j.note}</span>
                             <span className="mt-1 flex flex-wrap gap-1">
-                              <span className="rounded bg-jade/12 px-1.5 py-px text-[10px] font-medium text-jade">约 ¥{j.pay >= 10000 ? (j.pay / 10000).toFixed(1) + "万" : j.pay}</span>
+                              <span className="rounded bg-jade/12 px-1.5 py-px text-[10px] font-medium text-jade">约 {j.pay >= 10000 ? wallet.short(j.pay) : wallet.fmt(j.pay)}</span>
                               <span className="rounded bg-coral/10 px-1.5 py-px text-[10px] font-medium text-coral">压力+{j.stress}</span>
                               {why && <span className="rounded bg-danger/10 px-1.5 py-px text-[10px] font-medium text-danger">{why}</span>}
                             </span>
@@ -326,7 +315,7 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
                         key={a.id}
                         disabled={!!why}
                         onClick={() => !why && chooseAct(a.id)}
-                        className={`flex items-start rounded-sm border border-dashed p-2.5 text-left transition ${why ? "cursor-not-allowed opacity-45" : chosen ? "border-solid border-jade bg-jade/8" : "border-line hover:border-jade"}`}
+                        className={`flex items-start rounded-[var(--radius-ui-sm)] border border-dashed p-2.5 text-left transition ${why ? "cursor-not-allowed opacity-45" : chosen ? "border-solid border-jade bg-jade/8" : "border-line hover:border-jade"}`}
                       >
                         <span className="min-w-0 flex-1">
                           <span className="flex items-center gap-1.5"><span className="font-medium text-ink">{a.name}</span>{chosen && <span className="text-[10px] text-jade"><StatusMark kind="ok">已排</StatusMark></span>}</span>
@@ -346,7 +335,7 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
 
       {/* 本周伙食：每周吃什么（只有挂了生活开销包的世界才有） */}
       {MEALS.length > 0 && (
-        <div className="mb-3 rounded-sm border border-dashed border-line p-3">
+        <div className="mb-3 rounded-[var(--radius-ui-sm)] border border-dashed border-line p-3">
           <div className="mb-2 flex items-baseline justify-between gap-2">
             <p className="text-[12.5px] font-bold text-ink">本周伙食</p>
             <p className="text-[10.5px] text-ink-soft">周日随账单结算 · 一直沿用到改为止</p>
@@ -361,11 +350,11 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
                   disabled={!!why}
                   onClick={() => chooseMeal(m.id)}
                   title={m.desc}
-                  className={`flex flex-col items-start rounded-sm border border-dashed p-2 text-left transition ${why ? "cursor-not-allowed opacity-45" : chosen ? "border-solid border-jade bg-jade/8" : "border-line hover:border-jade"}`}
+                  className={`flex flex-col items-start rounded-[var(--radius-ui-sm)] border border-dashed p-2 text-left transition ${why ? "cursor-not-allowed opacity-45" : chosen ? "border-solid border-jade bg-jade/8" : "border-line hover:border-jade"}`}
                 >
                   <span className="flex w-full items-baseline justify-between gap-1">
                     <span className="text-[12px] font-medium text-ink">{m.name}{chosen && <span className="ml-1 text-[10px] text-jade"><StatusMark kind="ok">已排</StatusMark></span>}</span>
-                    <span className="shrink-0 text-[10.5px] font-semibold tabular-nums text-danger">¥{m.cost.toLocaleString("zh-CN")}</span>
+                    <span className="shrink-0 text-[10.5px] font-semibold tabular-nums text-danger">{wallet.fmt(m.cost)}</span>
                   </span>
                   <span className="mt-0.5 block text-[10.5px] leading-snug text-ink-soft">{why ? `未解锁：${why}` : mealEffect(m, attrLabels)}</span>
                 </button>
@@ -378,7 +367,7 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
 
       {/* 排程风险预警（无风险时不显示） */}
       {warnings.length > 0 && (
-        <div className="mb-3 rounded-sm border border-danger/40 bg-danger/5 p-3">
+        <div className="mb-3 rounded-[var(--radius-ui-sm)] border border-danger/40 bg-danger/5 p-3">
           {warnings.map((w, i) => (
             <p key={i} className="text-[12px] text-danger"><StatusMark kind="warn">{w}</StatusMark></p>
           ))}
@@ -393,19 +382,19 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
         const setPref = (u: AdvanceUnit, c: number) => patchGame((g) => ({ ...g, advancePref: { unit: u, count: Math.max(1, Math.min(u === "day" ? 30 : 12, c)) } }));
         const U = { day: "日", week: "周", month: "月", year: "年" } as const;
         return (
-          <div className="rounded-[8px] border border-line bg-paper-2 p-3">
+          <div className="ui-card p-3">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-[12px] font-bold text-ink">推进方式</p>
               <div className="flex items-center gap-1">
-                <button type="button" disabled={n <= 1} onClick={() => setPref(unit, n - 1)} className="grid h-7 w-7 place-items-center rounded-[6px] border border-line bg-paper text-ink disabled:opacity-35" aria-label="减少">−</button>
+                <button type="button" disabled={n <= 1} onClick={() => setPref(unit, n - 1)} className="ui-card grid h-7 w-7 place-items-center text-ink disabled:opacity-35" aria-label="减少">−</button>
                 <span className="w-8 text-center font-serif text-[16px] font-black tabular-nums text-ink">{n}</span>
-                <button type="button" disabled={n >= max} onClick={() => setPref(unit, n + 1)} className="grid h-7 w-7 place-items-center rounded-[6px] border border-line bg-paper text-ink disabled:opacity-35" aria-label="增加">＋</button>
+                <button type="button" disabled={n >= max} onClick={() => setPref(unit, n + 1)} className="ui-card grid h-7 w-7 place-items-center text-ink disabled:opacity-35" aria-label="增加">＋</button>
               </div>
             </div>
             <div className="mb-3 grid grid-cols-4 gap-1.5">
               {(Object.keys(U) as AdvanceUnit[]).map((u) => (
                 <button key={u} type="button" onClick={() => setPref(u, u === unit ? n : 1)}
-                  className={`rounded-[6px] border py-2 font-serif text-[15px] font-black transition ${u === unit ? "border-jade bg-jade text-paper-2 shadow-sm" : "border-line bg-paper text-ink hover:border-jade"}`}>
+                  className={`rounded-[var(--radius-ui-sm)] border py-2 font-serif text-[15px] font-black transition ${u === unit ? "border-jade bg-jade text-paper-2 shadow-sm" : "border-line bg-paper text-ink hover:border-jade"}`}>
                   {U[u]}
                 </button>
               ))}
@@ -418,7 +407,7 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
               </button>
               {!(unit === "day" && n === 1) && (
                 <button disabled={busy} onClick={endDayNow}
-                  className="flex-1 rounded-[8px] border border-line bg-paper py-3 text-[12.5px] font-semibold text-ink transition hover:border-jade disabled:opacity-50">
+                  className="ui-card flex-1 py-3 text-[12.5px] font-semibold text-ink transition hover:border-jade disabled:opacity-50">
                   只过一天
                 </button>
               )}

@@ -46,3 +46,22 @@ export function toggleNpcTag(current: string[] | undefined, tag: string, on: boo
 export function platformNpcTagsPromptLine(): string {
   return `人物标签 tags[] 优先从平台内置选择：${PLATFORM_NPC_TAGS.join("、")}；可少量自定义，勿整段手写长句。`;
 }
+
+/**
+ * 功能注释：语音嗓音底子按人物标签分三档，按顺序命中第一档即停（引擎 screenShare.timbre 与编辑器说明共用）。
+ */
+export const NPC_VOICE_TAG_GROUPS: { re: RegExp; effect: string; rate: number; pitch: number; volume?: number }[] = [
+  { re: /冷|沉稳|稳重|成熟|严格|严肃|危险|腹黑|慵懒/, effect: "偏慢、偏低沉", rate: 0.94, pitch: 0.95 },
+  { re: /温柔|邻家|害羞|内向|治愈|乖/, effect: "偏慢、轻柔", rate: 0.95, pitch: 1.03, volume: 0.9 },
+  { re: /直率|活泼|元气|开朗|阳光|爽朗|毒舌|热情|话痨/, effect: "偏快、明亮", rate: 1.07, pitch: 1.04 },
+];
+
+/** 功能注释：这组标签里真正决定嗓音的那一个（按标签顺序找第一档命中）；无则 null */
+export function voiceDrivingTag(tags: string[] | undefined): { tag: string; effect: string; group: (typeof NPC_VOICE_TAG_GROUPS)[number] } | null {
+  const list = tags ?? [];
+  for (const g of NPC_VOICE_TAG_GROUPS) {
+    const tag = list.find((t) => g.re.test(t));
+    if (tag) return { tag, effect: g.effect, group: g };
+  }
+  return null;
+}

@@ -25,6 +25,36 @@ import type { CmpOp, FixedCond } from "../lib/types";
 import { CMP_OPS } from "../lib/types";
 import { IconCheck, IconChevronDown, IconChevronUp, IconClose, IconLock, IconSpark } from "../lib/icons";
 
+import PathRouteMap from "./PathRouteMap";
+import { pathRouteNodes, type RouteStoryline } from "../lib/pathRoute";
+
+/* 线路路线：关联主线（优先读其 nodes 顺序）或手写节点；下方实时预览建角时的路线图 */
+function PathRouteEditor({ path, storylines, onChange }: { path: CreationPath; storylines: RouteStoryline[]; onChange: (p: Partial<CreationPath>) => void }) {
+  const nodes = pathRouteNodes(path, storylines);
+  const linked = path.storylineId ? storylines.find((l) => l.id === path.storylineId) : undefined;
+  const linkedHasNodes = !!linked && Array.isArray(linked.nodes) && linked.nodes.length > 0;
+  const cls = "mt-0.5 w-full min-w-0 rounded-lg border border-line bg-paper-2 px-2.5 py-1.5 text-[12.5px] text-ink focus:border-jade focus:outline-none";
+  return (
+    <div className="space-y-1.5 rounded-lg border border-line/70 bg-paper-2/40 p-2">
+      <label className="block text-[10.5px] text-ink-soft">线路路线 · 关联主线（建角时按其节点顺序生成路线图）
+        <select className={cls} value={path.storylineId ?? ""} onChange={(e) => onChange({ storylineId: e.target.value || undefined })}>
+          <option value="">不关联（使用下方手写节点）</option>
+          {path.storylineId && !linked && <option value={path.storylineId}>{path.storylineId}（已失效）</option>}
+          {storylines.map((l) => <option key={l.id} value={l.id}>{l.name || l.id}（{Array.isArray(l.nodes) ? l.nodes.length : 0} 节点）</option>)}
+        </select>
+      </label>
+      {!linkedHasNodes && (
+        <label className="block text-[10.5px] text-ink-soft">{linked ? "该主线还没有节点，暂用手写节点（每行一个）" : "手写路线节点（每行一个）"}
+          <textarea rows={3} className={cls} value={(path.routeNodes ?? []).join("\n")} placeholder={"初入剧组\n第一次试镜\n站上领奖台"}
+            onChange={(e) => { const v = e.target.value.split("\n").map((x) => x.trim()); onChange({ routeNodes: v.some(Boolean) ? v : undefined }); }}
+            onBlur={(e) => { const v = e.target.value.split("\n").map((x) => x.trim()).filter(Boolean); onChange({ routeNodes: v.length ? v : undefined }); }} />
+        </label>
+      )}
+      {nodes.length > 0 && <div className="pt-0.5"><p className="mb-1 text-[10px] text-ink-soft">建角预览</p><PathRouteMap nodes={nodes} /></div>}
+    </div>
+  );
+}
+
 const livePool = () => [...new Set(valueSources({ stats: getWorldSlot("stats"), attrs: getWorldSlot("customAttrs"), paths: creationCopy().paths }).map((s) => s.label))];
 /* 绑定事件库里的固定事件（可选）：开局序章按该事件演绎 */
 export function EventPick({ value, events, onChange }: { value?: string; events: { id: string; name: string }[]; onChange: (v: string | undefined) => void }) {
@@ -94,11 +124,12 @@ const inp = "min-w-0 w-full rounded-lg border border-line bg-paper px-2 py-1 tex
 const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
 const num = (v: unknown) => Math.round(Number(v) || 0);
 
-export default function ModPathsEditor({ creation, identities, world, npcs = [], rooms = [], events = [], statsValue, attrsValue, onChange, onMergeNpcs }: {
+export default function ModPathsEditor({ creation, identities, world, npcs = [], rooms = [], events = [], storylines = [], statsValue, attrsValue, onChange, onMergeNpcs }: {
   creation?: CreationCopy; identities?: Option[]; world: string;
   npcs?: { id: string; name: string }[]; // 可配开局人际 / 预设主角的固定人物
   rooms?: { id: string; name: string }[]; // 可选的开局地点
   events?: { id: string; name: string }[]; // 事件库（绑定开局事件）
+  storylines?: RouteStoryline[]; // 主线（关联后按节点顺序生成路线图）
   statsValue?: import("../game/data").StatsSlot; attrsValue?: import("../lib/types").AttrDef[]; // 全局属性池来源（正在编辑的模组）
   onChange: (p: { creation: CreationCopy; identities: Option[] }) => void;
   /** 功能注释：AI 生成线路时一并回写人物资料（姓名/年龄/性别/约 300 字小传） */
@@ -312,6 +343,7 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
                 <textarea rows={2} className={`${inp} mt-0.5`} value={p.memory ?? ""} placeholder="如：三年前在雨夜救过一只流浪猫，至今记得那家便利店" onChange={(e) => setPath(i, { memory: e.target.value || undefined })} />
               </label>
               <EventPick value={p.eventId} events={events} onChange={(eventId) => setPath(i, { eventId })} />
+              <PathRouteEditor path={p} storylines={storylines} onChange={(patch) => setPath(i, patch)} />
             </div>
             <PathNpcsEditor value={Array.isArray(p.npcs) ? p.npcs : []} npcs={npcs} onChange={(v) => setPath(i, { npcs: v.length ? v : undefined })} />
             {hasLegacy(b) && (

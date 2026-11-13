@@ -1,3 +1,6 @@
+import { npcFactionOf } from "../game/factions";
+import { LIVE_PERSON_BY_ID as PERSON_BY_ID_FAC } from "../mods/registry";
+import { liveTerm as T } from "../mods/live";
 import { ProfileTabs } from "./personFields";
 import { ageLabel, birthdayLabel, ownField } from "../lib/npcIdentity";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -334,7 +337,7 @@ export default function NpcTab() {
   // 艺人即 NPC：圈内艺人没有人脉条目时，就地合成一个，走同一套人物详情界面
   const starOf = (id?: string | null) => (id ? (s.npcs ?? []).find((x) => x.id === id) : undefined);
   const asNpc = (st: NonNullable<ReturnType<typeof starOf>>): Npc => ({
-    id: st.id, name: st.name, age: "", identity: `艺人 · ${st.dir}`, relation: "同行", avatar: "", bio: "", mood: "",
+    id: st.id, name: st.name, age: "", identity: `${T("member")} · ${st.dir}`, relation: "同行", avatar: "", bio: "", mood: "",
     affinity: s.rel?.[st.id] ?? 0, dims: [], tags: [], attrs: [], affinityHistory: [], interactions: [],
   });
   const npc = game.npcs.find((n) => n.id === sel) ?? (starOf(sel) ? asNpc(starOf(sel)!) : undefined);
@@ -604,7 +607,7 @@ export default function NpcTab() {
       {card}
         {resumeOpen && <ResumeModal name={npc.name} pid={pid} onClose={() => setResumeOpen(false)} npc={npc} extra={star ? starResume(star) : undefined} />}
         {exchange && (
-          <Modal title="交换联系方式" onClose={() => setExchange(null)}>
+          <Modal panelClassName="ui-dialog-game" title="交换联系方式" onClose={() => setExchange(null)}>
             {exchange === "ok" ? (
               <p className="text-[14px] leading-relaxed text-ink">
                 {npc.name}把联系方式给了你。到底部「<span className="font-semibold text-jade">手机</span>」里，就能随时用微信、短信或电话找 TA 了。
@@ -628,7 +631,8 @@ export default function NpcTab() {
   type Entry = { id: string; name: string; avatar?: string; sub: string; rel: number; vals: (src: ContactSrc) => number | undefined; dead?: boolean; dating?: boolean };
   const npcEntries: Entry[] = known.map((n) => {
     const prof = profileOf(n.id);
-    const org = prof?.org?.trim() || affiliationOf(n.identity);
+    // 功能注释：有所属势力时列表第二行显示势力名（玩家在资料里改了也随之变化）
+    const org = npcFactionOf(n.id, PERSON_BY_ID_FAC[n.id]?.factionId)?.name || prof?.org?.trim() || affiliationOf(n.identity);
     return {
       id: n.id, name: n.name, avatar: n.avatar, rel: n.affinity,
       sub: [n.identity || "—", org].filter(Boolean).join(" · "),
@@ -746,7 +750,7 @@ function ResumeModal({ name, pid, onClose, npc, extra }: { name: string; pid: st
   const selCls = "rounded-sm border border-dashed border-line bg-paper px-2 py-1 text-[12px] text-ink transition hover:border-jade/60";
 
   return (
-    <Modal title={`${name} · 履历与互动`} onClose={onClose}>
+    <Modal panelClassName="ui-dialog-game" title={`${name} · 履历与互动`} onClose={onClose}>
       <ProfileGroup title={`生平履历 · ${filtered.length} 条`}>
         {all.length === 0 ? <ResumeTimeline items={[]} /> : (
           <>

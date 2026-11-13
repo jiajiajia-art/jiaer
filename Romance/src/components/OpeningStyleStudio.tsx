@@ -102,6 +102,7 @@ export default function OpeningStyleStudio({ value, onPage, modId, modName }: {
       const messages: PlatformWorldGenChatMsg[] = [{ role: "system", content: SYS(modName, value) }, ...prior, { role: "user", content: ask }];
       const completed = await completeViaPlatform(messages, {
         moduleId: "opening-style",
+        feature: "editor:opening-style",
         max_tokens: OPENING_STYLE_MAX_TOKENS,
         signal: ctl.signal,
       });

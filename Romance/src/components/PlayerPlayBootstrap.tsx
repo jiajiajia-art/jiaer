@@ -13,7 +13,6 @@ import {
 } from "../lib/platformRomancePlay";
 import { applyPlatformThemeToMod, readWorldThemeHint } from "../lib/worldTheme";
 import { fetchPlatformGameTheme } from "../lib/platformThemeTags";
-import { setStorageGameFileId } from "../lib/storage";
 
 function asMod(content: unknown): Mod | null {
   if (!content || typeof content !== "object") return null;
@@ -35,8 +34,6 @@ export default function PlayerPlayBootstrap({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 功能注释：进局即绑定作品 fileId，本地/云存档按作品隔离
-    setStorageGameFileId(fileId);
     let cancelled = false;
     void (async () => {
       setLoading(true);

@@ -1,5 +1,8 @@
+import { noticeDaysLeft } from "../lib/eventNotices";
+import { spotName } from "../game/mapedits";
+import { LIVE_LOCATIONS } from "../mods/registry";
 import { IconStar, IconCheck } from "../lib/icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { firedOf } from "../game/mapedits";
 import { useGame } from "../store/gameCtx";
 import { SIDEQUESTS } from "../worlds/star2005/content";
@@ -53,7 +56,18 @@ function recapItems(memory: string) {
 }
 
 export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => void } = {}) {
-  const { game, toggleFav, removeJournal, exportJournal } = useGame();
+  const { game, toggleFav, removeJournal, exportJournal, playEventNotice, simMove, busy } = useGame();
+  const [moveNote, setMoveNote] = useState<{ id: string; text: string } | null>(null);
+  // 功能注释：点「前往」后等主角真的到了发生地，再回主界面让玩家在地点里点「!」触发；没到就留在这里显示原因
+  const [pendingRoom, setPendingRoom] = useState<string | null>(null);
+  const curRoom = game?.sim.room;
+  useEffect(() => {
+    if (!pendingRoom || curRoom !== pendingRoom) return;
+    setPendingRoom(null);
+    setMoveNote(null);
+    onNavigate?.();
+    go("home");
+  }, [curRoom, pendingRoom, onNavigate]);
   const [view, setView] = useState<View>("main");
   const [readId, setReadId] = useState<string | null>(null);
   const [recapAll, setRecapAll] = useState(false);
@@ -69,7 +83,11 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
   // 功能注释：创作者支线——隐藏支线触发前不显示；进行中排最前，未出现的排最后
   const SIDE_ORDER: Record<SideState, number> = { active: 0, done: 1, failed: 2, pending: 3 };
   const sides = visibleSidelines(getWorldSidelines(), s).sort((a, b) => SIDE_ORDER[a.state] - SIDE_ORDER[b.state]);
-  const sideCount = triggered.length + sides.filter((x) => x.state !== "pending").length;
+  // 功能注释：特殊事件——进行中排前（带倒计时），已展开 / 过期 / 失败标灰留档（最近 12 条）
+  const notices = [...(game.eventNotices ?? [])].reverse();
+  const openNotices = notices.filter((n) => n.status === "open");
+  const pastNotices = notices.filter((n) => n.status !== "open").slice(0, 12);
+  const sideCount = openNotices.length + triggered.length + sides.filter((x) => x.state !== "pending").length;
   // 功能注释：主线与顶栏同一数据源（homeMainQuest / getWorldStorylines），没有章节设定就不硬造章号
   const mainQuest = homeMainQuest(s, getWorldStorylines(), dayDateLabel(s.day ?? 0));
   const mainLineName = mainQuest?.lineName ?? (getWorldStorylines().find((l) => l.enabled !== false && l.name?.trim())?.name?.trim() || "主线");
@@ -93,7 +111,7 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
     <div className="w-full pb-5">
       <div className="mx-auto max-w-2xl space-y-4 px-4 pt-3">
       {/* 分类页签 */}
-      <div className="grid grid-cols-3 gap-1 rounded-2xl border border-line/60 bg-paper-2/60 p-1">
+      <div className="ui-card grid grid-cols-3 gap-1 p-1">
         {([["main", "主线", 0], ["side", "支线", sideCount], ["journal", "回顾", journal.length]] as const).map(([id, label, n]) => {
           const on = view === id;
           return (
@@ -107,7 +125,7 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
       </div>
 
       {view === "main" && (
-        <article className="overflow-hidden rounded-[22px] border border-line/60 bg-paper shadow-[0_20px_44px_-30px_rgba(110,70,170,0.55)]">
+        <article className="ui-card overflow-hidden">
           {/* 主线卷首：标题取当前作品主线，不写死章节 */}
           <header className="relative overflow-hidden border-b border-line/60 bg-[linear-gradient(160deg,color-mix(in_srgb,var(--coral)_14%,var(--paper))_0%,var(--paper)_75%)] px-5 pb-4 pt-4">
             <span aria-hidden className="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-coral/15 blur-2xl" />
@@ -171,7 +189,7 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
             )}
 
             {lim > 0 && (
-              <div className="rounded-2xl border border-line/70 px-3.5 py-2.5">
+              <div className="rounded-[var(--radius-ui)] border border-line/70 px-3.5 py-2.5">
                 <div className="mb-1.5 flex justify-between text-[11px] text-ink-soft">
                   <span className="font-semibold">本局时限 · 结算倒计时</span>
                   <span className="tabular-nums"><b className="text-ink">{Math.min(s.day, lim)}</b> / {lim} 天</span>
@@ -219,8 +237,55 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
 
       {view === "side" && (
         <div className="space-y-2">
+          {(openNotices.length > 0 || pastNotices.length > 0) && (
+            <section className="space-y-2">
+              <p className="px-1 text-[11px] font-bold tracking-[0.2em] text-ink-soft">特殊事件</p>
+              {openNotices.map((n) => {
+                const left = noticeDaysLeft(n, s.day ?? 0);
+                const place = n.room ? spotName(game, n.room) || LIVE_LOCATIONS.find((l) => l.id === n.room)?.name : undefined;
+                return (
+                  <div key={n.id} className="ui-card flex items-center gap-3 border-coral/40 px-3.5 py-3">
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-coral text-[14px] font-black text-white">!</span>
+                    <div className="min-w-0 flex-1">
+                      <b className="block truncate text-[14px] text-ink">{n.name}</b>
+                      {n.summary && n.summary !== n.name && <p className="mt-0.5 line-clamp-2 text-[11.5px] leading-relaxed text-ink-soft">{n.summary}</p>}
+                      <p className="mt-1 text-[11px] font-semibold text-coral">
+                        {left != null ? `剩 ${left} 天` : "仅本回合，下回合过期"}{place ? ` · ${n.room === s.room ? "就在这里" : `去「${place}」触发`}` : ""}
+                      </p>
+                      {moveNote?.id === n.id && <p className="mt-1 text-[11px] text-danger">{moveNote.text}</p>}
+                    </div>
+                    {/* 功能注释：只能在发生地触发——在这里就展开，不在就按正常出行前往 */}
+                    {!n.room || n.room === s.room ? (
+                      <button type="button" disabled={busy} onClick={() => { playEventNotice(n.id); onNavigate?.(); }} className="ui-btn ui-btn-sm ui-btn-primary shrink-0" style={{ ["--tone" as string]: "var(--coral)" }}>
+                        展开
+                      </button>
+                    ) : (
+                      <button type="button" disabled={busy} onClick={() => {
+                        setPendingRoom(n.room!);
+                        const msgs = simMove(n.room!);
+                        setMoveNote({ id: n.id, text: msgs.join(" ") || "暂时去不了那里。" });
+                      }} className="ui-btn ui-btn-sm shrink-0">
+                        前往
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+              {pastNotices.map((n) => (
+                <div key={n.id} className="ui-card flex items-center gap-3 px-3.5 py-2.5 opacity-60">
+                  <div className="min-w-0 flex-1">
+                    <b className="block truncate text-[13px] text-ink-soft">{n.name}</b>
+                    {n.summary && n.summary !== n.name && <p className="mt-0.5 truncate text-[11px] text-ink-soft">{n.summary}</p>}
+                  </div>
+                  <span className="shrink-0 rounded-full bg-ink-soft/10 px-2 py-0.5 text-[10.5px] font-semibold text-ink-soft">
+                    {n.status === "played" ? "已展开" : n.status === "failed" ? "超时失败" : "已过期"}
+                  </span>
+                </div>
+              ))}
+            </section>
+          )}
           {sides.map(({ line, state }) => (
-            <div key={line.id} className="flex items-center gap-3 rounded-2xl border border-line bg-paper/60 px-3.5 py-3 shadow-sm">
+            <div key={line.id} className="ui-card flex items-center gap-3 px-3.5 py-3">
               <div className="min-w-0 flex-1">
                 <b className="block truncate text-[14px] text-ink">{line.name || line.id}</b>
                 {line.desc ? <p className="mt-0.5 line-clamp-2 text-[11.5px] leading-relaxed text-ink-soft">{line.desc}</p> : null}
@@ -229,7 +294,7 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
             </div>
           ))}
           {triggered.length === 0 && sides.length === 0 && (
-            <p className="rounded-2xl border border-line bg-paper/40 px-4 py-8 text-center text-[12.5px] leading-relaxed text-ink-soft">
+            <p className="ui-card px-4 py-8 text-center text-[12.5px] leading-relaxed text-ink-soft">
               还没有触发过支线。<br />满足特定条件，或在行动 / 台词里聊到相关话题时，支线会自动展开。
             </p>
           )}
@@ -237,7 +302,7 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
             const entry = journal.find((e) => e.kind === "quest" && e.title.includes(x.title));
             return (
               <button key={x.id} onClick={() => { if (entry) { setView("journal"); setReadId(entry.id); } }}
-                className="flex w-full items-center gap-3 rounded-2xl border border-line bg-paper/60 px-3.5 py-3 text-left shadow-sm transition hover:border-jade/50">
+                className="ui-card flex w-full items-center gap-3 px-3.5 py-3 text-left transition hover:border-jade/50">
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-jade/12 text-[15px] text-jade-deep"></span>
                 <div className="min-w-0 flex-1">
                   <b className="block truncate text-[14px] text-ink">{x.title}</b>
@@ -258,13 +323,13 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
             <div className="ml-auto flex gap-2">
               <button
                 onClick={() => exportJournal(true)}
-                className="rounded-xl border border-jade/50 bg-jade/10 px-3 py-1.5 text-[12px] font-bold text-jade-deep transition hover:bg-jade/20"
+                className="rounded-[var(--radius-ui)] border border-jade/50 bg-jade/10 px-3 py-1.5 text-[12px] font-bold text-jade-deep transition hover:bg-jade/20"
               >
                 导出收藏
               </button>
               <button
                 onClick={() => exportJournal(false)}
-                className="rounded-xl border border-line px-3 py-1.5 text-[12px] font-semibold text-ink-soft transition hover:text-ink"
+                className="rounded-[var(--radius-ui)] border border-line px-3 py-1.5 text-[12px] font-semibold text-ink-soft transition hover:text-ink"
               >
                 导出全部
               </button>
@@ -272,7 +337,7 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
           </div>
 
           {journal.length === 0 && (
-            <p className="rounded-2xl border border-dashed border-line bg-paper/40 px-4 py-8 text-center text-[12.5px] text-ink-soft">
+            <p className="rounded-[var(--radius-ui)] border border-dashed border-line bg-paper/40 px-4 py-8 text-center text-[12.5px] text-ink-soft">
               还没有留存的剧情。在地图点位或上方支线里触发几段吧——每一次都会独立收进这里。
             </p>
           )}
@@ -280,7 +345,7 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
           {journal.map((e) => {
             const open = readId === e.id;
             return (
-              <div key={e.id} className={`overflow-hidden rounded-2xl border transition ${e.fav ? "border-gold/50 bg-gold/[0.05]" : "border-line bg-paper/40"}`}>
+              <div key={e.id} className={`overflow-hidden rounded-[var(--radius-ui)] border transition ${e.fav ? "border-gold/50 bg-gold/[0.05]" : "border-line bg-paper/40"}`}>
                 <div className="flex items-start gap-2 px-3.5 py-3">
                   <button
                     onClick={() => toggleFav(e.id)}
@@ -300,7 +365,7 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
                   <button
                     onClick={() => removeJournal(e.id)}
                     aria-label="删除"
-                    className="mt-0.5 shrink-0 rounded-md border border-line px-2 py-1 text-[11px] text-ink-soft transition hover:border-danger/60 hover:text-danger"
+                    className="mt-0.5 shrink-0 rounded-[var(--radius-ui-sm)] border border-line px-2 py-1 text-[11px] text-ink-soft transition hover:border-danger/60 hover:text-danger"
                   >
                     删除
                   </button>

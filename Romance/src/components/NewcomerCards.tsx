@@ -126,7 +126,7 @@ export default function NewcomerCards({ ids }: { ids?: string[] }) {
         <Receipt key={n.id} n={n} met={introState(game, n.id) === "met"} />
       ))}
       {detail && (
-        <Modal title={detail.name} onClose={() => setDetailId(null)}>
+        <Modal panelClassName="ui-dialog-game" title={detail.name} onClose={() => setDetailId(null)}>
           {detailKnown ? (
             <PersonProfile pid={detail.id} known />
           ) : (

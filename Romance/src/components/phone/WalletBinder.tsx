@@ -22,7 +22,8 @@ export default function WalletBinder() {
   const defs = game.attrDefs ?? [];
   const cur = game.walletAttr && walletDef(game) ? game.walletAttr : undefined;
   const bind = (id?: string) => patchGame((g) => ({ ...g, walletAttr: id }));
-  const sorted = [...defs].sort((a, b) => Number(looksLikeCurrency(b)) - Number(looksLikeCurrency(a)));
+  // 只列出货币类属性（观察力、胆量等普通数值不是货币）；已绑定的保留以便切回
+  const sorted = defs.filter((d) => looksLikeCurrency(d) || d.id === cur);
   const Radio = ({ on }: { on: boolean }) => (
     <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-[1.5px]" style={{ borderColor: on ? WX_GREEN : "#c8c8c8", background: on ? WX_GREEN : "transparent" }}>
       {on && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>}
@@ -61,9 +62,7 @@ export default function WalletBinder() {
         })}
       </div>
       <p className="px-5 pt-3 text-[12px] leading-relaxed text-[#9a9a9a]">
-        {defs.length
-          ? <>当前使用「{wallet.name(game, "零钱")}」：小粉书商城下单与购物车结算、阅读里打赏作者、视频里给 UP 主充电与直播打赏、买票、咸鱼买卖、聊天里发 / 领红包和转账，都会自动增减这笔余额；主线剧情里的买卖与赚钱也由 AI 记在这里。属性值可在状态栏点数字直接修改，属性本身（名称、上限、说明）在世界观编辑的「建角」里改。</>
-          : <>还没有自定义货币。到「世界观编辑 → ① 基础 → 建角」点「＋ 添加」选「货币」（名字随意：金币 / 灵石 / 微信钱包都行，说明里写「这是货币」，最大值留空即无上限），也可以在 AI 对话编辑里说「加一个叫灵石的货币」；开新局后回到这里绑定。</>}
+        {`购物、打赏、红包、转账等收付款都会记在「${wallet.name(game, "零钱")}」里。`}
       </p>
     </div>
   );

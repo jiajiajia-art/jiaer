@@ -31,6 +31,8 @@ export function condBrief(c: FixedCond, events: FixedEvent[] = []): string {
     case "side": return `支线「${c.key || "未选"}」${SIDE_STATE_LABEL[c.state]}`;
     case "faction": return `${faction(c.key)}声望${op(c.op)}${c.value}`;
     case "visited": return `去过${place(c.key)}`;
+    case "npcFaction": return c.npc ? `${person(c.npc)}属于${faction(c.faction)}` : `当前地点有${faction(c.faction)}的人`;
+    case "factionTerritory": return `当前地点属于${faction(c.faction)}的势力范围`;
     case "relSet": return `${(c.keys ?? []).map(person).join("、") || "（未选人物）"}中${c.need ? `至少 ${c.need} 人` : "全部"}好感${op(c.op)}${c.value}`;
     case "memory": return `记得「${c.key || "未命名"}」`;
     case "flagSet": return `标记「${c.key || "未命名"}」${c.exists === false ? "不存在" : "存在"}`;

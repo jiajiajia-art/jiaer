@@ -1,3 +1,5 @@
+import type { WorldRuleDim } from "../game/data";
+import { resolveWorldCommsBrand } from "../lib/worldTheme";
 /* ═══════════════ 模组注册表 ═══════════════
  * · 内置模组（娱乐圈 / 校园示例）+ 用户模组（JSON 导入，存 localStorage）
  * · 「选择」= 玩家在模组管理里勾选的世界观与叠加包；「生效」= 当前局实际使用的组合。
@@ -6,7 +8,9 @@
  * 引擎通过本文件导出的读取函数取内容，不直接认识任何题材。 */
 import { loadGlobal, saveGlobal } from "../lib/saveScope";
 import { useSyncExternalStore } from "react";
-import { SLOT_KEYS, type ContentSlots, type FeatureFlags, type MapVisuals, type Mod, type ModContent, type PromptFragments, type ResolvedWorld, type SlotKey, type TermKey } from "./types";
+import { SLOT_KEYS, type ContentSlots, type FeatureFlags, type LoadIssue, type LoadReport, type MapVisuals, type Mod, type ModContent, type PromptFragments, type ResolvedWorld, type SlotKey, type TermKey } from "./types";
+import { findIdClashes, forbiddenPlayFields, forbiddenFieldLabels, sanitizeConflictIds, sortByDeps } from "./playModGuard";
+import { stampFromChain, type ItemMemoEntry, type ModStampEntry } from "./modStamp";
 import type { LibraryGroup } from "../game/eventLibrary";
 import { setSlotReader, setTermReader, termFallback, liveArray, liveRecord, hasSlot, withResolvingWorld, setWorldOwnReader } from "./live";
 import entMod from "./ent";
@@ -277,14 +281,30 @@ export function selectionProblems(sel: ModSelection = selection): string[] {
   const w = modById(sel.world);
   if (!w) p.push(`世界观「${sel.world}」不存在，将回退到「${DEFAULT_WORLD}」`);
   else if (w.kind !== "world") p.push(`「${w.name}」不是世界观模组`);
-  for (const id of sel.addons) {
-    const a = modById(id);
-    if (!a) { p.push(`叠加包「${id}」不存在，已跳过`); continue; }
-    const miss = missingDeps(a, sel);
-    if (miss.length) p.push(`叠加包「${a.name}」缺少依赖：${miss.join("、")}，已跳过`);
-  }
+  // 功能注释：统一走加载报告（含世界安装记录、依赖排序、撞名、越界字段），与预览 / 开局同一份判定
+  p.push(...describeLoadReport(resolve(sel).report));
   return p;
 }
+
+const modName = (id: string) => modById(id)?.name ?? id;
+
+/** 功能注释：加载报告 → 创作者可读的提示句 */
+export function describeLoadReport(report: LoadReport | undefined): string[] {
+  if (!report) return [];
+  return report.issues.map((i) => {
+    switch (i.kind) {
+      case "missing": return `玩法「${i.mod}」本机找不到，已跳过`;
+      case "missingDep": return `玩法「${modName(i.mod)}」缺少依赖：${i.deps.join("、")}，未生效`;
+      case "cycle": return `玩法互相依赖成环：${i.mods.map(modName).join(" ↔ ")}，均未生效`;
+      case "conflict": return `玩法「${modName(i.mod)}」与「${modName(i.with)}」互斥，前者未生效`;
+      case "idClash": return `玩法「${modName(i.mod)}」的 ${i.slot}/${i.id} 与「${i.with}」同名，已覆盖对方（有意覆盖请写 override: true）`;
+      case "forbiddenField": return `玩法「${modName(i.mod)}」写了世界本体字段：${forbiddenFieldLabels(i.fields).join("、")}（玩法包不应改世界设定）`;
+    }
+  });
+}
+
+/** 功能注释：当前生效世界的加载报告（预览壳 / 编辑器提示用） */
+export const getLoadReport = (): LoadReport | undefined => getWorld().report;
 
 /* —— 合并 —— */
 type WithId = { id: string };
@@ -305,10 +325,19 @@ const mergeById = <T extends WithId>(base: T[], over: T[] | undefined): T[] => {
 };
 
 const NO_FALLBACK_TERMS: TermKey[] = ["city", "industry", "celebrity"];
+/**
+ * 功能注释：所有世界只继承娱乐圈的底栏页签 / 提示文案；玩法叫法（货币、粉丝、通告…）不得泄漏到别的题材，
+ * 否则 money 恒为「收入」、建角货币名读不到。娱乐圈本体的玩法叫法见 ENT_PLAY_TERMS。
+ */
 const entTermsBase = () => {
-  const t = { ...(entMod.content.terms ?? {}) };
+  const t = { ...(entMod.content.terms ?? {}) } as Record<string, string | undefined>;
   for (const k of NO_FALLBACK_TERMS) delete t[k];
-  return t;
+  for (const k of Object.keys(t)) if (!k.startsWith("tab") && !k.startsWith("hint")) delete t[k];
+  return t as Partial<Record<TermKey, string>>;
+};
+/** 功能注释：娱乐圈本体（及基于它的作品）未写叫法时的默认，保持原版体验 */
+const ENT_PLAY_TERMS: Partial<Record<TermKey, string>> = {
+  fans: "粉丝", company: "经纪公司", member: "艺人", fee: "片酬", contract: "经纪合约", celebrity: "艺人",
 };
 
 function resolve(sel: ModSelection): ResolvedWorld {
@@ -321,13 +350,36 @@ function resolve(sel: ModSelection): ResolvedWorld {
 
 function resolveChain(sel: ModSelection, world: Mod): ResolvedWorld {
   const chain: Mod[] = [world];
+  const issues: LoadIssue[] = [];
+  const skipped: string[] = [];
   // 功能注释：预览 / 开局都要读世界自己的 playModInstalls（不只 dependencies / 选择的叠加包）；
   // 安装顺序在前、手选叠加包在后，同 id 只进链一次。无安装记录的世界（含娱乐圈）这里为空，行为不变。
   const installAddonIds = resolveInstallAddonModIds(world.content?.playModInstalls, (id) => modById(id)?.kind === "addon");
-  const addonIds = Array.from(new Set([...installAddonIds, ...sel.addons]));
+  const requested = Array.from(new Set([...installAddonIds, ...sel.addons]));
+  // 功能注释：依赖排序——被依赖的包先合并；不违反依赖时保持安装顺序；成环的包整体不进链
+  const depIds = (m: Mod | undefined) => [...asModArray<string>(m?.dependencies), ...asModArray<{ id: string }>(m?.deps).map((d) => d?.id)].filter((x): x is string => typeof x === "string");
+  const { order: addonIds, cycle } = sortByDeps(requested, (id) => depIds(modById(id)));
+  if (cycle.length) { issues.push({ kind: "cycle", mods: cycle }); skipped.push(...cycle); }
   for (const id of addonIds) {
     const a = modById(id);
-    if (a && a.kind === "addon" && missingDeps(a, { world: world.id, addons: addonIds }).length === 0) chain.push(a);
+    if (!a || a.kind !== "addon") { issues.push({ kind: "missing", mod: id }); skipped.push(id); continue; }
+    // 功能注释：依赖必须已经进链（排在前面且自身没被跳过），否则不进链并写明原因，不再静默丢弃
+    const loaded = chain.slice(1).map((m) => m.id);
+    const miss = missingDeps(a, { world: world.id, addons: [...loaded, id] });
+    if (miss.length) { issues.push({ kind: "missingDep", mod: id, deps: miss.map(modName) }); skipped.push(id); continue; }
+    // 功能注释：互斥（双向）——先进链的保留，后来的不生效
+    {
+      const mine = sanitizeConflictIds(a.conflictsWith, a.id);
+      const hit = chain.slice(1).find((m) => mine.includes(m.id) || sanitizeConflictIds(m.conflictsWith, m.id).includes(a.id));
+      if (hit) { issues.push({ kind: "conflict", mod: id, with: hit.id }); skipped.push(id); continue; }
+    }
+    if (!a.builtin) {
+      const bad = forbiddenPlayFields(a.content);
+      if (bad.length) issues.push({ kind: "forbiddenField", mod: id, fields: bad });
+      const bases = chain.map((m) => ({ name: m.name, content: m.content }));
+      for (const c of findIdClashes(a.content, bases)) issues.push({ kind: "idClash", mod: id, ...c });
+    }
+    chain.push(a);
   }
   const wc = world.content;
   // 功能注释：下列字段 AI 常写成单对象；一律 asModArray，禁止预览 getWorld() 时 [...x] → is not iterable
@@ -496,7 +548,8 @@ function resolveChain(sel: ModSelection, world: Mod): ResolvedWorld {
     content.rooms = ensured.rooms;
     content.worldMaps = ensured.worldMaps;
   }
-  return { worldId: world.id, addonIds: chain.slice(1).map((m) => m.id), chain, content };
+  const report: LoadReport = { chain: chain.map((m) => m.id), skipped, issues };
+  return { worldId: world.id, addonIds: chain.slice(1).map((m) => m.id), chain, content, report };
 }
 
 /* 当前生效世界（缓存，模组变动时失效） */
@@ -763,8 +816,12 @@ function resolveLiveTerm(w: ResolvedWorld, k: TermKey, fallback?: string): strin
   if (k.startsWith("tab") || k.startsWith("hint")) {
     return fromTerms || termFallback(k, fallback);
   }
-  // 玩法类：有旧 terms 则兼容；否则从真实配置推导（禁止再调 liveTerm，否则与 termReader 死循环）
+  // 玩法类：作者写过叫法优先；否则从真实配置推导（禁止再调 liveTerm，否则与 termReader 死循环）
   if (fromTerms) return fromTerms;
+  if (w.worldId === "ent" || w.chain.some((m) => (m.dependencies ?? []).includes("ent"))) {
+    const entDefault = ENT_PLAY_TERMS[k];
+    if (entDefault) return entDefault;
+  }
   const slots = w.chain.map((m) => m.content);
   const pickSlot = <T,>(read: (c: ModContent) => T | undefined): T | undefined => {
     for (let i = slots.length - 1; i >= 0; i--) {
@@ -859,6 +916,8 @@ const FEATURE_NEEDS: Partial<Record<Exclude<keyof FeatureFlags, "phoneApps" | "p
   pregnancy: (w) => w.content.features.pregnancy === true,
   // 关系玩法：须已添加 pack-relations / features.relationsPlay（未声明 = 关闭；无表白婚礼入口）
   relationsPlay: (w) => w.content.features.relationsPlay === true,
+  // 阵营声望：须已添加 pack-faction-rep（未声明 = 关闭；势力只作设定与人物归属）
+  factionRep: (w) => w.content.features.factionRep === true,
 };
 export const feature = (k: Exclude<keyof FeatureFlags, "phoneApps" | "phoneAppsExtra">): boolean => {
   const w = getWorld();
@@ -884,7 +943,14 @@ export const worldPhoneAppsCfg = () => getWorld().content.phoneAppsCfg;
 /** 作品默认手机桌面背景（未声明则玩家/引擎默认） */
 export const worldPhoneHomeWallpaper = () => getWorld().content.phoneHomeWallpaper;
 /** 作品选了古风通讯皮肤「传讯」 */
-export const worldPhoneCommSkinSet = () => getWorld().content.phoneCommSkin === "chuanxun";
+/** 古风「传讯」开关：编辑器显式选择优先；未选时按世界题材判断，与通讯品牌（标题）保持一致 */
+export const worldPhoneCommSkinSet = () => {
+  const w = getWorld();
+  const set = w.content.phoneCommSkin;
+  if (set === "chuanxun") return true;
+  if (set === "lvxin") return false;
+  return resolveWorldCommsBrand(w.chain).skin === "letter";
+};
 /** 模组底栏配置：新局写入存档 navTabs / navSize */
 export const worldNavTabs = () => getWorld().content.navTabs;
 export const worldNavSize = () => getWorld().content.navSize;
@@ -904,9 +970,33 @@ export const getWorldBookSeed = () => getWorld().content.worldBook.map((e) => ({
 export const getWorldRuleDims = () => {
   const dims = getWorld().content.worldRules;
   if (!Array.isArray(dims) || !dims.length) return WORLD_RULE_DIMS;
-  const ok = dims.filter((d) => d && Array.isArray(d.options) && d.options.length);
+  const ok = dims.map(normalizeWorldRuleDim).filter((d): d is WorldRuleDim => !!d);
   return ok.length ? ok : WORLD_RULE_DIMS;
 };
+
+/**
+ * 功能注释：世界规则维度规整——AI / 旧数据常把选项写成纯字符串、或用 name/text 代替 label、缺 id。
+ * 不规整时所有选项 id 都是 undefined，界面会把每个按钮都当「已选中」涂黑且没有文字（建角页三条黑条）。
+ */
+function normalizeWorldRuleDim(raw: unknown): WorldRuleDim | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as Record<string, unknown>;
+  const txt = (...vs: unknown[]) => { for (const v of vs) if (typeof v === "string" && v.trim()) return v.trim(); return ""; };
+  const seen = new Set<string>();
+  const options = (Array.isArray(d.options) ? d.options : []).map((o) => {
+    if (typeof o === "string") return o.trim() ? { id: o.trim(), label: o.trim() } : null;
+    if (!o || typeof o !== "object") return null;
+    const r = o as Record<string, unknown>;
+    const label = txt(r.label, r.name, r.text, r.title, r.id, r.value);
+    const id = txt(r.id, r.value, r.key) || label;
+    return id && label ? { ...r, id, label, desc: txt(r.desc, r.description, r.hint) || undefined } : null;
+  }).filter((o): o is NonNullable<typeof o> => !!o && !seen.has(o.id) && !!seen.add(o.id)) as WorldRuleDim["options"];
+  if (!options.length) return null;
+  const label = txt(d.label, d.name, d.title, d.id) || "规则";
+  const id = txt(d.id, d.key) || label;
+  const def = options.some((o) => o.id === d.def) ? String(d.def) : options[0].id;
+  return { ...(d as object), id, label, hint: txt(d.hint, d.desc) , def, options } as WorldRuleDim;
+}
 /* 存档里的「自建地点」（地图编辑器添加 / 文本解析 / 公共地图）：叠加在世界观房间之上，与原地点双向连通 */
 export type RuntimeSpot = { id: string; name: string; desc?: string; link?: string };
 let runtime: { spots: RuntimeSpot[]; world?: ResolvedWorld; rooms?: Record<string, RoomContent>; locs?: MapLocation[] } = { spots: [] };
@@ -1006,6 +1096,34 @@ function derived(): Derived {
 export const worldPersonById = (id: string): PersonContent | undefined => derived().personById[id];
 export const getWorldItems = (): RoomItem[] => derived().items;
 export const worldItemById = (id: string): RoomItem | undefined => derived().itemById.get(id);
+
+/** 功能注释：物品来自合并链里的哪个包（后包覆盖前包，取最后声明者；世界自带的返回世界） */
+function itemOwner(id: string): Mod | undefined {
+  const chain = getWorld().chain;
+  for (let i = chain.length - 1; i >= 0; i--) {
+    const c = chain[i].content ?? {};
+    if (asModArray<{ id?: string }>(c.items).some((x) => x?.id === id)) return chain[i];
+    for (const r of Object.values(c.rooms ?? {})) if (asModArray<{ id?: string }>(r?.items).some((x) => x?.id === id)) return chain[i];
+  }
+  return undefined;
+}
+
+/** 功能注释：存档物品备忘用——当前世界能解析到的物品名字 / 图标 / 来源包 */
+export function worldItemMemo(id: string): ItemMemoEntry | undefined {
+  const it = worldItemById(id);
+  if (!it) return undefined;
+  const owner = itemOwner(id);
+  const isAddon = owner && owner.kind === "addon";
+  return {
+    name: typeof it.name === "string" ? it.name : id,
+    ...(it.icon ? { icon: it.icon } : {}),
+    ...(typeof it.desc === "string" && it.desc ? { desc: it.desc.slice(0, 200) } : {}),
+    ...(isAddon ? { mod: owner.id, modName: owner.name } : {}),
+  };
+}
+
+/** 功能注释：本局合并链里玩法包的版本快照（开局写进存档，读档对比） */
+export const currentModStamp = (): ModStampEntry[] => stampFromChain(getWorld().chain);
 export const worldRoom = (id: string): RoomContent | undefined => getWorld().content.rooms[id];
 export const worldItemsOfRoom = (id: string): RoomItem[] => worldRoom(id)?.items ?? [];
 /* 各层子地点的活动互相独立；勾了「沿用父地点」时逐层向上叠加（去重、防环） */

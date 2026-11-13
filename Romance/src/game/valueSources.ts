@@ -1,7 +1,8 @@
-import { RAW_STAT_LABELS, RAW_STAT_ORDER, type CreationPath, type StatsSlot } from "./data";
+import { RAW_STAT_ORDER, type CreationPath, type StatsSlot } from "./data";
 import { BASE_METRICS } from "./fixedEvents";
 import { routeAttrId } from "./routeFx";
 import type { AttrDef } from "../lib/types";
+import { resolveAttrRef as resolveAttrRefRaw } from "./attrRef";
 
 /* 全局属性池：结局编辑器（触发条件 / 评级维度）与人物线路编辑器共用同一套名称，不另建属性。
  * 名称解析规则与开局时应用线路数值（GameContext）一致：先八维 → 内置指标 → 作品自定义属性 → 都没有则是线路新建属性。
@@ -12,7 +13,7 @@ import type { AttrDef } from "../lib/types";
 export type ValueSrc = { kind: "stat" | "metric"; key: string; label: string; group: string };
 export const GROUP_ROUTE = "人物线路词条";
 export const GROUP_ATTR = "本作品属性";
-export const GROUP_BUILTIN = "引擎内置数值";
+export const GROUP_BUILTIN = "货币";
 
 /** 功能注释：AI 常漏写 label/name，直接 .trim() 会在角色页 map 里崩成 reading 'trim' */
 function cellText(raw: unknown): string {
@@ -26,19 +27,20 @@ function rowList(raw: unknown): unknown[] {
   return Array.isArray(raw) ? raw : [];
 }
 
-export function valueSources(opts: { stats?: StatsSlot; attrs?: AttrDef[]; paths?: CreationPath[] }): ValueSrc[] {
-  const { stats } = opts;
+export function valueSources(opts: {
+  stats?: StatsSlot;
+  attrs?: AttrDef[];
+  paths?: CreationPath[];
+  /** 功能注释：已不再区分题材，保留参数只为兼容旧调用 */
+  entBase?: boolean;
+  moneyLabel?: string;
+}): ValueSrc[] {
   const attrs = Array.isArray(opts.attrs) ? opts.attrs : [];
   const paths = Array.isArray(opts.paths) ? opts.paths : [];
-  const hidden = new Set(Array.isArray(stats?.hidden) ? stats.hidden : []);
-  const order = [...(Array.isArray(stats?.order) ? stats.order : []), ...RAW_STAT_ORDER].filter((k, i, a) => a.indexOf(k) === i && !hidden.has(k));
-  const meta = stats?.metaLabels ?? {};
+  // 功能注释：任何题材（含娱乐圈）都不列引擎内置属性（演技 / 歌艺等八维、名气 / 口碑 / 黑粉 / 压力 / 精力等）；
+  // 只保留作品货币，属性一律来自本作品属性表与人物线路
   const builtin: ValueSrc[] = [
-    ...order.map((k) => ({ kind: "stat" as const, key: k, label: cellText(stats?.labels?.[k]) || RAW_STAT_LABELS[k], group: GROUP_BUILTIN })),
-    ...BASE_METRICS.filter((m) => m.key !== "week").map((m) => ({
-      kind: "metric" as const, key: m.key, group: GROUP_BUILTIN,
-      label: (m.key === "fame" && cellText(meta.fame)) || (m.key === "stress" && cellText(meta.stress)) || m.label,
-    })),
+    { kind: "metric", key: "money", label: cellText(opts.moneyLabel) || BASE_METRICS.find((m) => m.key === "money")?.label || "现金", group: GROUP_BUILTIN },
   ];
   const custom: ValueSrc[] = attrs.map((d) => ({ kind: "metric", key: `c:${d.id}`, label: cellText(d?.label) || d?.id || "属性", group: GROUP_ATTR }));
   const all = [...builtin, ...custom];
@@ -62,3 +64,8 @@ export function favorTargets(people: { id: string; name: string }[], paths: Crea
 }
 
 export const srcValue = (s: { kind: string; key: string }) => `${s.kind}:${s.key}`;
+
+/** 功能注释：带上引擎内置键保护的属性引用纠正 */
+export function resolveAttrRef(kind: string, key: string, attrs: { id?: unknown; label?: unknown }[] | undefined) {
+  return resolveAttrRefRaw(kind, key, attrs, [...RAW_STAT_ORDER, ...BASE_METRICS.map((m) => m.key)]);
+}

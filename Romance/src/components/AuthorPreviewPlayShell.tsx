@@ -16,6 +16,7 @@ import {
   getAuthorPreviewBoot,
   subscribeAuthorPreviewBoot,
 } from "../lib/authorPreviewBoot.ts";
+import { describeLoadReport, getLoadReport, subscribeMods } from "../mods/registry";
 
 function PreviewStatusCard({
   title,
@@ -116,6 +117,21 @@ function MissingBanner({ labels }: { labels: string[] }) {
   );
 }
 
+/** 功能注释：玩法加载报告——没生效的玩法、撞名、越界字段，预览里直接告诉作者原因 */
+function LoadReportBanner() {
+  const report = useSyncExternalStore(subscribeMods, getLoadReport, () => undefined);
+  const lines = describeLoadReport(report);
+  if (!lines.length) return null;
+  return (
+    <div className="border-b border-gold/40 bg-gold/10 px-4 py-2 text-[12px] text-ink" role="status" data-author-preview-load-report="1">
+      <b>玩法加载提示：</b>
+      <ul className="mt-0.5 list-disc pl-4 text-ink-soft">
+        {lines.slice(0, 5).map((l) => <li key={l}>{l}</li>)}
+      </ul>
+    </div>
+  );
+}
+
 export default function AuthorPreviewPlayShell({ children }: { children: ReactNode }) {
   const session = useSyncExternalStore(subscribeAuthorPreview, getAuthorPreviewSession, () => null);
   const boot = useSyncExternalStore(subscribeAuthorPreviewBoot, getAuthorPreviewBoot, () => ({ status: "idle" as const }));
@@ -150,6 +166,7 @@ export default function AuthorPreviewPlayShell({ children }: { children: ReactNo
     /* 功能注释：高度吃满预览舞台（父级 flex-1），勿再 min-h-100vh，否则顶栏占位后底栏被裁 */
     <div className="author-preview-play flex h-full min-h-0 flex-col overflow-hidden" data-author-preview-play="1">
       <MissingBanner labels={[...new Set([...missing, ...warnList.map((w) => w.replace(/^缺少「|」$/g, ""))])]} />
+      {boot.status === "ready" ? <LoadReportBanner /> : null}
       <div className="min-h-0 flex-1 overflow-hidden [&_.app-root]:h-full [&_.app-root]:max-h-full">
         <PreviewErrorBoundary onRetry={retry} onBack={back}>
           <div className="h-full min-h-0">{body}</div>

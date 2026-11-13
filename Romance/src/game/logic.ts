@@ -1,3 +1,4 @@
+import { catPublishes, gigConfig, resolveGigCat } from "./gigConfig";
 import { affinityCapOf, partnerLocPerksFor, partnerPerksFor } from "../worlds/star2005/content";
 import { apMax } from "./mud";
 import { shopPrice } from "./factions";
@@ -494,32 +495,24 @@ export function isHighRisk(g: Gig, s: GameState): boolean {
   return reqStats(g).some((r) => statRead(s, r.key) <= r.need * 0.5);
 }
 
-// 11.5 通告类别：广告/电视剧 名气参与判定；唱片/电影 只看实际能力
-export type GigCat = "ad" | "tv" | "record" | "film" | "variety";
+// 11.5 通告类别：由 gigConfig 决定（分类 / 发布节奏 / 名气是否计入）；未配置 = 原版广告·电视剧·电影·唱片·综艺
+export type GigCat = string;
 export function gigCategory(g: Gig): GigCat {
-  const t = g.type;
-  if (/电影/.test(t)) return "film";
-  if (/唱片|音乐|单曲|专辑|演唱会/.test(t)) return "record";
-  if (/电视剧|剧/.test(t)) return "tv";
-  if (/综艺|采访|直播/.test(t)) return "variety";
-  return "ad";
+  return resolveGigCat(g).id;
 }
-// 唱片、电影只看实际能力，不把名气计入能力判定
 export function judgeUsesFame(g: Gig): boolean {
-  const c = gigCategory(g);
-  return c !== "record" && c !== "film";
+  return resolveGigCat(g).fameJudge !== false;
 }
-// 11.5 发布时间：广告/电视剧 奇数周周一发布；唱片/电影 偶数周周一发布；综艺常驻
 function catPublishesOn(cat: GigCat, week: number): boolean {
-  const odd = week % 2 === 1;
-  if (cat === "ad" || cat === "tv") return odd;
-  if (cat === "record" || cat === "film") return !odd;
-  return true; // 综艺常驻
+  return catPublishes(gigConfig().cats.find((c) => c.id === cat), week);
 }
 
 // 找对应制作人/制片人「打听」到的通告：按其掌管的类别 + 本周发布节奏 + 名气门槛筛选
-export function offersFrom(s: GameState, cats: GigCat[], maxStar?: number): string[] {
+export function offersFrom(s: GameState, catsIn: GigCat[], maxStar?: number): string[] {
   const used = new Set(s.usedGigs ?? []);
+  // 功能注释：作者自定义分类后，负责人原先掌管的分类 id 可能都不存在了——此时视为可派所有分类，避免接不到单
+  const known = gigConfig().cats.map((c) => c.id);
+  const cats = catsIn.some((c) => known.includes(c)) ? catsIn : known;
   return LIVE_GIGS.filter(
     (g) =>
       !used.has(g.id) &&
@@ -584,7 +577,7 @@ export function negotiateRate(g: Gig, s: GameState): number {
 
 // 9.1 与负责人交涉：成功锁定档期，失败损失体力/压力/好感，先到先得可能被 NPC 抢走
 export function negotiateGig(s: GameState, gigId: string): { next: GameState; ok: boolean; msg: string } {
-  if (!feature("career")) return { next: s, ok: false, msg: `本局未启用「演艺事业包」，没有${T("gig")}可接。` };
+  if (!feature("career")) return { next: s, ok: false, msg: `本局未启用「事业经营包」，没有${T("gig")}可接。` };
   const g = LIVE_GIGS.find((x) => x.id === gigId);
   if (!g) return { next: s, ok: false, msg: "" };
   if (s.activeGigId) return { next: s, ok: false, msg: `你已有${T("gig")}在身，档期冲突。` };
@@ -726,16 +719,25 @@ function noGigFame(n: GameState, grade: DayGrade, gains: string[]) {
   else if (grade === "great") { n.fame += 1; gains.push(`小有表现 · ${T("fame", "名气")} +1`); }
 }
 
+/**
+ * 功能注释：休息一次实际减多少压力；null = 本作品未写休息减压（非娱乐圈不套默认 8）。
+ * 日程板预览与 applyAct 结算共用，保证玩家看到的数字就是结算的数字。
+ */
+export function restStressValue(): number | null {
+  const tu = tuning();
+  if (getWorldId() !== "ent" && (!tuningHasModule("rest") || tu.restStress == null)) return null;
+  return tu.restStress ?? 8;
+}
+
 export function applyAct(n: GameState, act: string | null, deltas: string[]): ActResult {
   const p = parseAct(act);
 
   if (p.kind === "rest") {
     // 功能注释：休息减压须勾选并写出；非娱乐圈未勾/未写 = 无效果，不套用娱乐圈默认 8。
-    const tu = tuning();
-    if (getWorldId() !== "ent" && (!tuningHasModule("rest") || tu.restStress == null)) {
+    const rs = restStressValue();
+    if (rs == null) {
       return { grade: null, actLabel: "休息", gains: ["休息（引擎规则未写减压，无效果）"] };
     }
-    const rs = tu.restStress ?? 8;
     n.stress = clamp(n.stress - rs, 0, 100);
     return { grade: null, actLabel: "休息", gains: [`压力 ${rs >= 0 ? "-" : "+"}${Math.abs(rs)}`] };
   }

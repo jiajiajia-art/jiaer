@@ -5,7 +5,7 @@ import { fmtMultiplier, useAiRoutes, type AiCapability } from "../lib/platformAi
 export default function AiRoutePicker({ capability, compact = false, title }: { capability: AiCapability; compact?: boolean; title?: string }) {
   const { routes, loading, current, select } = useAiRoutes(capability);
   if (loading || !routes.length) return null;
-  const label = title ?? (capability === "image" ? "生图线路" : "AI 线路");
+  const label = title ?? (capability === "image" ? "生图线路" : capability === "tts" ? "语音线路" : "AI 线路");
 
   if (compact) {
     return (

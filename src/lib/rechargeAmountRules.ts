@@ -64,13 +64,34 @@ export function validateRechargeAmount(
   return { ok: true };
 }
 
+/** 功能注释：后台未配置海外倍率时的兜底值（海外价 = 人民币价 × 0.15） */
+export const DEFAULT_OVERSEAS_RATE = 0.15;
+
+export function normalizeOverseasRate(rate: number | null | undefined): number {
+  return typeof rate === 'number' && Number.isFinite(rate) && rate > 0 ? rate : DEFAULT_OVERSEAS_RATE;
+}
+
+/** 功能注释：海外价 = 人民币价 × 倍率，向上取整到分，避免低于后台核算价 */
+export function toOverseasPrice(cnyAmount: number, rate: number): number {
+  return Math.ceil(cnyAmount * rate * 100 - 1e-6) / 100;
+}
+
+export function formatPayAmount(amount: number, method: DefaultPayMethod): string {
+  return method === 'overseas' ? amount.toFixed(2) : String(amount);
+}
+
 export function calcDiamondsForPayMethod(
   amount: number,
   method: DefaultPayMethod,
   isFixedPlan: boolean,
+  overseasRate?: number,
 ): number {
   if (isFixedPlan) {
     return Math.floor(amount * 10);
+  }
+  if (method === 'overseas' && overseasRate) {
+    // 海外自定义金额先按倍率折回人民币，再按 1 元 = 10 KK币 计算
+    return Math.max(1, Math.floor((amount / overseasRate) * 10 + 1e-6));
   }
   return method === 'overseas'
     ? calcOverseasCustomDiamonds(amount)

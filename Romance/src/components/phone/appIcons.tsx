@@ -90,17 +90,6 @@ export const APP_ICON: Record<string, ReactNode> = {
       <circle cx="31.5" cy="26.5" r="2" fill="#7fd1ff" />
     </Tile>
   ),
-  forum: (
-    <Tile from="#ff8aa0" to="#fb5a5f" angle={140}>
-      {/* 叠层楼层气泡 + 顶部小星，寓意「饭圈盖楼」 */}
-      <rect x="12" y="18" width="26" height="16" rx="5" fill="#fff" />
-      <path d="M18 34l-2.5 5 7-3z" fill="#fff" />
-      <circle cx="19.5" cy="26" r="1.7" fill="#fb5a5f" /><circle cx="25" cy="26" r="1.7" fill="#fb5a5f" /><circle cx="30.5" cy="26" r="1.7" fill="#fb5a5f" />
-      <rect x="24" y="30" width="22" height="13" rx="4.5" fill="#ffe3e8" stroke="#fb5a5f" strokeWidth="1.1" />
-      <circle cx="31" cy="36.5" r="1.4" fill="#fb5a5f" /><circle cx="35.5" cy="36.5" r="1.4" fill="#fb5a5f" /><circle cx="40" cy="36.5" r="1.4" fill="#fb5a5f" />
-      <path d="M43 13.5l1.5 3 3.3.4-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3-2.4-2.3 3.3-.4z" fill="#ffd76b" />
-    </Tile>
-  ),
   get wechat() { return isAncientComm() ? CHUANXUN_ICON : APP_ICON["wechat-lvxin"]; },
   "wechat-lvxin": (
     /* 「绿信」自有标识：单枚圆润气泡里托一片新叶（绿=生机），右上一点微光，
@@ -279,7 +268,6 @@ function Sprite({ col, row, set = "a" }: { col: number; row: number; set?: keyof
 Object.assign(APP_ICON, {
   campus: <Sprite col={1} row={0} />,
   meituan: <Sprite col={2} row={0} />,
-  forum: <Sprite col={0} row={1} />,
   douyin: <Sprite col={1} row={1} />,
   taobao: <Sprite col={2} row={1} />,
   xianyu: <Sprite col={2} row={1} />,

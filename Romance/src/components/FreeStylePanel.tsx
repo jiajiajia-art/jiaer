@@ -5,6 +5,7 @@ import {
   FREE_COLORS, FREE_SLOTS, type Asset, type FreeImg, type FreeSlot, type FreeStyle, type ImgHost,
   loadAssets, assetDaysLeft, keepAsset, loadHost, saveAssets, saveHost, uploadImage,
 } from "../lib/freeStyle";
+import AssetKindTabs, { filterAssetsByKind, type AssetKindFilter } from "./AssetKindTabs";
 
 /* 自由美化的零件：按「改的东西出现在哪」分别嵌进美化页对应位置，不再集中成一个大杂烩。
  *   AssetLibrary → 素材与代码 · 素材库
@@ -101,6 +102,8 @@ export function FreeFont() {
 /* 素材库 + 图床配置：所有图片位共用这里的素材 */
 export function AssetLibrary() {
   const [assets, setAssets] = useState<Asset[]>(loadAssets);
+  const [kindFilter, setKindFilter] = useState<AssetKindFilter>("all");
+  const shown = filterAssetsByKind(assets, kindFilter);
   const [host, setHostState] = useState<ImgHost>(loadHost);
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -149,9 +152,12 @@ export function AssetLibrary() {
       </div>
       {msg && <p className={`text-[11px] ${msg.ok ? "text-jade" : "text-danger"}`}>{msg.t}</p>}
 
-      {assets.length ? (
+      {assets.length > 0 && <AssetKindTabs assets={assets} value={kindFilter} onChange={setKindFilter} />}
+      {assets.length && !shown.length ? (
+        <p className="rounded-xl border border-dashed border-line px-3 py-4 text-center text-[12px] text-ink-soft">这个分类下还没有素材。人物头像、地点场景图生成后用上，会自动归到对应分类。</p>
+      ) : assets.length ? (
         <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
-          {assets.map((a) => (
+          {shown.map((a) => (
             <div key={a.id} className="group relative aspect-square overflow-hidden rounded-lg border border-line bg-paper">
               <img src={a.url} alt={a.name} className="h-full w-full object-cover" loading="lazy" />
               <span className="absolute inset-x-0 bottom-0 truncate bg-black/50 px-1 text-[9.5px] text-white">{a.temp ? `临时 · ${assetDaysLeft(a)}天后清除` : `${a.url.startsWith("data:") ? "本地 · " : ""}${a.name}`}</span>

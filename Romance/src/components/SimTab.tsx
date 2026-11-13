@@ -16,7 +16,7 @@ import {
   dossierFactLine,
 } from "../lib/playerDossier";
 import type { AttrDef } from "../lib/types";
-import { customAttrValue } from "../game/wallet";
+import { customAttrValue, wallet } from "../game/wallet";
 
 function IconCrown({ className }: { className?: string }) {
   return (
@@ -50,7 +50,7 @@ function IconCar({ size = 20 }: { size?: number }) {
 /** 功能注释：分区卡——中文标题 + 右侧 meta，无英文眉题、无序号 */
 function Block({ title, meta, children }: { title: string; meta?: ReactNode; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-line/70 bg-paper/95 px-3.5 py-3 shadow-sm">
+    <section className="ui-card px-3.5 py-3">
       <header className="mb-2.5 flex items-baseline gap-2">
         <h3 className="text-[14px] font-bold tracking-wide text-ink">{title}</h3>
         {meta != null && <span className="ml-auto min-w-0 text-right text-[11px] text-ink-soft">{meta}</span>}
@@ -116,13 +116,13 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
   return (
     <div className={embedded ? "w-full" : "w-full pb-5"}>
       {openImage && (
-        <Modal title={term("tabImage", "形象")} onClose={() => setOpenImage(false)}>
+        <Modal panelClassName="ui-dialog-game" title={term("tabImage", "形象")} onClose={() => setOpenImage(false)}>
           <ImageTab />
         </Modal>
       )}
       <div className={`mx-auto max-w-lg space-y-3 ${embedded ? "pt-0.5" : "px-4 py-4"}`}>
         {/* ═══ 头卡：左头像 · 右名字 / 年龄·性别·生日·星座 ═══ */}
-        <section className="rounded-2xl border border-line/70 bg-[#FFF7F8]/80 px-3.5 py-3.5 shadow-sm dark:bg-paper/95">
+        <section className="ui-card px-3.5 py-3.5">
           <div className="flex items-start gap-3">
             <Avatar src={p.avatar} name={p.name} size={64} square onPick={setPlayerAvatar} />
             <div className="min-w-0 flex-1 pt-0.5">
@@ -200,7 +200,7 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
         {/* ═══ 随身 ═══ */}
         <Block title="随身" meta={`${bagCount} 件`}>
           {bagEmpty ? (
-            <div className="rounded-xl border border-dashed border-line/80 px-3 py-3 text-center text-[12px] leading-relaxed text-ink-soft">
+            <div className="rounded-[var(--radius-ui)] border border-dashed border-line/80 px-3 py-3 text-center text-[12px] leading-relaxed text-ink-soft">
               行囊空空 · 沿途拾取的物件会收纳在此
             </div>
           ) : (
@@ -221,8 +221,8 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
                         type="button"
                         onClick={() => setActiveCar(on ? null : id)}
                         aria-pressed={on}
-                        title={`${c.desc} · 回收价 ¥${resaleValue(c).toLocaleString("zh-CN")}`}
-                        className={`relative flex min-w-0 items-center gap-2 rounded-xl border px-2.5 py-2 text-left ${on ? "border-jade/55 bg-jade/[0.07]" : "border-line/70"}`}
+                        title={`${c.desc} · 回收价 ${wallet.fmt(resaleValue(c))}`}
+                        className={`relative flex min-w-0 items-center gap-2 rounded-[var(--radius-ui)] border px-2.5 py-2 text-left ${on ? "border-jade/55 bg-jade/[0.07]" : "border-line/70"}`}
                       >
                         <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${on ? "bg-jade/15 text-jade" : "bg-ink/[0.04] text-ink-soft"}`}>
                           <IconCar size={16} />
@@ -248,7 +248,7 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
         {/* ═══ 背景履历 ═══ */}
         <Block title="背景履历" meta={`${history.length} 条`}>
           {histEmpty ? (
-            <div className="rounded-xl border border-dashed border-line/80 px-3 py-3 text-center text-[12px] leading-relaxed text-ink-soft">
+            <div className="rounded-[var(--radius-ui)] border border-dashed border-line/80 px-3 py-3 text-center text-[12px] leading-relaxed text-ink-soft">
               暂无履历 · 人生刚刚开始
             </div>
           ) : (
@@ -276,9 +276,9 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
 
         {/* 属性详情：当前值 · 进度条 · 说明 · 警戒提醒（不展示满值） */}
         {detailDef && (
-          <Modal title={detailDef.label} onClose={() => setDetailId(null)}>
+          <Modal panelClassName="ui-dialog-game" title={detailDef.label} onClose={() => setDetailId(null)}>
             <div className="space-y-3">
-              <div className="rounded-xl border border-line/70 bg-paper-2/50 px-3 py-2.5">
+              <div className="ui-card px-3 py-2.5">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="text-[13px] font-semibold text-ink">{detailDef.label}</span>
                   <AttrValueEdit def={detailDef} className="text-[16px] font-bold text-ink no-underline" flash={changedLabels.has(detailDef.label)} />
@@ -289,7 +289,7 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
                 />
               </div>
               {dossierAttrWarn(detailDef, customAttrValue(game, detailDef)) && (
-                <p className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-[12.5px] text-danger">
+                <p className="rounded-[var(--radius-ui-sm)] border border-danger/30 bg-danger/10 px-3 py-2 text-[12.5px] text-danger">
                   {dossierAttrWarn(detailDef, customAttrValue(game, detailDef))}
                 </p>
               )}
@@ -301,7 +301,7 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
               <button
                 type="button"
                 onClick={() => setDetailId(null)}
-                className="flex w-full items-center justify-center gap-1 rounded-xl border border-line py-2.5 text-[13px] font-semibold text-ink-soft"
+                className="flex w-full items-center justify-center gap-1 rounded-[var(--radius-ui)] border border-line py-2.5 text-[13px] font-semibold text-ink-soft"
               >
                 <IconClose size={14} />
                 关闭
@@ -311,7 +311,7 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
         )}
 
         {openTitles && (
-          <Modal title="我的头衔" onClose={() => setOpenTitles(false)}>
+          <Modal panelClassName="ui-dialog-game" title="我的头衔" onClose={() => setOpenTitles(false)}>
             {earnedTitles.length ? (
               <>
                 <p className="mb-3 text-[12px] text-ink-soft">已解锁 {earnedTitles.length} 枚 · 点选佩戴 / 摘下。</p>
@@ -325,7 +325,7 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
                         onClick={() => equipTitle(t.id)}
                         title={t.desc}
                         aria-pressed={worn}
-                        className={`rounded-sm border px-3 py-1.5 text-left transition ${worn ? "border-solid border-gold bg-gold/12" : "border-dashed border-line hover:border-gold/60"}`}
+                        className={`rounded-[var(--radius-ui-sm)] border px-3 py-1.5 text-left transition ${worn ? "border-solid border-gold bg-gold/12" : "border-dashed border-line hover:border-gold/60"}`}
                       >
                         <span className={`block text-[13px] font-bold ${worn ? "text-gold" : "text-ink"}`}>
                           {worn ? (

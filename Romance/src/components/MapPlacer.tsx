@@ -4,8 +4,27 @@ import { useEffect, useRef, useState } from "react";
  * 右上角或滚轮放大，放大后拖空白处平移。 */
 export type PlacerDot = { id: string; x: number; y: number; label: string };
 
-export default function MapPlacer({ bg, dots, activeId, onPick, onPlace }: {
+/** 功能注释：读图片真实宽高比（加载前返回 undefined），让标点画布与图片同比例，点位不偏 */
+export function useImageRatio(url?: string): number | undefined {
+  const [r, setR] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    setR(undefined);
+    if (!url) return;
+    const img = new Image();
+    img.onload = () => { if (img.naturalWidth && img.naturalHeight) setR(img.naturalWidth / img.naturalHeight); };
+    img.src = url;
+  }, [url]);
+  return r;
+}
+
+export default function MapPlacer({ bg, dots, activeId, onPick, onPlace, onBlank, aspect = "aspect-[16/10]", ratio }: {
+  /** 功能注释：画布宽高比（数值，优先于 aspect class） */
+  ratio?: number;
   bg?: string;
+  /** 功能注释：没选中地点时点空白处（如新建地点并放在此处） */
+  onBlank?: (x: number, y: number) => void;
+  /** 功能注释：画布比例 class；大地图图为竖版 9:16 */
+  aspect?: string;
   dots: PlacerDot[];
   activeId?: string | null;
   onPick: (id: string) => void;
@@ -41,7 +60,8 @@ export default function MapPlacer({ bg, dots, activeId, onPick, onPlace }: {
   return (
     <div
       ref={box}
-      className="relative aspect-[16/10] w-full touch-none select-none overflow-hidden rounded-xl border border-line bg-paper-2"
+      style={ratio ? { aspectRatio: String(ratio) } : undefined}
+      className={`relative ${ratio ? "" : aspect} w-full touch-none select-none overflow-hidden rounded-xl border border-line bg-paper-2`}
       onPointerDown={(e) => {
         const pin = (e.target as HTMLElement).closest("[data-pin]")?.getAttribute("data-pin") ?? undefined;
         if (pin) onPick(pin);
@@ -63,6 +83,7 @@ export default function MapPlacer({ bg, dots, activeId, onPick, onPlace }: {
         if (!d) return;
         if (d.pin) { if (d.moved) { const p = pct(e.clientX, e.clientY); onPlace(d.pin, p.x, p.y); } setTemp(null); return; }
         if (!d.moved && activeId) { const p = pct(e.clientX, e.clientY); onPlace(activeId, p.x, p.y); }
+        else if (!d.moved && onBlank) { const p = pct(e.clientX, e.clientY); onBlank(p.x, p.y); }
       }}
     >
       <div

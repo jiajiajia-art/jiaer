@@ -7,7 +7,7 @@ import { useGame } from "../store/gameCtx";
 import { AuditBadge, AuditBar, AuditList, KwInput, EmptyState, ScopeBanner, auditDomId, useConfirm } from "./EditorKit";
 import { auditGame, issuesAt } from "../game/refAudit";
 import { LIVE_LOCATIONS as LOCATIONS } from "../mods/registry";
-import { STANCE_LABEL, STANCE_SPILL, factionFlag, repOf, repPriceMult, repTier, syncFactions, REP_MIN, REP_MAX } from "../game/factions";
+import { STANCE_LABEL, STANCE_SPILL, factionFlag, factionLoreOnly, repOf, repPriceMult, repTier, syncFactions, REP_MIN, REP_MAX } from "../game/factions";
 
 const uid = () => `fa_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 const box = "w-full rounded-lg border border-line bg-paper-2 px-2.5 py-1.5 text-[13px] text-ink";
@@ -19,7 +19,7 @@ export default function FactionsPanel() {
   const [confirm, confirmEl] = useConfirm();
   if (!game) return null;
   const list = game.factions ?? [];
-  const lore = false;
+  const lore = factionLoreOnly();
   const audit = auditGame(game, { factions: list });
   const save = (factions: Faction[], extra: Partial<typeof game> = {}) => {
     const next = { ...game, ...extra, factions: factions.length ? factions : undefined };
@@ -34,7 +34,7 @@ export default function FactionsPanel() {
       {confirmEl}
       <ScopeBanner scope="save">阵营只作用于当前存档，修改即时保存。</ScopeBanner>
       <p className="rounded-2xl border border-line bg-paper-2/60 px-4 py-3 text-[12px] leading-relaxed text-ink-soft">
-        阵营名与标签是世界书关键词：剧情里提到时自动注入阵营设定、成员与当前声望。同时声望 -100~100 参与数值：变动时按立场波及成员好感（核心 50% · 成员 30% · 亲近 15%）；在阵营控制的地点购物按声望调价（+100 打八折，-100 贵五成）；事件、主线、结局条件都可以读取声望。
+        {lore ? "阵营名与标签是世界书关键词：剧情里提到时自动注入阵营设定与成员。本作品未添加「阵营声望」玩法，不计声望数值。" : <>阵营名与标签是世界书关键词：剧情里提到时自动注入阵营设定、成员与当前声望。同时声望 -100~100 参与数值：变动时按立场波及成员好感（核心 50% · 成员 30% · 亲近 15%）；在阵营控制的地点购物按声望调价（+100 打八折，-100 贵五成）；事件、主线、结局条件都可以读取声望。</>}
       </p>
 
       {list.length === 0 && <EmptyState>还没有阵营。点下方「＋ 新增阵营」开始。</EmptyState>}

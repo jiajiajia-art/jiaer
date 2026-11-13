@@ -422,9 +422,9 @@ export function contentIdsFromEditorSteps(editorStepIds: readonly string[]): Wor
   return ALL_WORLD_GEN_CONTENT_IDS.filter((c) => set.has(c));
 }
 
-/** 默认游玩偏好：游戏模式 + 跟随世界观（不写入 play 槽） */
+/** 默认游玩偏好：剧情模式 + 跟随世界观（不写入 play 槽）；游戏模式暂未开放 */
 export function defaultWorldGenPlayPrefs(): PlayPrefs {
-  return { mode: "game" };
+  return { mode: "novel" };
 }
 
 /**

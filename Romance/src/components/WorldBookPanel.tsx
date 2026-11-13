@@ -154,6 +154,8 @@ export default function WorldBookPanel() {
                   placeholder="条目名（如：帝都夜生活 / 顾氏家规）"
                   className="min-w-0 flex-1 rounded-lg border border-line bg-paper-2 px-2.5 py-1.5 text-[13.5px] font-bold text-ink placeholder:font-normal placeholder:text-ink-soft/70 focus:border-jade focus:outline-none"
                 />
+                {/* 功能注释：剧情记忆自动写入的关键往事，可改可删 */}
+                {e._mem && <span title="剧情中自动记下的关键往事，可修改或删除" className="shrink-0 rounded-full bg-coral/12 px-2 py-0.5 text-[10.5px] font-bold text-coral">剧情记忆</span>}
                 <AuditBadge issues={issuesAt(audit, `wb:${e.id}`)} />
                 <button
                   onClick={() => update(e.id, { enabled: !e.enabled })}

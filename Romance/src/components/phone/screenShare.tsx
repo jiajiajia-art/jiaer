@@ -1,3 +1,7 @@
+import { voiceDrivingTag } from "../../lib/npcTags";
+import { synthSpeechViaPlatform } from "../../lib/platformTts";
+import { aiRouteBody } from "../../lib/platformAiRoutes";
+import { hasPlatformPlayAuth } from "../../lib/platformPlayAi";
 import { LIVE_PERSON_BY_ID } from "../../mods/registry";
 import { loadConfig } from "../../lib/store";
 import type { AIConfig } from "../../lib/types";
@@ -42,7 +46,7 @@ export function fileToImage(f: File): Promise<string> {
   });
 }
 
-/* 朗读：配置了语音模型就走 OpenAI 兼容 /audio/speech（同句缓存），失败或未配置时退回浏览器自带 TTS */
+/* 朗读：登录平台走后台语音线路；未登录就走 OpenAI 兼容 /audio/speech（同句缓存），失败或未配置时退回浏览器自带 TTS */
 const ttsCache = new Map<string, string>();
 let ttsAudio: HTMLAudioElement | null = null;
 /* 人物专属音色：只认角色模块上的 ttsVoice；不再为父母单独开音色特例 */
@@ -50,19 +54,15 @@ export function voiceOf(pid?: string): string | undefined {
   if (!pid) return undefined;
   return LIVE_PERSON_BY_ID[pid]?.ttsVoice?.trim() || undefined;
 }
+/** 能否走云端语音：只走平台后台配置的语音线路（登录即可）；未登录退回浏览器自带朗读 */
+export function ttsAvailable(_cfg?: AIConfig): boolean {
+  return hasPlatformPlayAuth();
+}
 export async function synthSpeech(cfg: AIConfig, text: string, gender?: string, voiceId?: string): Promise<string> {
-  const voice = voiceId || (gender === "男" ? cfg.ttsVoiceMale : cfg.ttsVoiceFemale) || cfg.ttsVoiceFemale || cfg.ttsVoiceMale || "alloy";
-  const key = `${cfg.ttsModel}|${voice}|${cfg.ttsSpeed ?? 1}|${text}`;
+  const key = `platform|${aiRouteBody("tts").routeId ?? ""}|${voiceId ?? gender ?? ""}|${cfg.ttsSpeed ?? 1}|${text}`;
   const hit = ttsCache.get(key);
   if (hit) return hit;
-  const base = (cfg.ttsBaseUrl || cfg.baseUrl).replace(/\/+$/, "");
-  const res = await fetch(`${base}/audio/speech`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${cfg.ttsApiKey || cfg.apiKey}` },
-    body: JSON.stringify({ model: cfg.ttsModel, input: text.slice(0, 600), voice, speed: cfg.ttsSpeed ?? 1, response_format: "mp3" }),
-  });
-  if (!res.ok) throw new Error(`语音合成失败（${res.status}）${(await res.text().catch(() => "")).slice(0, 120)}`);
-  const url = URL.createObjectURL(await res.blob());
+  const url = await synthSpeechViaPlatform(text, { voice: voiceId, gender, speed: cfg.ttsSpeed ?? 1 });
   ttsCache.set(key, url);
   return url;
 }
@@ -74,7 +74,7 @@ export function speakOut(text: string, gender?: string, pid?: string, ownVoice?:
   const say = text.replace(/[（(][^）)]*[）)]/g, "").trim() || text;
   const gen = ++speechGen;
   const local = () => { if (gen === speechGen) browserSpeak(say, gender, pid, emotion, cfg.ttsSpeed ?? 1); };
-  if (cfg.ttsModel) {
+  if (ttsAvailable(cfg)) {
     window.speechSynthesis?.cancel();
     ttsAudio?.pause();
     synthSpeech(cfg, say, gender, ownVoice?.trim() || voiceOf(pid))
@@ -144,9 +144,9 @@ function timbre(pid: string | undefined, seed: number): [number, number, number]
     else if (age >= 38) { rate *= 0.97; pitch *= 0.96; }
     else if (age <= 22) { rate *= 1.03; pitch *= 1.03; }
   }
-  if (/冷|沉稳|稳重|成熟|严格|严肃|危险|腹黑|慵懒/.test(tags)) { rate *= 0.94; pitch *= 0.95; }
-  else if (/温柔|邻家|害羞|内向|治愈|乖/.test(tags)) { rate *= 0.95; pitch *= 1.03; volume = 0.9; }
-  else if (/直率|活泼|元气|开朗|阳光|爽朗|毒舌|热情|话痨/.test(tags)) { rate *= 1.07; pitch *= 1.04; }
+  // 功能注释：嗓音档位与编辑器说明共用 NPC_VOICE_TAG_GROUPS，命中第一档即停
+  const drive = voiceDrivingTag(p?.tags);
+  if (drive) { rate *= drive.group.rate; pitch *= drive.group.pitch; if (drive.group.volume) volume = drive.group.volume; }
   return [rate, pitch, volume];
 }
 

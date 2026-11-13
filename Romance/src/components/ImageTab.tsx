@@ -1,3 +1,4 @@
+import { liveTerm as T } from "../mods/live";
 import { useState } from "react";
 import { useGame } from "../store/gameCtx";
 import { Chip, Meter, SectionHead } from "./ui";
@@ -57,7 +58,7 @@ export default function ImageTab() {
           ["目标受众认可", s.audience, "gold"],
           ["舆情热度", s.controversy, "danger"],
         ] as [string, number, string][]).map(([k, v, tone]) => (
-          <div key={k} className="rounded-xl border border-line bg-paper-2 px-3 py-2.5">
+          <div key={k} className="ui-card px-3 py-2.5">
             <div className="mb-1 flex items-center justify-between">
               <span className="text-[11px] text-ink-soft">{k}</span>
               <span className="font-serif text-[15px] font-bold text-ink">{v}</span>
@@ -68,8 +69,8 @@ export default function ImageTab() {
       </div>
 
       {/* 粉丝分层 */}
-      <SectionTitle text="粉丝分层" hint={`总盘约 ${(fans.total / 10000).toFixed(1)} 万`} />
-      <div className="rounded-xl border border-line bg-paper-2 p-4">
+      <SectionTitle text={`${T("fans")}分层`} hint={`总盘约 ${(fans.total / 10000).toFixed(1)} 万`} />
+      <div className="ui-card p-4">
         <div className="mb-2 flex h-3 overflow-hidden rounded-full bg-paper">
           <div className="bg-jade" style={{ width: `${(fans.core / fanMax) * 100}%` }} />
           <div className="bg-gold/70" style={{ width: `${(fans.casual / fanMax) * 100}%` }} />
@@ -86,7 +87,7 @@ export default function ImageTab() {
       {s.crisis && crisisDef && (
         <>
           <SectionTitle text="舆情危机" hint="回应越及时越好，结算由证据 / 诚信 / 舆情决定" />
-          <div className="rounded-2xl border border-danger/40 bg-danger/5 p-4">
+          <div className="rounded-[var(--radius-ui)] border border-danger/40 bg-danger/5 p-4">
             <div className="mb-1 flex items-center gap-2">
               <span className="font-serif text-lg font-bold text-ink">{crisisDef.label}</span>
               <Chip tone={EVIDENCE_LABEL[s.crisis.evidence].tone}>{EVIDENCE_LABEL[s.crisis.evidence].text}</Chip>
@@ -108,7 +109,7 @@ export default function ImageTab() {
                 <button
                   key={r.id}
                   onClick={() => pushFeed(crisisResolve(r.id))}
-                  className="rounded-xl border border-line bg-paper-2 p-2.5 text-left transition hover:border-danger/50"
+                  className="ui-card p-2.5 text-left transition hover:border-danger/50"
                 >
                   <div className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
                     {r.label}
@@ -131,7 +132,7 @@ export default function ImageTab() {
             <button
               key={p.id}
               onClick={() => pushFeed(personaDeclare(p.id))}
-              className={`rounded-2xl border p-3.5 text-left transition ${on ? "border-jade bg-jade/10 shadow-sm" : "border-line bg-paper-2 hover:border-ink-soft/40"}`}
+              className={`rounded-[var(--radius-ui)] border p-3.5 text-left transition ${on ? "border-jade bg-jade/10 shadow-sm" : "border-line bg-paper-2 hover:border-ink-soft/40"}`}
             >
               <div className="mb-1 flex items-center gap-2">
                 <span className="font-serif text-base font-bold text-ink">{p.label}</span>
@@ -154,7 +155,7 @@ export default function ImageTab() {
             <button
               key={a.id}
               onClick={() => pushFeed(personaAct(a.id))}
-              className="rounded-xl border border-line bg-paper-2 p-3 text-left transition hover:border-jade/50 disabled:opacity-40"
+              className="ui-card p-3 text-left transition hover:border-jade/50 disabled:opacity-40"
             >
               <div className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
                 {a.label}
@@ -171,7 +172,7 @@ export default function ImageTab() {
       {feed.length > 0 && (
         <>
           <SectionTitle text="公关动态" />
-          <div className="space-y-1.5 rounded-xl border border-line bg-paper-2 p-3.5">
+          <div className="ui-card space-y-1.5 p-3.5">
             {feed.map((line, i) => (
               <p key={i} className={`text-[12.5px] leading-relaxed ${i === 0 ? "text-ink" : "text-ink-soft"}`}>{line}</p>
             ))}

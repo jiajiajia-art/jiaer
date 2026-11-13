@@ -54,9 +54,8 @@ function EntityDetail({ refr, onClose }: { refr: EntityRef; onClose: () => void 
     if (!n) return null;
     const known = (s?.metPeople ?? []).includes(n.id) || n.affinity !== 0;
     return (
-      <Modal title="人物档案" onClose={onClose}>
+      <Modal panelClassName="ui-dialog-game" title="人物档案" onClose={onClose}>
         <PersonProfile pid={n.id} known={known} />
-        <p className="mt-4 border-t border-line pt-3 text-[11px] text-ink-soft">{n.identity}{n.relation ? ` · ${n.relation}` : ""} · 点选人物只查看档案；要交谈或经营关系，请到 TA 所在地点当面进行。</p>
       </Modal>
     );
   }
@@ -65,7 +64,7 @@ function EntityDetail({ refr, onClose }: { refr: EntityRef; onClose: () => void 
     const it = worldItemById(refr.id);
     if (!it) return null;
     return (
-      <Modal title={it.name} onClose={onClose}>
+      <Modal panelClassName="ui-dialog-game" title={it.name} onClose={onClose}>
         <p className="story-prose text-[13px] leading-relaxed text-ink/85">{it.desc}</p>
       </Modal>
     );
@@ -98,7 +97,7 @@ function LocDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const exits = exitsOf(id);
   const tone = rs?.kind === "open" ? "var(--jade)" : rs?.kind === "event" ? "var(--coral)" : "var(--gold)";
   return (
-    <Modal title={title} onClose={onClose}>
+    <Modal panelClassName="ui-dialog-game" title={title} onClose={onClose}>
       <div className="space-y-3">
         {/* 实景横幅：有照片用照片，没有用柔和渐变；状态与「你在这里」浮在左下 */}
         <div className="relative h-32 overflow-hidden rounded-2xl border border-line/60 bg-gradient-to-br from-[var(--jade)]/25 via-[var(--gold)]/10 to-[var(--coral)]/20">

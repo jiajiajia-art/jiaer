@@ -54,6 +54,13 @@ export type Ctx = {
   startNew: (player: Player, simChar?: SimChar, contract?: SigningContract, worldRules?: import("../lib/types").WorldRules, opts?: StartOpts) => void;
   loadState: (s: GameState) => void;
   submit: (input: string, asPopup?: boolean) => Promise<void>;
+  /** 魔法棒：推进 / 切换视角推进 / 后日谈（幕后指令，不显示玩家气泡） */
+  directTurn: (kind: "advance" | "pov" | "after", povName?: string) => void;
+  /** 魔法棒 · 小剧场：番外短剧，弹窗展示，不进正文、不结算、不进记忆 */
+  theaterTurn: (theme?: string, format?: string) => Promise<string | null>; // 返回新小剧场 id（失败 null）
+  removeTheater: (id: string) => void;
+  /** 摇一摇的网友约见面：加入人物名单并在主角所在地上演见面剧情 */
+  meetStranger: (pid: string) => boolean;
   setPlayerAvatar: (dataUrl: string) => void;
   setNpcAvatar: (id: string, dataUrl: string) => void;
   setNpcPortrait: (id: string, url: string) => void;
@@ -134,7 +141,13 @@ export type Ctx = {
   xianyuSell: (listingId: string, agreed?: { price: number; buyer: string }) => string;
   // —— 手机系统 ——
   commitGame: (next: GameState) => void; // 整档提交并持久化（聊天/通话逐条落库）
-  patchGame: (fn: (latest: GameState) => GameState) => void; // 基于最新存档做函数式修改（异步回调里用，避免覆盖期间的进度）
+  patchGame: (fn: (latest: GameState) => GameState) => void;
+  /** 功能注释：日记本 · 重写某一篇失败 / 不满意的周记 */
+  retryWeekDiary: (id: string) => void;
+  /** 功能注释：正在流式写的周记（id → 已收到的全文） */
+  weekDiaryLive: Record<string, string>;
+  /** 功能注释：展开一条特殊事件（支线 / 地点「!」） */
+  playEventNotice: (id: string) => void; // 基于最新存档做函数式修改（异步回调里用，避免覆盖期间的进度）
   phoneExchange: (personId: string) => boolean; // 交换联系方式：随机同意/拒绝，同意开通私聊
   /** 功能注释：剧情初遇点「结识」——记入人脉并幕后开一回合结识剧情（写入 memory 摘要） */
   meetNewcomer: (personId: string) => void;

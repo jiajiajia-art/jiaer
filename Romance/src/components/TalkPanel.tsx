@@ -1,3 +1,5 @@
+import { npcFactionOf } from "../game/factions";
+import { LIVE_PERSON_BY_ID as PERSON_BY_ID_TALK } from "../mods/registry";
 import { moodLine } from "@/lib/npcIdentity";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -116,7 +118,7 @@ export default function TalkPanel({ pid, name, role, onClose }: { pid: string; n
     const bondBlock = bond && known
       ? `\n【你和主角的关系 · 既定事实】${bond}。你们早就认识，你清楚主角是谁、和你是什么关系，交谈必须以此为前提，绝不能表现得像陌生人或忘了这层关系；没加微信只说明还没有微信好友，不代表不熟。`
       : "";
-    const persona = npc ? `${pov(npc.identity) || npc.identity}，对主角好感${affinityOf(g0, pid)}，心情${npc.mood || "平常"}${npc.persona?.text ? `，人设：${npc.persona.text}` : ""}${npc.persona?.voice ? `，口吻：${npc.persona.voice}` : ""}` : role;
+    const persona = npc ? `${pov(npc.identity) || npc.identity}，对主角好感${affinityOf(g0, pid)}，心情${npc.mood || "平常"}${npc.tags?.length ? `，性格标签：${npc.tags.join("、")}（口吻、态度要体现这些标签）` : ""}${(() => { const f = npcFactionOf(pid, PERSON_BY_ID_TALK[pid]?.factionId); return f ? `，所属势力：${f.name}${f.desc ? `（${f.desc.slice(0, 60)}）` : ""}（立场与说话要符合这个身份）` : ""; })()}${npc.persona?.text ? `，人设：${npc.persona.text}` : ""}${npc.persona?.voice ? `，口吻：${npc.persona.voice}` : ""}` : role;
     // 爱慕段落 + 相处分寸：只给爱慕段落的话，不熟但爱慕很高的人仍容易被演成冷淡
     const romance = [romanceBlock(g0, pid), npc ? `【相处分寸】${toneCue(g0, pid)}。` : ""].filter(Boolean).join("\n");
     const spotCtx = mapSpotBlock(g0);
@@ -216,56 +218,24 @@ export default function TalkPanel({ pid, name, role, onClose }: { pid: string; n
     })();
   };
 
-  const wxBadge = ({
-    friend: { text: "微信好友", cls: "border-jade/35 bg-jade/10 text-jade-deep" },
-    pending: { text: "待通过", cls: "border-gold/40 bg-gold/10 text-gold" },
-    non_friend: { text: "未加微信", cls: "border-line bg-paper/80 text-ink-soft" },
-  } as Record<WxRelation, { text: string; cls: string }>)[rel];
-
   return createPortal(
     <div className="ui-overlay z-50">
       <div
         role="dialog"
         aria-modal="true"
         aria-label={`与${name}对话`}
-        className="ui-sheet ui-dialog animate-pop"
+        className="ui-sheet ui-dialog ui-dialog-game animate-pop"
       >
-        {/* 顶部人物名片栏 */}
-        <header className="relative border-b border-line/60 bg-gradient-to-b from-paper-2/95 to-paper/60 px-4 pb-3 pt-3.5 sm:px-5">
-          <div className="flex items-center gap-3">
-            <div className="relative shrink-0 rounded-2xl p-0.5 ring-1 ring-jade/25 bg-gradient-to-br from-jade/15 to-coral/15 shadow-sm">
-              <Avatar src={npc?.avatar || undefined} name={name} size={64} square editable={false} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <h3 className="truncate font-serif text-[20px] font-black tracking-wide text-ink">{name}</h3>
-                {role && (
-                  <span className="truncate rounded-full bg-ink/[0.05] px-2 py-0.5 text-[11px] font-medium text-ink-soft">
-                    {role}
-                  </span>
-                )}
-                <span className={`ml-auto shrink-0 rounded-full border px-2.5 py-0.5 text-[10.5px] font-semibold ${wxBadge.cls}`}>
-                  {wxBadge.text}
-                </span>
-              </div>
-              <p className="mt-1 flex flex-wrap items-center gap-x-2 text-[11.5px] text-ink-soft">
-                <span>地点 · <b className="font-semibold text-ink">{game?.world?.location || "此地"}</b></span>
-                <span className={`rounded-full px-1.5 py-px text-[10.5px] font-semibold ${(game?.sim.metPeople ?? []).includes(pid) ? "bg-jade/10 text-jade-deep" : "bg-coral/12 text-coral"}`}>
-                  {(game?.sim.metPeople ?? []).includes(pid) ? "已结识" : "初次见面 · 聊上就算结识"}
-                </span>
-              </p>
-              {mood && (
-                <p className="mt-1 flex items-center gap-1.5 truncate text-[11.5px] text-ink-soft">
-                  <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-coral/75" />
-                  <span className="shrink-0 text-ink-soft/80">心境</span>
-                  <span className="truncate text-coral font-medium">{mood}</span>
-                </p>
-              )}
-            </div>
-            <button onClick={end} aria-label="结束对话" className="ui-icon-btn ml-1 shrink-0">
-              <IconClose />
-            </button>
+        {/* 顶部：只留头像 + 姓名，心境弱化为一行小字 */}
+        <header className="flex items-center gap-2.5 border-b border-line/50 px-4 py-2.5 sm:px-5">
+          <Avatar src={npc?.avatar || undefined} name={name} size={36} square editable={false} />
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate font-serif text-[16px] font-bold leading-tight text-ink">{name}</h3>
+            {mood && <p className="mt-0.5 truncate text-[11px] leading-tight text-ink-soft/70" title={mood}>{mood}</p>}
           </div>
+          <button onClick={end} aria-label="结束对话" className="ui-icon-btn shrink-0">
+            <IconClose />
+          </button>
         </header>
 
         {/* 对话消息流 */}
@@ -294,8 +264,8 @@ export default function TalkPanel({ pid, name, role, onClose }: { pid: string; n
           {lines.map((l, i) => {
             if (l.who === "sys")
               return (
-                <div key={i} className="flex justify-center py-1">
-                  <span className={`max-w-[85%] text-center text-[11.5px] leading-relaxed ${l.hint ? "rounded-full bg-coral/10 px-2.5 py-0.5 font-medium text-coral" : "text-ink-soft/80"}`}>
+                <div key={i} className={`flex justify-center ${l.hint ? "-my-1" : "py-1"}`}>
+                  <span className={`max-w-[85%] text-center leading-relaxed ${l.hint ? "text-[10.5px] text-ink-soft/55" : "text-[11.5px] text-ink-soft/80"}`}>
                     {l.text}
                   </span>
                 </div>

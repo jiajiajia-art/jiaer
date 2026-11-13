@@ -1,6 +1,11 @@
 import { wallet } from "../game/wallet";
+import { THEATER_FORMATS, type TheaterFormatId } from "../lib/theaterFormats";
+import { THEATER_ICON } from "./theaterIcons";
+import TheaterStage from "./TheaterStage";
+import { useConfirm } from "./EditorKit";
+import { turnsInCurrentScene } from "../lib/sceneTurns";
 import IntelAsk from "./IntelAsk";
-import { shopPrice } from "../game/factions";
+import { npcFactionOf, shopPrice } from "../game/factions";
 import DiyIcon from "./DiyIcon";
 import { GLYPHS } from "../lib/iconGlyphs";
 import { saveGlobal } from "../lib/saveScope";
@@ -10,10 +15,10 @@ import { ageLabel, moodLine, ownField } from "@/lib/npcIdentity";
 import { STAT_LABELS } from "../game/data";
 import { limitDays } from "../lib/types";
 import { resolveStart, spotUnlocked } from "../game/mapStart";
-import { autoPos } from "../game/mapPos";
+import { autoPos, roomPin } from "../game/mapPos";
 import { MAIN_SHEET, jumpOf, mapSheets, sheetOf } from "../game/mapSheets";
 import { homePlaceOf } from "../game/homeSpot";
-import { ProfileRelations, ProfileHero, RelTag, ProfileBasics, ProfileBio, ProfilePlaces, ProfileMemory, affiliationOf, PLAYER_REF, relationRefsOf } from "./personFields";
+import { ProfileRelations, ProfileHero, RelTag, ProfileBasics, ProfileBio, ProfilePlaces, ProfileMemory, PLAYER_REF, relationRefsOf } from "./personFields";
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { isAuthorPreview } from "../lib/authorPreview";
 import { playPrefsOf } from "../lib/ai";
@@ -28,7 +33,7 @@ import ProducerParley from "./ProducerParley";
 import GigBoard from "./GigBoard";
 import { HeartMeter, Modal, Chip, Avatar } from "./ui";
 import PersonProfile from "./PersonProfile";
-import { IconCalendar, IconCheck, IconChevronRight, IconExternal, IconEye, IconHeart, IconMessage, IconPin, IconScroll, IconSpark, IconSparkle, StarRating } from "../lib/icons";
+import { IconCalendar, IconCheck, IconChevronRight, IconExternal, IconEye, IconHeart, IconMessage, IconPin, IconScroll, IconSpark, IconSparkle, IconWand, IconDrama, IconForward, IconHourglass, IconFlag, StarRating } from "../lib/icons";
 import {
   roomDesc,
   directionHint,
@@ -49,6 +54,7 @@ import {
   transportOn,
   carShopId,
   childEntries,
+  type ChildEntry,
   roomBgOf,
   roomParent,
   roomPath,
@@ -75,9 +81,9 @@ const fmtBonus = (b: Record<string, number>) => Object.entries(b).map(([k, v]) =
 function Dealership({ s, onClose }: { s: SimState; onClose: () => void }) {
   const { game, buyCar, sellCar, setActiveCar, busy } = useGame();
   const owned = s.cars ?? [];
-  const yuan = (n: number) => `¥${n.toLocaleString("zh-CN")}`;
+  const yuan = (n: number) => wallet.fmt(n);
   return (
-    <Modal title={(game && spotName(game, carShopId() ?? "")) || locOf(carShopId() ?? "")?.name || "汽车城"} onClose={onClose}>
+    <Modal panelClassName="ui-dialog-game" title={(game && spotName(game, carShopId() ?? "")) || locOf(carShopId() ?? "")?.name || "汽车城"} onClose={onClose}>
       <p className="mb-3 text-[12px] text-ink-soft">
         {wallet.name(undefined, "现金")} <b className="text-ink">{wallet.fmt(wallet.balance(s), undefined, yuan)}</b>。买车后到「主角」页把它选为座驾，出行就能「自己开车」——免费又体面。
       </p>
@@ -172,7 +178,7 @@ function ScriptDossier({ s }: { s: SimState }) {
   if (!rows.length) {
     return (
       <p className="mt-2.5 rounded-sm border border-dashed border-line px-3 py-2.5 text-[12px] leading-relaxed text-ink-soft">
-        袋里还是空的——这里的项目你尚未打听过。找片场负责人「洽谈{T("gig")}」，问到的细节才会归档到这里。
+        袋里还是空的——这里的项目你尚未打听过。找负责人「洽谈{T("gig")}」，问到的细节才会归档到这里。
       </p>
     );
   }
@@ -229,7 +235,7 @@ function MapNode({
 }) {
   const loc = locOf(id);
   const edits = mapEdits?.[id];
-  const hs = getWorldMap().hotspots?.[mode]?.[id];
+  const hs = getWorldMap().hotspots?.[mode]?.[id] ?? roomPin(id);
   const defaultPos = hs ? { label: loc?.name ?? id, ...hs } : { ...autoPos(id, mode), label: loc?.name ?? id };
 
   const x = edits?.x ?? defaultPos.x;
@@ -240,7 +246,9 @@ function MapNode({
   const { game } = useGame();
   const fired = game ? firedOf(game, "spot") : [];
   const isHome = id === homeRoomOf(game);
-  const alert = (game ? spotEventsOf(game, id, fired).length > 0 : false) || encountersHere(s, id, game?.npcs).length > 0 || (current && !!s.crisis);
+  // 功能注释：可展开的特殊事件（支线条目）在其发生地亮「!」
+  const noticeHere = (game?.eventNotices ?? []).some((n) => n.status === "open" && n.room === id);
+  const alert = noticeHere || (game ? spotEventsOf(game, id, fired).length > 0 : false) || encountersHere(s, id, game?.npcs).length > 0 || (current && !!s.crisis);
 
   // 地标：主题色水滴图钉 + 地名；颜色取局部皮肤的 jade / coral，随皮肤切换。按钮外圈留出触控余量
   return (
@@ -533,6 +541,7 @@ function MeetOption({ icon: Icon, label, onClick, disabled, active, highlight }:
 /* 地点实景横幅：进入一处后展示该地实景照片 + 场景名 + 营业状态 + 可点位标记，右下角可切回星城舆图。 */
 /* 地点树导航：面包屑（任意一层可点回）+ 入口区（返回上层 · 直接子地点胶囊）。只在多级地点里出现 */
 function TreeNav({ s, onGo }: { s: SimState; onGo: (id: string) => void }) {
+  const [mapOpen, setMapOpen] = useState(false);
   const room = s.room ?? getWorldStartRoom();
   const path = roomPath(room);
   const kids = childEntries(s, room);
@@ -540,6 +549,8 @@ function TreeNav({ s, onGo }: { s: SimState; onGo: (id: string) => void }) {
   if (path.length < 2 && !kids.length) return null;
   const upName = up ? path[path.length - 2]?.name : "";
   const pill = "flex shrink-0 items-center gap-1 rounded-full border px-3 py-1.5 text-[12px] font-bold backdrop-blur-md transition active:scale-95";
+  // 功能注释：此地有内部地图时可展开，子地点按作者点位上图点选进入
+  const innerMap = getWorldRooms()[room]?.innerMap;
   return (
     <div className="mx-3 mt-2 shrink-0 space-y-1.5">
       {path.length > 1 && (
@@ -566,6 +577,12 @@ function TreeNav({ s, onGo }: { s: SimState; onGo: (id: string) => void }) {
             {roomUpLabel(room) || `返回${upName}`}
           </button>
         )}
+        {innerMap && kids.length > 0 && (
+          <button type="button" onClick={() => setMapOpen(true)} className={`${pill} border-jade/70 bg-jade text-paper-2 hover:brightness-110`} title={`展开${path[path.length - 1]?.name ?? ""}地图`}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 4 3 6.5V20l6-2.5 6 2.5 6-2.5V4l-6 2.5L9 4z" /><path d="M9 4v13.5M15 6.5V20" /></svg>
+            地图
+          </button>
+        )}
         {kids.map((k) => (
           <button key={k.id} type="button" onClick={() => k.ok && onGo(k.id)} disabled={!k.ok} title={k.ok ? k.desc.slice(0, 60) : k.note}
             className={`${pill} ${k.ok ? "border-white/70 bg-white/85 text-ink hover:bg-white" : "cursor-not-allowed border-white/20 bg-black/40 text-white/55"}`}>
@@ -575,6 +592,52 @@ function TreeNav({ s, onGo }: { s: SimState; onGo: (id: string) => void }) {
           </button>
         ))}
       </div>
+      {mapOpen && innerMap && (
+        <Modal title={path.map((p) => p.name).join(" / ")} onClose={() => setMapOpen(false)}>
+          <SubMapView map={innerMap} kids={kids} onGo={(id) => { setMapOpen(false); onGo(id); }} />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* 功能注释：内部地图——子地点按作者点位叠在图上；可进入的点亮、上锁的置灰并提示原因；没标点的列在图下 */
+function SubMapView({ map, kids, onGo }: { map: string; kids: ChildEntry[]; onGo: (id: string) => void }) {
+  const rooms = getWorldRooms();
+  const pos = (id: string) => {
+    const r = rooms[id];
+    return typeof r?.mapX === "number" && typeof r?.mapY === "number" ? { x: r.mapX, y: r.mapY } : null;
+  };
+  const unplaced = kids.filter((k) => !pos(k.id));
+  return (
+    <div className="space-y-2">
+      <div className="relative w-full overflow-hidden rounded-xl">
+        <img src={map} alt="地图" className="block h-auto w-full select-none" draggable={false} />
+        {kids.map((k) => {
+          const p = pos(k.id);
+          if (!p) return null;
+          return (
+            <button key={k.id} type="button" disabled={!k.ok} onClick={() => k.ok && onGo(k.id)} title={k.ok ? k.desc.slice(0, 60) : k.note}
+              className="group absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 disabled:cursor-not-allowed"
+              style={{ left: `${p.x}%`, top: `${p.y}%` }}>
+              <span className={`grid h-4 w-4 place-items-center rounded-full border-2 border-white shadow ${k.ok ? (k.visited ? "bg-gold" : "bg-jade") : "bg-ink-soft/70"}`}>
+                <span className="h-1.5 w-1.5 rounded-full bg-white" />
+              </span>
+              <span className={`whitespace-nowrap rounded-md px-1.5 py-px text-[11px] font-bold shadow ${k.ok ? "bg-white/90 text-ink group-hover:bg-white" : "bg-black/55 text-white/70"}`}>{k.name}</span>
+            </button>
+          );
+        })}
+      </div>
+      {unplaced.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {unplaced.map((k) => (
+            <button key={k.id} type="button" disabled={!k.ok} onClick={() => k.ok && onGo(k.id)} title={k.ok ? "" : k.note}
+              className={`rounded-full border px-2.5 py-1 text-[12px] ${k.ok ? "border-line bg-paper text-ink hover:border-jade" : "cursor-not-allowed border-line text-ink-soft"}`}>
+              {k.name}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -662,7 +725,7 @@ function LocationHero({ s, spots, activeKey, onOpenMap, onGo, fill, novelCard, b
           <div
             data-tour="story"
             data-dstyle={theme.dialogStyle ?? "soft"}
-            className="novel-read-card relative flex h-[85%] max-h-[85%] min-h-0 w-full flex-col overflow-hidden rounded-[var(--radius-ui-lg)] border border-line text-ink shadow-[var(--shadow-ui-lift)] backdrop-blur-[2px]"
+            className="novel-read-card relative flex min-h-0 h-[85%] max-h-[85%] w-full flex-col overflow-hidden rounded-[var(--radius-ui-lg)] border border-line text-ink shadow-[var(--shadow-ui-lift)] backdrop-blur-[2px]"
           >
             <div className="flex shrink-0 items-start justify-between gap-2 border-b border-line/70 px-3 py-2.5">
               <div className="min-w-0">
@@ -695,12 +758,13 @@ function LocationHero({ s, spots, activeKey, onOpenMap, onGo, fill, novelCard, b
               <div className="shrink-0 border-t border-line/70 px-2.5 py-2">{footer}</div>
             )}
           </div>
+          {/* 功能注释：在场人物与子地点分两行排在卡片下方（不再叠在一起）；卡片用剩余高度，底部内容不会被挤出、互相覆盖 */}
+          {belowCard}
           {onGo && (
             <div className="shrink-0 pt-1">
               <TreeNav s={s} onGo={onGo} />
             </div>
           )}
-          {belowCard}
         </div>
       </div>
     );
@@ -769,8 +833,8 @@ function PersonDossier({ pid, onClose, onJump }: { pid: string; onClose: () => v
     );
   };
   return (
-    <Modal title={`${name} · 人物资料`} onClose={onClose}>
-      <ProfileHero name={name} avatarSrc={npc?.avatar || undefined} facts={{ 性别: npc?.persona?.gender ?? p?.gender, 年龄: age, 所属: affiliationOf(ownField(npc, "identity", p?.role)) }} />
+    <Modal panelClassName="ui-dialog-game" title={`${name} · 人物资料`} onClose={onClose}>
+      <ProfileHero name={name} avatarSrc={npc?.avatar || undefined} facts={{ 性别: npc?.persona?.gender ?? p?.gender, 年龄: age, 所属势力: npcFactionOf(pid, p?.factionId)?.name }} /* 功能注释：只显示作者设置的所属势力，不再从身份文字拆「所属」冒充 */ />
       <ProfileBio bio={ownField(npc, "bio", p?.bio)} />
       {home && <ProfilePlaces places={[home]} />}
       {(npc?.id ?? p?.id) && <ProfileMemory pid={(npc?.id ?? p?.id) as string} />}
@@ -784,10 +848,18 @@ function PersonDossier({ pid, onClose, onJump }: { pid: string; onClose: () => v
 // 功能注释：无剧情选项时的行动灵感改由 lib/actionIdeas.buildActionIdeas 按当前地点 / 在场人物 / 主线生成，禁止写死他作品人名
 
 export default function HomeTab() {
-  const { game, busy, look: theme, commitGame, submit, simMove, simVisit, simEvent, simChooseArc, simConfirmDating, simPickup, simActivity, simBuy, simAskIntel, playSpotEvent } = useGame();
+  const { game, busy, look: theme, commitGame, submit, directTurn, theaterTurn, endManually, simMove, simVisit, simEvent, simChooseArc, simConfirmDating, simPickup, simActivity, simBuy, simAskIntel, playSpotEvent, playEventNotice } = useGame();
   const landscape = theme.orient === "landscape";
   const [input, setInput] = useState("");
   const [ideasOpen, setIdeasOpen] = useState(false);
+  // 功能注释：魔法棒——推进 / 切换视角推进 / 完结 / 后日谈
+  const [wandOpen, setWandOpen] = useState(false);
+  const [povPick, setPovPick] = useState(false);
+  const [theaterPick, setTheaterPick] = useState(false);
+  const [theaterTopic, setTheaterTopic] = useState("");
+  const [theaterFormat, setTheaterFormat] = useState<TheaterFormatId>("moments");
+  const [theaterView, setTheaterView] = useState<string | null>(null); // 小剧场舞台：单场 id 或 "shelf" 合集
+  const [confirmWand, confirmWandEl] = useConfirm();
   const inputRef = useRef<HTMLInputElement>(null);
   const [custom, setCustom] = useState(false);
   // 选项面板展开时按 1~9 直接选择（输入框里打字时不拦截）
@@ -953,6 +1025,14 @@ export default function HomeTab() {
       onClick: () => { if (!busy) setNote(simVisit(room)); },
     }] : []),
     // 本周日程不再作为场景点位出现：由底栏「推进」唤出；舆图改由地名条旁的「外出」按钮打开，也不再占场景点位
+    // 特殊事件：触发后进支线等玩家选择；在发生地列出，点开才演绎
+    ...(game.eventNotices ?? []).filter((n) => n.status === "open" && (n.room === room || !n.room)).map((n) => ({
+      key: `notice:${n.id}`,
+      label: `! ${n.name}`,
+      glyph: "",
+      tone: "event" as const,
+      onClick: () => { if (!busy) playEventNotice(n.id); },
+    })),
     // 剧情事件：点击进入支线（入口扣体力，支线内行动免体力），结束后落入剧情志
     ...spotEvents.map((ev) => ({
       key: `evt:${ev.id}`,
@@ -984,6 +1064,8 @@ export default function HomeTab() {
 
   // 功能注释：正文固定在场景图下累积留屏，不再进可消失对话框；底部只留输入与行动选项。
   const introSlots = newcomerSlots(game.story); // 初遇名片挂在该人物最近一次登场的回合底部
+  // 功能注释：换场景即翻篇——正文区只显示到达当前地点之后的剧情（记录完整保留，剧情志 / AI 上下文不受影响）
+  const sceneStory = turnsInCurrentScene(game.story, room);
   const hasOpts = !busy && (game.options?.length ?? 0) > 0 && !custom;
   // 功能注释：无剧情选项时的行动灵感，按当前地点 / 在场人物 / 主线生成（3.6.1）
   const ideaTexts = buildActionIdeas({
@@ -1081,6 +1163,128 @@ export default function HomeTab() {
               </div>
             </div>
           )}
+          {confirmWandEl}
+          {wandOpen && (
+            <div id="action-wand" className="mb-2 animate-pop overflow-hidden rounded-[var(--radius-ui-lg)] border border-coral/25 bg-paper/90 p-2.5 shadow-[var(--shadow-ui-lift)] backdrop-blur-md"
+              style={{ backgroundImage: "radial-gradient(110% 80% at 0% 0%, color-mix(in srgb, var(--coral) 12%, transparent), transparent 60%), radial-gradient(90% 70% at 100% 100%, color-mix(in srgb, var(--jade) 10%, transparent), transparent 60%)" }}>
+              <div className="mb-2 flex items-center justify-between px-1">
+                <span className="flex items-center gap-1.5 text-[11px] font-bold tracking-[0.2em] text-coral">
+                  <IconWand width={12} height={12} aria-hidden /> 魔法棒
+                </span>
+                {(game.theaters?.length ?? 0) > 0 && (
+                  <button type="button" onClick={() => { setWandOpen(false); setTheaterView("shelf"); }} className="text-[11px] font-semibold text-ink-soft transition hover:text-coral">
+                    <span className="inline-flex items-center gap-0.5">小剧场合集 · {game.theaters!.length}<IconChevronRight width={12} height={12} aria-hidden /></span>
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-5 gap-1.5">
+                {([
+                  { k: "advance", label: "推进", sub: "让剧情走一段", Icon: IconForward },
+                  { k: "pov", label: "换视角", sub: "从 TA 眼中看", Icon: IconEye },
+                  { k: "after", label: "后日谈", sub: "之后的日子", Icon: IconHourglass },
+                  { k: "theater", label: "小剧场", sub: "番外短剧", Icon: IconDrama },
+                  { k: "end", label: "完结", sub: "进入结局", Icon: IconFlag },
+                ] as const).map((b) => {
+                  const off = busy || (b.k === "pov" && people.length === 0);
+                  const on = (b.k === "pov" && povPick) || (b.k === "theater" && theaterPick);
+                  const end = b.k === "end";
+                  return (
+                    <button
+                      key={b.k}
+                      type="button"
+                      disabled={off}
+                      aria-pressed={b.k === "pov" || b.k === "theater" ? on : undefined}
+                      title={b.k === "pov" && people.length === 0 ? "此地没有其他人物，无法切换视角" : b.sub}
+                      onClick={async () => {
+                        if (b.k === "pov") { setPovPick((v) => !v); setTheaterPick(false); return; }
+                        if (b.k === "theater") { setTheaterPick((v) => !v); setPovPick(false); return; }
+                        if (b.k === "end") {
+                          if (await confirmWand("现在就让故事完结，进入结局与后记？完结后不能继续游玩。")) { setWandOpen(false); void endManually("manual"); }
+                          return;
+                        }
+                        setWandOpen(false); setPovPick(false); directTurn(b.k);
+                      }}
+                      className={`group flex min-w-0 flex-col items-center gap-1 rounded-[var(--radius-ui)] border px-1 py-2 text-center transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 ${
+                        on ? "border-coral bg-coral/12" : end ? "border-ink/15 bg-ink/[0.04] hover:border-ink/30" : "border-transparent hover:border-coral/30 hover:bg-coral/[0.06]"
+                      }`}
+                    >
+                      <span className={`grid h-9 w-9 place-items-center rounded-full transition ${
+                        end ? "bg-ink/75 text-paper" : on ? "bg-coral text-white shadow-[0_6px_14px_-6px_var(--coral)]" : "bg-gradient-to-br from-coral/18 to-jade/15 text-coral group-hover:from-coral/28"
+                      }`}>
+                        <b.Icon width={17} height={17} aria-hidden />
+                      </span>
+                      <span className={`text-[12px] font-bold leading-tight ${end ? "text-ink" : "text-ink"}`}>{b.label}</span>
+                      <span className="w-full truncate text-[9.5px] leading-tight text-ink-soft/80">{b.sub}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {theaterPick && (
+                <div className="mt-2.5 space-y-2">
+                  {/* 功能注释：小剧场形式——朋友圈 / 群聊 / 论坛帖 / 日记 / 直播间 / 搜索记录 / 备忘录 / 纯文字番外 */}
+                  <div className="grid grid-cols-4 gap-1.5" role="radiogroup" aria-label="小剧场形式">
+                    {THEATER_FORMATS.map((f) => {
+                      const on = theaterFormat === f.id;
+                      const FIcon = THEATER_ICON[f.id];
+                      return (
+                        <button key={f.id} type="button" role="radio" aria-checked={on} onClick={() => setTheaterFormat(f.id)} title={f.hint}
+                          className={`flex min-w-0 items-center gap-1.5 rounded-full border px-2 py-1.5 text-[11.5px] font-semibold transition active:scale-95 ${on ? "border-coral bg-coral text-white shadow-[0_4px_12px_-6px_var(--coral)]" : "border-line bg-paper text-ink hover:border-coral/50"}`}>
+                          <FIcon width={13} height={13} className="shrink-0" aria-hidden />
+                          <span className="truncate">{f.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <form
+                    className="flex items-center gap-1.5 rounded-full border border-coral/30 bg-paper p-1 pl-3"
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (busy) return;
+                      setWandOpen(false); setTheaterPick(false);
+                      const id = await theaterTurn(theaterTopic, theaterFormat);
+                      setTheaterTopic("");
+                      if (id) setTheaterView(id);
+                    }}
+                  >
+                    <IconDrama width={14} height={14} className="shrink-0 text-coral" aria-hidden />
+                    <input
+                      value={theaterTopic}
+                      onChange={(e) => setTheaterTopic(e.target.value)}
+                      maxLength={80}
+                      placeholder={`可选主题 · ${THEATER_FORMATS.find((f) => f.id === theaterFormat)?.hint ?? ""}`}
+                      aria-label="小剧场主题"
+                      className="min-w-0 flex-1 bg-transparent py-1 text-[12.5px] text-ink outline-none placeholder:text-ink-soft/60"
+                    />
+                    <button type="submit" disabled={busy} className="shrink-0 rounded-full bg-coral px-3.5 py-1.5 text-[12.5px] font-bold text-white transition hover:brightness-110 disabled:opacity-40">开演</button>
+                  </form>
+                </div>
+              )}
+              {povPick && people.length > 0 && (
+                <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] text-ink-soft">从谁的视角：</span>
+                  {people.map((p) => {
+                    const av = game.npcs.find((n) => n.id === p.id)?.avatar;
+                    return (
+                      <button key={p.id} type="button" disabled={busy}
+                        onClick={() => { setWandOpen(false); setPovPick(false); directTurn("pov", p.name); }}
+                        className="flex items-center gap-1.5 rounded-full border border-line bg-paper py-0.5 pl-0.5 pr-2.5 text-[12px] font-semibold text-ink transition hover:border-coral hover:text-coral disabled:opacity-40">
+                        {av ? <img src={av} alt="" className="h-6 w-6 rounded-full object-cover" /> : <span className="grid h-6 w-6 place-items-center rounded-full bg-coral/15 text-[11px] text-coral">{p.name.slice(0, 1)}</span>}
+                        {p.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+          {theaterView && (
+            <TheaterStage
+              key={theaterView}
+              openId={theaterView}
+              onClose={() => setTheaterView(null)}
+              onEncore={async (topic, format) => { setTheaterView(null); const id = await theaterTurn(topic, format); if (id) setTheaterView(id); }}
+            />
+          )}
           <div className="action-capsule flex items-center gap-2 rounded-[var(--radius-ui)] border border-line bg-paper p-1.5 shadow-[var(--shadow-ui)] transition-all duration-300">
             <div className="flex flex-1 items-center gap-2 pl-0.5">
               <div className="relative shrink-0">
@@ -1112,6 +1316,16 @@ export default function HomeTab() {
                   )}
                 </button>
               </div>
+              <button
+                type="button"
+                onClick={() => { setWandOpen((v) => !v); setPovPick(false); setTheaterPick(false); setIdeasOpen(false); }}
+                aria-label="魔法棒：推进 / 切换视角 / 完结 / 后日谈 / 小剧场"
+                aria-expanded={wandOpen}
+                aria-controls="action-wand"
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-ui-sm)] transition ${wandOpen ? "bg-coral/15 text-coral ring-1 ring-coral/30" : "bg-coral/[0.08] text-coral/85 hover:bg-coral/15"}`}
+              >
+                <IconWand width={15} height={15} />
+              </button>
               <input
                 type="text"
                 value={input}
@@ -1262,7 +1476,7 @@ export default function HomeTab() {
                               </p>
                             )
                           )}
-                          {game.story.map((t) =>
+                          {sceneStory.map((t) =>
                             t.role === "player" ? (
                               <div key={t.id} className="flex justify-end">
                                 <div className="dlg-bubble-me max-w-[85%] rounded-[var(--radius-ui)] rounded-tr-sm bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] px-3.5 py-2 text-[13.5px] font-medium text-white shadow-sm">
@@ -1340,7 +1554,7 @@ export default function HomeTab() {
           const run = (fn: () => string) => { if (busy) return; const m = fn(); if (m) setNote(m); else close(); };
           const btn = "mt-4 w-full rounded-full bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] py-2.5 text-[13.5px] font-bold text-white shadow-sm transition active:scale-[0.98] disabled:opacity-50";
           return (
-            <Modal title={actSel?.name ?? itemSel?.name ?? ""} onClose={close}>
+            <Modal panelClassName="ui-dialog-game" title={actSel?.name ?? itemSel?.name ?? ""} onClose={close}>
               <div className="text-center [&_p]:text-[13px] [&_p]:leading-relaxed">
               {actSel && (
                 <>
@@ -1373,7 +1587,7 @@ export default function HomeTab() {
                   <p className="text-[12px] text-ink-soft">{itemSel.desc}</p>
                   {!itemSel.owned && itemSel.price ? (
                     <button type="button" onClick={() => run(() => simBuy(itemSel.id))} disabled={busy || !wallet.can(s, shopPrice(s, itemSel.price))} className={btn}>
-                      {!wallet.can(s, shopPrice(s, itemSel.price)) ? `${wallet.name(undefined, "现金")}不足（余 ${wallet.fmt(wallet.balance(s))}）· ` : ""}购买 · ¥{shopPrice(s, itemSel.price)}{shopPrice(s, itemSel.price) !== itemSel.price && <s className="ml-1 opacity-60">¥{itemSel.price}</s>}
+                      {!wallet.can(s, shopPrice(s, itemSel.price)) ? `${wallet.name(undefined, "现金")}不足（余 ${wallet.fmt(wallet.balance(s))}）· ` : ""}购买 · {wallet.fmt(shopPrice(s, itemSel.price))}{shopPrice(s, itemSel.price) !== itemSel.price && <s className="ml-1 opacity-60">{wallet.fmt(itemSel.price)}</s>}
                     </button>
                   ) : !itemSel.owned ? (
                     <button type="button" onClick={() => run(() => simPickup(itemSel.id))} disabled={busy} className={btn}>
@@ -1398,7 +1612,7 @@ export default function HomeTab() {
               // 情感线这一段：只在与 TA 当面、时机到了且今天还没经历过一段时出现
               const arcNow = arcMomentHere(s, room, p.id, game.npcs);
               return (
-                <Modal key={p.id} title="线下见面" onClose={() => setOpenId(null)}>
+                <Modal panelClassName="ui-dialog-game" key={p.id} title="线下见面" onClose={() => setOpenId(null)}>
                 <div className="relative">
                   <PersonProfile pid={p.id} name={p.name} known={known} />
                   {/* 互动区 */}
@@ -1406,7 +1620,7 @@ export default function HomeTab() {
                     <p className="font-serif text-[14px] font-semibold text-ink">互动</p>
                     <div className="grid grid-cols-2 gap-2">
                       <MeetOption icon={IconMessage} label="对话" disabled={busy} onClick={() => setTalkWith({ pid: p.id, name: p.name, role: p.role })} />
-                      {/* 查看 / 接洽通告属于「演艺事业包」：未启用时不出现，避免关掉扩展包仍能接单 */}
+                      {/* 查看 / 接洽通告属于「事业经营包」：未启用时不出现，避免关掉扩展包仍能接单 */}
                       {known && feature("career") && isManager(p.id) && (
                         <MeetOption icon={IconScroll} label={`查看${T("gig")}`} active={openId === `parley:${p.id}`}
                           onClick={() => setOpenId(openId === `parley:${p.id}` ? `menu:${p.id}` : `parley:${p.id}`)} />
@@ -1416,7 +1630,8 @@ export default function HomeTab() {
                         <MeetOption icon={IconCalendar} label={`接洽${T("gig")}`} active={openId === `gigs:${p.id}`}
                           onClick={() => setOpenId(openId === `gigs:${p.id}` ? `menu:${p.id}` : `gigs:${p.id}`)} />
                       )}
-                      {known && (
+                      {/* 功能注释：只有作者给该人物写了可打听情报才出现，避免任何人物都有「打听」 */}
+                      {known && intel.length > 0 && (
                         <MeetOption icon={IconEye} label="打听" active={openId === `intel:${p.id}`}
                           onClick={() => setOpenId(openId === `intel:${p.id}` ? `menu:${p.id}` : `intel:${p.id}`)} />
                       )}
@@ -1453,7 +1668,7 @@ export default function HomeTab() {
                       </div>
                     </div>
                   )}
-                  {openId === `intel:${p.id}` && known && <IntelAsk pid={p.id} name={p.name} role={p.role} intel={intel} />}
+                  {openId === `intel:${p.id}` && known && intel.length > 0 && <IntelAsk pid={p.id} name={p.name} role={p.role} intel={intel} />}
                   {openId === `parley:${p.id}` && known && feature("career") && isManager(p.id) && (
                     <div className="mt-2.5 border-l border-coral/40 pl-3">
                       <ProducerParley pid={p.id} name={p.name} />
@@ -1486,7 +1701,7 @@ export default function HomeTab() {
         const blocked = !plan.reachable;
         const previewRStatus = plan.explore ? null : roomStatus(s, pending);
         return (
-          <Modal title={plan.explore ? "前往探索" : blocked ? "暂时无法前往" : "确认前往"} onClose={() => { setPending(null); setCompanion(null); }}>
+          <Modal panelClassName="ui-dialog-game" title={plan.explore ? "前往探索" : blocked ? "暂时无法前往" : "确认前往"} onClose={() => { setPending(null); setCompanion(null); }}>
             <div className="space-y-3">
               <p className="font-serif text-[19px] font-black text-ink">
                 {plan.explore ? `未知地点 · ${directionHint(s, pending)}` : dest?.name}
@@ -1518,7 +1733,7 @@ export default function HomeTab() {
                   <div>
                     {transportOn() && (<>
                     <p className="mb-2 text-[11px] font-bold tracking-[0.2em] text-ink-soft">{travelText().title}</p>
-                    <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(5, Math.max(2, TRANSPORT.filter((m) => !m.ownCar || myCar).length))}, minmax(0, 1fr))` }}>
+                    <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(3, Math.max(2, TRANSPORT.filter((m) => !m.ownCar || myCar).length))}, minmax(0, 1fr))` }} /* 功能注释：游戏弹窗宽 ≤520px，最多 3 列，多的换行，避免名字和价格挤成省略号 */>
                       {TRANSPORT.filter((m) => !m.ownCar || myCar).map((m) => {
                         const t = fareFor(plan, m);
                         const on = mode.id === m.id;

@@ -19,7 +19,6 @@ import CoupleApp from "./phone/CoupleApp";
 import { useCouple } from "./phone/couple/store";
 import { runSync, useSyncState, loadFeed } from "./phone/worldSync";
 import { useProactiveMessages } from "./phone/wxFeatures";
-import ForumApp from "./phone/ForumApp";
 import { requestWallet } from "./phone/WalletBinder";
 import MailApp from "./phone/MailApp";
 import ReadApp from "./phone/ReadApp";
@@ -65,7 +64,6 @@ const STORE: StoreItem[] = [
   { id: "notes", label: "备忘录", tagline: "台词、灵感、待办随手记", desc: "灵感来时，立刻记下", kicker: "编辑精选", story: "深夜想到的角色小传、明天要带的证件、导演随口的一句要求——打开即写，本地留存，不怕忘。", icon: APP_ICON.notes, cat: "效率", rating: 4.8, size: "1.9 MB", cover: SC("1517842645767-c639042777db") },
   { id: "calculator", label: "计算器", tagline: "片酬分成随手算", desc: "经典键位，随手就算", kicker: "实用工具", get story() { return `经纪抽成、${T("gig")}费、打车报销……四则运算一步到位，键位手感一如熟悉的那台。`; }, icon: APP_ICON.calculator, cat: "实用工具", rating: 4.7, size: "1.4 MB", cover: SC("1554224155-6726b3ff858f") },
   { id: "weather", label: "天气", get tagline() { return `${T("city")}天气与一周预报`; }, get desc() { return `出门${T("gig")}，先看天`; }, kicker: "生活方式", get story() { return `外景在即，先看${T("city")}这一周的阴晴。今日实时天气与一周走势，一屏尽览。`; }, icon: APP_ICON.weather, cat: "生活", rating: 4.6, size: "2.6 MB", cover: SC("1504608524841-42fe6f032b4b") },
-  { id: "forum", label: "星潮", tagline: "追星饭圈发帖楼中楼", desc: "一层一层，看她怎么被夸上天", kicker: "社区精选", story: "路人、CP 粉、代拍、还有几个嘴硬的黑子——一条帖子一百多层楼，谁也别想安静吃瓜。多语种自带翻译，正主偶尔会亲自下场。", icon: APP_ICON.forum, cat: "社交", rating: 4.9, size: "5.4 MB", cover: SC("1522202176988-66273c2fd55f") },
   // 桌面美化小组件
   { id: "w-hero-clock", kind: "widget", label: "大字号时钟横幅", tagline: "整行大字号日期与时间", desc: "把时间放在你想要的位置", kicker: "桌面美化", story: "谁说时间一定在最顶端？这是你的手机。大字号日期时钟横幅，随手拖到任意位置，或干脆收起来。", icon: APP_ICON.clock, cat: "美化", rating: 4.9, size: "0.4 MB", cover: SC("1501139083538-0139583c060f") },
   { id: "w-photo", kind: "widget", label: "照片卡片", tagline: "上传照片，点亮桌面", desc: "把你的高光时刻放上桌面", kicker: "桌面美化", story: "上传一张自己的照片或喜欢的海报，桌面立刻不一样。点按卡片随时更换，配一句专属文案。", icon: APP_ICON.moments, cat: "美化", rating: 4.9, size: "0.8 MB", cover: SC("1524504388940-b1c1722653e1") },
@@ -172,11 +170,14 @@ const DEFAULT_PREFS: PhonePrefs = {
 type AppsSlice = Pick<PhonePrefs, "installed" | "widgets" | "layout" | "widgetSizes" | "widgetShapes">;
 type LookSlice = Pick<PhonePrefs, "wallpaper" | "customWallpaper" | "wallpaperUserSet" | "brightness" | "dark" | "dnd" | "haptics" | "frameColor" | "showFrame" | "iconOverrides"> & { lookV2?: boolean };
 
+/* 功能注释：已下线的内置 App（旧存档里装过也自动移除）：星潮 forum */
+const RETIRED_APPS = new Set(["forum"]);
+
 function normalizeApps(raw: Partial<AppsSlice> & { order?: string[] }): AppsSlice {
   // 功能注释：允许平台表 appId（不限于本地 APP_IDS）；小组件仍校验 WIDGET_IDS
   const installed = Array.from(
     new Set([...(Array.isArray(raw.installed) ? raw.installed : defaultInstalled()), "appstore", "settings"]),
-  ).filter((id) => typeof id === "string" && id.trim() && !WIDGET_IDS.has(id));
+  ).filter((id) => typeof id === "string" && id.trim() && !WIDGET_IDS.has(id) && !RETIRED_APPS.has(id));
   const widgets = Array.from(new Set([...(Array.isArray(raw.widgets) ? raw.widgets : []).filter((id) => WIDGET_IDS.has(id)), "w-hero-clock"])).filter((id) => id !== "w-today");
   const legacy = Array.isArray(raw.order) ? [...widgets, ...raw.order] : [];
   const baseLayout = (Array.isArray(raw.layout) && raw.layout.length ? raw.layout : (legacy.length ? legacy : DEFAULT_LAYOUT)).filter((id) => id !== "w-today");
@@ -290,7 +291,6 @@ const APP_CHROME: Record<AppId, Chrome> = {
   bosspin: { top: "#ffffff", bottom: "#ffffff", dark: false },
   xianyu: { top: "#1a9b98", bottom: "#f5f6f7", dark: true },
   peek: { top: "#0d0f12", bottom: "#f2f2f7", dark: true },
-  forum: { top: "#fff1f2", bottom: "#fff1f2", dark: false },
   couple: { top: "#fdf2f6", bottom: "#fbf4f6", dark: false },
   mail: { top: "#f2f2f7", bottom: "#f2f2f7", dark: false },
   read: { top: "#f6f1e7", bottom: "#f6f1e7", dark: false },
@@ -559,7 +559,6 @@ function PhoneInner() {
                 {app === "cloudmusic" && <MusicApp onBack={back} />}
                 {app === "bosspin" && <BossZhipinApp onBack={back} />}
                 {app === "xianyu" && <XianyuApp onBack={back} />}
-                {app === "forum" && <ForumApp onBack={back} />}
                 {app === "peek" && <PeekApp onBack={back} />}
                 {app === "couple" && <CoupleApp onBack={back} />}
                 {app === "mail" && <MailApp onBack={back} />}

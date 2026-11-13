@@ -33,9 +33,27 @@ export function inferWorldMapName(opts?: {
     .filter((r) => !r.parent)
     .map((r) => String(r.name || "").trim())
     .filter(Boolean);
-  // 功能注释：顶层地点名像「皇宫」「校园」时直接当区域名；避免「新地点」「旅馆」等通用糊名
+  // 功能注释：大地图是「区域」，不能与某个地点同名（否则大地图与顶层地点一模一样）
   const GENERIC = /^(主地图|新地点|地点|旅馆|厨房|卧室|客厅)$/;
-  const regionLike = topNames.find((n) => !GENERIC.test(n) && n.length <= 12);
+  const ROOM_SUFFIX = /(大堂|大厅|前台|登记台|餐厅|饭厅|厨房|走廊|客房|房间|卧室|客厅|庭院|院子|花园|门口|大门|楼梯|天台|阳台|书房|浴室|洗手间|仓库|地下室|后门|停车场)$/;
+  // 1) 多个顶层地点有共同前缀（如「山岚旅馆大堂」「山岚旅馆餐厅」→「山岚旅馆」）
+  if (topNames.length > 1) {
+    let prefix = topNames[0]!;
+    for (const n of topNames.slice(1)) {
+      let k = 0;
+      while (k < prefix.length && k < n.length && prefix[k] === n[k]) k++;
+      prefix = prefix.slice(0, k);
+    }
+    prefix = prefix.replace(/[的之·\s]+$/, "");
+    if (prefix.length >= 2 && !GENERIC.test(prefix)) return prefix;
+  }
+  // 2) 顶层地点名去掉房间类后缀（「山岚旅馆大堂」→「山岚旅馆」）
+  for (const n of topNames) {
+    const stripped = n.replace(ROOM_SUFFIX, "").replace(/[的之·\s]+$/, "");
+    if (stripped !== n && stripped.length >= 2 && !GENERIC.test(stripped)) return stripped;
+  }
+  // 3) 顶层地点本身就是区域名（「皇宫」「校园」），且不是房间类名
+  const regionLike = topNames.find((n) => !GENERIC.test(n) && !ROOM_SUFFIX.test(n) && n.length <= 12);
   if (regionLike) return regionLike;
 
   const setting = String(opts?.setting || "").trim();
@@ -56,6 +74,11 @@ export type LibraryRoomNode = {
   imageUrl?: string;
   parentKey?: string | null;
   order?: number;
+  /** 功能注释：后台地点库标的点位（百分比）：顶层相对大地图图，子节点相对父节点 innerMapUrl */
+  mapX?: number;
+  mapY?: number;
+  /** 功能注释：本节点的内部地图（子节点在其上标点） */
+  innerMapUrl?: string;
 };
 
 export type LibraryMapTree = { rooms: LibraryRoomNode[] };
@@ -160,6 +183,9 @@ export function importLibraryMapTree(opts: {
       mapId,
       ...(parent ? { parent, order: n.order } : { order: n.order }),
       ...(String(n.imageUrl || "").trim() ? { bg: String(n.imageUrl).trim() } : {}),
+      // 功能注释：库里点好的点位与内部地图随整图复制进作品（各层都带）
+      ...(typeof n.mapX === "number" && typeof n.mapY === "number" ? { mapX: n.mapX, mapY: n.mapY } : {}),
+      ...(String(n.innerMapUrl || "").trim() ? { innerMap: String(n.innerMapUrl).trim() } : {}),
     };
   }
   return { map, rooms, rootId };
@@ -193,4 +219,42 @@ export function parseLibraryMapTree(raw: unknown): LibraryMapTree | null {
     });
   }
   return out.length ? { rooms: out } : null;
+}
+
+/**
+ * 功能注释：AI 生成后纠偏大地图：剔除无效图；大地图与地点同名时改成区域名；
+ * 子地点跟随父地点所在大地图；缺 mapId 的交给 ensureWorldMaps 挂到首图。
+ */
+export function healGeneratedWorldMaps(content: { rooms?: Rooms; worldMaps?: WorldMapDef[]; setting?: unknown; title?: unknown }): void {
+  const rooms = content.rooms;
+  if (!rooms || typeof rooms !== "object") return;
+  const raw = Array.isArray(content.worldMaps) ? content.worldMaps : [];
+  const seen = new Set<string>();
+  const maps: WorldMapDef[] = [];
+  raw.forEach((m, i) => {
+    const id = String(m?.id ?? "").trim();
+    const name = String(m?.name ?? "").trim();
+    if (!id || !name || seen.has(id)) return;
+    seen.add(id);
+    maps.push({ ...m, id, name, order: typeof m.order === "number" ? m.order : i });
+  });
+  const roomNames = new Set(Object.values(rooms).map((r) => String(r?.name || "").trim()).filter(Boolean));
+  for (const m of maps) {
+    if (!roomNames.has(m.name)) continue;
+    const own = Object.fromEntries(Object.entries(rooms).filter(([, r]) => r.mapId === m.id));
+    let next = inferWorldMapName({ rooms: Object.keys(own).length ? own : rooms });
+    if (next === DEFAULT_WORLD_MAP_NAME || roomNames.has(next)) next = `${m.name}一带`;
+    m.name = next;
+  }
+  const ids = new Set(maps.map((m) => m.id));
+  // 子地点归到父地点的大地图（最多迭代层数次）
+  for (let pass = 0; pass < 4; pass++) {
+    for (const [id, r] of Object.entries(rooms)) {
+      if (r.mapId && !ids.has(r.mapId)) rooms[id] = { ...r, mapId: undefined };
+      const par = r.parent ? rooms[r.parent] : undefined;
+      if (par?.mapId && par.mapId !== rooms[id].mapId) rooms[id] = { ...rooms[id], mapId: par.mapId };
+    }
+  }
+  if (maps.length) content.worldMaps = maps;
+  else delete content.worldMaps;
 }

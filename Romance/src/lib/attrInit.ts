@@ -35,14 +35,29 @@ export function clampAttrStart(a: Pick<AttrDef, "min" | "max">, value: number): 
   return Math.max(lo, Math.min(hi, v));
 }
 
+export type AttrStartMode = "random" | "locked" | "choice" | "custom";
+/** 功能注释：开局取值方式（兼容旧稿：fixed / 缺省 = locked，dice = random；choice 无有效选项时退回 locked） */
+export function attrStartMode(a: Pick<AttrDef, "initMode" | "options">): AttrStartMode {
+  if (attrUsesRandomStart(a)) return "random";
+  if (a.initMode === "choice") return (a.options ?? []).some((o) => o && String(o.label ?? "").trim()) ? "choice" : "locked";
+  if (a.initMode === "custom") return "custom";
+  return "locked";
+}
+/** 功能注释：choice 模式的有效选项 */
+export function attrChoiceOptions(a: Pick<AttrDef, "options">): { label: string; value: number; desc?: string }[] {
+  return (Array.isArray(a.options) ? a.options : []).filter((o) => o && String(o.label ?? "").trim()).map((o) => ({ label: String(o.label).trim(), value: Math.round(Number(o.value) || 0), desc: o.desc }));
+}
+
 /**
  * 功能注释：开局只随机这一次。固定用 init；不勾固定则在最小…最大均匀取整。
  * rand 可注入，便于单测；正式开局用 Math.random，不经过 AI。
  */
 export function attrStartValue(
-  a: Pick<AttrDef, "init" | "initMode" | "dice" | "min" | "max">,
+  a: Pick<AttrDef, "init" | "initMode" | "dice" | "min" | "max" | "options">,
   rand: () => number = Math.random,
 ): number {
+  // 功能注释：玩家选择默认取第一个选项；玩家自定义默认取 init（玩家在建角页再改）
+  if (attrStartMode(a) === "choice") return clampAttrStart(a, attrChoiceOptions(a)[0]?.value ?? a.init);
   if (attrUsesRandomStart(a)) {
     const lo = Math.floor(a.min ?? 0);
     const hiRaw = a.max;

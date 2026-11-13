@@ -10,6 +10,7 @@ import { relOf } from "../../game/relations";
 import { canRomance, dayDateLabel, dayParts } from "../../game/logic";
 import { COUPLE_QUESTIONS } from "./couple/questions";
 import { applyBond, type BondKind } from "../../game/coupleBond";
+import { lastOf } from "../../lib/lastOf.ts";
 import {
   useCouple, updateCouple, getCouple, newSpace, uidc, readImage, paperStyle, fontOf,
   PAPERS, FONTS, INKS, ANNIV_COLORS, MAX_BINDINGS,
@@ -394,8 +395,8 @@ function HomeView({ data, space, npc, me, day, go, todays, celebrated, celebrati
   const together = Math.max(1, day - space.since + 1);
   const unread = space.letters.filter((l) => l.from === "char" && !l.read).length;
   const q = COUPLE_QUESTIONS[space.qa.cur % COUPLE_QUESTIONS.length];
-  const answered = space.qa.history.at(-1)?.q === space.qa.cur;
-  const lastLetter = [...space.letters].reverse().find((l) => l.from === "char") ?? space.letters.at(-1);
+  const answered = lastOf(space.qa.history)?.q === space.qa.cur;
+  const lastLetter = [...space.letters].reverse().find((l) => l.from === "char") ?? lastOf(space.letters);
   const next = upcoming(space, day);
   const { m, d, dow } = dayParts(day);
   const WD = ["日", "一", "二", "三", "四", "五", "六"];
@@ -488,7 +489,7 @@ function QaView({ space, npc, me, day, online, setSpace, memo }: { space: Space;
   const [busy, setBusy] = useState(false);
   const [showHist, setShowHist] = useState(false);
   const total = COUPLE_QUESTIONS.length;
-  const rec = space.qa.history.at(-1);
+  const rec = lastOf(space.qa.history);
   const answered = rec?.q === space.qa.cur;
 
   // 已作答且跨到新的一天 → 换下一题；没答就一直保留这道题

@@ -2,7 +2,7 @@
  * 人物标签选择：平台内置 50 个勾选 + 自定义追加；禁止只留一个纯输入框。
  */
 import { useState } from "react";
-import { PLATFORM_NPC_TAGS, isPlatformNpcTag, normalizeNpcTags, toggleNpcTag } from "../lib/npcTags";
+import { PLATFORM_NPC_TAGS, isPlatformNpcTag, normalizeNpcTags, toggleNpcTag, voiceDrivingTag } from "../lib/npcTags";
 
 const chip = (on: boolean) =>
   `rounded-full border px-2 py-0.5 text-[11px] font-semibold transition ${
@@ -32,6 +32,16 @@ export default function NpcTagsPicker({
       <p className="text-[11px] text-ink-soft">
         <b className="font-semibold text-ink">人物标签</b> · 勾选平台常用标签，也可自定义
       </p>
+      {/* 功能注释：如实告诉作者标签在哪些地方参与演绎；改动接入范围时同步改这行 */}
+      <ul className="space-y-0.5 text-[10.5px] leading-relaxed text-ink-soft">
+        <li><b className="font-semibold text-ink">私聊 / 当面说话</b>：全部已勾标签写进对话提示词，口吻、态度随之变化。</li>
+        <li><b className="font-semibold text-ink">语音嗓音</b>：{(() => {
+          const d = voiceDrivingTag(selected);
+          if (!selected.length) return "未勾标签，按年龄决定。";
+          return d ? `由「${d.tag}」决定（${d.effect}）；其余标签只影响说话内容，不改嗓音。` : "已勾标签都不影响嗓音，按年龄决定；说话内容仍按标签。";
+        })()}</li>
+        <li><b className="font-semibold text-ink">人物资料</b>：不直接显示标签，只在玩家点「生成近况」时用于撰写近况。</li>
+      </ul>
       <div className="flex max-h-28 flex-wrap gap-1 overflow-y-auto" role="group" aria-label="平台人物标签">
         {PLATFORM_NPC_TAGS.map((t) => {
           const on = selected.includes(t);

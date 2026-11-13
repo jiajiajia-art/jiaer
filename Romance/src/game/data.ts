@@ -231,9 +231,8 @@ export const dossierStatKeys = (): StatKey[] => {
     (k, i, a) => k in RAW_STAT_LABELS && a.indexOf(k) === i && !hid.has(k),
   );
   if (ordered.length) return ordered;
-  // 功能注释：非娱乐圈没写 order 不补八维；娱乐圈仍回落内置顺序再扣 hidden
-  if (currentWorldId() !== "ent") return [];
-  return RAW_STAT_ORDER.filter((k) => !hid.has(k));
+  // 功能注释：作品表单没写 stats.order 时不补内置能力，档案显示「尚未配置个人能力」
+  return [];
 };
 export const ALL_STAT_KEYS: readonly StatKey[] = ["yanji", "geyi", "koucai", "yitai", "donggan", "tineng", "caizhi", "zixin"];
 /* 开局资金 / 开局天气（开局日期见 content.ts CALENDAR，可用槽 startDate 简写覆盖） */
@@ -527,6 +526,8 @@ export type GigCast = {
   maleLead?: string; // 男主角
   femaleSupport?: string; // 女配角
   maleSupport?: string; // 男配角
+  /** 功能注释：作者在 gigConfig.roles 里自定义的阵容角色 key（如 师父 / 对手） */
+  [role: string]: string | undefined;
 };
 export type Gig = {
   id: string;
@@ -544,6 +545,7 @@ export type Gig = {
   genre?: string; // 题材/品类/曲风（如 校园·古风·都市·言情·乡村 / 美妆·数码 / 流行·民谣）
   role?: string; // 玩家出演的角色（女主角 / 女配角 / 客串 …），仅影视类
   cast?: GigCast; // 该剧组的男女主角、男女配角（虚构角色名），仅影视类
+  cat?: string; // 显式分类 id（gigConfig.cats）；不写则按类型关键词自动归类
   fixedWeek?: number; // 重点通告的固定开机周：档期锁死，只能在临近该周时到公司接洽
 };
 
@@ -879,6 +881,8 @@ export type CreationPath = {
   memory?: string; // 专属前置记忆：写进主角档案，AI 可读
   event?: string; // 开局独有小事件：序章里必须发生的一件小事
   eventId?: string; // 绑定事件库里的固定事件 id：开局序章按该事件演绎（可与 event 同时填写）
+  storylineId?: string; // 关联主线 id：建角选线路时按该主线 nodes 顺序生成可视化路线（优先）
+  routeNodes?: string[]; // 手写路线节点（未关联主线或主线无节点时兜底）
   perksLabel?: string; // 开局数值小标题（作者自填，留空 = 不显示标题）
   lockTag?: string; // 未解锁时的角标文字（默认「未解锁」）
   /** @deprecated 仅兼容旧草稿展示；新编辑用 lockConds 生成提示 */
@@ -966,7 +970,7 @@ export type CreationCopy = {
   startFactions?: StartFaction[]; // 开局可勾选加入的势力（创作者自设）：开局时全部装入存档的阵营，勾选的给初始声望
   factionPickMax?: number; // 最多可勾选几个（缺省 = 不限）
 };
-export type StartFaction = { id: string; name: string; desc?: string; tags?: string[]; rep?: number /* 加入后的初始声望，缺省 20 */ };
+export type StartFaction = { id: string; name: string; desc?: string; tags?: string[]; rep?: number /* 加入后的初始声望，缺省 20 */; rooms?: string[] /* 势力范围：控制的地点 id；选上级地点即包含其下所有子地点 */ };
 export const RAW_CREATION: CreationCopy = {
   paths: [
     {

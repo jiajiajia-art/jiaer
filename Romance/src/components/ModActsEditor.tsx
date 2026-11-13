@@ -57,8 +57,10 @@ function GainRows({ value, attrs, onChange }: { value?: Record<string, Range>; a
   );
 }
 
-export default function ModActsEditor({ jobs, acts, stats, attrs, onChange }: {
+export default function ModActsEditor({ jobs, acts, stats, attrs, onChange, builtinFame = false }: {
   jobs?: SideJob[]; acts?: WeekendAct[]; stats?: StatsSlot; attrs?: AttrDef[];
+  /** 功能注释：作品基于娱乐圈底座时才露出内置「名气 / 口碑」字段；其他题材用「解锁条件」+ 建角属性 */
+  builtinFame?: boolean;
   onChange: (p: { sideJobs?: SideJob[]; weekendActs?: WeekendAct[] }) => void;
 }) {
   const hidden = new Set(stats?.hidden ?? []);
@@ -78,16 +80,16 @@ export default function ModActsEditor({ jobs, acts, stats, attrs, onChange }: {
     <div className="space-y-4">
       <div className="space-y-2">
         <p className="text-[12px] font-bold text-ink">打工 <span className="font-normal text-ink-soft">· 按列表顺序为档位，从空白自填</span></p>
-        {!jl.length && <p className="text-[11px] text-ink-soft">还没有打工档；点下方添加。开局不会套用娱乐圈便利店/商演表。</p>}
+        {!jl.length && <p className="rounded-xl border border-dashed border-line px-3 py-3 text-center text-[11.5px] text-ink-soft">还没有打工档位。列表顺序就是解锁顺序，可设置做满上一档几次才解锁下一档。</p>}
         {jl.map((j, i) => (
           <div key={j.id} className="space-y-1.5 rounded-xl border border-line bg-paper p-2.5">
             <div className="flex items-center gap-1.5">
-              <input className={inp} value={j.label} placeholder="名称，如：便利店夜班" onChange={(e) => pj(i, { label: e.target.value })} />
+              <input className={inp} value={j.label} placeholder="名称，如：餐馆帮工" onChange={(e) => pj(i, { label: e.target.value })} />
               <button className={`${btn} shrink-0`} onClick={() => setJobs(jl.filter((_, k) => k !== i))} aria-label="删除">×</button>
             </div>
             <input className={inp} value={j.note} placeholder="说明" onChange={(e) => pj(i, { note: e.target.value })} />
             <div className="grid grid-cols-3 gap-1.5">
-              {([["pay", "收入"], ["stress", "压力"], ["fameReq", "名气门槛"]] as const).map(([k, l]) => (
+              {(builtinFame || j.fameReq ? [["pay", "收入"], ["stress", "压力"], ["fameReq", "名气门槛"]] as const : [["pay", "收入"], ["stress", "压力"]] as const).map(([k, l]) => (
                 <label key={k} className="block text-[10.5px] text-ink-soft">{l}
                   <input type="number" className={`${inp} mt-0.5`} value={j[k]} onChange={(e) => pj(i, { [k]: num(e.target.value) } as Partial<SideJob>)} />
                 </label>
@@ -109,7 +111,7 @@ export default function ModActsEditor({ jobs, acts, stats, attrs, onChange }: {
 
       <div className="space-y-2">
         <p className="text-[12px] font-bold text-ink">周末活动 <span className="font-normal text-ink-soft">· 从空白自填</span></p>
-        {!al.length && <p className="text-[11px] text-ink-soft">还没有周末活动；点下方添加。开局不会套用娱乐圈应酬表。</p>}
+        {!al.length && <p className="rounded-xl border border-dashed border-line px-3 py-3 text-center text-[11.5px] text-ink-soft">还没有周末活动。每个活动可归入「休息调整」或「外出社交」分类。</p>}
         {al.map((a, i) => (
           <div key={a.id} className="space-y-1.5 rounded-xl border border-line bg-paper p-2.5">
             <div className="flex items-center gap-1.5">
@@ -124,7 +126,7 @@ export default function ModActsEditor({ jobs, acts, stats, attrs, onChange }: {
               </select>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-              {([["cost", "花费"], ["stress", "压力"], ["fame", "名气"], ["reputation", "口碑"]] as const).map(([k, l]) => (
+              {(builtinFame || a.fame || a.reputation ? [["cost", "花费"], ["stress", "压力"], ["fame", "名气"], ["reputation", "口碑"]] as const : [["cost", "花费"], ["stress", "压力"]] as const).map(([k, l]) => (
                 <label key={k} className="block text-[10.5px] text-ink-soft">{l}
                   <input type="number" className={`${inp} mt-0.5`} value={(a[k] as number | undefined) ?? 0} onChange={(e) => pa(i, { [k]: num(e.target.value) } as Partial<WeekendAct>)} />
                 </label>
