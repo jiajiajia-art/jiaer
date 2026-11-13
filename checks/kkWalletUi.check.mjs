@@ -22,6 +22,9 @@ test('account types expose wallet, membership, recharge, and activity metadata',
   assert.match(source, /kkBalance\?: KkBalance/);
   assert.match(source, /membership\?: MembershipState/);
   assert.match(source, /kkRechargePlans\?: KkRechargePlan\[\]/);
+  assert.match(source, /overseasMultiplier\?:/);
+  assert.match(source, /export interface OverseasPricing/);
+  assert.match(source, /overseasPricing\?: OverseasPricing/);
   assert.match(source, /kkFilter\?: KkActivityFilter/);
   assert.match(source, /KkValidityFilter = 'all' \| 'permanent' \| 'limited'/);
   assert.match(source, /KkAssetCategoryFilter = 'all' \| 'recharge' \| 'gift'/);
@@ -203,9 +206,9 @@ test('recharge and membership UI only exposes the new plans and benefits', () =>
     source.indexOf('styles.membershipSubmitBtn') < source.indexOf('className={styles.membershipRulesCard}'),
     '领取规则应位于会员支付按钮之后',
   );
-  assert.match(source, /<b>\{plan\.baseDiamonds\}<\/b><small>KK币<\/small>/);
-  // 首充改为角标「首充」+「+N 首充赠送」
-  assert.match(source, /\+\$\{plan\.firstBonusDiamonds\} 首充赠送/);
+  // 功能注释：档位卡用 tileCoins 展示基础币；首充角标 + tileBonus「首充得」
+  assert.match(source, /plan\.baseDiamonds[\s\S]{0,40}KK币/);
+  assert.match(source, /tileRibbon[\s\S]{0,20}首充|tileBonus[\s\S]{0,120}firstBonusDiamonds|首充得/);
   assert.doesNotMatch(source, /setAmountText\(String\((?:defaultPlan|plan)\.amount\)\)/);
   assert.doesNotMatch(source, /const matchedPlan = rechargePlans/);
   assert.match(styles, /\.plansList\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s);

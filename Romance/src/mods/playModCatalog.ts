@@ -100,8 +100,10 @@ function withStoreDetail(
     authorName: "官方",
     downloadCount: detail.downloads,
     detailDescription: detail.detail,
-    // 功能注释：预览图必须由作者上传，本地种子不造占位图
-    previewImages: [],
+    // 功能注释：官方种子用包图标作商店预览，详情至少一张图；作者上传的照片以后台为准
+    previewImages: [
+      `data:image/svg+xml;charset=utf-8,${encodeURIComponent(item.iconSvg || `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"/>`)}`,
+    ],
     // 功能注释：官方包必须有至少 1 个适用题材语义；缺配置时按 modern 兜底并便于单测抓住遗漏
     applicableThemeCodes: codes?.length ? [...codes] : ["modern"],
   };

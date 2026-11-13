@@ -1,5 +1,6 @@
 import { loadGlobal, saveGlobal } from "./saveScope";
 import { buildTopbarCss, type TopbarDiy } from "./topbarDiy";
+import { syncRememberToCloud } from "./platformCreatorAssets";
 
 /* 自由美化（类酒馆）：任意颜色 / 字体文件 / 各部位贴图。
  * 生成一段 <style id="free-style">，放在皮肤之后、用户 CSS 之前；选择器加权以压过皮肤变量。 */
@@ -87,21 +88,23 @@ export const loadAssets = (): Asset[] => {
   return kept;
 };
 const newId = () => Math.random().toString(36).slice(2, 9);
-/** 功能注释：P8 采用生图后进「我的素材库」；同 URL 去重，写入后广播 star:assets。ImagePicker 与批量生图共用，勿各写一份。 */
+/** 功能注释：P8 采用生图后进「我的素材库」；同 URL 去重，写入后广播 star:assets，并同步云端。ImagePicker 与批量生图共用，勿各写一份。 */
 export function rememberImageAsset(url: string, name = "图片", kind?: AssetKind): boolean {
   if (!url) return false;
   const a = loadAssets();
   const hit = a.find((x) => x.url === url);
+  let ok: boolean;
   // 功能注释：已在库里则转长期保留并补分类，不重复写
   if (hit) {
     delete hit.temp;
     if (kind && !hit.kind) hit.kind = kind;
-    const ok = saveAssets(a);
+    ok = saveAssets(a);
     emitAssets();
-    return ok;
+  } else {
+    ok = saveAssets([{ id: newId(), name: name.slice(0, 24) || "图片", url, at: Date.now(), ...(kind ? { kind } : {}) }, ...a]);
+    emitAssets();
   }
-  const ok = saveAssets([{ id: newId(), name: name.slice(0, 24) || "图片", url, at: Date.now(), ...(kind ? { kind } : {}) }, ...a]);
-  emitAssets();
+  if (ok) syncRememberToCloud(url, name);
   return ok;
 }
 /** 生图结果自动收进素材库（临时）；已存在则只刷新使用时间 */
@@ -112,6 +115,8 @@ export function addTempAsset(url: string, name = "AI 生图", kind?: AssetKind):
   if (hit) { hit.usedAt = Date.now(); if (kind && !hit.kind) hit.kind = kind; ok = saveAssets(a); }
   else ok = saveAssets([{ id: newId(), name: name.slice(0, 24), url, at: Date.now(), temp: true, ...(kind ? { kind } : {}) }, ...a]);
   emitAssets();
+  // 功能注释：临时生图也进云端「我的」，7 天规则仍由 temp 标记
+  if (ok) syncRememberToCloud(url, name, { temp: true });
   return ok;
 }
 /** 收藏：长期保留（不在库里则直接加入） */

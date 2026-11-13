@@ -90,10 +90,6 @@ interface RechargeModalProps {
     constrainToGameViewport?: boolean;
 }
 
-/** 功能注释：海外支付暂未上线（等后端美元下单接口就绪，见 docs/11.11更新-后端交接文档.md 模块八），改为 true 即开放 */
-const OVERSEAS_PAY_ENABLED = false;
-const WEB_PAY_METHODS: DefaultPayMethod[] = OVERSEAS_PAY_ENABLED ? ['wechat', 'alipay', 'overseas'] : ['wechat', 'alipay'];
-
 const POLL_INTERVAL_MS = 3000;
 const POLL_TIMEOUT_MS = 2 * 60 * 1000;
 const COUNTDOWN_SECONDS = POLL_TIMEOUT_MS / 1000;
@@ -742,6 +738,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                 </div>
                 <div className={styles.amountsGrid}>
                     {rechargePlans.map((plan) => {
+                        const planDiamonds = plan.firstChargeEligible ? plan.firstTotalDiamonds : plan.baseDiamonds;
                         const isFirst = plan.firstChargeEligible;
                         const isActive = selectedFirstChargePlanId === plan.planId;
                         return (
@@ -754,11 +751,13 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                             >
                                 {isFirst && <span className={styles.tileRibbon}>首充</span>}
                                 <span className={styles.tileCoins}>
-                                    <b>{plan.baseDiamonds}</b><small>KK币</small>
+                                    <b>{plan.baseDiamonds} KK币</b>
                                 </span>
                                 {/* 首充 / 非首充共用同一标签位，卡片高度一致 */}
                                 <span className={`${styles.tileBonus} ${isFirst ? styles.tileBonusFirst : ''}`}>
-                                    {isFirst ? `+${plan.firstBonusDiamonds} 首充赠送` : '已享首充'}
+                                    {isFirst
+                                        ? <>首充得 <strong>{planDiamonds}</strong></>
+                                        : <>本次获得 <strong>{plan.baseDiamonds}</strong></>}
                                 </span>
                                 <span className={styles.tilePrice}>
                                     {fmt(toPayPrice(plan.amount, plan.overseasMultiplier))}
@@ -930,8 +929,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                         <section className={styles.paymentSection} aria-labelledby="payment-method-heading">
                             <h3 id="payment-method-heading" className={styles.sectionHeading}>支付方式</h3>
                             <div className={styles.payMethodToggle} role="group" aria-label={t('rechargeModal.choosePayMethod')}
-                                style={{ gridTemplateColumns: `repeat(${isMiniProgramEnv() ? 1 : WEB_PAY_METHODS.length}, minmax(0, 1fr))` }}>
-                                {(isMiniProgramEnv() ? (['wechat'] as DefaultPayMethod[]) : WEB_PAY_METHODS).map((method) => (
+                                style={isMiniProgramEnv() ? { gridTemplateColumns: '1fr' } : undefined}>
+                                {((isMiniProgramEnv() ? ['wechat'] : ['wechat', 'alipay', 'overseas']) as DefaultPayMethod[]).map((method) => (
                                     <button
                                         key={method}
                                         type="button"
@@ -959,7 +958,21 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                             </div>
                         </section>
 
-                        {/* 功能注释：订单摘要已删——支付按钮文案已含金额与商品，中间摘要重复且占位 */}
+                        {/* 功能注释：订单摘要便于用户核对金额/到账；与支付按钮文案互补 */}
+                        <section className={styles.orderSummary} aria-label="订单摘要">
+                            {rechargeTab === 'membership' ? (
+                                <>
+                                    <div><span>选择商品</span><strong>{selectedMembershipPlan?.name ?? '未选择'}</strong></div>
+                                    <div><span>支付金额</span><strong>{fmt(membershipPayAmount)}</strong></div>
+                                </>
+                            ) : (
+                                <>
+                                    <div><span>支付金额</span><strong>{fmt(payAmount)}</strong></div>
+                                    <div><span>本次获得</span><strong>{estimatedDiamonds} KK币</strong></div>
+                                </>
+                            )}
+                        </section>
+
                         <button
                             type="submit"
                             className={`${styles.submitBtn} ${rechargeTab === 'membership' ? styles.membershipSubmitBtn : ''}`}

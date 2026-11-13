@@ -263,7 +263,7 @@ export default function AiImageGen({
               {(
                 [
                   ["refs", "参考图", refs.length > 0 ? String(refs.length) : ""],
-                  ["stylePick", "选画风", style.trim() ? "✓" : ""],
+                  ["stylePick", "选画风", style.trim() ? "已选" : ""],
                 ] as const
               ).map(([id, label, badge]) => {
                 const on = prepTab === id;
@@ -342,7 +342,8 @@ export default function AiImageGen({
 
               {prepTab === "stylePick" && (
                 <div className="space-y-1.5">
-                  <p className="text-[11px] font-bold tracking-wide text-ink-soft">点选画风（提示词由后台配置，此处只选不改）</p>
+                  <p className="text-[11px] font-bold tracking-wide text-ink-soft">选填：可写画风；留空则按主体与设定生成</p>
+                  <p className="text-[11px] text-ink-soft">点选画风（提示词由后台配置，此处只选不改）</p>
                   <ArtStylePicker value={style} disabled={locked} onChange={(v, preset) => {
                     setStyle(v);
                     // 功能注释：选中画风时并入该画风的负面词（排除三次元 / 低质）

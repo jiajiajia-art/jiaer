@@ -394,11 +394,19 @@ function DiscoverPage({ onSearch, onOpenChat }: { onSearch: () => void; onOpenCh
   const letterSkin = useCommsBrand().skin === "letter";
   const [inMoments, setInMoments] = useState(false);
   const [profile, setProfile] = useState<string | null>(null);
-  const [sub, setSub] = useState<"shake" | null>(null);
+  const [sub, setSub] = useState<"shake" | "channels" | null>(null);
   const recent = game!.npcs.slice(0, 3);
 
   if (profile) return <div className="absolute inset-0 z-30 bg-white"><ProfileView pid={profile} onBack={() => setProfile(null)} /></div>;
   if (sub === "shake") return <div className="absolute inset-0 z-30 bg-white"><ShakePage onBack={() => setSub(null)} onOpenChat={onOpenChat} /></div>;
+  if (sub === "channels") {
+    return (
+      <div className="absolute inset-0 z-30 flex flex-col bg-white">
+        <button type="button" onClick={() => setSub(null)} className="px-3 py-2 text-left text-[14px] text-ink/70">‹ 发现</button>
+        <p className="px-4 py-6 text-[14px] text-ink-soft">视频号还在筹备，先去看看身边的人。</p>
+      </div>
+    );
+  }
 
   if (inMoments) {
     return (
@@ -436,6 +444,11 @@ function DiscoverPage({ onSearch, onOpenChat }: { onSearch: () => void; onOpenCh
       )}
       {letterSkin && (
         <div><Item icon={<IconImage size={20} className="text-[#2ca35b]" />} label={commTerm("moments")} onClick={() => setInMoments(true)} thumbs={momentsPush} /></div>
+      )}
+      {!letterSkin && (
+        <div>
+          <Item icon={<IconImage size={20} className="text-[#fa9d3b]" />} label="视频号" onClick={() => setSub("channels")} />
+        </div>
       )}
       {!letterSkin && (
         <div>

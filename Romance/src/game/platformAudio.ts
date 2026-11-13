@@ -16,12 +16,13 @@ export type PlatformAudio = {
 
 const CC0 = "https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3";
 
-/** 功能注释：后台接口不可用时的内置兜底曲目 */
+/** 功能注释：后台接口不可用时的内置兜底曲目（别名 PLATFORM_AUDIO_FALLBACK 供契约单测） */
 const SEED: readonly PlatformAudio[] = Object.freeze([
   { id: "platform:cc0-bed", name: "短循环示例", kind: "bgm", src: CC0, loop: true },
   { id: "platform:cc0-roar", name: "恐龙吼声", kind: "sfx", src: CC0, loop: false },
   { id: "platform:cc0-air", name: "短氛围示例", kind: "amb", src: CC0, loop: true },
 ] as PlatformAudio[]);
+export const PLATFORM_AUDIO_FALLBACK = SEED;
 
 /** 功能注释：当前平台曲库（live binding：加载完成后各处读到的就是后台最新列表）；客户端没有的 id 在模组里标失效，不让存档打不开 */
 export let PLATFORM_AUDIO: readonly PlatformAudio[] = SEED;
@@ -42,7 +43,7 @@ function normalize(raw: unknown): PlatformAudio | null {
 }
 
 /** 功能注释：从运营后台拉取上架曲目；失败或为空时保留内置兜底。重复调用共用一次请求，force 强制刷新 */
-export function loadPlatformAudio(force = false): Promise<void> {
+export function loadPlatformAudioFromApi(force = false): Promise<void> {
   if (loading && !force) return loading;
   const token = readFunloomAuthToken();
   const base = String(resolveFunloomApiBase() || "").replace(/\/$/, "");
@@ -60,6 +61,9 @@ export function loadPlatformAudio(force = false): Promise<void> {
     .catch(() => { loading = null; });
   return loading;
 }
+
+/** 功能注释：兼容旧调用名；等同 loadPlatformAudioFromApi */
+export const loadPlatformAudio = loadPlatformAudioFromApi;
 
 /** 功能注释：组件里读平台曲库并在后台列表加载完成后重渲染 */
 export function usePlatformAudio(): readonly PlatformAudio[] {

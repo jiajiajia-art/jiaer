@@ -303,8 +303,9 @@ test('worldGenWizard_第2步须覆盖ModEditorPanel全部可生成Section', asyn
     头衔: ['头衔'],
     培训课程: ['培训课程'],
     '打工 · 周末活动': ['打工 · 周末活动'],
-    玩法规则: ['玩法规则'],
-    数值调节: ['引擎规则与经济'],
+    玩法规则: ['玩法规则', '规则列表'],
+    规则列表: ['规则列表', '玩法规则'],
+    数值调节: ['引擎规则与经济', '数值调节'],
   };
   const names = new Set(mod.WORLD_GEN_EDITOR_STEPS.map((s) => s.name));
   const covered = (t) => names.has(t) || (alias[t] ?? []).some((a) => names.has(a));
@@ -316,9 +317,10 @@ test('worldGenWizard_主线支线结局合并剧情线后为36项基础11项', a
   const mod = await import(pathToFileURL(join(romance, 'lib/worldGenWizard.ts')).href);
   const ids = mod.ALL_WORLD_GEN_EDITOR_STEP_IDS;
   assert.equal(new Set(ids).size, ids.length, '勾选 id 不得重复');
-  assert.equal(ids.length, 36);
+  // 功能注释：编辑器新增「玩法叫法」Section（content.terms），对应扩展步骤 playTerms；基础默认仍是 11 项
+  assert.equal(ids.length, 37);
   assert.equal(mod.DEFAULT_WORLD_GEN_EDITOR_STEP_IDS.length, 11);
-  assert.equal(mod.EXTENDED_WORLD_GEN_EDITOR_STEP_IDS.length, 25);
+  assert.equal(mod.EXTENDED_WORLD_GEN_EDITOR_STEP_IDS.length, 26);
   // 基础默认必须等于分栏里渲染的基础栏
   const tier = mod.groupWorldGenEditorStepsByTier();
   const coreRendered = tier.core.flatMap((g) => g.steps.map((s) => s.id));

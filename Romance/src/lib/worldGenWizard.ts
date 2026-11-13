@@ -244,8 +244,8 @@ const MOD_STEPS: WorldGenEditorStep[] = [
   { id: "trainings", group: "③ 养成", name: "培训课程", desc: "须先勾选「课程」模块 · 学费 · 体力 · 属性收益", contentIds: ["world", "mainPlot"], source: "mod" },
   { id: "sideJobs", group: "③ 养成", name: "打工 · 周末活动", desc: "须先勾选「打工」模块 · 收入 · 压力 · 解锁条件", contentIds: ["world", "mainPlot"], source: "mod" },
   { id: "income", group: "③ 养成", name: "账单与周期收入", desc: "须先勾选「账单」模块 · 固定账单 · 每周发放/扣除", contentIds: ["world"], source: "mod" },
-  { id: "gameRules", group: "③ 养成", name: "玩法规则", desc: "须先勾选 · 如果/否则 · 每天/每周判定", contentIds: ["world", "mainPlot"], source: "mod" },
-  { id: "tuning", group: "③ 养成", name: "引擎规则与经济", desc: "表现评级 · 休息 ·（有相关玩法才生成）课程/通告结算/违约（破产规则在结局配置）", contentIds: ["world"], source: "mod" },
+  { id: "gameRules", group: "③ 养成", name: "规则列表", desc: "须先勾选 · 如果/否则 · 每天/每周判定", contentIds: ["world", "mainPlot"], source: "mod" },
+  { id: "tuning", group: "③ 养成", name: "数值调节", desc: "引擎规则与经济 · 表现评级 · 休息 ·（有相关玩法才生成）课程/通告结算/违约（破产规则在结局配置）", contentIds: ["world"], source: "mod" },
 
   // 地点已并入①基础（取消独立「④ 世界」页签）；出行属玩法 Mod
   { id: "rooms", group: "① 基础", name: "地点", desc: "多级子地点 · 树状预览 · 准入 · 出口 · 开局地点", contentIds: ["locations"], source: "mod" },
@@ -257,6 +257,7 @@ const MOD_STEPS: WorldGenEditorStep[] = [
 
   // 玩法并入①基础：添加即启用，不再单独生成「功能开关」
   { id: "playModInstalls", group: "① 基础", name: "已添加的玩法", desc: "推荐 · 确认添加 · 底栏名 · 显隐（添加即启用）", contentIds: ["world", "mainPlot"], source: "mod" },
+  { id: "playTerms", group: "① 基础", name: "玩法叫法", desc: "把通告、货币、粉丝等改成题材里的说法（content.terms）", contentIds: ["world"], source: "mod" },
   { id: "travel", group: "① 基础", name: "出行与交通", desc: "须添加玩法后自定义：选择区标题 · 货币 · 出行方式 · 花费", contentIds: ["locations", "world"], source: "mod" },
   { id: "cars", group: "① 基础", name: "座驾", desc: "须添加座驾包后配置购车与切换（建议先加出行与交通）", contentIds: ["locations", "world"], source: "mod" },
   { id: "gigs", group: "① 基础", name: "通告库", desc: "通告门槛 · 酬劳 · 名气 · 成长 · 星级价目表", contentIds: ["mainPlot", "world"], source: "mod" },

@@ -10,7 +10,7 @@ import { friendlyAIError } from "../lib/aiError";
 import AiRoutePicker from "./AiRoutePicker";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { importModJson, useMods, validateMod } from "../mods/registry";
-import { applyPlatformThemeToMod, readWorldThemeHint } from "../lib/worldTheme";
+import { applyPlatformThemeToMod, patchWorldTheme, readWorldThemeHint } from "../lib/worldTheme";
 import { fetchPlatformGameTheme, fetchPlatformThemeTags, type PlatformThemeTag } from "../lib/platformThemeTags";
 import { readRomancePlatformDraftId } from "../lib/platformRomanceDraft";
 import {
@@ -131,7 +131,8 @@ import GameRulesEditor from "./GameRulesEditor";
 import PublishReviewModal from "./PublishReviewModal";
 import PlayTermsEditor from "./PlayTermsEditor";
 import GigConfigEditor from "./GigConfigEditor";
-import FactionsEditor from "./FactionsEditor";
+import CreatorAssetLibrary from "./CreatorAssetLibrary";
+import WorldThemeFields from "./WorldThemeFields";
 import type { RomancePublishInput, RomancePublishResult } from "../lib/platformRomanceDraft";
 import StorylinesEditor from "./StorylinesEditor";
 import SidelinesEditor from "./SidelinesEditor";
@@ -177,8 +178,8 @@ const GROUPS = [
   { k: "base", label: "① 基础", hint: "作品封面、名称与简介、剧本基调、时间与推进、头像、建角、人物线路、地点、音乐、已添加的玩法" },
   { k: "role", label: "② 角色", hint: "开局人物与关系档位（表白/婚礼请在「已添加的玩法」里加关系玩法）" },
   { k: "grow", label: "③ 养成", hint: "养成总开关、日程分类，以及课程、打工、账单、玩法规则、评级、休息等子系统" },
-  { k: "story", label: "④ 剧情", hint: "世界书、固定 / 首次事件、剧情线（主线 · 支线 · 结局）、剧情美化" },
-  { k: "look", label: "⑤ 美化", hint: "手机外观、皮肤美化、开场页外观、底栏样式" },
+  { k: "story", label: "④ 剧情", hint: "世界书、固定 / 首次事件、剧情线（主线 · 支线 · 结局）" },
+  { k: "look", label: "⑤ 美化", hint: "手机外观、皮肤美化、开场页外观、剧情美化、底栏样式" },
   { k: "pack", label: "本包内容", hint: "只列出这个叠加包里实际写了内容的区块；要加别的内容，去其他分组找" },
 ] as const;
 const STEPS = GROUPS.filter((x) => x.k !== "pack");
@@ -513,6 +514,7 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
     setM({ ...m, content: next });
   };
   const [addPlayOpen, setAddPlayOpen] = useState(false);
+  const [assetLibOpen, setAssetLibOpen] = useState(false);
   /* 功能注释：玩法配置面板按已安装 Mod 动态出现；编辑 addon 本体时按其目录声明的面板展示 */
   const playPanels = useMemo(() => {
     if (m.kind === "addon") {
@@ -883,10 +885,9 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishBusy, setPublishBusy] = useState(false);
   const [publishNote, setPublishNote] = useState<{ ok: boolean; text: string } | null>(null);
-  /** 功能注释：发布前与「保存并离开」同一套必填检查，再保存留在编辑器，通过后才弹协议窗。 */
+  /** 功能注释：发布不走编辑器必填拦截；保存草稿后直接进平台审核协议。 */
   const startPublish = () => {
     if (!onPublish) return;
-    if (blockIfRequiredMissing("发布")) return;
     if (!save(true)) return;
     setPublishNote(null);
     setPublishOpen(true);
@@ -957,6 +958,9 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
           </div>
         </Modal>
       )}
+      {assetLibOpen && (
+        <CreatorAssetLibrary onClose={() => setAssetLibOpen(false)} initialScope="mine" />
+      )}
       {addPlayOpen && (
         <AddPlayModModal
           installs={c.playModInstalls ?? []}
@@ -996,7 +1000,10 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
             {persisted ? `编辑「${m.name || initial.name}」` : "创建世界"}
           </span>
           <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
-            {/* 功能注释：顶栏只留「保存 / 放弃 / 预览」；已去掉「保存后退出」按钮，退出用左侧‹返回 */}
+            {/* 功能注释：顶栏只留「保存 / 放弃 / 预览」；素材库同排打开统一面板。已去掉「保存后退出」按钮，退出用左侧‹返回 */}
+            <button type="button" className={`${btn} shrink-0`} onClick={() => setAssetLibOpen(true)} title="打开素材库">
+              素材库
+            </button>
             <button
               type="button"
               onClick={() => save(true)}
@@ -1287,6 +1294,8 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
                 <FieldErr>{toneErr}</FieldErr>
               </label>
             </div>
+            {/* 功能注释：作者简化路径也写世界题材，供玩法商店与手机应用读适用题材 */}
+            <WorldThemeFields value={worldTheme} tags={platformThemeTags} onPatch={(patch) => setM(patchWorldTheme(m, patch))} />
           </>
         ) : (
           <>
@@ -1384,6 +1393,8 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
               )}
               <Help>叠加包通常依赖某个世界观；缺少依赖时该包会被跳过。</Help>
             </div>
+            {/* 功能注释：完整基本信息路径同样挂世界题材字段 */}
+            <WorldThemeFields value={worldTheme} tags={platformThemeTags} onPatch={(patch) => setM(patchWorldTheme(m, patch))} />
           </>
         )}
       </Section>
@@ -1440,17 +1451,6 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
           onAttrs={(customAttrs) => setC({ customAttrs })}
           onStartMoney={(v) => setC({ startMoney: v })}
           onMoneyLabel={(v) => setC({ moneyLabel: v })} />
-      </Section>
-
-      {/* 功能注释：势力放在①基础 · 建角下方；人物卡选「所属势力」、地点可划进势力范围 */}
-      <Section g="base" title="势力" target="factions" on={startFactions.length > 0} hint="作品里的组织 / 门派 / 阵营；人物可选归属，地点可设势力范围，对话与事件条件都会用到" count={startFactions.length || undefined}>
-        <FactionsEditor
-          value={startFactions}
-          memberCount={(id) => npcs.filter((n) => n.factionId === id).length}
-          rooms={roomIds.map((id) => ({ id, name: rooms[id]?.name || id, parent: rooms[id]?.parent }))}
-          repOn={showPlay("factionRep")}
-          onChange={(next) => setC({ creation: { ...(c.creation ?? {}), startFactions: next } as typeof c.creation })}
-        />
       </Section>
 
       {/* 功能注释：人物线路紧挨建角字段下方（①基础），便于先配属性再挂线路依赖 */}
@@ -1525,9 +1525,10 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
       </Section>
 
 
-      {/* 功能注释：先看人物卡（姓名在最前）；关系档位全作品共用，放在人物列表之后单独成块 */}
+      {/* 功能注释：关系档位全作品共用，放在人物列表之上；不再单开人脉配置页 */}
       <Section g="role" title="人物" on={has(c.npcs) || has(c.contacts)} hint="须有名有姓 · 身份 · 标签 · 小传 · 时间线 · 关系档位（全作品共用）" count={npcs.length || undefined}>
         <datalist id="mod-avatar-variants">{variantNames(c.avatars ?? null).map((x) => <option key={x} value={x} />)}</datalist>
+        <ContactsPanel value={c.contacts} onChange={(contacts) => setC({ contacts })} />
         {npcs.length > 5 && <SearchBox value={npcQ} onChange={setNpcQ} placeholder="搜索人物" />}
         {npcs.length === 0 && <EmptyState>还没有人物。</EmptyState>}
         {npcs.map((n, i) => !matches(npcQ, n.name, n.role, n.id) ? null : (
@@ -1580,15 +1581,19 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
                 {!roomIds.includes(n.home) && <option value={n.home}>{n.home ? `${n.home}（依赖模组的地点）` : "（未选择）"}</option>}
                 {roomIds.map((x) => <option key={x} value={x}>{rooms[x].name || x}</option>)}
               </select>
-              {/* 功能注释：所属势力来自上方「势力」区块；人物资料显示、对话提示词带上、事件条件可选 */}
-              {startFactions.length > 0 ? (
-                <select className={`${inp} !w-auto min-w-0 flex-1`} value={n.factionId ?? ""} aria-label="所属势力" onChange={(e) => setNpc(i, { factionId: e.target.value || undefined })}>
+              {/* 功能注释：所属势力只绑当前作品仍存在的势力，下拉不出现已失效 id */}
+              <label className="flex min-w-0 flex-1 items-center gap-1.5">
+                <span className="shrink-0 text-[11.5px] text-ink-soft">所属势力（可选）</span>
+                <select
+                  className={`${inp} !w-auto min-w-0 flex-1`}
+                  value={startFactionIds.has(n.factionId ?? "") ? (n.factionId ?? "") : ""}
+                  aria-label="所属势力（可选）"
+                  onChange={(e) => setNpc(i, { factionId: sanitizeNpcFactionId(e.target.value, startFactionIds) })}
+                >
                   <option value="">无所属势力</option>
                   {startFactions.map((f) => <option key={f.id} value={f.id}>{f.name || "（未命名势力）"}</option>)}
                 </select>
-              ) : (
-                <span className="text-[11px] text-ink-soft">建了势力后可在这里选所属势力</span>
-              )}
+              </label>
             </div>
             <label className="block">
               <span className={lbl}>小传 · 贴合世界观（约 300 字；供 AI 演绎与生图）</span>
@@ -1678,10 +1683,6 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
           </div>
         ))}
         <button className={btn} onClick={addNpc}>＋ 添加人物</button>
-        {/* 功能注释：关系档位全作品共用，单独成块放在人物卡之后，不贴在某个人身上 */}
-        <div className="pt-2">
-          <ContactsPanel value={c.contacts} onChange={(contacts) => setC({ contacts })} />
-        </div>
       </Section>
 
       {/* 功能注释：养成页顺序 = 总开关 → 日程分类（玩家最先看到的结构）→ 已勾子项各自成块；文案保持题材通用。 */}
@@ -1745,7 +1746,7 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
                 </label>
               ))}
             </div>
-            <Help>数值属性（如体力、压力、金钱）在「① 基础 → 建角」里定义；扣费、破产等经济规则在「④ 剧情 → 结局」里设置。</Help>
+            <Help>数值属性在「① 基础 → 建角」里定义；头衔请添加「头衔包」，不在养成页做名气分档。扣费、破产等经济规则在「④ 剧情 → 结局」里设置。</Help>
           </div>
         )}
       </Section>
@@ -1792,7 +1793,7 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
       )}
 
       {isGrowEnabled(c) && isGrowModuleOn(c, "gameRules") && (
-        <Section g="grow" title="玩法规则" on={has(c.gameRules)} hint="判定时机 · 条件 · 调用事件库 · 规则变量" count={c.gameRules?.length || undefined}>
+        <Section g="grow" title="规则列表" on={has(c.gameRules)} hint="判定时机 · 条件 · 调用事件库 · 规则变量" count={c.gameRules?.length || undefined}>
           <Help>每条规则在指定时机检查条件，命中后触发事件库里的一条事件，或修改一个规则变量。显示「未挂钩事件」的规则命中后不会产生任何效果，记得展开挂上事件。</Help>
           <GameRulesEditor
             value={c.gameRules}
@@ -2218,7 +2219,7 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
         </div>
       </Section>
 
-      <Section g="story" title="剧情美化" on={has(c.lookRules)} hint="条件满足时自动切换外观 · 玩家可在美化里关闭" count={c.lookRules?.length}>
+      <Section g="look" title="剧情美化" on={has(c.lookRules)} hint="条件满足时自动切换外观 · 玩家可在美化里关闭" count={c.lookRules?.length}>
         <p className="text-[11px] leading-relaxed text-ink-soft">给这个世界设计「会随剧情变化的外观」：深夜转暗、压力爆表变灰、成名后换上流金……条件与固定事件同一套，也能读取玩法规则里的规则变量。玩家自己的剧情美化优先于此处。</p>
         <LookRulesEditor value={c.lookRules} events={c.fixedEvents} onChange={(lookRules) => setC({ lookRules })} />
       </Section>

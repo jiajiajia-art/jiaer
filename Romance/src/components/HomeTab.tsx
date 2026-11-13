@@ -1476,8 +1476,9 @@ export default function HomeTab() {
                               </p>
                             )
                           )}
-                          {sceneStory.map((t) =>
-                            t.role === "player" ? (
+                          {game.story.map((t) => {
+                            if (!sceneStory.some((row) => row.id === t.id)) return null;
+                            return t.role === "player" ? (
                               <div key={t.id} className="flex justify-end">
                                 <div className="dlg-bubble-me max-w-[85%] rounded-[var(--radius-ui)] rounded-tr-sm bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] px-3.5 py-2 text-[13.5px] font-medium text-white shadow-sm">
                                   {t.segments.map((seg) => (seg.kind === "narration" ? seg.text : "")).join("")}
@@ -1492,8 +1493,8 @@ export default function HomeTab() {
                                 <Thoughts thoughts={t.thoughts} npcs={game.npcs} />
                                 <NewcomerCards ids={introSlots.get(t.id)} />
                               </div>
-                            ),
-                          )}
+                            );
+                          })}
                           {busy && <LiveNarration scrollRef={scrollRef} overlay={!isNovel} plain={isNovel} />}
                         </>
                       }

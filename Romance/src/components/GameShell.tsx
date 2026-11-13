@@ -571,7 +571,33 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
         </SettingBranch>
         )}
 
-        {/* 功能注释：横竖屏暂不支持选择（固定竖屏），屏幕方向入口已移除 */}
+        {/* 功能注释：每局默认竖屏；游玩中可切横屏，不锁定 */}
+        {!beauty && (
+        <div>
+          <span className="text-[14px] font-bold leading-tight tracking-[0.06em] text-ink">屏幕方向</span>
+          <span className="mb-2 mt-0.5 block text-[11px] text-ink-soft">每局默认竖屏，游玩中可随时切换</span>
+          <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="屏幕方向">
+            {([
+              { id: "portrait", label: "竖屏" },
+              { id: "landscape", label: "横屏" },
+            ] as const).map((o) => {
+              const on = (theme.orient ?? "portrait") === o.id;
+              return (
+                <button
+                  key={o.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => setTheme({ ...theme, orient: o.id })}
+                  className={`rounded-xl border px-3 py-2 text-[13px] font-bold transition ${on ? "border-jade bg-jade/10 text-jade" : "border-line bg-paper text-ink-soft"}`}
+                >
+                  {o.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        )}
         {/* 本局游玩偏好：开局时按世界观默认 / 建角所选，之后随时可改，下一回合起生效 */}
         {!beauty && game && (
         <div>
@@ -796,6 +822,7 @@ export default function GameShell() {
     : null;
   const topbarData = {
     ...topbarDataOf(game, modWorld.chain[0].name),
+    note: game.world.note,
     ...(mainQuest
       ? {
           questStep: mainQuest.waitLabel ? `${mainQuest.stepName} · ${mainQuest.waitLabel}` : mainQuest.stepName,

@@ -837,7 +837,7 @@ export function CondRow({ c, events, selfId, onChange, onDelete, srcs, people, q
       <select className={selCls} value={c.kind === "metric" ? "stat" : c.kind} onChange={(e) => {
         const k = e.target.value as FixedCond["kind"];
         const first = attrOpts[0];
-        onChange(k === "stat" ? { kind: first?.kind ?? "stat", key: first?.key ?? "", op: "gte", value: 1 } as FixedCond : defaultCond(k, draftRefs));
+        onChange(k === "stat" ? { kind: first?.kind ?? "stat", key: first?.key ?? "", op: "gte", value: 1 } as FixedCond : defaultCond(e.target.value as FixedCond["kind"], draftRefs));
       }}>
         <option value="stat">属性</option>
         <option value="rel">NPC 关系</option>
@@ -1093,7 +1093,7 @@ export function EffectRow({ ef, onChange, onDelete }: { ef: FixedEffect; onChang
       <select className={selCls} value={ef.kind === "metric" ? "stat" : ef.kind} onChange={(e) => {
         const k = e.target.value as FixedEffect["kind"];
         const first = attrOpts[0];
-        onChange(k === "stat" ? { kind: first?.kind ?? "stat", key: first?.key ?? "", delta: 1 } as FixedEffect : defaultEffect(k, draftRefs));
+        onChange(k === "stat" ? { kind: first?.kind ?? "stat", key: first?.key ?? "", delta: 1 } as FixedEffect : defaultEffect(e.target.value as FixedEffect["kind"], draftRefs));
       }}>
         <option value="stat">增减属性</option>
         <option value="rel">NPC 关系</option>

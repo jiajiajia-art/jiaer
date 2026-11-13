@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { assetDaysLeft, loadAssets, rememberImageAsset, saveAssets, touchAsset, uploadImage, type AssetKind } from "../lib/freeStyle"
-import AssetKindTabs, { filterAssetsByKind, type AssetKindFilter } from "./AssetKindTabs"
+import { rememberImageAsset, touchAsset, uploadImage, type AssetKind } from "../lib/freeStyle"
 import { displayableImageSrc } from "../lib/displayableImageSrc"
 import { mediaCheck } from "../game/engineRules"
 import {
@@ -12,14 +11,14 @@ import {
 import { Modal } from "./ui"
 import AiImageGen, { type AiImageGenPhase } from "./AiImageGen"
 import type { EditorImagePromptParts } from "../lib/editorImagePrompts"
-import PlatformLocationAssetPicker from "./PlatformLocationAssetPicker"
+import CreatorAssetLibrary from "./CreatorAssetLibrary"
 import type { LocationAssetPurpose } from "../lib/platformLocationAssetLibrary"
 
 /* 通用图片选择器：点缩略图或「上传」直接选本地图片（有图床走图床，否则本地压缩，并收进素材库）；
  * 也可从素材库挑选、粘贴链接、清除。所有美化里需要图片的地方共用。
  * scenePortrait：地点场景图 / 大地图竖版，上传/素材库/生图一律裁成 9:16 / 1080×1920；「链接」改为「生图」。
  * aiGen：在「上传」旁出「生图」按钮，弹窗内填提示词；走平台既有生图入口，不在页内铺输入框。
- * platformAssetPurpose：地点页大地图/场景图走平台地点素材库弹窗（只换预览图，与地点库整包分离）。 */
+ * platformAssetPurpose：地点页大地图/场景图打开统一素材库并停在地点图（只换预览图，与地点整包分离）。 */
 const btn =
   "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40"
 
@@ -64,29 +63,27 @@ export default function ImagePicker({
   scenePortrait?: boolean
   /** 功能注释：开启后在上传旁显示「生图」，弹窗调用平台生图，不内联铺输入框。 */
   aiGen?: ImagePickerAiGen
-  /** 功能注释：有值时「素材库」打开平台地点素材库（按用途筛），不走本地素材格。 */
+  /** 功能注释：有值时「素材库」打开统一面板并停在地点图 Tab。 */
   platformAssetPurpose?: LocationAssetPurpose
   /** 功能注释：存进素材库的分类；缺省时地点竖图 = 地点、标签含「封面」= 封面、「头像」= 头像 */
   assetKind?: AssetKind
 }) {
   const ref = useRef<HTMLInputElement>(null)
-  const [mode, setMode] = useState<"" | "lib" | "link">("")
+  const [mode, setMode] = useState<"" | "link">("")
   const [link, setLink] = useState("")
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState("")
   const [genOpen, setGenOpen] = useState(false)
   // 功能注释：生图弹窗阶段——编辑 / 生成中 / 结果；用于改标题与生成中锁定关闭
   const [genPhase, setGenPhase] = useState<AiImageGenPhase>("edit")
-  const [platformLibOpen, setPlatformLibOpen] = useState(false)
+  // 功能注释：素材库一律打开统一面板（含「我的」），地点图位默认停在地点图 Tab
+  const [assetLibOpen, setAssetLibOpen] = useState(false)
   const src = displayableImageSrc(value)
   const [broken, setBroken] = useState(false)
   useEffect(() => { setBroken(false) }, [src])
   const show = Boolean(src) && !broken
   const kind: AssetKind | undefined = assetKind
     ?? (scenePortrait ? "location" : /封面/.test(label) ? "cover" : /头像/.test(label) ? "avatar" : undefined)
-  const [kindFilter, setKindFilter] = useState<AssetKindFilter>(kind ?? "all")
-  const allAssets = mode === "lib" && !platformAssetPurpose ? loadAssets() : []
-  const assets = filterAssetsByKind(allAssets, kindFilter)
   const portraitHint = scenePortrait ? SCENE_PORTRAIT_HINT : hint
   // 功能注释：地点场景用「生图」替换「链接」；封面等仍可同时有生图+链接
   const genOpts: ImagePickerAiGen | undefined = aiGen
@@ -197,14 +194,10 @@ export default function ImagePicker({
           <button
             type="button"
             className={btn}
-            aria-pressed={platformAssetPurpose ? platformLibOpen : mode === "lib"}
+            aria-pressed={assetLibOpen}
             onClick={() => {
-              if (platformAssetPurpose) {
-                setPlatformLibOpen(true)
-                setMode("")
-                return
-              }
-              setMode(mode === "lib" ? "" : "lib")
+              setMode("")
+              setAssetLibOpen(true)
             }}
           >
             素材库
@@ -260,46 +253,15 @@ export default function ImagePicker({
           </button>
         </div>
       )}
-      {mode === "lib" && !platformAssetPurpose && allAssets.length > 0 && (
-        <div className="mt-2"><AssetKindTabs assets={allAssets} value={kindFilter} onChange={setKindFilter} /></div>
-      )}
-      {mode === "lib" && !platformAssetPurpose &&
-        (assets.length ? (
-          <div className="mt-2 grid max-h-44 grid-cols-5 gap-1.5 overflow-y-auto rounded-xl border border-line bg-paper-2 p-1.5 sm:grid-cols-7">
-            {assets.map((a) => (
-              <button
-                type="button"
-                key={a.id}
-                title={a.name}
-                disabled={busy}
-                onClick={() => { void applyUrl(a.url) }}
-                className={`relative aspect-square overflow-hidden rounded-md border ${
-                  a.url === value
-                    ? "border-jade ring-2 ring-jade/40"
-                    : "border-line"
-                }`}
-              >
-                <img
-                  src={a.url}
-                  alt={a.name}
-                  className="h-full w-full object-cover"
-                  loading="lazy"
-                />
-                {a.temp && <span className="absolute inset-x-0 bottom-0 bg-black/55 text-center text-[9px] leading-[14px] text-white">{assetDaysLeft(a)}天后清除</span>}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <p className="mt-2 rounded-xl border border-dashed border-line px-3 py-2 text-[11px] text-ink-soft">
-            {allAssets.length ? "这个分类下还没有素材，换个分类看看。" : "素材库还是空的，点「上传」选一张，会自动收进素材库。"}
-          </p>
-        ))}
-      {platformLibOpen && platformAssetPurpose ? (
-        <PlatformLocationAssetPicker
-          purpose={platformAssetPurpose}
-          onClose={() => setPlatformLibOpen(false)}
-          onPick={(url) => {
-            setPlatformLibOpen(false)
+      {assetLibOpen ? (
+        <CreatorAssetLibrary
+          onClose={() => setAssetLibOpen(false)}
+          initialTab={platformAssetPurpose ? "locationImage" : "general"}
+          initialScope="mine"
+          locationImagePurpose={platformAssetPurpose}
+          pickMode="image"
+          onPickImage={(url) => {
+            setAssetLibOpen(false)
             void applyUrl(url)
           }}
         />

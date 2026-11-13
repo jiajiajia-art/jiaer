@@ -315,9 +315,19 @@ export async function completeWithTools(
   tools: ToolDef[],
   timeoutMs?: number,
 ): Promise<{ text: string; calls: ToolCall[]; native: boolean }> {
-  // 功能注释：平台文案链路暂不透传 tools，退回普通 complete（与接口不支持 tools 时一致）
+  // 功能注释：平台 JWT 链路同样透传 tools / tool_calls，供模组工坊等原生 function calling
   if (hasPlatformPlayAuth()) {
-    return { text: await complete(cfg, messages, timeoutMs), calls: [], native: false };
+    const r = await completePlayViaPlatform(toPlatformMessages(messages), {
+      timeoutMs,
+      tools,
+      feature: "romance.completeWithTools",
+    });
+    const calls: ToolCall[] = (r.tool_calls ?? []).map((c) => ({
+      name: c.name,
+      args: c.args,
+      raw: c.raw,
+    }));
+    return { text: r.text, calls, native: calls.length > 0 };
   }
   const ctl = timeoutMs && timeoutMs > 0 ? new AbortController() : undefined;
   const dog = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : undefined;

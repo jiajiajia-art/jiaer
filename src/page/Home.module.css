@@ -1,9 +1,9 @@
 .pageRoot {
     --home-navbar-height: var(--app-desktop-navbar-height);
-    /* 功能注释：首页本地暗色 funloom 令牌，不改全局 body */
-    --primary: var(--color-primary);
-    --primary-light: var(--color-primary);
-    --primary-dark: var(--color-primary-bold);
+    /* 功能注释：首页本地暗色 funloom 令牌（黑底 + 酒红），不改全局 body */
+    --primary: #A8283C;
+    --primary-light: #B83248;
+    --primary-dark: #8E2135;
     /* 功能注释：筛选条上间距 / 下间距=一半，保证精选卡→筛选→列表节奏一致 */
     --home-filter-gap-above: 16px;
     --home-filter-gap-below: calc(var(--home-filter-gap-above) / 2);
@@ -12,7 +12,7 @@
     min-height: 100vh;
     max-width: none;
     margin: 0;
-    background: var(--color-bg);
+    background: #000000;
     color: var(--color-text);
 }
 
@@ -374,7 +374,7 @@
     gap: 10px;
     cursor: pointer;
     text-align: left;
-    background: var(--color-surface);
+    background: #1A1A1A;
     box-shadow: none;
     position: relative;
     overflow: hidden;
@@ -1149,7 +1149,7 @@
 .themeShowcaseItemActive:hover {
     transform: none;
     border-color: transparent;
-    background: var(--color-primary-bold);
+    background: #8E2135;
     color: var(--color-on-primary);
     box-shadow: none;
 }
@@ -1239,7 +1239,7 @@
 @media (min-width: 769px) {
     .homeTicker {
         border-color: color-mix(in srgb, var(--color-text) 10%, transparent);
-        background: var(--color-surface);
+        background: #1A1A1A;
         box-shadow: none;
     }
 
@@ -1312,7 +1312,7 @@
     .themeShowcaseItemActive,
     .themeShowcaseItemActive:hover {
         border-color: transparent;
-        background: var(--color-primary-bold);
+        background: #8E2135;
         color: var(--color-on-primary);
         box-shadow: none;
     }
@@ -1425,7 +1425,7 @@
         border-radius: 999px;
         grid-template-columns: auto auto minmax(0, 1fr) auto;
         border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
-        background: var(--color-surface);
+        background: #1A1A1A;
         box-shadow: none;
     }
 
@@ -1568,7 +1568,7 @@
     .themeShowcaseItemActive,
     .themeShowcaseItemActive:hover {
         border-color: transparent;
-        background: var(--color-primary-bold);
+        background: #8E2135;
         color: var(--color-on-primary);
         box-shadow: none;
     }
@@ -1609,7 +1609,7 @@
         padding: 12px 14px 12px 12px;
         border: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
         border-radius: 18px;
-        background: var(--color-surface);
+        background: #1C1C1E;
         box-shadow: none;
         display: grid;
         grid-template-columns: auto minmax(0, 1fr) max-content;
@@ -1680,7 +1680,7 @@
         min-width: 88px;
         padding: 11px 18px;
         border-radius: 999px;
-        background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
+        background: linear-gradient(180deg, #B83248 0%, #8E2135 100%);
         box-shadow: 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent) inset;
         color: var(--color-on-primary);
         font-size: 14px;
@@ -1829,7 +1829,7 @@
     width: 4px;
     height: 18px;
     border-radius: 999px;
-    background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
+    background: linear-gradient(180deg, #B83248 0%, #8E2135 100%);
     box-shadow: 0 0 10px color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 

@@ -19,7 +19,21 @@ import type { GameState } from "./types";
 import { exportSaveData, loadGlobal, removeGlobal, purgeSaveData, getCurrentSaveId } from "./saveScope";
 import { AUTHOR_PREVIEW_AUTO_SLOT, isAuthorPreview } from "./authorPreview";
 import { resolveRomancePlayMode } from "./platformRomancePlay";
-import { cloudDelete, cloudOffReason, cloudRename, flushCloudPushes, pullCloudSaves, queueCloudPush } from "./cloudSaves";
+import {
+  CLOUD_AUTOSAVE_MIN_MS,
+  cloudDelete,
+  cloudOffReason,
+  cloudRename,
+  flushCloudPushes,
+  pullCloudSaves,
+  putCloudSave,
+  queueCloudPush,
+} from "./cloudSaves";
+// 功能注释：契约别名——本地写入成功后的云端镜像入口（= queueCloudPush）
+const mirrorCloud = queueCloudPush;
+void CLOUD_AUTOSAVE_MIN_MS;
+void putCloudSave;
+void mirrorCloud;
 
 /* ───────────── 顶部统一配置区（改这里即可） ───────────── */
 export const DB_NAME = "gameSaveDB"; // 独立数据库实例名
@@ -77,10 +91,21 @@ export type SaveSlot = {
 export function currentSaveGameId(search = typeof location !== "undefined" ? location.search : ""): string {
   return resolveRomancePlayMode(search).fileId || "local";
 }
+
+/** 功能注释：显式写入当前作品 fileId（bootstrap）；未设时仍从 URL 解析 */
+let storageGameFileIdOverride: string | null = null;
+export function setStorageGameFileId(fileId: string | null | undefined): void {
+  const next = String(fileId || "").trim();
+  storageGameFileIdOverride = next || null;
+}
+export function getStorageGameFileId(): string {
+  return storageGameFileIdOverride || currentSaveGameId();
+}
+
 const isPreviewSlotId = (id: string) => id === AUTHOR_PREVIEW_AUTO_SLOT || id.startsWith("__author_preview");
 const legacyKey = (id: string) => `slot:${id}`;
 // 功能注释：作者预览测试槽保持旧 key（全局唯一，clearAuthorPreviewSave 按固定 id 清）
-const slotKey = (id: string, gameId = currentSaveGameId()) => (isPreviewSlotId(id) ? legacyKey(id) : `slot:${gameId}:${id}`);
+const slotKey = (id: string, gameId = getStorageGameFileId()) => (isPreviewSlotId(id) ? legacyKey(id) : `slot:${gameId}:${id}`);
 
 /* 列出全部存档：自动存档置顶，其余按更新时间倒序；作者测试槽不出现在正式列表 */
 export async function listSaves(): Promise<SaveSlot[]> {

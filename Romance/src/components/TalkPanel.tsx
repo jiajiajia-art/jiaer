@@ -224,7 +224,7 @@ export default function TalkPanel({ pid, name, role, onClose }: { pid: string; n
         role="dialog"
         aria-modal="true"
         aria-label={`与${name}对话`}
-        className="ui-sheet ui-dialog ui-dialog-game animate-pop"
+        className="ui-sheet ui-dialog animate-pop"
       >
         {/* 顶部：只留头像 + 姓名，心境弱化为一行小字 */}
         <header className="flex items-center gap-2.5 border-b border-line/50 px-4 py-2.5 sm:px-5">

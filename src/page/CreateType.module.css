@@ -3,7 +3,7 @@
     --type-card: var(--color-surface);
     --type-border: color-mix(in srgb, var(--color-text) 10%, transparent);
     /* 功能注释：活动入口跟暗色主站次要文案一致（白灰），不用品红/酒红当正文色 */
-    --activity-accent: var(--color-text-secondary);
+    --activity-accent: rgba(255, 255, 255, 0.78);
     --activity-accent-strong: var(--color-surface);
     --activity-rule: color-mix(in srgb, var(--color-text) 14%, transparent);
     width: 100%;

@@ -539,6 +539,7 @@ export default function TopbarView({ data, diy, topbar = "gradient", topbarText,
       {topbar !== "plain" && <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-line to-transparent" />}
       <div className={`topbar-inner relative ${compact ? "px-4 py-1.5" : "mx-auto max-w-3xl px-3.5 py-1.5 @min-[40rem]:px-5"}`}>
         {body}
+        {data.note ? <p className="topbar-note truncate px-0.5 pt-1 text-[11px] leading-snug text-ink-soft">{data.note}</p> : null}
       </div>
       {children}
     </Tag>

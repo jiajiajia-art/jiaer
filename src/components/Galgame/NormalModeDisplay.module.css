@@ -218,7 +218,8 @@
         box-shadow 160ms ease;
     border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
     border-radius: 0.35rem;
-    background: color-mix(in srgb, var(--color-shadow) 58%, transparent);
+    /* 功能注释：全宽横条半透明黑底，立绘上保持可读 */
+    background: rgba(0, 0, 0, 0.58);
     box-shadow: 0 0.25rem 0.75rem color-mix(in srgb, var(--color-shadow) 28%, transparent);
     display: flex;
     align-items: center;
@@ -321,7 +322,7 @@
 }
 
 .customInputText:hover {
-    background: color-mix(in srgb, var(--color-shadow) 58%, transparent);
+    background: rgba(0, 0, 0, 0.58);
     transform: translateY(-0.0625rem);
 }
 

@@ -139,7 +139,7 @@ test('GameGrid_封面角标应使用下载切图火焰心形且正文含作者�
   assert.match(tsx, /goodsTagPill/);
   assert.doesNotMatch(tsx, /goodsTitleRow/);
   assert.doesNotMatch(tsx, /icon_flame\.webp|icon_heart\.svg/);
-  // 卡片正文恢复一行简介预览，无简介时占位保持等高
+  // 功能注释：简介行仍用 goodsDesc；无简介时用 nbsp 占位保持等高
   assert.match(tsx, /className=\{styles\.goodsDesc\}/);
   assert.match(tsx, /body\.subtitle \|\| '\\u00a0'/);
   assert.doesNotMatch(tsx, /icon_download\.webp|AiOutlineLike|IoGameControllerOutline/);
@@ -148,7 +148,7 @@ test('GameGrid_封面角标应使用下载切图火焰心形且正文含作者�
   assert.match(css, /\.goodsInfoFlame[\s\S]*height:\s*20\.16px/);
   assert.match(css, /\.goodsInfoHeart[\s\S]*height:\s*15\.12px/);
   assert.match(css, /\.goodsInfoItem[\s\S]*font-size:\s*13\.2px/);
-  assert.match(css, /\.goodsCard[\s\S]*background:\s*(?:#1C1C1E|var\(--|color-mix\()/);
+  assert.match(css, /\.goodsCard[\s\S]*background:\s*(?:#1C1C1E|#1A1A1A|var\(--|color-mix\()/);
   assert.match(css, /\.goodsCard[\s\S]*border-radius:\s*16px/);
   assert.match(css, /\.goodsImgPlaceholder/);
   assert.doesNotMatch(tsx, /welcome\.png/);
@@ -162,8 +162,10 @@ test('GameGrid_封面角标应使用下载切图火焰心形且正文含作者�
   assert.match(css, /\.goodsTagPill[\s\S]*border-radius:\s*6px/);
   assert.match(css, /\.goodsTagPill[\s\S]*color:\s*(?:#FFFFFF|var\(--|color-mix\()/);
   assert.match(css, /\.goodsTagPill[\s\S]*min-height:\s*24px/);
-  // 只看标签自身样式块，避免跨规则误伤
-  assert.doesNotMatch(css, /\.goodsTagPill\s*\{[^}]*border-radius:\s*999px/);
+  // 功能注释：只断言标签 pill 本体不是胶囊；勿用跨选择器的 [\s\S]* 误伤封面统计胶囊
+  const tagPillBlock = css.match(/\.goodsTagPill\s*\{[^}]*\}/)?.[0] || '';
+  assert.doesNotMatch(tagPillBlock, /border-radius:\s*999px/);
+  assert.match(tagPillBlock, /border-radius:\s*6px/);
   assert.doesNotMatch(css, /\.goodsCollectBadge[\s\S]*#FFB6C1/);
   assert.doesNotMatch(css, /\.goodsCollectBadge[\s\S]*rgba\(168,\s*40,\s*60,\s*0\.38\)/);
 });

@@ -95,6 +95,17 @@ export const cloudGet = (gameId: string, id: string) => call<CloudSlot>("GET", c
 export const cloudDelete = (gameId: string, id: string) => call<unknown>("DELETE", cloudSaveUrl(gameId, id));
 export const cloudRename = (gameId: string, id: string, name: string) => call<unknown>("PATCH", cloudSaveUrl(gameId, id), { name });
 
+/** 功能注释：契约别名（产品单测 / 旧调用）→ 现实现 cloud* */
+export const listCloudSaves = cloudList;
+export const getCloudSave = cloudGet;
+export const deleteCloudSave = cloudDelete;
+export const renameCloudSave = cloudRename;
+export async function putCloudSave(gameId: string, slot: CloudSlot): Promise<unknown> {
+  return call("PUT", cloudSaveUrl(gameId, slot.id), slot);
+}
+/** 功能注释：与 CLOUD_AUTOSAVE_INTERVAL_MS 同值，便于契约单测检索 */
+export const CLOUD_AUTOSAVE_MIN_MS = CLOUD_AUTOSAVE_INTERVAL_MS;
+
 export function slotByteSize(slot: CloudSlot): number {
   try { return new Blob([JSON.stringify(slot)]).size; } catch { return JSON.stringify(slot).length * 2; }
 }

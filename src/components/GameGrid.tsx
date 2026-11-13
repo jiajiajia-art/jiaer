@@ -331,6 +331,10 @@ const GameGrid: React.FC<GameGridProps> = ({
                                     />
                                     <span className={styles.goodsAuthorName}>{author.name}</span>
                                 </div>
+                                {/* 功能注释：右侧收藏徽标与作者同一行，实心酒红胶囊 */}
+                                {body.collectBadge ? (
+                                    <span className={styles.goodsCollectBadge}>{body.collectBadge}</span>
+                                ) : null}
                             </div>
                             {/* 功能注释：首页标签行恒占位保齐；书架 works 无标签不渲染，去掉作者下方空白条 */}
                             {(body.tags.length > 0 || !isWorksLayout) && (

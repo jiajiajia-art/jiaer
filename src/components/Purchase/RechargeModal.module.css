@@ -2341,7 +2341,7 @@
     .submitBtn, .membershipSubmitBtn { min-height: 48px; font-size: 14px; }
     .paymentNotice { font-size: 11px; line-height: 1.5; text-align: center; }
 
-    /* 功能注释：充值中心卡片已缩小；删掉订单摘要后略放宽 gap，规则区不至于贴死支付钮 */
+    /* 功能注释：充值中心卡片已缩小；订单摘要与支付钮之间留出可滚动间距 */
     .modalContent.rechargeCenter .form { gap: 14px; padding-bottom: 8px; }
     .modalContent.rechargeCenter .regionSummary { min-height: 36px; margin-bottom: 8px; }
     .modalContent.rechargeCenter .rechargeTabs { margin-bottom: 8px; }
@@ -2485,10 +2485,13 @@
     font-variant-numeric: tabular-nums;
 }
 .tileCoins b {
-    font-size: 22px;
+    /* 功能注释：档位主文案是「数量 + KK币」整句，字号略收以免三列卡片裁切 */
+    font-size: 15px;
     font-weight: 800;
-    line-height: 1;
-    letter-spacing: -0.01em;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    text-align: center;
+    white-space: nowrap;
 }
 .tileCoins small {
     color: var(--color-text-secondary);
@@ -2506,6 +2509,10 @@
     font-size: 10.5px;
     font-weight: 600;
     white-space: nowrap;
+}
+.tileBonus strong {
+    font-weight: 800;
+    color: inherit;
 }
 .tileBonusFirst {
     background: color-mix(in srgb, var(--color-primary) 20%, transparent);
@@ -2568,7 +2575,7 @@
     .amountsGrid .tile,
     .amountsGrid .tileCustom { min-height: 100px; padding-top: 14px; gap: 6px; border-radius: 12px; }
     .amountsGrid .tileCustom { padding: 10px 8px; }
-    .tileCoins b { font-size: 19px; }
+    .tileCoins b { font-size: 13px; }
     .tileBonus { min-height: 18px; padding: 0 6px; font-size: 10px; }
     .tilePrice { min-height: 28px; padding: 5px 4px 6px; font-size: 12px; }
     .tileRibbon { font-size: 9px; padding: 2px 6px 3px 8px; }

@@ -231,8 +231,9 @@ export const dossierStatKeys = (): StatKey[] => {
     (k, i, a) => k in RAW_STAT_LABELS && a.indexOf(k) === i && !hid.has(k),
   );
   if (ordered.length) return ordered;
-  // 功能注释：作品表单没写 stats.order 时不补内置能力，档案显示「尚未配置个人能力」
-  return [];
+  // 功能注释：非娱乐圈没写 stats.order 不补八维；娱乐圈仍回落全量再扣 hidden
+  if (currentWorldId() !== "ent") return [];
+  return RAW_STAT_ORDER.filter((k) => !hid.has(k));
 };
 export const ALL_STAT_KEYS: readonly StatKey[] = ["yanji", "geyi", "koucai", "yitai", "donggan", "tineng", "caizhi", "zixin"];
 /* 开局资金 / 开局天气（开局日期见 content.ts CALENDAR，可用槽 startDate 简写覆盖） */

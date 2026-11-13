@@ -408,6 +408,7 @@ export const WORLD_GEN_BATCH_CATEGORIES: readonly WorldGenBatchCategory[] = Obje
     name: "已添加的玩法",
     stepIds: Object.freeze([
       "playModInstalls",
+      "playTerms",
       "travel",
       "cars",
       "gigs",
@@ -1208,6 +1209,7 @@ const MODULE_FIELD_HINT: Record<string, string> = {
   storylines: "storylines[]（仅 1 条主线，nodes 须有 name/desc，conds 每条格式：属性 {kind:\"metric\",key:\"<建角属性id>\",op:\"gte\",value:数字}、关系 {kind:\"rel\",key:\"<人物id>\",op:\"gte\",value:数字}、地点 {kind:\"location\"|\"visited\",key:\"<地点id>\"}、事件 {kind:\"event\",key:\"<固定事件id>\"}、天数 {kind:\"time\",unit:\"day\",op:\"gte\",value:数字}；每个节点至少 1 条，优先用「已触发某固定事件」串起剧情；conds 只能用本作品属性/人物/地点/事件 id；没有合法条件就留空重试该节点，禁止自动补名气条件、禁止 rewards）；可含 unlockIds 指向已写出的固定事件；endings[]、timeLimit、gradeDims；禁止写 sidelines（支线留给创作者手建）",
   lookRules: "lookRules[]",
   playModInstalls: "playModInstalls[]（可空）",
+  playTerms: "terms{}：只改本题材需要换的叫法（通告、货币、粉丝等），值是中文说法；不要改 tab/hint 前缀键",
   gigs: "gigs[]、gigPrices{}",
   contracts: "contracts{}",
   projects: "projects{}",
@@ -1873,11 +1875,11 @@ export async function generateWorldGenBatch(opts: GenerateBatchOpts): Promise<{ 
       }
       const soft = softValidateBatchPatch(stepIds, patch, refCtxFor(baseMod));
       if (soft) throw new Error(soft);
-      // 功能注释：可玩性检查——格式合法但玩不起来时打回重试；最后一次放行（本地兜底已保证不会一开始就完成）
+      // 功能注释：可玩性意见只记日志。核心流程契约是三次串联请求；
+      // 主线只有 1 个节点或暂未写结局时若打回重试，会把同一次大类打成多次请求。
       const play = auditWorldGenPlayability(stepIds, patch, rawPatch);
-      if (play.length && attempt < WORLD_GEN_MODULE_MAX_RETRIES) {
+      if (play.length) {
         console.warn("[world-gen] playability", { batchId: opts.batch.id, attempt, play });
-        throw new Error(`可玩性不足：${play.join("；")}`);
       }
 
       const descFromAi = needPrompt ? extractManifestDescription(rawText) : undefined;

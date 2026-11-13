@@ -14,7 +14,7 @@
         width: auto;
         height: calc(72px + env(safe-area-inset-bottom));
         padding-bottom: env(safe-area-inset-bottom);
-        background: var(--color-bg);
+        background: #000000;
         z-index: 999;
         justify-content: space-between;
         align-items: center;
@@ -43,7 +43,7 @@
     }
 
     .navItemActive {
-        color: var(--color-primary-fg);
+        color: #F16C83;
     }
 
     .navItemDisabled {
