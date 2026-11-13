@@ -1,11 +1,12 @@
 .overlay {
     position: fixed;
     inset: 0;
-    z-index: 5200;
+    /* 功能注释：与充值中心同档，须高于 AI 线路层 */
+    z-index: 2147483012;
     display: grid;
     place-items: center;
     padding: 20px;
-    background: rgba(0, 0, 0, 0.74);
+    background: color-mix(in srgb, var(--color-shadow) 74%, transparent);
     backdrop-filter: blur(4px);
 }
 
@@ -18,17 +19,17 @@
     align-items: center;
     gap: 14px;
     padding: 30px 24px 24px;
-    border: 1px solid rgba(255, 255, 255, 0.13);
+    border: 1px solid color-mix(in srgb, var(--color-text) 13%, transparent);
     border-radius: 12px;
-    background: #242426;
-    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
-    color: #fff;
+    background: var(--color-surface-2);
+    box-shadow: 0 24px 80px color-mix(in srgb, var(--color-shadow) 50%, transparent);
+    color: var(--color-text);
     text-align: center;
 }
 
 .successIcon {
     flex: 0 0 auto;
-    color: #35c77a;
+    color: var(--color-success);
 }
 
 .panel h2 {
@@ -39,7 +40,7 @@
 
 .headline {
     margin: 0;
-    color: rgba(255, 255, 255, 0.82);
+    color: color-mix(in srgb, var(--color-text) 82%, transparent);
     font-size: 15px;
     line-height: 1.55;
 }
@@ -48,23 +49,23 @@
     display: flex;
     align-items: baseline;
     gap: 8px;
-    color: #fff;
+    color: var(--color-text);
 }
 
 .amount strong {
-    color: #4bd68d;
+    color: var(--color-success);
     font-size: 38px;
     font-variant-numeric: tabular-nums;
 }
 
 .amount span {
-    color: rgba(255, 255, 255, 0.76);
+    color: color-mix(in srgb, var(--color-text) 76%, transparent);
     font-size: 16px;
 }
 
 .description {
     margin: 0;
-    color: rgba(255, 255, 255, 0.62);
+    color: var(--color-text-secondary);
     font-size: 13px;
     line-height: 1.55;
 }
@@ -72,7 +73,7 @@
 .benefits {
     width: 100%;
     margin: 2px 0 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
 }
 
 .benefits div {
@@ -81,18 +82,18 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     text-align: left;
 }
 
 .benefits dt {
-    color: rgba(255, 255, 255, 0.58);
+    color: var(--color-text-secondary);
     font-size: 13px;
 }
 
 .benefits dd {
     margin: 0;
-    color: #fff;
+    color: var(--color-text);
     font-size: 13px;
     font-weight: 600;
     text-align: right;
@@ -104,15 +105,15 @@
     margin-top: 4px;
     border: 0;
     border-radius: 8px;
-    background: #b32942;
-    color: #fff;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
 }
 
 .returnButton:hover {
-    background: #c3334d;
+    background: var(--color-primary);
 }
 
 @media (max-width: 480px) {

@@ -23,6 +23,7 @@ import { canRomance, hasPartner, romanceFixedOff } from "./logic";
 import { RELATIONS, romanticCapOf } from "../worlds/star2005/content";
 import { relationPromptFor } from "./relNet";
 
+import { lastOf } from "../lib/lastOf.ts";
 export type KbMem = { t: string; text: string; turn?: number }; // t = 游戏内时间标签
 export type NpcProfile = {
   name: string; age?: string; job?: string; wealth?: string; personality?: string; identity?: string; relation?: string; bio?: string;
@@ -93,14 +94,40 @@ function baseProfile(g: GameState, id: string): NpcProfile {
   return prof;
 }
 
+/** 功能注释：记忆正文归一化，用于去重（忽略首尾空白与全角空格差异） */
+function normMemText(text: string): string {
+  return String(text ?? "").replace(/\u3000/g, " ").replace(/\s+/g, " ").trim();
+}
+
+/** 功能注释：按正文去重，保留先出现的一条（迁移 interactions / 展示前清洗） */
+function dedupeMemList(list: KbMem[]): KbMem[] {
+  const seen = new Set<string>();
+  const out: KbMem[] = [];
+  for (const m of list) {
+    const key = normMemText(m.text);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(m);
+  }
+  return out;
+}
+
 /* 取（并按需建立）某 NPC 的知识库；profile 每次按最新人设刷新，记忆保留 */
 export function kbOf(g: GameState, id: string): NpcKnowledge {
   const cur = g.npcKb?.[id];
   const profile = { ...baseProfile(g, id), ...(cur?.profile?.personality && !isParent(id) ? { personality: cur.profile.personality } : {}) };
-  if (cur) return { ...cur, selfMemory: cur.selfMemory ?? [], playerMemory: cur.playerMemory ?? [], profile };
-  // 旧存档迁移：把原有互动记录导入 playerMemory
+  if (cur) {
+    // 功能注释：已有知识库也清洗一次重复句，避免旧存档里同一句挨着出现两次
+    return {
+      ...cur,
+      selfMemory: dedupeMemList(cur.selfMemory ?? []),
+      playerMemory: dedupeMemList(cur.playerMemory ?? []),
+      profile,
+    };
+  }
+  // 旧存档迁移：把原有互动记录导入 playerMemory（同一句多次 push 时要去重）
   const npc = g.npcs.find((n) => n.id === id);
-  const playerMemory = (npc?.interactions ?? []).map((it) => ({ t: it.time, text: it.text, turn: it.turn }));
+  const playerMemory = dedupeMemList((npc?.interactions ?? []).map((it) => ({ t: it.time, text: it.text, turn: it.turn })));
   return fold({ profile, selfMemory: [], playerMemory });
 }
 
@@ -133,19 +160,25 @@ export function joinGroupMem(prev: { text: string; turn?: number } | undefined, 
 /* 追加记忆（写回 game.npcKb，返回新 game）；kind=player 交互记忆 / self 自身事件。
  * merge：群聊前缀「[群聊「群名」]」，同一场群聊的后几轮并进上一条（见 joinGroupMem），不新增条目 */
 export function remember(g: GameState, id: string, kind: "player" | "self", text: string, t: string, merge?: string): GameState {
-  const clean = text.trim().slice(0, MEM_MAX);
+  const clean = normMemText(text).slice(0, MEM_MAX);
   if (!clean) return g;
   const kb = kbOf(g, id);
   const key = kind === "player" ? "playerMemory" : "selfMemory";
-  const last = kb[key].at(-1);
-  if (last?.text === clean) return g; // 去重：同一句不重复写
+  const list = kb[key];
+  // 功能注释：整表按正文去重——interaction 与 memory_updates 常写同一句，只比「上一条」会漏
+  if (list.some((m) => normMemText(m.text) === clean)) {
+    // 确保 ephemeral 迁移结果落盘，避免下次再从带重复的 interactions 迁出来
+    if (!g.npcKb?.[id]) return { ...g, npcKb: { ...(g.npcKb ?? {}), [id]: kb } };
+    return g;
+  }
+  const last = lastOf(list);
   const joined = merge ? joinGroupMem(last, last?.t, clean, merge, g.turnCount, t) : undefined;
   if (last && joined !== undefined) {
     if (joined === last.text) return g;
-    const merged: NpcKnowledge = { ...kb, [key]: [...kb[key].slice(0, -1), { ...last, text: joined }] };
+    const merged: NpcKnowledge = { ...kb, [key]: [...list.slice(0, -1), { ...last, text: joined }] };
     return { ...g, npcKb: { ...(g.npcKb ?? {}), [id]: merged } };
   }
-  const next = fold({ ...kb, [key]: [...kb[key], { t, text: clean, turn: g.turnCount }] });
+  const next = fold({ ...kb, [key]: [...list, { t, text: clean, turn: g.turnCount }] });
   return { ...g, npcKb: { ...(g.npcKb ?? {}), [id]: next } };
 }
 
@@ -260,7 +293,7 @@ export function gossipTick(g: GameState, mobs: Record<string, string>, tick: num
     if (ids.length < 2) continue;
     for (const a of ids) for (const b of ids) {
       if (a === b || h01(`${a}>${b}:${tick}`) > 0.35) continue;
-      const src = kbs[a]?.playerMemory.at(-1);
+      const src = lastOf(kbs[a]?.playerMemory);
       if (!src) continue;
       const name = kbs[a]?.profile.name ?? PERSON_BY_ID[a]?.name ?? a;
       const text = `听${name}说：${src.text}`.slice(0, 160);
@@ -309,6 +342,6 @@ export function allowanceFallback(g: GameState): string[] {
   const warm = /温柔|慈|心疼|开朗|包容/.test(p.personality ?? "");
   const me = p.relation === "父亲" ? "爸" : p.relation === "母亲" ? "妈" : "我";
   const tone = strict ? "这个月的钱打过去了，省着点花。" : warm ? "生活费给你转过去啦，别舍不得吃饭～" : "这个月生活费到了，记得收一下。";
-  const tail = kb.playerMemory.at(-1)?.text ? (strict ? "上回跟你说的事，自己心里有数。" : `上回你说的事，${me}一直记着呢。`) : p.job ? `${me}这阵子${p.job}那边忙，有事给${me}留言。` : "";
+  const tail = lastOf(kb.playerMemory)?.text ? (strict ? "上回跟你说的事，自己心里有数。" : `上回你说的事，${me}一直记着呢。`) : p.job ? `${me}这阵子${p.job}那边忙，有事给${me}留言。` : "";
   return [tone, tail].filter(Boolean);
 }

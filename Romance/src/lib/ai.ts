@@ -29,7 +29,7 @@ import { knowledgeBlock } from "../game/kb";
 import { timelinePrompt } from "../game/npcTimeline";
 import { attrCap, walletDef, wallet } from "../game/wallet";
 import { phoneLinkPrompt } from "../game/phoneLink";
-import { linkNewcomer, relNetPromptLines } from "../game/relNet";
+import { linkNewcomer, personGender, relNetPromptLines } from "../game/relNet";
 
 export type ContentPart = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
 export type ChatMsg = { role: "system" | "user" | "assistant"; content: string | ContentPart[] };
@@ -596,7 +596,9 @@ ${state.npcs
     const kbm = state.npcKb?.[n.id]?.playerMemory;
     const mem = (kbm?.length ? kbm.slice(-2).map((m) => m.text) : (n.interactions ?? []).slice(-2).map((it) => it.text)).join("；");
     const ps = n.persona;
-    const custom = [ps?.gender && `性别${ps.gender}`, ps?.text?.trim() && `玩家设定人设：${ps.text.trim()}`, ps?.voice?.trim() && `说话口吻：${ps.voice.trim()}`].filter(Boolean).join("；");
+    // 功能注释：性别必须写入核心人物条——世界设定 / persona / 花名册任一来源；否则模型常把女角色写成「他」
+    const gender = personGender(state, n.id) || ps?.gender || "";
+    const custom = [gender && `性别${gender}`, ps?.text?.trim() && `玩家设定人设：${ps.text.trim()}`, ps?.voice?.trim() && `说话口吻：${ps.voice.trim()}`].filter(Boolean).join("；");
     const tl = timelinePrompt(n, state.sim?.day ?? 0);
     const love = romanceBlock(state, n.id, true); // 家人返回空：只有亲情，不演恋爱
     const unmet = (state.sim?.metPeople ?? []).includes(n.id) ? "" : "，尚未结识";

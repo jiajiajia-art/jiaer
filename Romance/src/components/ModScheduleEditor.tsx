@@ -1,50 +1,63 @@
 import type { ScheduleCatCfg, ScheduleCatId, ScheduleSlot } from "../mods/types";
+import { SCHEDULE_CAT_DEFAULTS, SCHEDULE_CAT_IDS } from "../game/scheduleCats";
+import { liveTerm as T } from "../mods/live";
 
-/* 模组编辑器 · 日程分类：日程弹窗里「安排什么？」各分类的名称、说明、颜色、显示顺序与隐藏。
- * 留空的字段沿用内置默认；各分类下有哪些活动由「培训课程」「打工 · 周末活动」决定。 */
-const inp = "w-full min-w-0 rounded-lg border border-line bg-paper-2 px-2 py-1 text-[12px] text-ink placeholder:text-ink-soft/70 focus:border-jade focus:outline-none";
-const btn = "rounded-full border border-line bg-paper px-2 py-0.5 text-[11px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
+/* 模组编辑器 · 日程分类：玩家打开日程时「安排什么？」各分类的名称、说明、颜色、顺序与显示。
+ * 默认值与局内日程板共用 game/scheduleCats；分类里有哪些活动由各养成子系统决定。 */
+const inp = "w-full min-w-0 rounded-md border border-line bg-paper-2 px-1.5 py-0.5 text-[12px] text-ink placeholder:text-ink-soft/60 focus:border-jade focus:outline-none";
+const iconBtn = "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-line bg-paper text-[11px] text-ink-soft transition hover:border-jade hover:text-jade disabled:opacity-30";
 
-const DEFAULTS: { id: ScheduleCatId; label: string; hint: string; color: string; src: string }[] = [
-  { id: "work", label: "拍摄通告", hint: "接戏拍摄，赚片酬涨名气", color: "#e0533d", src: "接下通告后自动出现" },
-  { id: "lesson", label: "才艺课程", hint: "分级授课 · 级别越高上限越高、单次加成越少", color: "#c79a3a", src: "来自「培训课程」" },
-  { id: "job", label: "打工赚钱", hint: "分级零工 · 名气越高价码越高", color: "#b3823c", src: "来自「打工」" },
-  { id: "rest", label: "休息调整", hint: "回血减压，保住状态", color: "#3a9d78", src: "内置「休息」+ 归入此类的周末活动" },
-  { id: "social", label: "外出社交", hint: "自由活动可踩地图 · 人脉与心情", color: "#d76d77", src: "归入此类的周末活动" },
-];
-
-export default function ModScheduleEditor({ value, onChange }: { value?: ScheduleSlot; onChange: (v?: ScheduleSlot) => void }) {
-  const saved = (value?.cats ?? []).filter((c) => DEFAULTS.some((d) => d.id === c.id));
-  const list: ScheduleCatCfg[] = [...saved, ...DEFAULTS.filter((d) => !saved.some((c) => c.id === d.id)).map((d) => ({ id: d.id }))];
+export default function ModScheduleEditor({ value, onChange, active }: {
+  value?: ScheduleSlot;
+  onChange: (v?: ScheduleSlot) => void;
+  /** 功能注释：本作品当前每个分类下是否有活动；没有的分类局内自动隐藏，这里如实标出 */
+  active?: Partial<Record<ScheduleCatId, boolean>>;
+}) {
+  const saved = (value?.cats ?? []).filter((c) => SCHEDULE_CAT_IDS.includes(c.id));
+  const list: ScheduleCatCfg[] = [...saved, ...SCHEDULE_CAT_IDS.filter((id) => !saved.some((c) => c.id === id)).map((id) => ({ id }))];
   const commit = (next: ScheduleCatCfg[]) => {
     const clean = next.map((c) => Object.fromEntries(Object.entries(c).filter(([, v]) => v !== "" && v !== undefined && v !== false)) as ScheduleCatCfg);
-    const untouched = clean.every((c, i) => Object.keys(c).length === 1 && c.id === DEFAULTS[i].id);
+    const untouched = clean.every((c, i) => Object.keys(c).length === 1 && c.id === SCHEDULE_CAT_IDS[i]);
     onChange(untouched ? undefined : { ...value, cats: clean });
   };
   const set = (i: number, p: Partial<ScheduleCatCfg>) => commit(list.map((c, j) => (j === i ? { ...c, ...p } : c)));
   const move = (i: number, d: -1 | 1) => { const n = [...list]; [n[i], n[i + d]] = [n[i + d], n[i]]; commit(n); };
 
   return (
-    <div className="space-y-2">
-      <p className="text-[11px] text-ink-soft">顺序即玩家在日程里看到的顺序；留空沿用默认文案。</p>
+    <ol className="space-y-1.5">
       {list.map((c, i) => {
-        const d = DEFAULTS.find((x) => x.id === c.id)!;
+        const d = SCHEDULE_CAT_DEFAULTS[c.id];
+        const color = c.color || d.color;
+        const live = active?.[c.id] !== false;
         return (
-          <div key={c.id} className={`space-y-1.5 rounded-xl border border-line bg-paper p-2.5 ${c.hidden ? "opacity-60" : ""}`}>
+          <li key={c.id} className={`rounded-lg border bg-paper p-2 transition ${c.hidden ? "border-dashed border-line opacity-60" : "border-line"}`} style={{ boxShadow: `inset 3px 0 0 ${color}` }}>
             <div className="flex items-center gap-1.5">
-              <input type="color" aria-label="分类颜色" value={c.color || d.color} onChange={(e) => set(i, { color: e.target.value })} className="h-7 w-7 shrink-0 cursor-pointer rounded border border-line bg-paper-2 p-0.5" />
-              <input className={inp} value={c.label ?? ""} placeholder={d.label} onChange={(e) => set(i, { label: e.target.value })} aria-label="分类名称" />
-              <button className={`${btn} shrink-0`} disabled={i === 0} onClick={() => move(i, -1)} aria-label="上移">↑</button>
-              <button className={`${btn} shrink-0`} disabled={i === list.length - 1} onClick={() => move(i, 1)} aria-label="下移">↓</button>
-              <label className="flex shrink-0 items-center gap-1 text-[11px] text-ink-soft">
-                <input type="checkbox" checked={!c.hidden} onChange={(e) => set(i, { hidden: !e.target.checked })} />显示
+              <span className="w-3.5 shrink-0 text-center text-[10.5px] font-bold tabular-nums text-ink-soft">{i + 1}</span>
+              <label className="relative h-6 w-6 shrink-0 cursor-pointer overflow-hidden rounded-full border border-line" style={{ background: color }} title="分类颜色">
+                <input type="color" aria-label="分类颜色" value={color} onChange={(e) => set(i, { color: e.target.value })} className="absolute inset-0 cursor-pointer opacity-0" />
               </label>
+              <input className={`${inp} font-semibold`} value={c.label ?? ""} placeholder={d.label((k) => T(k))} onChange={(e) => set(i, { label: e.target.value })} aria-label="分类名称" />
+              <button type="button" className={iconBtn} disabled={i === 0} onClick={() => move(i, -1)} aria-label="上移">↑</button>
+              <button type="button" className={iconBtn} disabled={i === list.length - 1} onClick={() => move(i, 1)} aria-label="下移">↓</button>
             </div>
-            <input className={inp} value={c.hint ?? ""} placeholder={d.hint} onChange={(e) => set(i, { hint: e.target.value })} aria-label="分类说明" />
-            <p className="text-[10.5px] text-ink-soft">活动：{d.src}</p>
-          </div>
+            <div className="mt-1 pl-5">
+              <input className={inp} value={c.hint ?? ""} placeholder={d.hint} onChange={(e) => set(i, { hint: e.target.value })} aria-label="分类说明" />
+              <div className="mt-1 flex flex-wrap items-center justify-between gap-1.5">
+                <span className="flex items-center gap-1.5 text-[10.5px] text-ink-soft">
+                  <span className={`rounded-full px-1.5 py-px text-[10px] font-semibold ${live ? "bg-jade/12 text-jade" : "bg-paper-2 text-ink-soft"}`}>
+                    {live ? "有活动" : "暂无活动 · 局内不显示"}
+                  </span>
+                  {d.source}
+                </span>
+                <label className="flex cursor-pointer items-center gap-1 text-[11px] font-semibold text-ink-soft">
+                  <input type="checkbox" className="h-3 w-3 accent-jade" checked={!c.hidden} onChange={(e) => set(i, { hidden: !e.target.checked })} />
+                  对玩家显示
+                </label>
+              </div>
+            </div>
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 }

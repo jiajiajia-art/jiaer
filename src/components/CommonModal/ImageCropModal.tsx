@@ -74,8 +74,10 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
         mediaWidth: number,
         mediaHeight: number,
     ): PixelCrop => {
-        const safeScale = Math.min(Math.max(defaultCropScale, 0.01), 1);
-        const mediaAspectRatio = mediaWidth / mediaHeight;
+        const mediaAspectRatio = mediaWidth / Math.max(mediaHeight, 1);
+        // 功能注释：原图已接近目标宽高比（如方形头像）时默认铺满最大可选区，避免还要手动拉全选
+        const aspectMatched = Math.abs(mediaAspectRatio - aspectRatio) / Math.max(mediaAspectRatio, aspectRatio, 1e-6) <= 0.02;
+        const safeScale = aspectMatched ? 1 : Math.min(Math.max(defaultCropScale, 0.01), 1);
 
         let maxWidth = mediaWidth;
         let maxHeight = mediaHeight;

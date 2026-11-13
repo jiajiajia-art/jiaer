@@ -16,7 +16,7 @@
     flex-direction: column;
     cursor: pointer;
     position: relative;
-    background: #1C1C1E;
+    background: var(--color-surface);
     border-radius: 16px;
     overflow: hidden;
 }
@@ -26,7 +26,7 @@
 }
 
 .goodsCardSelected .goodsTitle {
-    color: #FF8A9A;
+    color: var(--color-primary-fg);
 }
 
 .goodsImg {
@@ -35,7 +35,7 @@
     position: relative;
     border-radius: 0;
     overflow: hidden;
-    background: #141414;
+    background: var(--color-surface);
 }
 
 .goodsImg > img {
@@ -56,8 +56,8 @@
     z-index: 5;
     border-radius: 999px;
     padding: 5px 10px;
-    background: rgba(142, 33, 53, 0.94);
-    color: #fff;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
     font-size: 12px;
     font-weight: 700;
     line-height: 1.2;
@@ -72,8 +72,8 @@
     width: 100%;
     height: 100%;
     background:
-        radial-gradient(ellipse at 50% 42%, rgba(168, 40, 60, 0.22) 0%, transparent 58%),
-        linear-gradient(160deg, #2C2C2E 0%, #141414 55%, #0A0A0A 100%);
+        radial-gradient(ellipse at 50% 42%, color-mix(in srgb, var(--color-primary) 22%, transparent) 0%, transparent 58%),
+        linear-gradient(160deg, var(--color-surface-2) 0%, var(--color-surface) 55%, var(--color-bg) 100%);
 }
 
 .goodsImg::after {
@@ -90,7 +90,7 @@
 .selectionMask {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.28);
+    background: color-mix(in srgb, var(--color-text) 28%, transparent);
     opacity: 0;
     transition: opacity 0.2s ease;
     z-index: 1;
@@ -98,7 +98,7 @@
 
 .selectionMaskActive {
     opacity: 1;
-    background: rgba(142, 33, 53, 0.35);
+    background: color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 .selectionToggle {
@@ -108,8 +108,8 @@
     width: 24px;
     height: 24px;
     border-radius: 999px;
-    border: 2px solid rgba(255, 255, 255, 0.96);
-    background: rgba(17, 24, 39, 0.36);
+    border: 2px solid color-mix(in srgb, var(--color-text) 96%, transparent);
+    background: color-mix(in srgb, var(--color-surface) 36%, transparent);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -124,15 +124,15 @@
 }
 
 .selectionToggleActive {
-    background: #8E2135;
-    border-color: #8E2135;
+    background: var(--color-primary-bold);
+    border-color: var(--color-primary-bold);
 }
 
 .selectionToggleInner {
     width: 10px;
     height: 10px;
     border-radius: 999px;
-    background: #ffffff;
+    background: var(--color-surface);
     opacity: 0;
     transform: scale(0.6);
     transition: opacity 0.2s ease, transform 0.2s ease;
@@ -147,9 +147,9 @@
     position: absolute;
     top: 8px;
     left: 8px;
-    background: rgba(142, 33, 53, 0.95);
-    color: #fff;
-    border: 1px solid rgba(168, 40, 60, 1);
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    border: 1px solid var(--color-primary);
     border-radius: 999px;
     padding: 4px 10px;
     font-size: 12px;
@@ -158,9 +158,9 @@
 }
 
 .incentiveFinished {
-    background: rgba(40, 167, 69, 0.95);
-    color: #fff;
-    border-color: rgba(40, 167, 69, 1);
+    background: color-mix(in srgb, var(--color-success) 95%, transparent);
+    color: var(--color-on-media);
+    border-color: var(--color-success);
 }
 
 .goodsTypeTag {
@@ -170,7 +170,7 @@
     max-width: 68%;
     border: none;
     border-radius: 999px;
-    color: #fff;
+    color: var(--color-on-media);
     padding: 5px 12px;
     font-size: 12px;
     font-weight: 600;
@@ -179,7 +179,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+    text-shadow: 0 1px 1px color-mix(in srgb, var(--color-shadow) 25%, transparent);
     box-shadow: none;
     z-index: 3;
 }
@@ -193,19 +193,21 @@
     justify-content: flex-start;
     align-items: flex-end;
     gap: 10px;
-    padding: 32px 12px 12px;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.62) 100%);
+    padding: 40px 12px 12px;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-surface) 70%, transparent) 70%, var(--color-surface) 100%);
     z-index: 3;
     pointer-events: none;
 }
 
 .goodsTheme {
     max-width: 60%;
-    color: #fff;
+    color: var(--color-text);
     font-size: 12px;
     padding: 4px 10px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.12);
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -222,13 +224,13 @@
     display: inline-flex;
     align-items: center;
     gap: 3.6px;
-    color: #FFFFFF;
+    color: var(--color-on-media);
     /* 功能注释：封面角标统计条整体相对原尺寸放大 20% */
     font-size: 13.2px;
     font-weight: 500;
     line-height: 1;
     min-width: 0;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+    text-shadow: 0 1px 2px color-mix(in srgb, var(--color-shadow) 55%, transparent);
 }
 
 .goodsInfoItem svg,
@@ -237,7 +239,7 @@
     height: 16px;
     object-fit: contain;
     flex-shrink: 0;
-    color: #FFFFFF;
+    color: var(--color-text);
     opacity: 0.96;
 }
 
@@ -246,7 +248,7 @@
     width: 15.12px;
     height: 20.16px;
     flex-shrink: 0;
-    color: #FFFFFF;
+    color: var(--color-on-media);
     opacity: 0.96;
 }
 
@@ -254,7 +256,7 @@
     width: 16.8px;
     height: 15.12px;
     flex-shrink: 0;
-    color: #FFFFFF;
+    color: var(--color-on-media);
     opacity: 0.96;
 }
 
@@ -272,7 +274,8 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    background: #1C1C1E;
+    flex: 1 1 auto;
+    background: var(--color-surface);
 }
 
 .goodsTitleWrap,
@@ -302,7 +305,7 @@
     min-width: 0;
     font-size: 16px;
     font-weight: 700;
-    color: #FFFFFF;
+    color: var(--color-text);
     line-height: 1.35;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -321,8 +324,8 @@
     min-height: 22px;
     padding: 3px 10px;
     border-radius: 999px;
-    background: #a8283c;
-    color: #ffffff;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
     font-size: 12px;
     font-weight: 600;
     line-height: 1.2;
@@ -345,17 +348,17 @@
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
-    background: #2C2C2E;
+    background: var(--color-surface-2);
     box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.18),
-      0 0 0 2px rgba(142, 33, 53, 0.45);
+      0 0 0 1px color-mix(in srgb, var(--color-text) 18%, transparent),
+      0 0 0 2px color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 .goodsAuthorName {
     font-size: 13px;
     font-weight: 500;
     letter-spacing: 0.01em;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -364,15 +367,15 @@
 
 .goodsCard:hover .goodsAuthorAvatar {
     box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.28),
-      0 0 0 2px rgba(168, 40, 60, 0.6);
+      0 0 0 1px color-mix(in srgb, var(--color-text) 28%, transparent),
+      0 0 0 2px color-mix(in srgb, var(--color-primary) 60%, transparent);
 }
 
 .goodsDesc {
     margin: 0;
     font-size: 13px;
     font-weight: 400;
-    color: #999999;
+    color: var(--color-text-muted);
     line-height: 1.4;
     white-space: nowrap;
     overflow: hidden;
@@ -394,8 +397,8 @@
     min-height: 24px;
     padding: 4px 10px;
     border-radius: 6px;
-    background: #333333;
-    color: #FFFFFF;
+    background: var(--color-surface-2);
+    color: var(--color-text);
     font-size: 12px;
     font-weight: 500;
     line-height: 1.3;
@@ -406,7 +409,7 @@
 
 .goodsSubtitle {
     font-size: 13px;
-    color: #999999;
+    color: var(--color-text-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -422,7 +425,7 @@
     margin: 0;
     font-size: 15px;
     line-height: 1.7;
-    color: #8E8E93;
+    color: var(--color-text-muted);
 }
 
 @media (min-width: 769px) {
@@ -494,10 +497,6 @@
         border-radius: 0;
     }
 
-    .goodsImg::after {
-        height: var(--mobile-content-image-guard-height);
-        background: var(--mobile-content-image-guard-dark-gradient);
-    }
 
     .goodsImg > img {
         /* 封面标题贴在顶部，禁止沿用上移放大（会把第一行字裁出卡片） */
@@ -573,8 +572,8 @@
         min-height: 22px;
         font-size: 11px;
         padding: 3px 9px;
-        background: #a8283c;
-        color: #ffffff;
+        background: var(--color-primary);
+        color: var(--color-on-primary);
     }
 
     .goodsDesc {
@@ -586,8 +585,8 @@
         font-size: 12px;
         padding: 4px 10px;
         border-radius: 6px;
-        background: #333333;
-        color: #FFFFFF;
+        background: var(--color-surface-2);
+        color: var(--color-text);
     }
 
     .goodsAuthor {
@@ -599,8 +598,8 @@
         width: 16px;
         height: 16px;
         box-shadow:
-          0 0 0 1px rgba(255, 255, 255, 0.25),
-          0 0 0 2px rgba(142, 33, 53, 0.5);
+          0 0 0 1px color-mix(in srgb, var(--color-text) 25%, transparent),
+          0 0 0 2px color-mix(in srgb, var(--color-primary) 50%, transparent);
     }
 
     .goodsAuthorName {
@@ -611,3 +610,108 @@
         font-size: 11px;
     }
 }
+
+/* 功能注释：卡片对齐——正文固定结构：标题恒占两行、作者行固定高、标签行恒占一行，
+   且网格拉伸等高，避免标题长短/有无标签导致卡片参差 */
+.grid4,
+.gridHomeWide { align-items: stretch !important; }
+.goodsCard { height: 100%; }
+.goodsTitle { min-height: calc(1.35em * 2); }
+.goodsMetaRow { height: 22px; }
+.goodsTagRow {
+    margin-top: auto;
+    height: 24px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+}
+.goodsTagPill { flex: 0 1 auto; min-width: 0; }
+
+/* 功能注释：书架「我的作品」——按内容收紧，取消双行标题/空简介/空标签占位，去掉卡内大块空白 */
+.gridWorks {
+    align-items: start !important;
+}
+.goodsCardWorks {
+    height: auto;
+}
+.goodsCardWorks .goodsBody {
+    flex: 0 0 auto;
+    gap: 6px;
+    padding: 8px 10px 10px;
+}
+.goodsCardWorks .goodsTitle {
+    min-height: 0;
+}
+.goodsCardWorks .goodsMetaRow {
+    height: auto;
+    min-height: 0;
+}
+.goodsCardWorks .goodsTagRow {
+    margin-top: 0;
+    height: auto;
+    min-height: 0;
+}
+
+/* ===== 功能注释：卡片视觉精修 =====
+   层级：封面（数据角标）→ 标题 → 作者 → 题材；统一 12px 内边距与 8px 节奏 */
+.goodsCard {
+    border: 1px solid color-mix(in srgb, var(--color-text) 7%, transparent);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.goodsImg > img { transition: transform 0.5s ease; }
+@media (hover: hover) {
+    .goodsCard:hover {
+        transform: translateY(-3px);
+        border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+        box-shadow: 0 12px 28px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+    }
+    .goodsCard:hover .goodsImg > img { transform: scale(1.04); }
+}
+/* 收藏：封面右下半透明玻璃胶囊，与左侧火焰/心形数据同一基线，不再抢正文视线 */
+.goodsInfo .goodsCollectBadge {
+    min-height: 22px;
+    padding: 2px 9px;
+    font-size: 11.5px;
+    font-weight: 600;
+    background: color-mix(in srgb, var(--color-primary) 82%, transparent);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 35%, transparent);
+}
+.goodsBody { padding: 10px 12px 12px; gap: 8px; }
+.goodsTitle { font-size: 15px; letter-spacing: 0.01em; }
+.goodsTagPill {
+    min-height: 22px;
+    padding: 2px 8px;
+    font-size: 11.5px;
+    color: var(--color-text-muted);
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+.goodsTagRow { height: 22px; gap: 6px; }
+.goodsInfoBookmark {
+    width: 14px;
+    height: 15px;
+    flex-shrink: 0;
+    color: var(--color-primary-fg, var(--color-primary));
+}
+
+/* 功能注释：底部渐变下探 1px 盖住封面与正文之间的亚像素缝，消除横线 */
+.goodsInfo { bottom: -1px; }
+
+/* 功能注释：封面统计改为深色玻璃小胶囊——浅色模式下底部渐变发白，白字会看不清 */
+.goodsInfo { padding-top: 28px; }
+.goodsInfo .goodsInfoItem {
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(12, 8, 16, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #fff;
+    font-size: 12px;
+    text-shadow: none;
+}
+.goodsInfoStats { gap: 6px; }
+.goodsInfo .goodsInfoItem svg,
+.goodsInfo .goodsInfoFlame,
+.goodsInfo .goodsInfoHeart { color: #fff; }
+.goodsInfo .goodsInfoBookmark { color: var(--color-primary-light); }
+.goodsDesc { color: var(--color-text-secondary); }

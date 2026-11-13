@@ -1,3 +1,5 @@
+import { feature } from "../mods/registry";
+import { wallet } from "../game/wallet";
 import { lazyPanel } from "../lib/lazyPanel";
 const WorldRuleCards = lazyPanel(() => import("./WorldRulesPanel").then((m) => ({ default: m.WorldRuleCards })));
 import { useState, useEffect, useRef, type ReactNode } from "react";
@@ -17,12 +19,17 @@ import NamePicker from "./NamePicker";
 import { factionSigningOffers, rollSigningOffers, type SigningContract } from "../worlds/star2005/content";
 import { creationVars, fillParts, fillText } from "../game/creationText";
 import { normalizeGenderOptions } from "../game/creationSystemFields";
-import { formatCreatorAttrPreview, rollCreatorAttrStarts, visibleCreatorAttrs } from "../lib/creationItems";
-import { attrUsesRandomStart } from "../lib/attrInit";
+import { rollCreatorAttrStarts, visibleCreatorAttrs } from "../lib/creationItems";
+import { attrChoiceOptions, attrStartMode, attrStartValue, attrUsesRandomStart, clampAttrStart } from "../lib/attrInit";
+import type { AttrDef } from "../lib/types";
 import { shouldShowPathPicker } from "../lib/pathPicker";
 import { isAuthorPreview, requestAuthorPreviewEnd } from "../lib/authorPreview";
 import { deleteSlot, listSaves, type SaveSlot } from "../lib/store";
+import { syncCloudSaves } from "../lib/storage";
 import { asModArray } from "../lib/asModArray";
+import PathRouteMap from "./PathRouteMap";
+import { pathRouteNodes } from "../lib/pathRoute";
+import { getWorldStorylines } from "../mods/registry";
 
 /** 功能注释：锁定图标统一走 Lucide；open=true 时略透明表示「未锁」。 */
 function LockGlyph({ open, className }: { open?: boolean; className?: string }) {
@@ -102,6 +109,8 @@ export default function CharacterCreate() {
   useEffect(() => {
     if (previewing) return;
     void listSaves().then(setSaves);
+    // 功能注释：再拉一次云端，换设备时也能看到「继续游戏」
+    void syncCloudSaves().then((n) => { if (n) void listSaves().then(setSaves); });
   }, [previewing]);
   useEffect(() => {
     const h = () => setPathLockTick((n) => n + 1);
@@ -146,10 +155,16 @@ export default function CharacterCreate() {
   }, [creatorAttrsKey, modSel.world]);
   /** 功能注释：仅当至少一项可随机时显示骰子；全固定则隐藏，避免点了无变化（3.16） */
   const canRerollAttrs = creatorAttrs.some((a) => attrUsesRandomStart(a));
+  // 功能注释：整组重掷只动「开局随机」项；锁定 / 玩家选择 / 玩家自定义的值保持不变
   const rerollAttrs = () => {
     if (!canRerollAttrs) return;
-    setAttrStarts(rollCreatorAttrStarts(creatorAttrs));
+    const fresh = rollCreatorAttrStarts(creatorAttrs.filter((a) => attrStartMode(a) === "random"));
+    setAttrStarts((cur) => ({ ...cur, ...fresh }));
   };
+  const rerollOne = (a: AttrDef) => setAttrStarts((cur) => ({ ...cur, [a.id]: attrStartValue(a) }));
+  const setAttrValue = (a: AttrDef, v: number) => setAttrStarts((cur) => ({ ...cur, [a.id]: clampAttrStart(a, v) }));
+  // 功能注释：玩家自定义输入框的草稿（失焦时夹进范围）
+  const [attrDraft, setAttrDraft] = useState<Record<string, string>>({});
   /* 创作者自定义字段：仅按人物线路过滤；系统四项始终显示、不进此列 */
   const CUSTOM = asModArray<CreationField>(cc.fields).filter((f) => f.label && (!asModArray(f.paths).length || asModArray<string>(f.paths).includes(curPath)));
   const [customVals, setCustomVals] = useState<Record<string, string>>({});
@@ -169,9 +184,9 @@ export default function CharacterCreate() {
   /* 开局游玩偏好：世界观默认预选模式/视角；屏幕方向默认竖屏，换世界观时保留玩家已选方向 */
   const playSlot = selectedSlot("play");
   const playKey = JSON.stringify(playSlot ?? {});
-  const [prefs, setPrefs] = useState<PlayPrefs>(() => ({ mode: playSlot?.mode, pov: playSlot?.pov, orient: "portrait" }));
+  const [prefs, setPrefs] = useState<PlayPrefs>(() => ({ mode: "novel", pov: playSlot?.pov, orient: "portrait" }));
   useEffect(() => {
-    setPrefs((p) => ({ mode: playSlot?.mode, pov: playSlot?.pov, orient: p.orient ?? "portrait" }));
+    setPrefs(() => ({ mode: "novel", pov: playSlot?.pov, orient: "portrait" }));
   }, [playKey]); // eslint-disable-line react-hooks/exhaustive-deps
   // 功能注释：开局日期只用创作者填的那天；进入建角时清掉上一局可能残留的玩家日期覆盖
   useEffect(() => { setStartDateOverride(undefined); }, []);
@@ -184,7 +199,9 @@ export default function CharacterCreate() {
   if (!autoNames.current.size) autoNames.current.add(form.name);
   // 配置了开局阵营 → 合约来自这些阵营（签约即入阵营）；否则按公司名气随机递合约
   // 功能注释：startFactions.name 偶发非字符串；禁止 .trim 崩建角势力/合约
-  const factionOffers = () => factionSigningOffers(asModArray<NonNullable<typeof cc.startFactions>[number]>(cc.startFactions).filter((f) => f.id && String(f.name ?? "").trim()));
+  // 功能注释：势力签约 / 加入势力属于「阵营声望」玩法；未添加时不出现
+  const repOn = feature("factionRep");
+  const factionOffers = () => repOn ? factionSigningOffers(asModArray<NonNullable<typeof cc.startFactions>[number]>(cc.startFactions).filter((f) => f.id && String(f.name ?? "").trim())) : [];
   const [offers, setOffers] = useState<SigningContract[]>(() => { const fo = factionOffers(); return fo.length ? fo : rollSigningOffers(); });
   const boundToFaction = offers.some((o) => o.factionId);
   const [contractId, setContractId] = useState<string>(() => offers[0]?.id ?? "");
@@ -256,6 +273,11 @@ export default function CharacterCreate() {
     const extra = [
       ...(selectedFeature("career") && path?.name ? [{ label: "人物线路", value: path.name }] : []),
       { label: bl("birthday", "生日"), value: `${form.birthMonth}月${form.birthDay}日` },
+      // 功能注释：玩家选择的属性写进档案（如 出身：书香门第），AI 可读到选了什么
+      ...creatorAttrs.filter((a) => attrStartMode(a) === "choice").flatMap((a) => {
+        const o = attrChoiceOptions(a).find((x) => clampAttrStart(a, x.value) === attrStarts[a.id]);
+        return o ? [{ label: a.label, value: o.desc ? `${o.label}（${o.desc}）` : o.label }] : [];
+      }),
       ...CUSTOM.filter((f) => cv(f).trim()).map((f) => {
         const note = fxOf(f)?.note?.trim();
         return { label: f.label, value: [cv(f), note && `（${note}）`, f.desc && `（${f.desc}）`].filter(Boolean).join("") };
@@ -265,7 +287,7 @@ export default function CharacterCreate() {
       ...CUSTOM.map(fxOf),
       optFx(IDENTITIES.find((o) => o.id === identityIdOf())),
     ].filter((x): x is OptFx => !!x);
-    const contract = career ? offers.find((c) => c.id === contractId) : undefined;
+    const contract = needSigning ? offers.find((c) => c.id === contractId) : undefined;
     const identityId = identityIdOf();
     const player: Player = {
       name: form.name || "无名",
@@ -334,6 +356,9 @@ export default function CharacterCreate() {
 
   // 当前所选世界观是否有演艺事业线：没有则走通用建角（无人物线路 / 母校 / 经纪合约）
   const career = selectedFeature("career");
+  // 功能注释：事业包默认开着，但本体空白底稿 / starter 会清空公司与签约列表；
+  // 作者未填公司时合约池为空——禁止再展示空「经纪合约」并把「开始」永久灰掉。
+  const needSigning = career && offers.length > 0;
   const selWorld = getSelectedWorld().chain[0];
   const systemFieldsComplete = !!form.name.trim() && Number(form.age) > 0 && !!form.gender && form.birthMonth > 0 && form.birthDay > 0;
   const customFieldsComplete = CUSTOM.every((field) => {
@@ -342,7 +367,7 @@ export default function CharacterCreate() {
     return !!value && (!(field.type === "select" || field.type === "radio") || customOptions(field).includes(value));
   });
   const whoComplete = systemFieldsComplete && customFieldsComplete;
-  const okToFinish = whoComplete && (!career || !!contractId);
+  const okToFinish = whoComplete && (!needSigning || !!contractId);
   const path = PATHS.find((p) => p.id === pathId);
   // 人物线路 · 预设主角：选中后用 TA 的档案填好自设页（玩家仍可微调）
   const heroId = path?.hero;
@@ -378,6 +403,7 @@ export default function CharacterCreate() {
   useEffect(() => { topRef.current?.closest(".ui-dialog-body")?.scrollTo({ top: 0 }); }, [stepK, wizOpen]);
 
   /* ① 路径：多条开放路径时弹窗；卡片只展示路径名 + 开局处境 */
+  const STORYLINES = asModArray<import("../lib/types").Storyline>(getWorldStorylines());
   const stepPath = (
     <div className="space-y-2.5">
       {cc.pathIntro && <p className="text-[12.5px] leading-relaxed text-ink-soft"><Tpl text={cc.pathIntro} vars={tv} /></p>}
@@ -406,6 +432,7 @@ export default function CharacterCreate() {
                 ) : p.blurb ? (
                   <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">{fillText(p.blurb, pv(p.name))}</p>
                 ) : null}
+                {(() => { const nodes = pathRouteNodes(p, STORYLINES); return nodes.length ? <div className="mt-2.5"><PathRouteMap nodes={nodes} active={current} /></div> : null; })()}
               </div>
             </div>
           </button>
@@ -493,12 +520,54 @@ export default function CharacterCreate() {
               ) : null}
             </div>
             <ul className="space-y-1.5">
-              {creatorAttrs.map((a) => (
-                <li key={a.id} className="flex items-center gap-2 rounded-xl border border-line/70 bg-paper px-3 py-2">
-                  <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">{a.label}</span>
-                  <span className="shrink-0 text-[12px] text-ink-soft">{formatCreatorAttrPreview(a, attrStarts[a.id])}</span>
-                </li>
-              ))}
+              {creatorAttrs.map((a) => {
+                const mode = attrStartMode(a);
+                const v = attrStarts[a.id];
+                const maxN = Number(a.max);
+                const range = `${a.min ?? 0}~${Number.isFinite(maxN) && maxN > 0 ? maxN : "∞"}`;
+                return (
+                  <li key={a.id} className="rounded-xl border border-line/70 bg-paper px-3 py-2" data-attr-mode={mode}>
+                    <div className="flex items-center gap-2">
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">{a.label}</span>
+                      {mode === "custom" ? (
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          aria-label={`${a.label}（${range}）`}
+                          className="w-20 rounded-lg border border-line bg-paper-2 px-2 py-1 text-right text-[13px] font-bold text-ink outline-none focus:border-jade"
+                          value={attrDraft[a.id] ?? String(v ?? "")}
+                          onChange={(e) => setAttrDraft((d) => ({ ...d, [a.id]: e.target.value }))}
+                          onBlur={(e) => { setAttrValue(a, Number(e.target.value)); setAttrDraft((d) => { const n = { ...d }; delete n[a.id]; return n; }); }}
+                        />
+                      ) : (
+                        <span className="shrink-0 text-[13px] font-bold tabular-nums text-ink">{typeof v === "number" ? v : "—"}</span>
+                      )}
+                      <span className="shrink-0 text-[11px] text-ink-soft">{mode === "custom" ? range : Number.isFinite(maxN) && maxN > 0 ? `/ ${maxN}` : ""}</span>
+                      {mode === "random" ? (
+                        <button type="button" onClick={() => rerollOne(a)} title={`重掷${a.label}（${range}）`} aria-label={`重掷${a.label}`}
+                          className="grid h-7 w-7 place-items-center rounded-full text-ink-soft transition hover:bg-ink/5 hover:text-jade">
+                          <IconDiceDuo size={15} />
+                        </button>
+                      ) : mode === "locked" ? (
+                        <span className="grid h-7 w-7 place-items-center text-ink-soft/70" title="作者已锁定" aria-label="作者已锁定"><LockGlyph /></span>
+                      ) : null}
+                    </div>
+                    {mode === "choice" && (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5" role="radiogroup" aria-label={a.label}>
+                        {attrChoiceOptions(a).map((o) => {
+                          const on = clampAttrStart(a, o.value) === v;
+                          return (
+                            <button key={o.label} type="button" role="radio" aria-checked={on} title={o.desc} onClick={() => setAttrValue(a, o.value)}
+                              className={`rounded-full border px-3 py-1 text-[12px] font-semibold transition ${on ? "border-jade bg-jade/10 text-jade" : "border-line bg-paper-2 text-ink-soft hover:border-jade/50"}`}>
+                              {o.label}<span className="ml-1 text-[10.5px] opacity-70">{o.value}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ) : null}
@@ -558,7 +627,7 @@ export default function CharacterCreate() {
   /* ③ 开局 · 游玩偏好 · 开局日期 · 世界规则 */
   const stepSetup = (
     <>
-      <Card title="游玩偏好" desc="开局默认竖屏；屏幕方向请到局内「游戏设置」再改">
+      <Card title="游玩偏好">
         <PlayPrefsPicker value={prefs} onChange={setPrefs} />
       </Card>
       <Card title="世界规则" desc="恋爱、婚姻、继承与社会秩序——决定这个世界怎么看待你">
@@ -570,7 +639,7 @@ export default function CharacterCreate() {
   /* ③ 开局 · 势力：创作者在「人物线路」编辑器里自设，可多选（受上限约束）；不选也能开局 */
   const SF = asModArray<NonNullable<typeof cc.startFactions>[number]>(cc.startFactions).filter((f) => f.id && String(f.name ?? "").trim());
   const sfMax = cc.factionPickMax && cc.factionPickMax > 0 ? cc.factionPickMax : SF.length;
-  const stepFactions = SF.length > 0 && (
+  const stepFactions = repOn && SF.length > 0 && (
     <Card title="加入势力" desc={<>勾选开局就加入的势力{sfMax < SF.length ? `（最多 ${sfMax} 个）` : ""}。加入后获得初始声望，成员态度、店铺价格与剧情都会随之变化；也可以都不选，做个自由人。<span className="mt-1 block text-[11.5px] text-ink-soft">{boundToFaction ? "签约的经纪公司就是你的东家阵营，会自动加入；其余势力可按需再选。" : "势力是你的人脉圈子，与经纪合约互不绑定。"}</span></>}>
       <div className="grid gap-2 sm:grid-cols-2">
         {SF.map((f) => {
@@ -639,7 +708,7 @@ export default function CharacterCreate() {
     path: stepPath,
     // 功能注释：基本信息与属性紧挨，避免中间空一大截
     who: <div className="space-y-2">{stepWho}{stepAttrs}{stepCustom}</div>,
-    setup: <div className="space-y-3">{career && stepSign}{stepFactions}{stepSetup}</div>,
+    setup: <div className="space-y-3">{needSigning && stepSign}{stepFactions}{stepSetup}</div>,
   };
 
   // 功能注释：底栏走 Modal.footer，钉在 85% 框底；滚动只发生在 ui-dialog-body，属性不被按钮盖住
@@ -715,7 +784,7 @@ export default function CharacterCreate() {
     >
       {wizard}
       {continueOpen && (
-        <Modal title="继续游戏 · 读取存档" onClose={() => setContinueOpen(false)}>
+        <Modal panelClassName="ui-dialog-game" title="继续游戏 · 读取存档" onClose={() => setContinueOpen(false)}>
           {saves.length === 0 ? (
             <p className="py-8 text-center text-sm text-ink-soft">暂无存档，先完成建角开一局吧。</p>
           ) : (
@@ -780,10 +849,10 @@ function ContractTerms({ c }: { c: SigningContract }) {
   return (
     <div>
       <div className="grid grid-cols-3 gap-2">
-        <Term label="保底月薪" value={`¥${c.baseSalary.toLocaleString()}`} />
+        <Term label="保底月薪" value={wallet.fmt(c.baseSalary)} />
         <Term label="分成" value={`${c.revenueShare}%`} tone="text-jade" />
-        <Term label="签约金" value={`¥${c.signBonus.toLocaleString()}`} tone="text-gold" />
-        <Term label="违约金" value={`¥${c.penalty.toLocaleString()}`} tone="text-danger" />
+        <Term label="签约金" value={wallet.fmt(c.signBonus)} tone="text-gold" />
+        <Term label="违约金" value={wallet.fmt(c.penalty)} tone="text-danger" />
         <Term label="信任" value={`+${c.trust}`} />
         <Term label="口碑" value={`${c.reputation >= 0 ? "+" : ""}${c.reputation}`} tone={c.reputation < 0 ? "text-danger" : undefined} />
       </div>

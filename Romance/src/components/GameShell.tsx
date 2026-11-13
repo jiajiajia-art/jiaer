@@ -3,6 +3,7 @@ import { lazyPanel } from "../lib/lazyPanel";
 import DiaryCard from "./DiaryCard";
 import DiyIcon from "./DiyIcon";
 import WeekReportCard from "./WeekReportCard";
+import DiaryBook from "./DiaryBook";
 import { tierOf } from "../game/data";
 import { withFontPreset } from "../lib/gameFonts";
 import { FONTS } from "../lib/skins";
@@ -63,6 +64,7 @@ const StoryQuestPanel = lazyPanel(() => import("./StoryQuestPanel"));
 import MudChrome, { menuItems, NavTabsEditor, type MudTab } from "./MudChrome";
 import ScheduleBoard from "./ScheduleBoard";
 import { Chip, Modal, toneColor } from "./ui";
+import NewSpotImagePrompt from "./NewSpotImagePrompt";
 import { useConfirm } from "./EditorKit";
 import { IconBook, IconCamera, IconClose, IconFlag, IconHeart, IconMenu, IconMoon, IconMusic, IconPin, IconPlay, IconSave, IconScroll, IconSettings, IconSpark, IconSparkle, IconStar, IconSun, IconUser, IconWallet, IconClock } from "../lib/icons";
 import { Segments, CastRow } from "./StoryTab";
@@ -75,6 +77,8 @@ import { topbarSummary } from "../lib/topbarDiy";
 import { defaultWorldBook } from "../game/worldbook";
 import { EntityProvider } from "./EntityText";
 import { listManualSaves, saveToSlot, deleteSlot, renameSlot, getSlot, MAX_SLOTS, AUTO_SLOT_ID, type SaveSlot, defaultTheme } from "../lib/store";
+import { syncCloudSaves } from "../lib/storage";
+import CloudSaveStatus from "./CloudSaveStatus";
 import { isAuthorPreview } from "../lib/authorPreview";
 import { homeMainQuest } from "../lib/homeMainQuest";
 import { dayDateLabel } from "../game/logic";
@@ -293,10 +297,12 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
           }
         />
       )}
-      <div className="mx-auto max-w-3xl px-4 py-5 space-y-4">
+      {/* 功能注释：弹窗内（bare）不再叠一层左右内边距——弹窗本体已有，双层会把卡片挤窄 */}
+      <div className={bare ? "space-y-3 pt-1" : "mx-auto max-w-3xl px-4 py-5 space-y-4"}>
         {/* 功能注释：玩家「游戏设置」只留皮肤风格选择；主题包/对话框/图标等仍在编辑器·美化 */}
         {!beauty && (
-        <SettingBranch title="美化" en="SKIN STYLE" desc="选择界面皮肤风格" current={(SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.dream)[0]} swatch={<span>{(SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.dream)[1]}</span>} defaultOpen>
+        <SettingBranch title="美化" en="SKIN STYLE" desc="选择界面皮肤风格" current={(SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.dream)[0]} swatch={<span>{(SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.dream)[1]}</span>}>
+          {/* 功能注释：默认收起——标题行已显示当前皮肤，点开再选，避免一打开设置就是一大片皮肤卡 */}
           <PlayerSkinPicker skin={theme.skin ?? "cute"} onPick={(skin) => setTheme({ ...theme, skin })} />
         </SettingBranch>
         )}
@@ -565,39 +571,7 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
         </SettingBranch>
         )}
 
-        {/* 版式方向：竖屏 / 横屏；建角已选则直接生效，此处可随时切换，无需解锁 */}
-        {!beauty && (
-        <div>
-          <span className="text-[14px] font-bold leading-tight tracking-[0.06em] text-ink">屏幕方向</span>
-          <span className="mb-2 mt-0.5 block text-[11px] text-ink-soft">每局默认竖屏 9:16 · 要横屏在此改 · 随时可改</span>
-          <div className="grid grid-cols-2 gap-1.5">
-            {([
-              { id: "landscape", label: "横屏", box: "h-4 w-7", desc: "16:9 等宽屏比例游戏" },
-              { id: "portrait", label: "竖屏", box: "h-7 w-4", desc: "9:16 等竖向比例游戏" },
-            ] as const).map((op) => {
-              const cur = (theme.orient ?? "portrait") === op.id;
-              return (
-                <button
-                  key={op.id}
-                  type="button"
-                  onClick={() => {
-                    setTheme({ ...theme, orient: op.id });
-                    // 功能注释：设置里改方向时同步本局 playPrefs，与建角所选保持一致
-                    if (game) patchGame((g) => ({ ...g, playPrefs: { ...g.playPrefs, orient: op.id } }));
-                  }}
-                  aria-pressed={cur}
-                  className={`flex flex-col items-center gap-0.5 rounded-xl border px-1 py-2 text-center transition ${cur ? "border-white/70 bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] text-white shadow-[0_6px_16px_-8px_rgba(150,110,220,0.7)]" : "border-line bg-paper text-ink-soft hover:border-jade/60"}`}
-                >
-                  <span className={`rounded-[3px] border-2 border-current ${op.box}`} aria-hidden />
-                  <span className="text-[12px] font-semibold">{op.label}</span>
-                  <span className={`text-[10px] ${cur ? "text-white/80" : "opacity-70"}`}>{op.desc}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        )}
-
+        {/* 功能注释：横竖屏暂不支持选择（固定竖屏），屏幕方向入口已移除 */}
         {/* 本局游玩偏好：开局时按世界观默认 / 建角所选，之后随时可改，下一回合起生效 */}
         {!beauty && game && (
         <div>
@@ -767,6 +741,7 @@ export default function GameShell() {
   const { world: modWorld } = useMods(); // 地图编辑器（点位/背景/物件）
   const [fixedOpen, setFixedOpen] = useState(false);
   const [questOpen, setQuestOpen] = useState(false); // 剧情志弹窗
+  const [diaryOpen, setDiaryOpen] = useState(false); // 日记本（AI 周记）
   const [personTab, setPersonTab] = useState<"persona" | "memory">("persona"); // 固定人物：人设 / 记忆
   const [beautyOpen, setBeautyOpen] = useState(false); // 编辑器 · 美化
   const [editorOpen, setEditorOpen] = useState(false); // 编辑器总入口（六个创作工具）
@@ -821,8 +796,6 @@ export default function GameShell() {
     : null;
   const topbarData = {
     ...topbarDataOf(game, modWorld.chain[0].name),
-    // 功能注释：局势摘要并入主线同一块顶栏，不再单独渲染第二条飘条
-    note: game.world.note?.trim() || undefined,
     ...(mainQuest
       ? {
           questStep: mainQuest.waitLabel ? `${mainQuest.stepName} · ${mainQuest.waitLabel}` : mainQuest.stepName,
@@ -836,12 +809,14 @@ export default function GameShell() {
       : {}),
   };
 
-  const refreshSaves = async () => {
+  const refreshSaves = async (pull = false) => {
+    // 功能注释：打开面板时先拉云端（换设备继续玩），存/删后只刷本机列表
+    if (pull) await syncCloudSaves();
     const [manual, auto] = await Promise.all([listManualSaves(), getSlot(AUTO_SLOT_ID)]);
     setSaves(manual);
     setAutoSlot(auto);
   };
-  const openSaves = () => { void refreshSaves(); setEditId(null); setSavesOpen(true); };
+  const openSaves = () => { void refreshSaves().then(() => refreshSaves(true)); setEditId(null); setSavesOpen(true); };
   // 立即存档：把当前进度刷入自动存档槽
   const quickSave = async () => {
     const ok = await saveNow();
@@ -887,6 +862,8 @@ export default function GameShell() {
 
   return (
     <EntityProvider>
+    {/* 功能注释：剧情出现新地点且素材库无图时，提示玩家生成场景图 */}
+    <NewSpotImagePrompt />
     {landscape && (
       /* ═══════════ 横屏 · 橙光式版式 ═══════════
          直接以真正的「世界」页（HomeTab）作为顶天立地的主场景，
@@ -1056,6 +1033,11 @@ export default function GameShell() {
                   badge={`${Object.keys(game.cgUnlocked ?? {}).length}/${(game.cgs ?? []).filter((c) => c.enabled !== false).length}`} badgeTone="gold"
                 />}
                 <MenuRow
+                  icon={IconScroll} label="日记本" romaji="DIARY" hint="每周结算后主角写下的周记，可按周翻看"
+                  onClick={() => { setDiaryOpen(true); setMenuOpen(false); }}
+                  badge={`${(game.weekDiaries ?? []).filter((e) => e.status === "done").length} 篇`} badgeTone="gold"
+                />
+                <MenuRow
                   icon={IconFlag} label="剧情志" romaji="STORY" hint="支线剧情 · 收藏留存 · 一键导出"
                   onClick={() => { setQuestOpen(true); setMenuOpen(false); }}
                   badge={`${(game.journal ?? []).length} 篇`} badgeTone="gold"
@@ -1119,20 +1101,24 @@ export default function GameShell() {
 
       {/* 通用行动结果弹窗 */}
       {popup && (
-        <Modal title={popup.scene && !popup.report ? "场景" : popup.title} onClose={() => setPopup(null)}>
+        <Modal panelClassName="ui-dialog-game" title={popup.scene && !popup.report ? "场景" : popup.title} onClose={() => setPopup(null)}>
           {popup.diary && !popup.report && <DiaryCard d={popup.diary} />}
           {popup.report ? (
-            <WeekReportCard report={popup.report} changes={popup.changes} diary={popup.diary} bill={popup.report.span ? null : game?.sim.lastBill} earned={game?.sim.lastCheck?.amount} onNext={() => setPopup(null)} />
+            <WeekReportCard report={popup.report} changes={popup.changes} diary={popup.diary} bill={popup.report.span ? null : game?.sim.lastBill} earned={game?.sim.lastCheck?.amount} onNext={() => setPopup(null)} onOpenDiary={() => { setPopup(null); setDiaryOpen(true); }} />
           ) : popup.scene ? (
-            <article className="scene-sheet -mx-1 overflow-hidden rounded-[22px] border border-line bg-paper shadow-[0_10px_30px_-20px_var(--jade)]">
-              <header className="relative bg-gradient-to-br from-jade/20 via-paper-2 to-coral/20 px-4 pb-3 pt-4">
-                <h3 className="font-serif text-[19px] font-bold text-ink">{popup.title}</h3>
-                <p className="mt-1 flex flex-wrap gap-1.5 text-[11px] text-ink-soft">
-                  {popup.scene.location && <span className="inline-flex items-center gap-1 rounded-full bg-paper/80 px-2 py-0.5"><IconPin size={12} /> {popup.scene.location}</span>}
-                  {popup.scene.time && <span className="inline-flex items-center gap-1 rounded-full bg-paper/80 px-2 py-0.5"><IconClock size={12} /> {popup.scene.time}</span>}
-                </p>
+            <article className="scene-sheet -mx-1">
+              <header className="relative mb-4 border-b border-line/70 px-1 pb-4 pt-1 text-center">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-coral/80">Scene</p>
+                <h3 className="mt-1.5 font-serif text-[22px] font-bold leading-snug tracking-[0.04em] text-ink">{popup.title}</h3>
+                {(popup.scene.location || popup.scene.time) && (
+                  <p className="mt-2 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-[11.5px] text-ink-soft">
+                    {popup.scene.location && <span className="inline-flex items-center gap-1"><IconPin size={12} /> {popup.scene.location}</span>}
+                    {popup.scene.location && popup.scene.time && <span className="h-3 w-px bg-line" aria-hidden />}
+                    {popup.scene.time && <span className="inline-flex items-center gap-1"><IconClock size={12} /> {popup.scene.time}</span>}
+                  </p>
+                )}
               </header>
-              <div className="px-4 py-3.5">
+              <div className="px-1 pb-1">
                 <Segments segments={popup.segments} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} />
               </div>
             </article>
@@ -1153,6 +1139,12 @@ export default function GameShell() {
               ))}
             </div>
           )}
+          {/* 功能注释：读完长剧情不用滚回顶部找关闭——底部直接「继续」（周报卡片自带下一步，不重复） */}
+          {!popup.report && !popup.retry && (
+            <button type="button" onClick={() => setPopup(null)} className="mt-4 w-full rounded-lg bg-jade py-2.5 text-sm font-semibold text-paper-2 transition hover:brightness-110 active:scale-[0.98]">
+              继续
+            </button>
+          )}
         </Modal>
       )}
 
@@ -1167,7 +1159,7 @@ export default function GameShell() {
 
       {/* 人物档案：点左上角头像唤出（原「人物」页内容，现以弹窗呈现） */}
       {simOpen && (
-        <Modal title="人物档案" onClose={() => setSimOpen(false)}>
+        <Modal panelClassName="ui-dialog-game" title="人物档案" onClose={() => setSimOpen(false)}>
           <SimTab embedded />
         </Modal>
       )}
@@ -1210,8 +1202,13 @@ export default function GameShell() {
       )}
 
       <AllowanceWatcher />
+      {diaryOpen && (
+        <Modal panelClassName="ui-dialog-game" title="日记本" onClose={() => setDiaryOpen(false)}>
+          <DiaryBook />
+        </Modal>
+      )}
       {questOpen && (
-        <Modal title="剧情志" onClose={() => setQuestOpen(false)}>
+        <Modal panelClassName="ui-dialog-game" title="剧情志" onClose={() => setQuestOpen(false)}>
           <StoryQuestPanel onNavigate={() => setQuestOpen(false)} />
         </Modal>
       )}
@@ -1272,8 +1269,8 @@ export default function GameShell() {
         </Modal>
       )}
 
-      {setOpen && <Modal title="设置" onClose={() => setSetOpen(false)}><SettingsPanel bare onBeauty={() => { setSetOpen(false); setBeautyOpen(true); }} /></Modal>}
-      {beautyOpen && <Modal title="美化" onClose={() => setBeautyOpen(false)}><SettingsPanel bare section="beauty" /></Modal>}
+      {setOpen && <Modal title="设置" panelClassName="ui-dialog-compact" onClose={() => setSetOpen(false)}><SettingsPanel bare onBeauty={() => { setSetOpen(false); setBeautyOpen(true); }} /></Modal>}
+      {beautyOpen && <Modal title="美化" panelClassName="ui-dialog-compact" onClose={() => setBeautyOpen(false)}><SettingsPanel bare section="beauty" /></Modal>}
       {cgOpen && (
         <Modal title="CG 图鉴" onClose={() => {
           setCgOpen(false);
@@ -1343,7 +1340,7 @@ export default function GameShell() {
 
       {/* 存档管理：6 个手动存档位 + 自动存档 + 立即存档 */}
       {savesOpen && (
-        <Modal title="存档管理" onClose={() => setSavesOpen(false)}>
+        <Modal panelClassName="ui-dialog-game" title="存档管理" onClose={() => setSavesOpen(false)}>
           {/* 当前进度 + 立即存档（写入自动存档槽） */}
           <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-dashed border-jade/50 bg-jade/[0.05] p-3.5">
             <div className="min-w-0">
@@ -1351,6 +1348,7 @@ export default function GameShell() {
               <p className="truncate text-[11.5px] text-ink-soft">{game.world.time} · {game.world.location} · 第 {game.turnCount} 回合</p>
               {saveMsg === "ok" && <p className="mt-0.5 text-[11px] text-jade">已写入本地大容量存档</p>}
               {saveMsg === "fail" && <p className="mt-0.5 text-[11px] text-danger">存档失败：本地存储不可用</p>}
+              <CloudSaveStatus />
             </div>
             <button
               onClick={() => void quickSave()}
@@ -1450,7 +1448,7 @@ export default function GameShell() {
 
       {/* 结束游戏 */}
       {endOpen && (
-        <Modal title="要在这里落幕吗？" onClose={() => (busy ? undefined : setEndOpen(false))}>
+        <Modal panelClassName="ui-dialog-game" title="要在这里落幕吗？" onClose={() => (busy ? undefined : setEndOpen(false))}>
           <p className="story-prose text-[14px] text-ink/90">
             每一段星路都会有谢幕的时刻。如果你觉得她的故事已经圆满，可以在此刻温柔地合上这本书——我会为她写下完整的生平后记。<br /><br />
             当然，你也可以继续走下去，把结局交给时间与命运——由 AI 判定结局。<br /><br />

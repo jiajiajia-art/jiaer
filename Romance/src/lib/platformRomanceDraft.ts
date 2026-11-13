@@ -320,3 +320,70 @@ export function resetRomancePlatformDraftSyncForTests(): void {
   queued = null;
   inflight = null;
 }
+
+/** 功能注释：协议版本须与主站 CreatorPublishAgreementModal 对齐；换版后作者须重新勾选。 */
+export const ROMANCE_CREATOR_AGREEMENT_VERSION = "1.0.0";
+export const ROMANCE_REVIEW_STANDARDS_VERSION = "1.0.0";
+
+export type RomancePublishInput = {
+  /** 功能注释：沿用作品信息简介；弹窗不再二次填写 */
+  description: string;
+  /** 功能注释：首次正式上线不填；后续有改版入口再传 */
+  versionNotes?: string;
+  audienceType: "male" | "female" | "all";
+  /** 功能注释：提交审核弹窗已去掉「通知收藏玩家」；默认不通知 */
+  notifyFavoritedUsers?: boolean;
+};
+
+export type RomancePublishResult =
+  | { ok: true; pendingReview: boolean }
+  | { ok: false; message: string };
+
+/**
+ * 功能注释：提交发布审核；走主站同一 /api/auth/games/publish，先审作品返回 pending_review。
+ * 调用前须已把最新正文 PUT 到同一 fileId，否则审核看到的是旧版本。
+ */
+export async function publishRomancePlatformDraft(
+  fileId: string,
+  input: RomancePublishInput,
+  apiBase = resolveFunloomApiBase(),
+): Promise<RomancePublishResult> {
+  const id = String(fileId || "").trim();
+  if (!id) return { ok: false, message: "这个作品还没有关联平台草稿，无法发布" };
+  const token = readFunloomAuthToken();
+  if (!token) return { ok: false, message: "请先登录后再发布" };
+  const base = String(apiBase || "").trim().replace(/\/$/, "");
+  try {
+    const res = await fetch(`${base}/api/auth/games/publish`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        fileId: id,
+        priceAmount: 0,
+        description: input.description,
+        versionNotes: input.versionNotes || null,
+        notifyFavoritedUsers: !!input.notifyFavoritedUsers,
+        audienceType: input.audienceType,
+        creatorAgreementVersion: ROMANCE_CREATOR_AGREEMENT_VERSION,
+        workReviewStandardsVersion: ROMANCE_REVIEW_STANDARDS_VERSION,
+        agreedAt: new Date().toISOString(),
+      }),
+    });
+    const json = await res.json().catch(() => null) as {
+      success?: boolean;
+      message?: string;
+      data?: { moderation_status?: string | null; moderationStatus?: string | null } | null;
+    } | null;
+    if (!res.ok || !json?.success) {
+      return { ok: false, message: json?.message || "提交失败，请稍后再试" };
+    }
+    const status = json.data?.moderation_status ?? json.data?.moderationStatus ?? "";
+    return { ok: true, pendingReview: status === "pending_review" };
+  } catch {
+    return { ok: false, message: "网络异常，提交失败" };
+  }
+}

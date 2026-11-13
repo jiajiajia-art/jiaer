@@ -52,5 +52,8 @@ test('platformImageGen_请求体可带referenceImages', () => {
   const src = read('lib/platformImageGen.ts');
   assert.match(src, /referenceImages/);
   assert.match(src, /normalizeClientReferenceImages/);
-  assert.match(src, /signal: options\.signal/);
+  // 功能注释：外层取消经 options.signal 并入 localAc；fetch 用 localAc.signal + 客户端超时
+  assert.match(src, /options\.signal/);
+  assert.match(src, /signal: localAc\.signal/);
+  assert.match(src, /CLIENT_TIMEOUT_MS/);
 });

@@ -1,9 +1,9 @@
 .pageRoot {
     --home-navbar-height: var(--app-desktop-navbar-height);
     /* 功能注释：首页本地暗色 funloom 令牌，不改全局 body */
-    --primary: #A8283C;
-    --primary-light: #C23A50;
-    --primary-dark: #8E2135;
+    --primary: var(--color-primary);
+    --primary-light: var(--color-primary);
+    --primary-dark: var(--color-primary-bold);
     /* 功能注释：筛选条上间距 / 下间距=一半，保证精选卡→筛选→列表节奏一致 */
     --home-filter-gap-above: 16px;
     --home-filter-gap-below: calc(var(--home-filter-gap-above) / 2);
@@ -12,8 +12,8 @@
     min-height: 100vh;
     max-width: none;
     margin: 0;
-    background: #000000;
-    color: #FFFFFF;
+    background: var(--color-bg);
+    color: var(--color-text);
 }
 
 .logo {
@@ -29,7 +29,7 @@
 
 .mainContent {
     /* 功能注释：纵向布局，页脚贴内容底部；主栏占满中间宽度，不再把页脚钉在右侧 */
-    color: #FFFFFF;
+    color: var(--color-text);
     display: flex;
     flex-direction: column;
     margin: 0;
@@ -115,7 +115,7 @@
     left: 0;
     z-index: 1;
     overflow: hidden;
-    background: #1C1C1E;
+    background: var(--color-surface);
 }
 
 .carouselImage img {
@@ -136,7 +136,7 @@
 .carouselImagePlaceholder {
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, #1C1C1E 25%, #2C2C2E 50%, #1C1C1E 75%);
+    background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-surface-2) 50%, var(--color-surface) 75%);
     background-size: 400% 100%;
     animation: carousel-image-skeleton 1.5s ease-in-out infinite;
     z-index: 2;
@@ -177,7 +177,7 @@
 
 .carouselInfo {
     text-align: left;
-    color: white;
+    color: var(--color-on-media);
     width: 100%;
     max-width: 1080px;
     margin: 0;
@@ -190,10 +190,10 @@
     margin: 0 0 20px 0;
     line-height: 1.1;
     text-shadow: 
-    0 0 6px rgba(0, 0, 0, 0.4),
-    0 0 12px rgba(0, 0, 0, 0.35),
-    0 0 24px rgba(0, 0, 0, 0.3),
-    0 0 36px rgba(0, 0, 0, 0.25);
+    0 0 6px color-mix(in srgb, var(--color-shadow) 40%, transparent),
+    0 0 12px color-mix(in srgb, var(--color-shadow) 35%, transparent),
+    0 0 24px color-mix(in srgb, var(--color-shadow) 30%, transparent),
+    0 0 36px color-mix(in srgb, var(--color-shadow) 25%, transparent);
 }
 
 .carouselDescription {
@@ -208,10 +208,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
     text-shadow: 
-    0 0 2px rgba(0, 0, 0, 0.4),
-    0 0 4px rgba(0, 0, 0, 0.35),
-    0 0 8px rgba(0, 0, 0, 0.3),
-    0 0 16px rgba(0, 0, 0, 0.25);
+    0 0 2px color-mix(in srgb, var(--color-shadow) 40%, transparent),
+    0 0 4px color-mix(in srgb, var(--color-shadow) 35%, transparent),
+    0 0 8px color-mix(in srgb, var(--color-shadow) 30%, transparent),
+    0 0 16px color-mix(in srgb, var(--color-shadow) 25%, transparent);
 }
 
 .carouselStartBtn {
@@ -224,10 +224,10 @@
     display: block;
     background-color: transparent;
     border-radius: 999px;
-    box-shadow: 0 4px 8px rgba(251, 73, 88, 0.3),
-    0 -3px 8px rgba(251, 73, 88, 0.3),
-    3px 0 8px rgba(251, 73, 88, 0.3),
-    -3px 0 8px rgba(251, 73, 88, 0.3);
+    box-shadow: 0 4px 8px color-mix(in srgb, var(--color-primary) 30%, transparent),
+    0 -3px 8px color-mix(in srgb, var(--color-primary) 30%, transparent),
+    3px 0 8px color-mix(in srgb, var(--color-primary) 30%, transparent),
+    -3px 0 8px color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 .carouselStartBtn:hover {
@@ -258,7 +258,7 @@
 .carouselIndicator {
     width: 8px;
     height: 8px;
-    background-color: rgba(255, 255, 255, 0.35);
+    background-color: color-mix(in srgb, var(--color-text) 35%, transparent);
     border: none;
     border-radius: 999px;
     cursor: pointer;
@@ -267,13 +267,13 @@
 }
 
 .carouselIndicator:hover {
-    background-color: rgba(255, 255, 255, 0.7);
+    background-color: color-mix(in srgb, var(--color-surface) 70%, transparent);
 }
 
 .carouselIndicatorActive {
     width: 18px;
     height: 8px;
-    background-color: #FFFFFF;
+    background-color: var(--color-surface);
 }
 
 .carouselNavButton {
@@ -282,10 +282,10 @@
     transform: translateY(-50%);
     width: 56px;
     height: 56px;
-    border: 1px solid rgba(255, 255, 255, 0.35);
+    border: 1px solid color-mix(in srgb, var(--color-text) 35%, transparent);
     border-radius: 999px;
     background:
-        radial-gradient(circle at 28% 28%, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.08) 44%, rgba(0, 0, 0, 0.28) 100%);
+        radial-gradient(circle at 28% 28%, color-mix(in srgb, var(--color-text) 34%, transparent), color-mix(in srgb, var(--color-text) 8%, transparent) 44%, color-mix(in srgb, var(--color-text) 28%, transparent) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -294,16 +294,16 @@
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     box-shadow:
-        0 10px 28px rgba(0, 0, 0, 0.28),
-        inset 0 1px 0 rgba(255, 255, 255, 0.38);
+        0 10px 28px color-mix(in srgb, var(--color-shadow) 28%, transparent),
+        inset 0 1px 0 color-mix(in srgb, var(--color-text) 38%, transparent);
     transition: opacity 0.28s ease, visibility 0.28s ease, transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .carouselNavButton:hover {
-    background-color: rgba(255, 255, 255, 0.12);
+    background-color: color-mix(in srgb, var(--color-text) 12%, transparent);
     box-shadow:
-        0 12px 30px rgba(0, 0, 0, 0.32),
-        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        0 12px 30px color-mix(in srgb, var(--color-shadow) 32%, transparent),
+        inset 0 1px 0 color-mix(in srgb, var(--color-text) 50%, transparent);
 }
 
 .carouselNavButton:active {
@@ -323,11 +323,11 @@
     height: 100%;
     display: block;
     fill: none;
-    stroke: rgba(255, 255, 255, 0.96);
+    stroke: color-mix(in srgb, var(--color-text) 96%, transparent);
     stroke-width: 2.3;
     stroke-linecap: round;
     stroke-linejoin: round;
-    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--color-shadow) 35%, transparent));
 }
 
 .carouselNavButtonLeft {
@@ -341,7 +341,7 @@
 .carouselEmpty {
     width: 100%;
     height: 100%;
-    background: #1C1C1E;
+    background: var(--color-surface);
     border-radius: 12px;
 }
 
@@ -366,7 +366,7 @@
     width: 100%;
     margin: 16px auto 0;
     padding: 12px 16px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     border-radius: 999px;
     display: grid;
     grid-template-columns: auto auto minmax(0, 1fr) auto;
@@ -374,7 +374,7 @@
     gap: 10px;
     cursor: pointer;
     text-align: left;
-    background: #1A1A1A;
+    background: var(--color-surface);
     box-shadow: none;
     position: relative;
     overflow: hidden;
@@ -388,21 +388,21 @@
 }
 
 .homeTicker:hover {
-    background: #222222;
-    border-color: rgba(255, 255, 255, 0.12);
+    background: var(--color-surface-2);
+    border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
     transform: none;
     box-shadow: none;
 }
 
 .homeTicker:focus-visible {
-    outline: 2px solid rgba(255, 255, 255, 0.92);
+    outline: 2px solid color-mix(in srgb, var(--color-text) 92%, transparent);
     outline-offset: 2px;
 }
 
 /* 功能注释：效果图「公告」文字标签 */
 .homeTickerBadge {
     flex-shrink: 0;
-    color: #FFFFFF;
+    color: var(--color-text);
     font-size: 14px;
     font-weight: 700;
     line-height: 1;
@@ -414,7 +414,7 @@
     width: 1px;
     height: 14px;
     flex-shrink: 0;
-    background: rgba(255, 255, 255, 0.28);
+    background: color-mix(in srgb, var(--color-text) 28%, transparent);
 }
 
 .homeTickerIcon {
@@ -449,7 +449,7 @@
 
 .homeTickerText {
     display: block;
-    color: rgba(255, 255, 255, 0.92);
+    color: color-mix(in srgb, var(--color-text) 92%, transparent);
     font-size: 14px;
     font-weight: 500;
     line-height: 1.4;
@@ -465,7 +465,7 @@
     width: 4px;
     height: 4px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.35);
+    background: color-mix(in srgb, var(--color-text) 35%, transparent);
     box-shadow: none;
 }
 
@@ -492,8 +492,8 @@
     content: '';
     width: 7px;
     height: 7px;
-    border-top: 1.6px solid rgba(255, 255, 255, 0.78);
-    border-right: 1.6px solid rgba(255, 255, 255, 0.78);
+    border-top: 1.6px solid color-mix(in srgb, var(--color-text) 78%, transparent);
+    border-right: 1.6px solid color-mix(in srgb, var(--color-text) 78%, transparent);
     transform: rotate(45deg);
     display: block;
 }
@@ -552,7 +552,7 @@
     background-color: transparent;
     outline: none;
     border: none;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     font-size: 20px;
     display: flex;
     align-items: center;
@@ -674,8 +674,8 @@
             opacity 0.45s ease,
             filter 0.45s ease;
         box-shadow:
-            0 26px 50px rgba(0, 0, 0, 0.28),
-            0 0 0 1px rgba(255, 255, 255, 0.08);
+            0 26px 50px color-mix(in srgb, var(--color-shadow) 28%, transparent),
+            0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
         transform-origin: center center;
     }
 
@@ -737,10 +737,10 @@
         /* 实现 PC 端固定展示框光影 */
         width: calc(var(--desktop-slide-width) + 28px);
         aspect-ratio: 9 / 5;
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02));
+        background: linear-gradient(180deg, color-mix(in srgb, var(--color-text) 10%, transparent), color-mix(in srgb, var(--color-text) 2%, transparent));
         box-shadow:
-            0 28px 80px rgba(0, 0, 0, 0.42),
-            0 0 0 1px rgba(255, 255, 255, 0.08);
+            0 28px 80px color-mix(in srgb, var(--color-shadow) 42%, transparent),
+            0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
         z-index: 2;
     }
 
@@ -748,10 +748,10 @@
         /* 实现 PC 端固定展示框边框 */
         width: calc(var(--desktop-slide-width) + 18px);
         aspect-ratio: 9 / 5;
-        border: 1px solid rgba(255, 255, 255, 0.28);
+        border: 1px solid color-mix(in srgb, var(--color-text) 28%, transparent);
         box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.28),
-            inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+            inset 0 1px 0 color-mix(in srgb, var(--color-text) 28%, transparent),
+            inset 0 -1px 0 color-mix(in srgb, var(--color-text) 8%, transparent);
         z-index: 4;
     }
 
@@ -943,7 +943,7 @@
         width: 100%;
         height: 100%;
         overflow: hidden;
-        background: linear-gradient(180deg, #181b21 0%, #232730 100%);
+        background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-surface-2) 100%);
     }
 
     .carouselImage img {
@@ -1113,10 +1113,10 @@
 }
 
 .themeShowcaseItem {
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     border-radius: 999px;
-    background: #252525;
-    color: #FFFFFF;
+    background: var(--color-surface-2);
+    color: var(--color-text);
     min-height: 40px;
     padding: 10px 20px;
     white-space: nowrap;
@@ -1139,9 +1139,9 @@
 
 .themeShowcaseItem:hover {
     transform: none;
-    border-color: rgba(255, 255, 255, 0.2);
-    color: #ffffff;
-    background: #2C2C2E;
+    border-color: color-mix(in srgb, var(--color-text) 20%, transparent);
+    color: var(--color-text);
+    background: var(--color-surface-2);
     box-shadow: none;
 }
 
@@ -1149,14 +1149,14 @@
 .themeShowcaseItemActive:hover {
     transform: none;
     border-color: transparent;
-    background: #8E2135;
-    color: #ffffff;
+    background: var(--color-primary-bold);
+    color: var(--color-on-primary);
     box-shadow: none;
 }
 
 .themeShowcaseItem:focus-visible,
 .themeShowcaseMoreLink:focus-visible {
-    outline: 2px solid rgba(255, 255, 255, 0.92);
+    outline: 2px solid color-mix(in srgb, var(--color-text) 92%, transparent);
     outline-offset: 2px;
 }
 
@@ -1184,7 +1184,7 @@
 .themeShowcaseTitle {
     min-width: 0;
     margin: 0;
-    color: #FFFFFF;
+    color: var(--color-text);
     font-size: 16px;
     font-weight: 600;
     line-height: 1.35;
@@ -1203,7 +1203,7 @@
     align-items: center;
     gap: 4px;
     background: transparent;
-    color: rgba(255, 255, 255, 0.78);
+    color: color-mix(in srgb, var(--color-text) 78%, transparent);
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -1211,7 +1211,7 @@
 }
 
 .themeShowcaseMoreLink:hover {
-    color: #ffffff;
+    color: var(--color-text);
     transform: none;
 }
 
@@ -1227,7 +1227,7 @@
     content: '\203A';
     font-size: 16px;
     line-height: 1;
-    color: rgba(255, 255, 255, 0.78);
+    color: color-mix(in srgb, var(--color-text) 78%, transparent);
 }
 
 .themeShowcasePreview {
@@ -1238,8 +1238,8 @@
 
 @media (min-width: 769px) {
     .homeTicker {
-        border-color: rgba(255, 255, 255, 0.1);
-        background: #1A1A1A;
+        border-color: color-mix(in srgb, var(--color-text) 10%, transparent);
+        background: var(--color-surface);
         box-shadow: none;
     }
 
@@ -1249,13 +1249,13 @@
     }
 
     .homeTicker:hover {
-        border-color: rgba(255, 255, 255, 0.14);
-        background: #222222;
+        border-color: color-mix(in srgb, var(--color-text) 14%, transparent);
+        background: var(--color-surface-2);
         box-shadow: none;
     }
 
     .homeTicker:focus-visible {
-        outline: 2px solid rgba(168, 40, 60, 0.55);
+        outline: 2px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
     }
 
     .homeTickerIcon {
@@ -1263,11 +1263,11 @@
     }
 
     .homeTickerText {
-        color: rgba(255, 255, 255, 0.92);
+        color: color-mix(in srgb, var(--color-text) 92%, transparent);
     }
 
     .homeTickerDot {
-        background: rgba(255, 255, 255, 0.35);
+        background: color-mix(in srgb, var(--color-text) 35%, transparent);
         box-shadow: none;
     }
 
@@ -1294,32 +1294,32 @@
     }
 
     .themeShowcaseItem {
-        border-color: rgba(255, 255, 255, 0.12);
-        background: #252525;
-        color: #FFFFFF;
+        border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+        background: var(--color-surface-2);
+        color: var(--color-text);
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
         box-shadow: none;
     }
 
     .themeShowcaseItem:hover {
-        border-color: rgba(255, 255, 255, 0.2);
-        color: #FFFFFF;
-        background: #2C2C2E;
+        border-color: color-mix(in srgb, var(--color-text) 20%, transparent);
+        color: var(--color-text);
+        background: var(--color-surface-2);
         box-shadow: none;
     }
 
     .themeShowcaseItemActive,
     .themeShowcaseItemActive:hover {
         border-color: transparent;
-        background: #8E2135;
-        color: #FFFFFF;
+        background: var(--color-primary-bold);
+        color: var(--color-on-primary);
         box-shadow: none;
     }
 
     .themeShowcaseItem:focus-visible,
     .themeShowcaseMoreLink:focus-visible {
-        outline: 2px solid rgba(168, 40, 60, 0.55);
+        outline: 2px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
     }
 
     .themeShowcaseTitleMarker {
@@ -1327,20 +1327,20 @@
     }
 
     .themeShowcaseTitle {
-        color: #FFFFFF;
+        color: var(--color-text);
         font-size: 16px;
     }
 
     .themeShowcaseMoreLink {
-        color: rgba(255, 255, 255, 0.78);
+        color: color-mix(in srgb, var(--color-text) 78%, transparent);
     }
 
     .themeShowcaseMoreLink:hover {
-        color: #FFFFFF;
+        color: var(--color-text);
     }
 
     .themeShowcaseMoreArrow::before {
-        color: rgba(255, 255, 255, 0.78);
+        color: color-mix(in srgb, var(--color-text) 78%, transparent);
     }
 }
 
@@ -1368,9 +1368,9 @@
         height: 540px;
         padding: 24px 0 28px;
         background:
-            radial-gradient(circle at 10% 10%, rgba(224, 61, 75, 0.26), transparent 36%),
-            radial-gradient(circle at 90% 90%, rgba(0, 0, 0, 0.36), transparent 42%),
-            linear-gradient(180deg, #16181d 0%, #1f2229 100%);
+            radial-gradient(circle at 10% 10%, color-mix(in srgb, var(--color-primary) 26%, transparent), transparent 36%),
+            radial-gradient(circle at 90% 90%, color-mix(in srgb, var(--color-shadow) 36%, transparent), transparent 42%),
+            linear-gradient(180deg, var(--color-surface) 0%, var(--color-surface-2) 100%);
         box-sizing: border-box;
     }
 
@@ -1424,8 +1424,8 @@
         gap: 8px;
         border-radius: 999px;
         grid-template-columns: auto auto minmax(0, 1fr) auto;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        background: #1A1A1A;
+        border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+        background: var(--color-surface);
         box-shadow: none;
     }
 
@@ -1449,14 +1449,14 @@
     .homeTickerText {
         font-size: 13px;
         line-height: 1.35;
-        color: rgba(255, 255, 255, 0.92);
+        color: color-mix(in srgb, var(--color-text) 92%, transparent);
         font-weight: 500;
     }
 
     .homeTickerDot {
         width: 4px;
         height: 4px;
-        background: rgba(255, 255, 255, 0.35);
+        background: color-mix(in srgb, var(--color-text) 35%, transparent);
         box-shadow: none;
     }
 
@@ -1480,16 +1480,16 @@
         content: '';
         width: 6px;
         height: 6px;
-        border-top: 1.5px solid rgba(255, 255, 255, 0.75);
-        border-right: 1.5px solid rgba(255, 255, 255, 0.75);
+        border-top: 1.5px solid color-mix(in srgb, var(--color-text) 75%, transparent);
+        border-right: 1.5px solid color-mix(in srgb, var(--color-text) 75%, transparent);
         transform: rotate(45deg);
         display: block;
     }
 
     .homeTicker:hover {
         transform: none;
-        border-color: rgba(255, 255, 255, 0.1);
-        background: #222222;
+        border-color: color-mix(in srgb, var(--color-text) 10%, transparent);
+        background: var(--color-surface-2);
         box-shadow: none;
     }
 
@@ -1524,9 +1524,9 @@
         min-height: 38px;
         padding: 9px 18px;
         font-size: 14px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        background: #252525;
-        color: #FFFFFF;
+        border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+        background: var(--color-surface-2);
+        color: var(--color-text);
         box-shadow: none;
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
@@ -1549,36 +1549,36 @@
     .themeShowcaseTitle {
         font-size: 15px;
         font-weight: 600;
-        color: #FFFFFF;
+        color: var(--color-text);
     }
 
     .themeShowcaseItem:hover {
-        border-color: rgba(255, 255, 255, 0.18);
-        color: #FFFFFF;
-        background: #2C2C2E;
+        border-color: color-mix(in srgb, var(--color-text) 18%, transparent);
+        color: var(--color-text);
+        background: var(--color-surface-2);
         box-shadow: none;
     }
 
     .themeShowcaseItem:focus-visible,
     .themeShowcaseMoreLink:focus-visible {
-        outline: 2px solid rgba(168, 40, 60, 0.55);
+        outline: 2px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
         outline-offset: 2px;
     }
 
     .themeShowcaseItemActive,
     .themeShowcaseItemActive:hover {
         border-color: transparent;
-        background: #8E2135;
-        color: #ffffff;
+        background: var(--color-primary-bold);
+        color: var(--color-on-primary);
         box-shadow: none;
     }
 
     .themeShowcaseMoreLink {
-        color: rgba(255, 255, 255, 0.72);
+        color: var(--color-text-secondary);
     }
 
     .themeShowcaseMoreLink:hover {
-        color: #FFFFFF;
+        color: var(--color-text);
     }
 
     .themeShowcaseMoreLink span:first-child {
@@ -1587,7 +1587,7 @@
 
     .themeShowcaseMoreArrow::before {
         font-size: 15px;
-        color: rgba(255, 255, 255, 0.72);
+        color: var(--color-text-secondary);
     }
 
     .themeShowcasePreview {
@@ -1607,9 +1607,9 @@
         width: 100%;
         margin-top: 0;
         padding: 12px 14px 12px 12px;
-        border: 1px solid rgba(255, 255, 255, 0.06);
+        border: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
         border-radius: 18px;
-        background: #1C1C1E;
+        background: var(--color-surface);
         box-shadow: none;
         display: grid;
         grid-template-columns: auto minmax(0, 1fr) max-content;
@@ -1626,7 +1626,7 @@
     }
 
     .mobileJoinGroupCard:focus-visible {
-        outline: 2px solid rgba(168, 40, 60, 0.55);
+        outline: 2px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
         outline-offset: 2px;
     }
 
@@ -1642,8 +1642,8 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        background: linear-gradient(180deg, #3A3A3C 0%, #2C2C2E 100%);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        background: linear-gradient(180deg, var(--color-surface-2) 0%, var(--color-surface-2) 100%);
+        box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 8%, transparent);
         flex-shrink: 0;
     }
 
@@ -1662,7 +1662,7 @@
     }
 
     .mobileJoinGroupTitle {
-        color: #FFFFFF;
+        color: var(--color-text);
         font-size: 15px;
         font-weight: 600;
         line-height: 1.3;
@@ -1670,7 +1670,7 @@
     }
 
     .mobileJoinGroupDesc {
-        color: #8E8E93;
+        color: var(--color-text-muted);
         font-size: 12px;
         font-weight: 400;
         line-height: 1.35;
@@ -1680,9 +1680,9 @@
         min-width: 88px;
         padding: 11px 18px;
         border-radius: 999px;
-        background: linear-gradient(180deg, #B83248 0%, #8E2135 100%);
-        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset;
-        color: #ffffff;
+        background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
+        box-shadow: 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent) inset;
+        color: var(--color-on-primary);
         font-size: 14px;
         font-weight: 700;
         line-height: 1;
@@ -1752,8 +1752,9 @@
     /* 底部加深渐变托底，标题与简介不再直接压在图片花纹上 */
     .carouselContent {
         padding-inline: 20px;
-        padding-bottom: 40px;
-        background: linear-gradient(180deg, rgba(0, 0, 0, 0) 52%, rgba(0, 0, 0, 0.55) 78%, rgba(0, 0, 0, 0.82) 100%);
+        /* 功能注释：原 40px 叠上图片底部深色托底，会在简介和公告条之间留出一大段空白；收到 16px */
+        padding-bottom: 16px;
+        background: linear-gradient(180deg, transparent 52%, color-mix(in srgb, var(--color-shadow) 55%, transparent) 78%, color-mix(in srgb, var(--color-shadow) 82%, transparent) 100%);
     }
 
     .carouselInfo {
@@ -1766,24 +1767,25 @@
         font-weight: 700;
         letter-spacing: 0.02em;
         margin-bottom: 6px;
-        text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
+        text-shadow: 0 1px 8px color-mix(in srgb, var(--color-shadow) 55%, transparent);
     }
 
     .carouselDescription {
         width: auto;
         font-size: 12px;
         line-height: 1.5;
-        color: rgba(255, 255, 255, 0.78);
+        color: color-mix(in srgb, var(--color-on-media) 78%, transparent);
         -webkit-line-clamp: 1;
         line-clamp: 1;
-        text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+        text-shadow: 0 1px 6px color-mix(in srgb, var(--color-shadow) 50%, transparent);
     }
 
     /* 指示器移到右下角，与左侧文字分区，不再叠在简介上 */
     .carouselIndicators {
         left: auto;
         right: 20px;
-        bottom: 46px;
+        /* 功能注释：跟随文字底部收紧，仍与简介同一行 */
+        bottom: 22px;
         transform: none;
         gap: 5px;
     }
@@ -1799,8 +1801,8 @@
 
     /* 分类条右侧渐隐，提示可横向滑动 */
     .themeShowcaseList {
-        -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 36px), transparent 100%);
-        mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 36px), transparent 100%);
+        -webkit-mask-image: linear-gradient(90deg, var(--color-bg) 0, var(--color-bg) calc(100% - 36px), transparent 100%);
+        mask-image: linear-gradient(90deg, var(--color-bg) 0, var(--color-bg) calc(100% - 36px), transparent 100%);
         padding-right: 24px;
     }
 
@@ -1827,15 +1829,15 @@
     width: 4px;
     height: 18px;
     border-radius: 999px;
-    background: linear-gradient(180deg, #E0485E 0%, #8E2135 100%);
-    box-shadow: 0 0 10px rgba(224, 72, 94, 0.45);
+    background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 .themeShowcaseTitle,
 .homeWideSections .themeShowcaseTitle {
     font-weight: 700;
     letter-spacing: -0.005em;
-    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
+    text-shadow: 0 1px 10px color-mix(in srgb, var(--color-shadow) 35%, transparent);
 }
 
 .themeShowcaseMoreLink,
@@ -1843,9 +1845,9 @@
     gap: 2px;
     padding: 5px 8px 5px 12px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(255, 255, 255, 0.78);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: color-mix(in srgb, var(--color-text) 78%, transparent);
     font-size: 12px;
     line-height: 1;
     transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
@@ -1861,9 +1863,9 @@
 }
 
 .themeShowcaseMoreLink:hover {
-    color: #ffffff;
-    border-color: rgba(224, 72, 94, 0.55);
-    background: rgba(168, 40, 60, 0.35);
+    color: var(--color-primary-fg);
+    border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 @media (min-width: 769px) {
@@ -1874,5 +1876,61 @@
     .themeShowcaseMoreLink,
     .themeShowcaseMoreLink span:first-child {
         font-size: 13px;
+    }
+}
+
+/* ===== 移动端排版呼吸感：拉开模块间距、收小分类胶囊、去掉标题发光 ===== */
+@media (max-width: 768px) {
+    .pageRoot {
+        /* 功能注释：加群卡/筛选条上间距，跟 Banner→公告→分类→标题 同一套呼吸节奏 */
+        --home-filter-gap-above: 32px;
+    }
+
+    /* Banner 与公告条 */
+    .homeTicker {
+        margin-top: 28px;
+        padding: 10px 14px;
+    }
+
+    /* 公告条与分类胶囊 */
+    .themeShowcase {
+        margin-top: 24px;
+    }
+
+    .themeShowcaseList {
+        gap: 8px;
+        padding: 4px 0 6px;
+    }
+
+    .themeShowcaseItem {
+        min-height: 34px;
+        padding: 7px 16px;
+        font-size: 13px;
+    }
+
+    /* 分类胶囊与「为您挑选…」标题 */
+    .themeShowcaseTitleRow {
+        margin-top: 36px;
+        margin-bottom: 6px;
+    }
+
+    .themeShowcaseTitle,
+    .homeWideSections .themeShowcaseTitle {
+        font-size: 16px;
+        text-shadow: none;
+    }
+
+    .themeShowcaseTitleGroup::before {
+        box-shadow: none;
+    }
+
+    /* 标题与精选卡、精选卡与加群横幅 */
+    .themeShowcasePreview {
+        margin-top: 18px;
+        margin-bottom: 8px;
+    }
+
+    .mobileJoinGroupSection {
+        margin-top: var(--home-filter-gap-above, 32px);
     }
 }

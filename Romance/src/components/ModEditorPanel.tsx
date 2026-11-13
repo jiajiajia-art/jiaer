@@ -1703,7 +1703,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
 
       {isGrowEnabled(c) && isGrowModuleOn(c, "courses") && (
         <Section g="grow" title="培训课程" on={has(c.trainings)} hint="学费 · 体力 · 属性收益 · 自定义等级与解锁条件" count={c.trainings?.length || undefined}>
-          <ModTrainingsEditor value={c.trainings} stats={c.stats} attrs={c.customAttrs} onChange={(trainings) => setC({ trainings })} />
+          <ModTrainingsEditor builtinFame={entBase} value={c.trainings} stats={c.stats} attrs={c.customAttrs} onChange={(trainings) => setC({ trainings })} />
         </Section>
       )}
 

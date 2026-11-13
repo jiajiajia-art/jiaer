@@ -18,7 +18,7 @@ import {
   GAME_CARD_DEFAULT_AVATAR_PATH,
   resolveGameCardAuthor,
 } from '../lib/gameCardAuthor';
-import { CardFlameIcon, CardHeartIcon } from './GameCardStatIcons';
+import { CardBookmarkIcon, CardFlameIcon, CardHeartIcon } from './GameCardStatIcons';
 import { creatorWorkStatusLabel, isDraftSlotWork, resolveCreatorWorkStatus } from '../utils/creatorWorkLifecycle';
 
 type GameGridLayoutVariant = 'default' | 'homeWide' | 'works';
@@ -299,6 +299,13 @@ const GameGrid: React.FC<GameGridProps> = ({
                                         </span>
                                     </div>
                                 </div>
+                                {/* 功能注释：收藏数与火焰/心形同一套图标数据，靠右对齐 */}
+                                <div className={styles.goodsInfoItem} title={body.collectBadge ?? undefined}>
+                                    <CardBookmarkIcon className={styles.goodsInfoBookmark} />
+                                    <span className={styles.goodsInfoValue}>
+                                        {Math.max(0, Math.floor(Number(meta.favorite_count) || 0))}
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
@@ -306,6 +313,12 @@ const GameGrid: React.FC<GameGridProps> = ({
                             <div className={styles.goodsTitle} title={meta.title || undefined}>
                                 {meta.title || `剧情${idx + 1}`}
                             </div>
+                            {/* 功能注释：首页无简介用空行保卡片等高；书架 works 仅在有且与标题不同的简介时渲染，去掉空行/重复行 */}
+                            {(!isWorksLayout || (body.subtitle && body.subtitle !== String(meta.title ?? '').trim())) && (
+                                <p className={styles.goodsDesc} title={body.subtitle || undefined}>
+                                    {body.subtitle || '\u00a0'}
+                                </p>
+                            )}
                             {/* 功能注释：左作者署名、右收藏徽标，同一行左右布局 */}
                             <div className={styles.goodsMetaRow}>
                                 <div className={styles.goodsAuthor} title={author.name}>
@@ -318,17 +331,15 @@ const GameGrid: React.FC<GameGridProps> = ({
                                     />
                                     <span className={styles.goodsAuthorName}>{author.name}</span>
                                 </div>
-                                {body.collectBadge ? (
-                                    <span className={styles.goodsCollectBadge}>{body.collectBadge}</span>
-                                ) : null}
                             </div>
-                            {body.tags.length > 0 ? (
-                                <div className={styles.goodsTagRow}>
+                            {/* 功能注释：首页标签行恒占位保齐；书架 works 无标签不渲染，去掉作者下方空白条 */}
+                            {(body.tags.length > 0 || !isWorksLayout) && (
+                                <div className={styles.goodsTagRow} aria-hidden={body.tags.length === 0 || undefined}>
                                     {body.tags.map((tag) => (
                                         <span key={tag} className={styles.goodsTagPill}>{tag}</span>
                                     ))}
                                 </div>
-                            ) : null}
+                            )}
                         </div>
                     </div>
                 );

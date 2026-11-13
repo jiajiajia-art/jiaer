@@ -206,17 +206,26 @@ test('AiImageGen_默认编辑页再开始生成_仍走platformImageGen', () => {
   assert.match(gen, /autoRun = false/);
   assert.match(gen, /autoApply = false/);
   assert.doesNotMatch(gen, /from ["']\.\.\/lib\/ai["']/);
+  const plat = read('lib/platformImageGen.ts');
+  assert.match(plat, /CLIENT_TIMEOUT_MS = 110_000/);
+  assert.match(plat, /生图超时，请稍后重试或换线路/);
 });
 
 test('AiImageGen_三层可编辑_正向画风加主体_负面词单独传_重绘默认带当前图', () => {
   const gen = read('components/AiImageGen.tsx');
   assert.match(gen, /initialParts/);
   assert.match(gen, /initialRefs/);
-  assert.match(gen, /画风 · 整部作品统一/);
+  // 功能注释：画风正向词后台配置，创作者只点选、不暴露手改框 / styleText Tab
+  assert.match(gen, /选画风/);
+  assert.doesNotMatch(gen, /画风词|styleText|setPrepTab\("styleText"\)/);
+  assert.match(gen, /grid-cols-2/);
   assert.match(gen, /本张主体 · 只写这一张/);
+  const picker = read('components/ArtStylePicker.tsx');
+  assert.match(picker, /grid-cols-3/);
+  assert.doesNotMatch(picker, /preview\.prompt\}/);
   assert.match(gen, /负面词 · 不想出现的内容/);
   assert.match(gen, /composePositivePrompt\(\{ style, subject \}\)/);
-  assert.match(gen, /negativePrompt: layered \? negative\.trim\(\) : undefined/);
+  assert.match(gen, /negativePrompt: negative\.trim\(\) \|\| undefined/);
   assert.match(gen, /onPartsCommit/);
   // 功能注释：参考图初始值取 initialRefs 前 MAX_REFS 张，创作者可移除
   assert.match(gen, /useState<string\[\]>\(\(\) => \(initialRefs \?\? \[\]\)\.filter\(Boolean\)\.slice\(0, MAX_REFS\)\)/);
@@ -247,12 +256,12 @@ test('人物卡_生图用外观描述三层_重绘默认带当前头像', () => 
   const panel = read('components/ModEditorPanel.tsx');
   assert.match(panel, /buildNpcAvatarPromptParts/);
   assert.match(panel, /from ["']\.\.\/lib\/editorImagePrompts["']/);
-  assert.match(panel, /aiGen=\{\{[\s\S]*initialParts: buildNpcAvatarPromptParts/);
+  assert.match(panel, /<AiImageGen[\s\S]*initialParts=\{buildNpcAvatarPromptParts/);
   assert.match(panel, /appearancePrompt: n\.appearancePrompt/);
   // 功能注释：头像生图主体不再喂小传 / 关系
-  assert.doesNotMatch(panel, /initialParts: buildNpcAvatarPromptParts\([\s\S]{0,260}bio: n\.bio/);
-  assert.match(panel, /size: NPC_AVATAR_GEN_SIZE/);
-  assert.match(panel, /initialRefs: n\.avatar \? \[n\.avatar\] : undefined/);
+  assert.doesNotMatch(panel, /initialParts=\{buildNpcAvatarPromptParts\([\s\S]{0,260}bio: n\.bio/);
+  assert.match(panel, /size=\{NPC_AVATAR_GEN_SIZE\}/);
+  assert.match(panel, /initialRefs=\{n\.avatar \? \[n\.avatar\] : undefined\}/);
   assert.match(panel, /n\.avatar/);
   const content = read('worlds/star2005/content.ts');
   assert.match(content, /avatar\?: string/);

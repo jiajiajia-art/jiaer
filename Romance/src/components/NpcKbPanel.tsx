@@ -61,7 +61,7 @@ export function NpcMemory({ pid }: { pid: string }) {
         {list.map((m, i) => (
           <li key={i} className="flex items-start gap-2 rounded-xl border border-line bg-paper px-2.5 py-2">
             <span className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-ink">
-              {m.t && <span className="mr-1.5 text-[11px] text-ink-soft">{m.t}</span>}{m.text}
+              {m.t && <span className="mr-1.5 font-sans text-[11px] tabular-nums text-ink-soft" style={{ fontFamily: "'Sarasa Gothic Rounded', 'Source Han Rounded SC', 'PingFang SC', 'Microsoft YaHei', sans-serif" }}>{m.t}</span>}{m.text}
             </span>
             <button onClick={() => write(list.filter((_, j) => j !== i))} aria-label="删除" className="shrink-0 text-[12px] text-ink-soft hover:text-coral"><IconClose size={14} /></button>          </li>
         ))}

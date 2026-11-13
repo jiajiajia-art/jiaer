@@ -135,7 +135,7 @@ function RefName({ r, onOpenPerson }: { r: FamilyRef; onOpenPerson?: (id: string
 export function WorkModal({ credit, onOpenPerson, onClose }: { credit: Credit; onOpenPerson?: (id: string) => void; onClose: () => void }) {
   const c = credit;
   return (
-    <Modal title={`《${c.title}》`} onClose={onClose}>
+    <Modal panelClassName="ui-dialog-game" title={`《${c.title}》`} onClose={onClose}>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Chip tone="jade">{c.role}</Chip>
         {c.genre && <Chip>{c.genre}</Chip>}
@@ -371,7 +371,7 @@ export function ProfileMemory({ pid, button }: { pid: string; button?: boolean }
   const k = kbOf(game, pid);
   const n = (k.playerMemory?.length ?? 0) + (k.selfMemory?.length ?? 0) + (k.heard?.length ?? 0);
   const name = game.npcs.find((x) => x.id === pid)?.name ?? "TA";
-  const modal = open && <Modal title={`${name} 的记忆`} onClose={() => setOpen(false)}><MemoryBody pid={pid} /></Modal>;
+  const modal = open && <Modal panelClassName="ui-dialog-game" title={`${name} 的记忆`} onClose={() => setOpen(false)}><MemoryBody pid={pid} /></Modal>;
   if (button) return (
     <>
       <ActionTile icon={IconBook} title="TA 的记忆" sub={n ? `记得 ${n} 件事` : "还没有记住什么"} badge={n || undefined} onClick={() => setOpen(true)} />
@@ -390,7 +390,7 @@ export function ProfileMemory({ pid, button }: { pid: string; button?: boolean }
         <span className="shrink-0 rounded-full bg-coral/12 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-coral">{n} 条</span>
         <span className="text-[14px] text-coral">›</span>
       </button>
-      {open && <Modal title={`${name} 的记忆`} onClose={() => setOpen(false)}><MemoryBody pid={pid} /></Modal>}
+      {open && <Modal panelClassName="ui-dialog-game" title={`${name} 的记忆`} onClose={() => setOpen(false)}><MemoryBody pid={pid} /></Modal>}
     </>
   );
 }
@@ -436,7 +436,8 @@ function MemoryBody({ pid }: { pid: string }) {
         <ul className="space-y-1">
           {list.map((m, i) => (
             <li key={i} className="flex gap-2 text-[12.5px] leading-relaxed text-ink/85">
-              <span className="shrink-0 text-[11px] tabular-nums text-ink-soft">{m.t}</span>
+              {/* 功能注释：时间戳强制 UI 圆体，避免中文数字走叙事衬线、阿拉伯数字走另一套字 */}
+              <span className="shrink-0 font-sans text-[11px] tabular-nums text-ink-soft" style={{ fontFamily: "'Sarasa Gothic Rounded', 'Source Han Rounded SC', 'PingFang SC', 'Microsoft YaHei', sans-serif" }}>{m.t}</span>
               <span className="min-w-0 flex-1">{m.text}</span>
               <button aria-label="删除" onClick={() => write(tab, list.filter((_, j) => j !== i))} className="shrink-0 text-ink-soft/50 hover:text-danger">×</button>
             </li>

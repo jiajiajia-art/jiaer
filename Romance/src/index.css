@@ -1582,6 +1582,18 @@ html.nav-label-c .nav-txt-on { color: var(--nav-label) !important; }
     height: 85dvh; max-height: 85dvh;
   }
   .ui-dialog.ui-dialog-create > .ui-dialog-body { flex: 1 1 auto; }
+  /* 功能注释：游戏尺寸——玩家游玩时的弹窗（场景、人物资料、背包、存档、确认等）：比工具弹窗窄，四周露出游戏画面，过高时内部滚动 */
+  .ui-dialog.ui-dialog-game {
+    width: min(520px, calc(100vw - 40px));
+    max-width: 520px;
+    max-height: min(78vh, 78dvh, 720px);
+  }
+  /* 功能注释：紧凑弹窗（设置 / 美化等列表型面板）——窄、矮，四周留出游戏画面与底栏，内容在弹窗内滚动 */
+  .ui-dialog.ui-dialog-compact {
+    width: min(440px, calc(100vw - 48px));
+    max-width: 440px;
+    max-height: min(72vh, 72dvh, 640px);
+  }
   .ui-sheet-head-bar { background: linear-gradient(to bottom, var(--sheet-solid, var(--paper-2)) 70%, transparent); }
   /* <Modal>：所有屏宽一律居中弹窗（手机上也不再从底部升起） */
   .ui-overlay-modal { align-items: center; padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)); }
@@ -2879,7 +2891,12 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
     linear-gradient(180deg, rgba(255, 255, 255, 0.25), rgba(122, 90, 46, 0.06));
   background-size: 5px 5px, 100% 100%;
 }
-.comm-ancient :is(.bg-\[\#ededed\], .bg-\[\#f2f2f2\], .bg-\[\#f3f3f3\]) { background-color: transparent !important; }
+/* 功能注释：顶栏/底栏灰底改透明以透出宣纸纹；全屏表单（发锦囊/聊天信息）必须用不透明底，否则聊天内容叠上来 */
+.comm-ancient :is(.bg-\[\#ededed\], .bg-\[\#f2f2f2\], .bg-\[\#f3f3f3\]):not(.comm-sheet) { background-color: transparent !important; }
+.comm-ancient .comm-sheet {
+  background-color: var(--ca-paper) !important;
+  background-image: none !important;
+}
 .comm-ancient :is(.bg-\[\#f7f7f7\], .bg-\[\#e9e9eb\], .bg-\[\#e5e5e5\]) { background-color: var(--ca-paper-2) !important; }
 .comm-ancient .bg-white { background-color: var(--ca-paper-3) !important; }
 .comm-ancient :is(.bg-\[\#07c160\], .bg-\[\#fa5151\]) { background-color: var(--ca-cinnabar) !important; }
@@ -2926,3 +2943,7 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
     linear-gradient(135deg, #ecd9ae, #e2c98f) !important;
   background-size: 23px 19px, 31px 27px, 17px 23px, 100% 100% !important;
 }
+
+/* 场景弹窗：书页式排版，去掉逐段竖线 */
+.scene-sheet .story-prose { padding-left: 0; text-indent: 2em; font-size: 15.5px; line-height: 1.95; letter-spacing: 0.02em; }
+.scene-sheet .story-prose::before { display: none; }

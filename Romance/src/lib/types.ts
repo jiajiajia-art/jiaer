@@ -18,8 +18,11 @@ export type AttrDef = {
   label: string;
   icon?: string; // emoji
   init: number; // 固定开局值；勾选「固定数值」时用；不勾则开局在 min～max 随机
-  /** 开局取值：缺省 / fixed = 用 init；random = 最小～最大随机；dice 为旧稿，开局按 random 处理 */
-  initMode?: "fixed" | "random" | "dice";
+  /** 开局取值：缺省 / fixed = 作者锁定用 init；random = 最小～最大随机（玩家可重掷）；
+   * choice = 玩家从 options 里选；custom = 玩家在最小～最大内自填；dice 为旧稿，开局按 random 处理 */
+  initMode?: "fixed" | "random" | "dice" | "choice" | "custom";
+  /** 功能注释：initMode=choice 时的选项（选中即取 value 作开局值；label 会写进主角档案给 AI 看） */
+  options?: AttrOption[];
   /** @deprecated 旧「投骰子」面数；新 UI 已改为范围随机，读档时忽略 */
   dice?: number;
   min?: number; // 下限（缺省 0）
@@ -33,6 +36,8 @@ export type AttrDef = {
   tierEvent?: boolean; // 升到新档位时触发一段 AI 剧情
   desc?: string; // 给 AI 的说明：这个属性代表什么、何时增减
 };
+
+export type AttrOption = { label: string; value: number; desc?: string };
 
 export type Trait = {
   name: string;
@@ -129,12 +134,13 @@ export type Segment =
 
 export type Turn = {
   scene?: string; // 本回合转场到的新地点名（galgame 式转场卡）
+  room?: string; // 本回合发生时主角所在地点 id：正文区只显示当前地点的剧情（换场景即翻篇，记录本身保留）
   id: string;
   role: "player" | "ai";
   segments: Segment[];
   raw?: string;
   ts: number;
-  error?: { title: string; text: string }; // AI 请求失败的提示条（不入 prompt，可重新生成）
+  error?: { title: string; text: string; preview?: string }; // AI 请求失败的提示条（不入 prompt，可重新生成）；preview = 解析失败时已生成的正文，只供查看
   thoughts?: Thought[]; // 回合末尾：在场角色各自没说出口的心事
   newcomers?: string[]; // 本回合剧情里初遇的人物 id：正文底部出名片，由玩家决定结识或暂不结识
 };
@@ -186,7 +192,27 @@ export type AudioOp = "play" | "stop" | "stopAll" | "switchBgm" | "volume";
 export type AudioCmd = { n: number; op: AudioOp; id?: string; volume?: number; fade?: number; from?: string };
 export type AudioSignal = "ended" | "fadeIn" | "fadeOut";
 
+/** 功能注释：日记本 · 周记（AI 撰写，随存档保存；req 留着供失败后重写） */
+export type WeekDiaryEntry = {
+  id: string;
+  week: number;
+  weekTo?: number;
+  date: string;
+  status: "writing" | "done" | "failed";
+  title?: string;
+  text?: string;
+  req: import("./ai").ChatMsg[];
+  ts: number;
+  /** 功能注释：写这篇周记时的回合数；下一篇用它界定「本周」与主角的往来 */
+  turn?: number;
+};
+
 export type GameState = {
+  weekDiaries?: WeekDiaryEntry[];
+  /** 功能注释：特殊事件支线（触发后等玩家展开；带倒计时 / 过期记录） */
+  eventNotices?: import("./eventNotices").EventNotice[];
+  /** 功能注释：下一回合提示（属性升档 / 条件抵达 / 插入事件），玩家下次行动时写进提示词后清空 */
+  pendingCues?: string[];
   id: string; // 存档 saveId：所有存档私有存储 key 均以 `${id}_` 为前缀隔离
   privateData?: Record<string, string>; // 存档私有数据快照（写槽时附带，读档时恢复）
   saveSummary?: string; // 最近一次 AI 给出的存档摘要（读档列表展示）
@@ -197,6 +223,10 @@ export type GameState = {
   options: Option[];
   world: World;
   memory: string; // 压缩后的主线记忆
+  theaters?: TheaterPiece[]; // 魔法棒 · 小剧场合集（番外，不进正文；梗概记入剧情记忆，标明番外）
+  chronicle?: import("./chronicle").ChronicleEvent[]; // 剧情事件线（带游戏日 / 地点 / 人物 / 重要度，按需召回）
+  sceneMem?: Record<string, import("./chronicle").SceneMem>; // 各地点陈设与状态（变化驱动）
+  looks?: Record<string, string>; // 人物当前穿着（只注入在场者，不在界面显示）
   npcKb?: Record<string, import("../game/npcKnowledge").NpcKnowledge>; // 每个 NPC 的私有知识库（严格隔离）
   allowance?: import("../game/npcKnowledge").AllowanceState; // 生活费发放 / 协商记录
   turnCount: number;
@@ -215,6 +245,7 @@ export type GameState = {
   endingCommentAvatar?: string; // 评定人头像
   endingGrade?: { grade: string; score: number; verdict: string; items: { label: string; score: number; detail: string }[] }; // 人生评级
   endingKind?: "manual" | "ai" | "bankrupt" | "finish"; // 结局来源：手动结束 / AI 判定 / 破产 / 时限
+  epiloguePending?: boolean; // 已用本地后记先进结局页，AI 后记仍在后台生成
   createdAt: number;
   updatedAt: number;
   sim: SimState; // 确定性数值引擎（八维/日程/通告/攻略线）
@@ -235,6 +266,7 @@ export type GameState = {
   timeLimit?: TimeLimit; // 本局结算时限（日历天数上限）：到期即强制进入结局；与主线节点完成条件无关
   customEndings?: CustomEnding[]; // 自定义结局：按顺序判定，首个满足条件者生效
   factions?: Faction[]; // 阵营派系：声望存于 sim.flags["faction:<id>"]
+  factionless?: string[]; // 功能注释：玩家在人脉里把这些人物改成「无所属势力」（不再回落作者原设定）
   factionMode?: "full" | "lore"; // full = 声望参与数值（好感波及、商店价格、条件）；lore = 只把阵营标签当世界书关键词，不做数值运算
   timeline?: TimelineEntry[];
   engineRules?: Partial<EngineRules>; // 底层世界规则（判定 / 标记 / 随机 / 叙事权限 / 数值 / NPC / 记忆 / 媒体）；缺省项取默认
@@ -248,6 +280,8 @@ export type GameState = {
   playPrefs?: PlayPrefs; // 本局游玩偏好：游玩模式 / 叙事视角 / 屏幕方向（开局按模组默认+建角所选，设置里可改）
   startDate?: string; // 本局开局日期（建角时玩家自选；缺省 = 世界观设定）
   addons?: string[]; // 模组：本局启用的叠加包 id（按优先级顺序）
+  modStamp?: import("../mods/modStamp").ModStampEntry[]; // 本局合并链里玩法包的版本（读档时对比，提示移除 / 新增 / 更新）
+  itemMemo?: import("../mods/modStamp").ItemMemo; // 背包物品备忘：卸包后定义消失仍能显示名字与来源
   entSplit?: boolean; // 娱乐圈拆包后创建 / 已迁移的存档（缺省 = 老存档，读档时补上原版玩法扩展包）
   diaries?: DiaryEntry[]; // NPC 视角日记
   cgs?: CgDef[]; // CG 定义（作者编排）
@@ -402,6 +436,8 @@ export type FixedCond =
   | { kind: "side"; key: string; state: SideState } // 支线进度：done = 至少完成过一次
   | { kind: "faction"; key: string; op: CmpOp; value: number } // 阵营声望（flags["faction:<id>"]，-100~100，未写过为 0）
   | { kind: "visited"; key: string } // 去过某地点（含其子地点）
+  | { kind: "npcFaction"; faction: string; npc?: string } // 人物所属势力：指定人物 = 此人属于该势力；不指定 = 当前地点有该势力成员
+  | { kind: "factionTerritory"; faction: string } // 当前地点属于该势力的势力范围（含其子地点）
   | { kind: "relSet"; keys: string[]; op: CmpOp; value: number; need?: number } // NPC 好感集合：其中至少 need 人（缺省 = 全部）满足
   | { kind: "memory"; key: string } // 记忆标记：由事件 / 选项写下的「主角记得这件事」（flags["mem:<key>"]）
   | { kind: "flagSet"; key: string; exists: boolean } // 标记是否存在（写过且非 0）
@@ -667,7 +703,13 @@ export type FixedEvent = {
   condGroups?: CondGroup[]; // 额外的「且 / 或」条件组：每组都要成立
   chain?: string; // 所属事件链 id：同链事件共享 暂停 / 中断 / 永久失败 状态（flags["chain:<id>"]）
   chainBreaks?: ChainBreak[]; // 事件链断点：条件满足时把整条链置为对应状态
-  inline?: boolean; // 插入对话流：上演时直接写进主剧情（酒馆式），而非弹出剧情幕
+  inline?: boolean; // 插入对话流：不另开剧情，触发后作为提示写进玩家下一回合的提示词
+  /** 功能注释：进支线后的时限（天）。填了 = 倒计时到 0 按失败处理（结算 failEffects）；不填 = 只在触发的这一回合可展开，下回合过期并照常结算 effects */
+  limitDays?: number;
+  /** 功能注释：超时失败的后果（仅填了 limitDays 时生效） */
+  failEffects?: FixedEffect[];
+  /** 功能注释：进支线时给玩家看的「发生了什么」（不填用事件名） */
+  brief?: string;
 };
 
 /* 触发类型：除 auto 外，都在「那一刻」判定一次（同时仍需满足时间 / 条件 / 前置激活），不满足就错过 */
@@ -725,7 +767,10 @@ export type WorldBookEntry = {
   bindNpcs?: string[]; // 依赖人物（本作品 npcs id，可多选）
   group?: string; // 互斥组：同组只注入一条（已在有效期内的优先，其次检索得分最高的）
   weight?: number; // 检索权重（缺省 100）：得分 = 命中关键词长度 × 权重 / 100，长词优先
+  _mem?: boolean; // 由剧情记忆自动写入的关键往事（玩家可改可删）
 };
+/* 小剧场：番外短剧（存档内收藏，可回看 / 重演 / 删除） */
+export type TheaterPiece = { id: string; title: string; topic?: string; format?: string; html?: string; cast: string[]; prose: string; summary: string; day: number; time?: string; ts: number };
 export type WorldBookMode = "keyword" | "constant" | "once";
 export type WorldBookMem = { used?: string[]; until?: Record<string, number> };
 
@@ -821,6 +866,8 @@ export type AIStep = {
   npc_changes?: {
     id?: string;
     name: string;
+    /** 功能注释：新人物必填；男 / 女 / 其他，写入 persona 供剧情人称锁定 */
+    gender?: string;
     aliases?: string[]; // 称谓/昵称（如「二姨」），用于后续同人识别
     age?: string;
     identity?: string;
@@ -845,7 +892,8 @@ export type AIStep = {
   narrative?: string; // 本回合剧情文本（= narration）
   state_diff?: { world?: Partial<World>; player_changes?: AIStep["player_changes"]; npc_changes?: AIStep["npc_changes"]; intimate?: string[]; game_end?: boolean };
   tabs?: Record<string, unknown>; // 分发给各 Tab 的数据（仅作展示提示，事实以状态中枢为准）
-  memory_updates?: { scope?: "main" | "npc"; npc?: string; text: string }[] | string[];
+  memory_updates?: { scope?: "main" | "npc"; npc?: string; text: string; imp?: number; who?: string[]; keys?: string[] }[] | string[];
+  scene_memory?: import("./chronicle").SceneUpdate; // 此地陈设 / 状态与在场者穿着的变化（无变化省略）
   save_summary?: string;
   need_clarification?: string[];
 };

@@ -1,3 +1,13 @@
+import type { ChatMsg } from "../lib/ai";
+import { getStranger, promoteStranger } from "../components/phone/wxFeatures";
+import { buildTheaterDirective, parseTheaterOutput, theaterFormatOf } from "../lib/theaterFormats";
+import { applyMemory } from "../lib/chronicle";
+import { presentNpcIds } from "../lib/ai";
+import type { WeekDiaryEntry } from "../lib/types";
+import { readScriptTone } from "../lib/scriptTone";
+import { buildWeekDiaryMessages, parseNpcWeekMemories, parseWeekDiary } from "../lib/weekReview";
+import { makeEventNotice, noticeRoomOf, tickEventNotices, nextTurnCueBlock, type EventNotice } from "../lib/eventNotices";
+import { homeMainQuest } from "../lib/homeMainQuest";
 import { perkKeyLabel, perkKeyOptions } from "../game/perkKeys";
 import { affinityCapOf } from "../worlds/star2005/content";
 import { getCurrentSaveId, purgeSaveData, switchSave } from "../lib/saveScope";
@@ -7,11 +17,12 @@ import { friendlyAIError } from "../lib/aiError";
 import { applyBonus, attrLabelOf } from "../game/data";
 import { carShopId, allRooms } from "../game/mud";
 import { syncChildNpcs } from "../game/pregnancy";
-import { getWorldStartRoom } from "../mods/registry";
+import { getWorldStartRoom, worldLocOf } from "../mods/registry";
 import {
   DEFAULT_WORLD, activateWorld, saveAddons, feature, getWorldEventGroups, getOpeningDirective, getWorld, getWorldId, getWorldStorylines, term, getWorldLookRules,
-  beginAuthorPreviewMod, endAuthorPreviewMod,
+  beginAuthorPreviewMod, endAuthorPreviewMod, currentModStamp, worldItemMemo,
 } from "../mods/registry";
+import { describeModStampDiff, diffModStamp, refreshItemMemo } from "../mods/modStamp";
 import {
   AUTHOR_PREVIEW_CLEAR, AUTHOR_PREVIEW_END, AUTHOR_PREVIEW_GAME_ID, AUTHOR_PREVIEW_RESTART, AUTHOR_PREVIEW_START,
   isAuthorPreview, reportAuthorPreviewFatal, type AuthorPreviewSession,
@@ -42,6 +53,8 @@ import {
   compressMemory,
   displayText,
   extractStep,
+  parseStepDetailed,
+  buildStepRepairMessages,
   isConfigured,
   mockEpilogue,
   proseToSegments,
@@ -95,23 +108,28 @@ import {
   type GameState as SimState,
   type GigCat,
 } from "../game/logic";
-import { gossipTick } from "../game/npcKnowledge";
+import { gossipTick, kbOf, remember } from "../game/npcKnowledge";
+import { findNpc } from "../lib/npcIdentity";
 import { meetPerson, withNewcomers } from "../game/npcIntro";
 import { addAutoSpot, isFormalPlaceName } from "../lib/newLocation";
-import { findSceneImageForNewSpot } from "../lib/newLocationAsset";
+import { preloadPlatformAvatarPools } from "../lib/avatarPreload";
+import { drawProfileAvatar } from "../game/avatarPools";
+import { getWorldNpcs } from "../mods/registry";
+import { findSceneImageForNewSpot, NEW_SPOT_NO_IMAGE_EVENT } from "../lib/newLocationAsset";
 import { commitWorldBook } from "../game/worldbookPick";
 import { recordTimeline } from "../game/timeline";
-import { syncFactions, setFactionRoomPath, factionFlag, REP_MIN, REP_MAX } from "../game/factions";
+import { syncFactions, setFactionRoomPath, setFactionRepReader, factionFlag, REP_MIN, REP_MAX } from "../game/factions";
 import { dropFlags, estTokens, filterSegments, oocText, rulesOf, syncEngineRules } from "../game/engineRules";
 import { pathOf as factionPathOf } from "../game/roomTree";
 import { getWorldRooms as factionRooms, worldActivitiesOfRoom } from "../mods/registry";
 setFactionRoomPath((id) => factionPathOf(factionRooms(), id));
+setFactionRepReader(() => feature("factionRep"));
 import { writeCheckpoint } from "../lib/storage";
 import { defaultWorldBook } from "../game/worldbook";
 import { advanceUnit, advanceCount, advanceStoryOn, advanceWords, hopEnergy, tripPoints, apPerMove, apPerAct, encountersHere, fireEncounter, insideTree, introOf, itemsOfRoom, learnIntel, locOf, mobsHere, presentHere, resolveMobs, roomDesc, tickWorld, travelPlan } from "../game/mud";
 import { activityApCost, customActsOf, customItemsOf, findCustomItem, findShopGood, findSpotEvent, firedKey, firedOf, withApNote } from "../game/mapedits";
 import { scanTriggers, queueChoiceTriggers, takeQueued } from "../game/eventTriggers";
-import { pickFixedEvent, pickRandomEvent, applyFixedEffects, applyHiddenBranches, applyChainBreaks, eventChoiceOptions, parseChoice, applyChoice, matchCustomEnding, evalFixedCond, applyEffectList, FIXED_METRICS } from "../game/fixedEvents";
+import { pickFixedEvent, pickRandomEvent, applyFixedEffects, settleFixedEventEffects, reserveFixedEvent, applyHiddenBranches, applyChainBreaks, eventChoiceOptions, parseChoice, applyChoice, matchCustomEnding, evalFixedCond, applyEffectList, FIXED_METRICS } from "../game/fixedEvents";
 import { normRouteFx } from "../game/routeFx";
 import { activateEvents, keepIfOngoing, keywordEventHits, settleActiveEvents } from "../game/loreContext";
 import type { FixedEffect, FixedEvent } from "../lib/types";
@@ -121,6 +139,7 @@ import { declarePersona, doPublicAct, personaWeekly, resolveCrisis } from "../ga
 import { syncBoundMetrics } from "../game/metricBind";
 import { applyProject, doWorkday, negotiateOffer, processAuditions, processReleases, promoteWork, signContract } from "../game/projects";
 import { blankRel, confessTo, contactPerson, decayRelations, ensureRelations, relDecayNotes } from "../game/relations";
+import { personGender } from "../game/relNet";
 import { askProducer, meetProducer } from "../game/producer";
 import { bridgeEnabled, bridgeModes, bridgePerDay, fillPair, type BridgeMode } from "../game/bridge";
 import { RELATIONS, SIDEQUEST_BY_ID, SIDEQUESTS, evalRequires, romanticCapOf, type SigningContract } from "../worlds/star2005/content";
@@ -223,12 +242,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemePref>(defaultTheme);
   // 功能注释：进游戏不再进封面开始菜单；直接建角，完成后进开幕
   const [screen, setScreen] = useState<Screen>("create");
+  // 功能注释：把当前画面广播给平台宿主（AI 线路悬浮球只在游戏画面显示，含 Studio 预览）
+  useEffect(() => {
+    (window as unknown as { __romanceScreen?: string }).__romanceScreen = screen;
+    window.dispatchEvent(new CustomEvent("romance:screen", { detail: screen }));
+  }, [screen]);
   const [game, setGame] = useState<GameState | null>(null);
   // 功能注释：存档 npcs 偶发非数组；先收成数组再 flatMap，禁止建角/预览挂载时 is not iterable
   const npcGender = useMemo(() => {
-    const list = Array.isArray(game?.npcs) ? game.npcs : [];
-    return Object.fromEntries(list.flatMap((n) => { const g = n.persona?.gender; return g ? [[n.id, g]] : []; }));
-  }, [game?.npcs]);
+    if (!game) return {};
+    const list = Array.isArray(game.npcs) ? game.npcs : [];
+    // 功能注释：同步性别到引擎时合并世界设定，不只看 persona（否则作者写了女、persona 空时规则侧当成无性别）
+    return Object.fromEntries(list.flatMap((n) => {
+      const g = n.persona?.gender || personGender(game, n.id);
+      return g ? [[n.id, g]] : [];
+    }));
+  }, [game]);
   syncWorldRules(game?.worldRules, game?.player.gender, npcGender); // 世界规则 → 引擎同步
   const [live, setLive] = useState("");
   const [busy, setBusy] = useState(false);
@@ -236,6 +265,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [popup, setPopup] = useState<Popup>(null);
   const [autosaveOn, setAutosaveOnState] = useState<boolean>(true);
   const autosaveOnRef = useRef(true);
+  // 功能注释：日记本 · 正在流式写的周记文本（id → 当前全文），只在内存，不进存档
+  const [weekDiaryLive, setWeekDiaryLive] = useState<Record<string, string>>({});
+  // 功能注释：周结算处早于周记写手定义，经 ref 转接调用
+  const weekDiaryRef = useRef<((report: WeekReport, diary: Diary, changes: string[], bill: SimState["lastBill"], earned?: number) => void) | null>(null);
   autosaveOnRef.current = autosaveOn;
   const gameRef = useRef<GameState | null>(null);
   // 数值锁：系统已结算的字段（下一次 preSettled 的 AI 回合里，AI 的 JSON 不得再改动这些项）
@@ -261,7 +294,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setCfgState(loadConfig());
-    setThemeState(loadTheme());
+    // 功能注释：暂不支持横屏——本机旧主题里的横屏一律按竖屏
+    setThemeState({ ...loadTheme(), orient: "portrait", orientLock: false });
     setAutosaveOnState(loadAutosaveOn());
     // 把旧版 localStorage 存档迁移进 localforage（一次性，静默）
     void migrateLegacySaves();
@@ -284,8 +318,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const themeRef = useRef(theme);
   themeRef.current = theme;
   const setTheme = useCallback((t: ThemePref) => {
-    // 功能注释：方向可随时切换，不再尊重历史 orientLock（建角选定后局内设置直接改）
-    const next = { ...t, orientLock: false };
+    // 功能注释：暂不支持选择横竖屏，固定竖屏
+    const next = { ...t, orient: "portrait" as const, orientLock: false };
     themeRef.current = next;
     setThemeState(next);
     saveTheme(next);
@@ -421,7 +455,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setStartDateOverride(s.startDate); // 本局自选的开局日期（老存档无 = 世界观日期）
     activateWorld(s.worldId ?? DEFAULT_WORLD, saveAddons(s));
     const snapshot = s.privateData;
-    s = { ...s, worldId: getWorld().worldId, addons: [...getWorld().addonIds], entSplit: true, privateData: undefined };
+    // 功能注释：对比开局时记下的玩法版本——移除 / 新增 / 更新各提示一次，然后以当前为准重新记下
+    const stamp = currentModStamp();
+    const modNotes = describeModStampDiff(diffModStamp(s.modStamp, stamp));
+    s = { ...s, worldId: getWorld().worldId, addons: [...getWorld().addonIds], modStamp: stamp, entSplit: true, privateData: undefined };
+    {
+      const memo = refreshItemMemo(s.sim?.bag, s.itemMemo, worldItemMemo);
+      if (memo !== s.itemMemo) s = { ...s, itemMemo: memo };
+    }
     // 功能注释：读档进局同样默认竖屏；局内改横屏只在本会话生效，下次进来仍竖屏
     const g0 = syncSimToPlayer(ensureLoveAxis(ensureSim(s)));
     const g = { ...g0, playPrefs: { ...g0.playPrefs, orient: "portrait" as const } };
@@ -441,7 +482,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
         // 已落幕的存档回到结局页：读进游戏里会变成过了时限也无法再落幕的局。
         // AI 已判定收场、但后记没写完就被关掉的存档，接着把结局补完。
         setScreen(g.endingGrade ? "ending" : "game");
+        // 后台后记任务随页面关闭而终止：读档时清掉「生成中」标记，保留已落盘的本地后记
+        if (g.epiloguePending) { const fixed = { ...g, epiloguePending: false }; gameRef.current = fixed; setGame(fixed); }
         if (g.ended && !g.endingGrade) queueMicrotask(() => void endManuallyRef.current?.("ai"));
+        if (modNotes.length && !g.endingGrade) setPopup({ title: "本作品的玩法有变化", segments: [{ kind: "system", text: modNotes.join("\n") }], changes: [] });
       },
     });
   }, [setTheme]);
@@ -460,6 +504,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     // 功能注释：玩法数值绑定——名气/口碑/黑粉/体能与作者建角属性双向同步（同一存档才比较前后，否则以建角属性为准）
     const prevSame = gameRef.current && gameRef.current.id === s0.id ? gameRef.current : null;
     s0 = syncBoundMetrics(prevSame, s0);
+    // 功能注释：背包物品备忘（卸包后仍能显示名字与来源）；无变化时不新建对象
+    {
+      const memo = refreshItemMemo(s0.sim?.bag, s0.itemMemo, worldItemMemo);
+      if (memo !== s0.itemMemo) s0 = { ...s0, itemMemo: memo };
+    }
     const s1 = applyFlagLife(gameRef.current, s0);
     const { state: s, cp } = recordTimeline(gameRef.current, s1);
     syncFactions(s);
@@ -470,9 +519,34 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return true;
   }, []);
 
+  // 功能注释：开局预拉平台头像库；之后把 AI 新建、还没头像的人物（非作者预设）按性别年龄套用平台头像
+  useEffect(() => {
+    const gid = game?.id;
+    if (!gid) return;
+    let alive = true;
+    void preloadPlatformAvatarPools().then((ok) => {
+      const cur = gameRef.current;
+      if (!ok || !alive || !cur || cur.id !== gid) return;
+      const authored = new Set((getWorldNpcs() ?? []).map((n) => n.id));
+      let changed = false;
+      const npcs = cur.npcs.map((n) => {
+        if (n.avatar || authored.has(n.id)) return n;
+        const av = drawProfileAvatar(n.id, { name: n.name, age: n.age, identity: n.identity, bio: n.bio });
+        if (!av.url) return n;
+        changed = true;
+        return { ...n, avatar: av.url, avatarVariant: av.variant };
+      });
+      if (changed) persist({ ...cur, npcs });
+    });
+    return () => { alive = false; };
+  }, [game?.id, persist]);
+
   // 核心：推进一回合
   const runTurn = useCallback(
     async (base: GameState, input: string, asPopup: boolean, hideInput = false, journalMeta?: Omit<import("../lib/types").JournalEntry, "id" | "ts" | "text">, preSettled = false, popupTitle?: string) => {
+      // 功能注释：总兜底——落地阶段（解析后结算 / 转场 / 存档）任何意外异常都不能让界面卡在「演绎中」：
+      // 解除忙碌、不结算，落一条可「重新生成」的错误条（重试从回合前快照原样重跑）
+      try {
       const lock = simLockRef.current; // 只由「先结算后演绎」的入口在调用前设置
       simLockRef.current = null;
       // 未配置 AI：剧情演绎需要模型，绝不凭空编造旁白/台词或偷偷改动好感数值。
@@ -501,7 +575,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         lastTurnRef.current = { base, input, hideInput };
         // hideInput：开场序章等「幕后导演指令」只驱动 AI 生成，不作为玩家气泡显示给玩家
         if (!hideInput) {
-          const playerTurn: Turn = { id: uid(), role: "player", segments: [{ kind: "narration", text: input }], ts: Date.now() };
+          const playerTurn: Turn = { id: uid(), role: "player", room: base.sim?.room, segments: [{ kind: "narration", text: input }], ts: Date.now() };
           working = { ...base, story: [...base.story, playerTurn] };
           setGame(working);
         }
@@ -529,8 +603,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const showStage = () => { if (!latest && !thinking) setLive(`（${stage}…… ${Math.round((Date.now() - t0) / 1000)}s）`); };
       const ticker = setInterval(showStage, 1000);
       showStage();
+      let msgs: ChatMsg[] = [];
       try {
-        const msgs = buildMessages(working, input, wbPick);
+        msgs = buildMessages(working, input, wbPick);
         // 底层规则 · Token 上限告警：估算本回合提示长度，超线时在本回合末尾提示
         promptTokens = estTokens(msgs.map((m) => m.content).join(""));
         full = await streamChat({ ...cfg, stream: true }, msgs, (_d, f) => {
@@ -556,7 +631,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         const fe = friendlyAIError(e);
         if (!asPopup && !preSettled) {
           // 主剧情失败：落一条错误提示条（带「重新生成」），基础功能不受影响；重试时从 base 快照原样重跑
-          const errTurn: Turn = { id: uid(), role: "ai", segments: [], error: fe, ts: Date.now() };
+          const errTurn: Turn = { id: uid(), role: "ai", room: working.sim?.room, segments: [], error: fe, ts: Date.now() };
           setGame({ ...working, story: [...working.story, errTurn] });
           setCanRetry(true);
         } else setPopup({ title: fe.title, segments: [{ kind: "system", text: fe.text }], changes: [], retry: { input, hideInput, journalMeta, preSettled } });
@@ -565,8 +640,35 @@ export function GameProvider({ children }: { children: ReactNode }) {
       clearInterval(ticker);
       if (flushTimer) clearTimeout(flushTimer);
 
-      const step = extractStep(full);
-      const prose = displayText(full);
+      // 功能注释：状态块解析兜底——本地容错 → 请 AI 只补状态块（一次）→ 仍失败则不落地、不结算，标成可重新生成
+      const oocTurn = !asPopup && !preSettled && !!oocText(input, rulesOf(working).narrative.oocMarks);
+      let parsed = parseStepDetailed(full);
+      if (!parsed.step && !oocTurn) {
+        setBusy(true);
+        setLive(`${displayText(full)}\n\n（状态没写完整，正在补全……）`);
+        try {
+          const fixed = parseStepDetailed(await complete(cfg, buildStepRepairMessages(msgs, full, parsed.reason ?? "no-json"), 40_000));
+          if (fixed.step) parsed = fixed;
+        } catch { /* 补全失败，按解析失败处理 */ }
+      }
+      const step = parsed.step;
+      const prose = displayText(full) || (step?.narration ?? "");
+      if (!step && !oocTurn) {
+        setBusy(false);
+        setLive("");
+        const why = parsed.reason === "truncated" ? "输出在状态块写到一半时中断了（多见于长篇剧情）"
+          : parsed.reason === "invalid" ? "状态块格式有误，无法读取"
+          : "这次没有输出状态块";
+        const fe = { title: "状态没解析成功", text: `${why}，选项、人物、地点都没有更新，本回合也没有结算任何数值。点「重新生成」再来一次。`, preview: prose.slice(0, 1600) };
+        if (asPopup || preSettled) {
+          setPopup({ title: fe.title, segments: [...(prose ? proseToSegments(prose) : []), { kind: "system", text: fe.text }], changes: [], retry: { input, hideInput, journalMeta, preSettled } });
+        } else {
+          const errTurn: Turn = { id: uid(), role: "ai", room: working.sim?.room, segments: [], error: fe, ts: Date.now() };
+          setGame({ ...working, story: [...working.story, errTurn] });
+          setCanRetry(true);
+        }
+        return;
+      }
       // 优先解析【剧情正文】：它把旁白按自然段拆开、把「角色名」：台词识别成对话，
       // 从而保留旁白与对话的交织顺序、让每句台词落进各自的对话框，而不是把整段旁白
       // 与所有台词各堆成一大块。仅当正文为空时，才退回 JSON 里的 narration/dialogue 字段。
@@ -592,7 +694,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         if (prevAi && isRepeatNarrative(prevAi.segments.map((sg) => sg.text).join(""), curText)) {
           setBusy(false);
           setLive("");
-          const errTurn: Turn = { id: uid(), role: "ai", segments: [], error: { title: "剧情重复", text: "AI 这次复述了上一回合的内容，已拦截、未结算任何数值。点「重新生成」换一版。" }, ts: Date.now() };
+          const errTurn: Turn = { id: uid(), role: "ai", room: working.sim?.room, segments: [], error: { title: "剧情重复", text: "AI 这次复述了上一回合的内容，已拦截、未结算任何数值。点「重新生成」换一版。" }, ts: Date.now() };
           setGame({ ...working, story: [...working.story, errTurn] });
           setCanRetry(true);
           return;
@@ -600,14 +702,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
 
       // 底层规则 · OOC 场外话：只回答、不推进——不结算数值 / 时间 / 地点 / 世界书消耗，沿用原有选项
-      const isOoc = !asPopup && !preSettled && !!oocText(input, rulesOf(working).narrative.oocMarks);
-      const effectiveStep = isOoc ? { options: working.options } : step ?? { options: [], narration: prose };
+      const isOoc = oocTurn;
+      // 功能注释：能走到这里时 step 一定已解析成功（OOC 除外），不再用「空状态」冒充成功回合
+      const effectiveStep = isOoc ? { options: working.options } : step!;
       const applied = isOoc ? { next: working, changes: [] as string[] } : applyStep(working, effectiveStep);
       const changes = applied.changes;
       // working 是回合开始时的快照；AI 生成期间玩家可能在小手机里聊了天，落地时沿用最新的手机数据，避免把聊天记录覆盖回旧版
       const cur0 = gameRef.current;
       let next = cur0 && cur0.id === working.id && cur0.phone ? { ...applied.next, phone: cur0.phone } : applied.next;
       if (lock) next = applyLock(next, working, lock);
+      // 功能注释：下一回合提示已随本回合交给 AI，主回合成功落地后清空
+      if (!asPopup && !isOoc && next.pendingCues?.length) next = { ...next, pendingCues: undefined };
       // 进行中的事件：AI 正文出现结束关键词即结束；没写结束词的事件只发这一回合
       next = settleActiveEvents(next, prose);
       if (!isOoc) next = commitWorldBook(next, wbPick, next.worldBook ?? defaultWorldBook());
@@ -651,8 +756,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
         if (freshSpot) {
           const spotId = freshSpot.id;
           const gid = next.id;
+          const spotInfo = freshSpot;
           void findSceneImageForNewSpot(freshSpot.name, { desc: freshSpot.desc }).then((url) => {
             const cur = gameRef.current;
+            // 功能注释：素材库没有合适图 → 通知界面弹「为新地点生图」提示（NewSpotImagePrompt）
+            if (!url && cur && cur.id === gid) {
+              window.dispatchEvent(new CustomEvent(NEW_SPOT_NO_IMAGE_EVENT, { detail: { id: spotId, name: spotInfo.name, desc: spotInfo.desc ?? "" } }));
+            }
             if (!url || !cur || cur.id !== gid) return;
             const spot = cur.mapEdits?.[spotId] as MapSpotEdit | undefined;
             if (!spot || spot.background?.trim()) return;
@@ -702,8 +812,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
         changes.push(...beat.events.map((e) => e.text).filter((t) => !stayNames.some((nm) => nm && t.startsWith(nm))));
         next = gossipTick(next, mobs, beat.tick, next.world.time).g;
       }
-      const thoughts = (step?.thoughts ?? []).filter((t) => t?.name && t?.text).map((t) => ({ name: t.name, text: t.text }));
-      const aiTurn: Turn = { id: uid(), role: "ai", ...(movedTo ? { scene: movedTo } : {}), segments, raw: full, ts: Date.now(), ...(thoughts.length ? { thoughts } : {}), ...newcomers };
+      // 功能注释：心事只保留代码判定在场的人（AI 写了不在场者的心事一律丢弃）
+      const presentNames = new Set(presentNpcIds(next).map((id) => next.npcs.find((n) => n.id === id)?.name).filter(Boolean));
+      const thoughts = (step?.thoughts ?? []).filter((t) => t?.name && t?.text && presentNames.has(t.name)).map((t) => ({ name: t.name, text: t.text }));
+      const aiTurn: Turn = { id: uid(), role: "ai", room: next.sim?.room, ...(movedTo ? { scene: movedTo } : {}), segments, raw: full, ts: Date.now(), ...(thoughts.length ? { thoughts } : {}), ...newcomers };
       const withStory = { ...next, story: [...next.story, aiTurn] };
       persist(withStory);
       setLastChanges(changes);
@@ -734,6 +846,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
       } else if (!isOoc) {
         // AI 回合可能推进了日期或改变了属性：检查是否触发本局结算时限到期或「达成即落幕」结局
         queueMicrotask(() => runFixedRef.current?.());
+      }
+      } catch (e) {
+        console.error("[runTurn] 回合落地异常", e);
+        setBusy(false);
+        setLive("");
+        const fe = { title: "本回合处理出错", text: "剧情已生成，但写入游戏时出错，本回合未结算任何数值。点「重新生成」再来一次。" };
+        if (asPopup || preSettled) {
+          setPopup({ title: fe.title, segments: [{ kind: "system", text: fe.text }], changes: [], retry: { input, hideInput, journalMeta, preSettled } });
+        } else {
+          const cur = gameRef.current && gameRef.current.id === base.id ? gameRef.current : base;
+          setGame({ ...cur, story: [...cur.story, { id: uid(), role: "ai", room: cur.sim?.room, segments: [], error: fe, ts: Date.now() }] });
+          setCanRetry(true);
+        }
       }
     },
     [cfg, persist],
@@ -834,11 +959,18 @@ export function GameProvider({ children }: { children: ReactNode }) {
         const baseFactions = Array.isArray(g.factions) ? g.factions : [];
         const have = new Set(baseFactions.map((f) => f.id));
         const flags = { ...(g.sim.flags ?? {}) };
-        for (const f of sf) if (joined.has(f.id)) flags[factionFlag(f.id)] = Math.max(REP_MIN, Math.min(REP_MAX, Math.round(f.rep ?? 20)));
+        // 功能注释：未添加「阵营声望」时不写声望数值
+        if (feature("factionRep")) for (const f of sf) if (joined.has(f.id)) flags[factionFlag(f.id)] = Math.max(REP_MIN, Math.min(REP_MAX, Math.round(f.rep ?? 20)));
         const names = sf.filter((f) => joined.has(f.id)).map((f) => f.name.trim());
         g = {
           ...g,
-          factions: [...baseFactions, ...sf.filter((f) => !have.has(f.id)).map((f) => ({ id: f.id, name: f.name.trim(), desc: f.desc, tags: Array.isArray(f.tags) ? f.tags : undefined }))],
+          // 功能注释：人物卡「所属势力」写进阵营成员表，世界书 / 立场联动 / 对话都能认出这个人属于谁
+          factions: [...baseFactions, ...sf.filter((f) => !have.has(f.id)).map((f) => {
+            const members = Object.values(PERSON_BY_ID).filter((p) => p.factionId === f.id).map((p) => ({ npc: p.id, stance: "member" as const }));
+            const rooms = Array.isArray(f.rooms) ? f.rooms.filter(Boolean) : [];
+            // 功能注释：势力范围随势力装进存档；局内对话、事件条件、阵营声望调价都读 Faction.rooms
+            return { id: f.id, name: f.name.trim(), desc: f.desc, tags: Array.isArray(f.tags) ? f.tags : undefined, ...(members.length ? { members } : {}), ...(rooms.length ? { rooms } : {}) };
+          })],
           sim: { ...g.sim, flags },
           player: { ...g.player, extra: [...g.player.extra.filter((e) => e.label !== "所属势力"), ...(names.length ? [{ label: "所属势力", value: names.join("、") }] : [])] },
         };
@@ -973,6 +1105,74 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("phone:interrupt", h);
   }, [runTurn]);
 
+  // 功能注释：魔法棒三种幕后指令——只驱动 AI 写这一回合，不显示玩家气泡；结算、记忆、在场约束照常走 runTurn
+  const directTurn = useCallback((kind: "advance" | "pov" | "after", povName?: string) => {
+    const g = gameRef.current;
+    if (!g || busy) return;
+    const directive =
+      kind === "advance"
+        ? "【推进 · 幕后指令，不是主角的台词】主角本回合不做额外行动。请让剧情按当前情势自然向前发展一段：在场人物主动行动或交谈、事件往前走，时间可略过片刻；不要替主角做重大决定或说关键台词，结尾停在需要主角回应的地方，并给出后续选项。"
+        : kind === "pov"
+          ? `【切换视角推进 · 幕后指令，不是主角的台词】本回合改从「${povName}」的视角叙述（第三人称，贴近 TA 的所见所想）：写 TA 此刻在想什么、做什么，剧情随之推进一段，主角只以 TA 眼中的样子出现。${povName} 只知道自己知道的事，不得知道主角的心理活动。下回合恢复主角视角；options 仍写主角接下来可以做的事。`
+          : "【后日谈 · 幕后指令，不是主角的台词】以番外的形式写一段「之后的日子」：时间跳到若干时日后，写当前人物关系与主角处境的余韵、日常片段与细小变化。这是氛围番外：不推进主线、不改任何数值与关系、不宣布结局，state 只填 world.note，npc_changes / player_changes 留空；memory_updates 记一条 scope=main、开头注明「后日谈番外：」的一句话；结尾回到当下，给出可继续游玩的选项。";
+    void runTurn(g, directive, false, true);
+  }, [busy, runTurn]);
+
+  // 功能注释：小剧场——借当前世界与在场人物写一段番外短剧。不进剧情流、不结算任何状态；
+  // 存进本存档「小剧场合集」可回看，并把一句梗概记进剧情记忆（标明番外，人物可以当作玩笑提起，但不当成真实发生）
+  const theaterTurn = useCallback(async (theme?: string, format?: string): Promise<string | null> => {
+    const g = gameRef.current;
+    if (!g || busy) return null;
+    if (!isConfigured(cfg)) { setPopup({ title: "还没接入 AI", segments: [{ kind: "system", text: "小剧场需要 AI：请先登录平台账号。" }], changes: [] }); return null; }
+    const topic = String(theme ?? "").trim().slice(0, 80);
+    const fmt = theaterFormatOf(format);
+    const castIds = presentNpcIds(g);
+    const castNamesNow = castIds.map((id) => g.npcs.find((n) => n.id === id)?.name).filter(Boolean) as string[];
+    setBusy(true);
+    setLive(`（小剧场「${fmt.label}」开演中……）`);
+    try {
+      // 功能注释：小剧场要原样拿到 html 代码块，不能先过 displayText（它会剥掉代码块）
+      const raw = await complete(cfg, buildMessages(g, buildTheaterDirective(fmt.id, topic, castNamesNow)), 120_000);
+      const parsed = parseTheaterOutput(raw);
+      const html = fmt.id === "text" ? "" : parsed.html;
+      const prose = fmt.id === "text" || !html ? displayText(parsed.prose).trim() : "";
+      if (!html && !prose) throw new Error("这次没有写出内容，请再试一次。");
+      const title = parsed.title || topic.slice(0, 20) || `${fmt.label}小剧场`;
+      const summary = parsed.summary;
+      const piece: import("../lib/types").TheaterPiece = { id: uid(), title, ...(topic ? { topic } : {}), format: fmt.id, ...(html ? { html } : {}), cast: castIds, prose, summary: summary || (prose || title).replace(/\s+/g, "").slice(0, 40), day: g.sim?.day ?? 0, time: g.world?.time, ts: Date.now() };
+      const cur = gameRef.current && gameRef.current.id === g.id ? gameRef.current : g;
+      const roomName = (id?: string) => (id ? spotName(cur, id) ?? worldLocOf(id)?.name ?? id : "");
+      const castNames = castIds.map((id) => cur.npcs.find((n) => n.id === id)?.name).filter(Boolean) as string[];
+      const withMem = applyMemory({ ...cur, theaters: [...(cur.theaters ?? []), piece].slice(-30) }, [{ scope: "main", text: `（番外小剧场·${fmt.label}，并非真实发生）《${title}》：${piece.summary}`, imp: 1, who: castNames }], undefined, { roomName, defaultBook: defaultWorldBook });
+      persist(withMem);
+      return piece.id;
+    } catch (e) {
+      const fe = friendlyAIError(e);
+      setPopup({ title: fe.title || "小剧场没演成", segments: [{ kind: "system", text: fe.text }], changes: [] });
+      return null;
+    } finally {
+      setBusy(false);
+      setLive("");
+    }
+  }, [busy, cfg, persist]);
+  const removeTheater = useCallback((id: string) => {
+    const g = gameRef.current;
+    if (g) persist({ ...g, theaters: (g.theaters ?? []).filter((t) => t.id !== id) });
+  }, [persist]);
+
+  // 功能注释：摇一摇约见面——门槛在聊天里判；这里把 TA 正式加入人物名单、落座到主角所在地，再上演一段见面剧情
+  const meetStranger = useCallback((pid: string): boolean => {
+    const g = gameRef.current;
+    const st = getStranger(pid);
+    if (!g || busy || !st || st.met) return false;
+    const room = g.sim?.room && worldLocOf(g.sim.room) ? g.sim.room : getWorldStartRoom();
+    const placeName = spotName(g, room) ?? worldLocOf(room)?.name ?? "这里";
+    const next = promoteStranger(g, st, room);
+    persist(next);
+    void runTurn(next, `【约见面 · 幕后指令，不是主角的台词】主角和在「摇一摇」上认识、聊了一阵的网友${st.name}（${st.age}岁，${st.occupation}）约在「${placeName}」第一次线下见面，${st.name}此刻已到场。请写两人见面的场景：认出对方的瞬间、和网上聊天时的反差或印证、略带拘谨又熟悉的对话，可自然提起之前聊过的事（${st.mem.slice(-3).join("；") || "随意的闲聊"}）。${st.name}的言行符合其人设，结尾给出后续选项。`, false, true);
+    return true;
+  }, [busy, persist, runTurn]);
+
   const submit = useCallback(
     async (input: string, asPopup = false) => {
       let g = gameRef.current;
@@ -1006,12 +1206,18 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
       await runTurn(g, input, asPopup);
       if (oocText(input, rulesOf(g).narrative.oocMarks)) return; // OOC 场外话不触发支线
-      // 支线·关键词触发：玩家的行动/台词提到某支线的关键词，本回合结束后自动展开
-      const done = firedOf(gameRef.current ?? g, "quest");
-      const hit = SIDEQUESTS.find((q) => !done.includes(q.id) && (q.keywords ?? []).some((k) => k && input.includes(k)));
-      if (hit) setTimeout(() => playQuestRef.current?.(hit.id), 120);
+      // 支线·关键词触发：玩家的行动/台词提到某支线的关键词 → 进「特殊事件」支线列表，等玩家点开（不自动展开）
+      const cur = gameRef.current ?? g;
+      const done = firedOf(cur, "quest");
+      const had = new Set((cur.eventNotices ?? []).filter((n) => n.kind === "quest").map((n) => n.refId));
+      const hit = SIDEQUESTS.find((q) => !done.includes(q.id) && !had.has(q.id) && (q.keywords ?? []).some((k) => k && input.includes(k)));
+      if (hit) {
+        const n = makeEventNotice(cur, { kind: "quest", refId: hit.id, name: hit.title, summary: hit.condition, room: cur.sim.room }, uid());
+        persist({ ...cur, eventNotices: [...(cur.eventNotices ?? []), n] });
+        setLastChanges([`新的特殊事件「${n.name}」，去支线查看`]);
+      }
     },
-    [busy, cfg, runTurn],
+    [busy, cfg, runTurn, persist],
   );
 
   /**
@@ -1248,11 +1454,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const season = m >= 3 && m <= 5 ? "春" : m >= 6 && m <= 8 ? "夏" : m >= 9 && m <= 11 ? "秋" : "冬";
     const rows: Diary["rows"] = [];
     const add = (label: string, from: number, to: number, hint: string) => { if (to !== from) rows.push({ label, from, to, hint }); };
-    add("名气", a.fame, b.fame, b.fame > a.fame ? "有人开始记住你了" : "热度在退");
-    add("口碑", a.reputation, b.reputation, b.reputation > a.reputation ? "风评变好" : "风评下滑，留意言行");
-    add("压力", a.stress, b.stress, b.stress >= 80 ? "已近临界，尽快安排休息" : b.stress > a.stress ? "日程偏满" : "身心放松了些");
-    { const wa = wallet.balance(a), wb = wallet.balance(b); add(wallet.name(), wa, wb, wb < 0 ? "已经透支" : wb > wa ? "有进账" : "课程与生活开销"); }
-    for (const k of STAT_ORDER) add(STAT_LABELS[k], a.stats[k], b.stats[k], b.stats[k] > a.stats[k] ? "练习见效" : "疏于练习而生疏");
+    // 功能注释：只列真实变动的数值，叫法跟随作品；不写套话点评（解读交给 AI 复盘），只保留有事实依据的提醒
+    add(term("fame"), a.fame, b.fame, "");
+    add(term("reputation"), a.reputation, b.reputation, "");
+    add("压力", a.stress, b.stress, b.stress >= 80 ? "已近临界" : "");
+    { const wa = wallet.balance(a), wb = wallet.balance(b); add(wallet.name(), wa, wb, wb < 0 ? "已经透支" : ""); }
+    for (const k of STAT_ORDER) add(STAT_LABELS[k], a.stats[k], b.stats[k], "");
+    // 本作品自定义属性（建角里定义的，如 理智值 / 修为）；货币属性已在上面单列
+    for (const d of g?.attrDefs ?? []) {
+      if (d.id === g?.walletAttr) continue;
+      add(d.label || d.id, a.cattrs?.[d.id] ?? d.init ?? 0, b.cattrs?.[d.id] ?? d.init ?? 0, "");
+    }
     const n = Math.max(1, b.day - a.day);
     return {
       date: `${date} ${weekdayName(b.day)}`,
@@ -1273,13 +1485,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const simDiff = (a: SimState, b: SimState): string[] => {
     const out: string[] = [];
     const push = (label: string, d: number, suffix = "") => { if (d) out.push(`${label} ${d > 0 ? "+" : ""}${d}${suffix}`); };
-    push("名气", b.fame - a.fame);
-    push("口碑", b.reputation - a.reputation);
+    push(term("fame"), b.fame - a.fame);
+    push(term("reputation"), b.reputation - a.reputation);
     push("压力", b.stress - a.stress);
     if (wallet.bound()) push(wallet.name(), wallet.balance(b) - wallet.balance(a));
     else { const money = Math.round((b.money - a.money) / 1000) / 10; if (money) out.push(`资金 ${money > 0 ? "+" : ""}${money}万`); }
     for (const k of STAT_ORDER) push(STAT_LABELS[k], b.stats[k] - a.stats[k]);
-    if (b.works !== a.works) out.push("作品 +" + (b.works - a.works));
+    // 本作品自定义属性变化（货币属性已在上面单列）
+    const gg = gameRef.current;
+    for (const d of gg?.attrDefs ?? []) if (d.id !== gg?.walletAttr) push(d.label || d.id, (b.cattrs?.[d.id] ?? 0) - (a.cattrs?.[d.id] ?? 0));
+    if (b.works !== a.works) out.push(`${term("works")} +` + (b.works - a.works));
     if (b.awards !== a.awards) out.push("奖项 +" + (b.awards - a.awards));
     return out;
   };
@@ -1294,7 +1509,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
     // 确定性动作的叙事结果直接落进下半部分的对话框（故事线），不再另开绿色小字。
     const storyOf = (nar?: string) => nar
-      ? [...g.story, { id: uid(), role: "ai" as const, segments: [{ kind: "system" as const, text: nar }], ts: Date.now() }]
+      ? [...g.story, { id: uid(), role: "ai" as const, room: g.sim?.room, segments: [{ kind: "system" as const, text: nar }], ts: Date.now() }]
       : g.story;
     // 日历进入 NPC 生日月：年龄 +1（每年一次），并在旁白里播报
     const bd = nextSim.day !== g.sim.day ? tickBirthdays(g.npcs, nextSim.day) : { npcs: g.npcs, notes: [] as string[] };
@@ -1345,9 +1560,32 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (brk.next !== g.sim) { g = { ...g, sim: brk.next }; persist(g); }
       if (brk.changes.length) setLastChanges(brk.changes);
     }
-    // 属性升档：勾选「升档时触发剧情」的属性升到新档位，演绎一段突破剧情（每档一次）
+    // 功能注释：这里只做代码判定与记录，绝不自动再调 AI——属性升档 / 条件抵达 / 插入事件记成「下一回合提示」，
+    // 带剧情幕的事件与条件支线进入「特殊事件」支线，玩家点开才演绎（避免一次操作后剧情自己往下冒）。
+    const cues: string[] = [];
+    const toasts: string[] = [];
+    const findEv = (id: string) => (g.fixedEvents ?? []).find((e) => e.id === id) ?? getWorldEventGroups().flatMap((gr) => gr.events).find((e) => e.id === id);
+    // 到期检查：未限时的上回合条目过期（照常结算事件数值）；限时条目倒计时到 0 记失败（结算失败后果）
+    {
+      const t = tickEventNotices(g);
+      if (t.expired.length || t.failed.length) {
+        let sim = t.g.sim;
+        for (const n of t.expired) {
+          const ev = n.kind === "event" ? findEv(n.refId) : undefined;
+          if (ev) { const r = settleFixedEventEffects(sim, ev); sim = r.next; toasts.push(`「${n.name}」已过期`, ...r.changes); }
+          else toasts.push(`「${n.name}」已过期`);
+        }
+        for (const n of t.failed) {
+          const ev = n.kind === "event" ? findEv(n.refId) : undefined;
+          if (ev?.failEffects?.length) { const r = settleFixedEventEffects(sim, ev, ev.failEffects); sim = r.next; toasts.push(`「${n.name}」超时失败`, ...r.changes); }
+          else toasts.push(`「${n.name}」超时失败`);
+        }
+        persist(t.g);
+        g = commitSim(sim) ?? t.g;
+      }
+    }
+    // 属性升档：勾选「升档时触发剧情」的属性升到新档位 → 记一条提示，下一回合由 AI 自然带出（每档一次）
     const seen = { ...(g.attrTierSeen ?? {}) };
-    let upTo: { d: import("../lib/types").AttrDef; t: string; v: number } | null = null;
     for (const d of g.attrDefs ?? []) {
       if (!d.tierEvent || !d.tiers?.length) continue;
       const v = g.player.attrs.find((a) => a.key === d.id)?.value ?? d.init;
@@ -1356,72 +1594,91 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (seen[d.id] === t) continue;
       const up = seen[d.id] !== undefined && sorted.findIndex((x) => x.label === t) > sorted.findIndex((x) => x.label === seen[d.id]);
       seen[d.id] = t; // 首次/降档只记下
-      if (up && !upTo) upTo = { d, t, v };
-    }
-    if (JSON.stringify(seen) !== JSON.stringify(g.attrTierSeen ?? {})) {
-      const marked = { ...g, attrTierSeen: seen };
-      persist(marked);
-      if (upTo) {
-        const { d, t, v } = upTo;
-        fixedFiringRef.current = true;
+      if (up) {
         const story = d.tiers?.find((x) => x.label === t)?.prompt?.trim();
-        void runTurn(marked, `【属性升档：${d.label}】主角的${d.label}达到「${t}」（${v}）。${story ? `请严格按作者设定演绎：\n${story}` : `请演绎这一突破/蜕变的时刻，写出旁人可感的变化。`}${d.desc ? `（${d.label}：${d.desc}）` : ""}`, true, false, { kind: "spot", srcId: `attr-${d.label}`, title: `${d.label} · 蜕变`, seed: d.label, location: marked.world.location, when: `第 ${marked.sim.week} 周` })
-          .finally(() => { fixedFiringRef.current = false; });
-        return;
+        cues.push(`【属性升档：${d.label}】主角的${d.label}达到「${t}」（${v}）。${story ? `作者设定：${story}` : "写出旁人可感的变化。"}${d.desc ? `（${d.label}：${d.desc}）` : ""}`);
+        toasts.push(`${d.label}升到「${t}」`);
       }
     }
-    // 条件抵达：年龄/周数达标，自动来到某地并展开剧情（每条只触发一次）
+    if (JSON.stringify(seen) !== JSON.stringify(g.attrTierSeen ?? {})) { g = { ...g, attrTierSeen: seen }; persist(g); }
+    // 条件抵达：年龄/周数达标，主角来到某地（每条只触发一次）→ 移过去并记提示，不立刻开写
     const arr = pickArrival(g, LIVE_LOCATIONS.map((l) => l.id));
     if (arr) {
-      fixedFiringRef.current = true;
       const name = spotName(g, arr.room) || LIVE_LOCATIONS.find((l) => l.id === arr.room)?.name || arr.room;
       const sim = { ...g.sim, room: arr.room, visited: [...new Set([...(g.sim.visited ?? []), arr.room])] };
       const moved = { ...(commitSim(sim) ?? g), arrivalsFired: [...(g.arrivalsFired ?? []), arr.a.id] };
-      moved.world = { ...moved.world, location: name };
-      persist(moved);
-      void runTurn(moved, `【条件抵达：${name}】主角此刻来到了「${name}」。${arr.a.note ?? "请以此地为舞台展开一段剧情。"}`, true, false, { kind: "spot", srcId: `arrive-${name}`, title: name, seed: arr.a.note ?? name, location: name, when: `第 ${moved.sim.week} 周` })
-        .finally(() => { fixedFiringRef.current = false; });
-      return;
+      g = { ...moved, world: { ...moved.world, location: name } };
+      persist(g);
+      cues.push(`【条件抵达：${name}】主角此刻来到了「${name}」。${arr.a.note ?? ""}`);
+      toasts.push(`来到了「${name}」`);
     }
-    // 支线·条件触发：内容里声明了 conds 且全部满足的支线，自动展开（每段一次）
+    const addNotice = (src: Parameters<typeof makeEventNotice>[1]) => {
+      const n = makeEventNotice(g, src, uid());
+      g = { ...g, eventNotices: [...(g.eventNotices ?? []), n] };
+      persist(g); // 立即落盘：后面的 commitSim 以最新存档为底，避免条目被覆盖
+      toasts.push(`新的特殊事件「${n.name}」，去支线查看`);
+    };
+    // 支线·条件触发：满足条件的支线进「特殊事件」，等玩家选择（每段一次）
     {
       const done = firedOf(g, "quest");
-      const sq = SIDEQUESTS.find((q) => q.conds?.length && !done.includes(q.id) && q.conds.every((c) => evalFixedCond(c, g.sim)));
-      if (sq) { playQuestRef.current?.(sq.id); return; }
+      const had = new Set((g.eventNotices ?? []).filter((n) => n.kind === "quest").map((n) => n.refId));
+      const sq = SIDEQUESTS.find((q) => q.conds?.length && !done.includes(q.id) && !had.has(q.id) && q.conds.every((c) => evalFixedCond(c, g.sim)));
+      if (sq) addNotice({ kind: "quest", refId: sq.id, name: sq.title, summary: sq.condition, room: g.sim.room });
     }
-    // 先按创作者排序的固定事件；没有可触发的，再按概率从「随机触发」分组（默认 NPC 之间）抽一桩
-    // 先演已被触发、排队中的事件；再按创作者排序的固定事件；最后随机
+    // 固定 / 排队 / 随机事件：一次只处理一桩
     const queued = takeQueued(g.fixedEvents ?? [], g.sim);
     if (queued.sim !== g.sim) { g = { ...g, sim: queued.sim }; persist(g); }
     const ev = queued.ev ?? pickFixedEvent(g.fixedEvents ?? [], g.sim)
       ?? pickRandomEvent(getWorldEventGroups(), g.randomGroups, g.fixedEvents ?? [], g.sim);
-    if (!ev) return; // 条件未满足：什么也不显示，游戏照常自由运行
+    if (ev && ev.inline) {
+      // 插入对话流：数值当下由代码结算，设定作为提示写进下一回合，不另起一段
+      const r = applyFixedEffects(g.sim, ev);
+      g = keepIfOngoing(commitSim(r.next) ?? g, ev);
+      cues.push(`【${ev.name}】${ev.prompt}`);
+      toasts.push(...r.changes);
+    } else if (ev) {
+      // 进支线：只登记已触发（不再被重复挑中），数值等玩家展开 / 过期时再结算
+      g = commitSim(reserveFixedEvent(g.sim, ev)) ?? g;
+      addNotice({ kind: "event", refId: ev.id, name: ev.name, summary: ev.brief, room: noticeRoomOf(ev, g.sim.room), limitDays: ev.limitDays });
+    }
+    if (cues.length) g = { ...g, pendingCues: [...(g.pendingCues ?? []), ...cues].slice(-8) };
+    if (cues.length) persist(g);
+    if (toasts.length) setLastChanges(toasts);
+  }, [cfg, commitSim, persist]);
+  runFixedRef.current = runFixedCheck;
+
+  /* —— 特殊事件：玩家走到发生地、点地点里的「!」才演绎；代码结算数值 → 交 AI 演绎 —— */
+  const playEventNotice = useCallback((id: string) => {
+    const g = gameRef.current;
+    const n = g?.eventNotices?.find((x) => x.id === id);
+    if (!g || !n || n.status !== "open" || busy || fixedFiringRef.current) return;
+    const mark = (x: GameState, status: EventNotice["status"]) => ({ ...x, eventNotices: (x.eventNotices ?? []).map((e) => (e.id === id ? { ...e, status, endedDay: x.sim.day ?? 0 } : e)) });
+    if (n.kind === "quest") { persist(mark(g, "played")); playQuestRef.current?.(n.refId); return; }
+    const ev = (g.fixedEvents ?? []).find((e) => e.id === n.refId) ?? getWorldEventGroups().flatMap((gr) => gr.events).find((e) => e.id === n.refId);
+    if (!ev) { persist(mark(g, "expired")); return; }
+    // 功能注释：特殊事件只能在发生地触发——人不在这里就不展开（支线列表里提供「前往」）
+    if (n.room && n.room !== g.sim.room) return;
+    const sim = g.sim;
+    const where = g.world.location;
     fixedFiringRef.current = true;
-    const hidden = applyHiddenBranches(applyFixedEffects(g.sim, ev).next, ev); // 先由代码结算所有数值/状态变化；条件已满足的隐藏分支自动走
-    const next = hidden.next;
-    // 带结束关键词的事件：上演后转为进行中，之后每回合继续发送设定，直到 AI 写出结束词
-    const merged = keepIfOngoing(commitSim(next) ?? g, ev);
-    const opts = eventChoiceOptions(ev, next);
+    const hidden = applyHiddenBranches(settleFixedEventEffects(sim, ev).next, ev);
+    persist(mark({ ...g, world: { ...g.world, location: where } }, "played"));
+    const merged = keepIfOngoing(commitSim(hidden.next) ?? g, ev);
+    const opts = eventChoiceOptions(ev, hidden.next);
     const choiceHint = opts.length ? `\n（本幕结尾停在抉择前：玩家将从「${opts.map((o) => o.label).join("」「")}」中选择，不要替玩家做决定）` : "";
     const hiddenHint = hidden.prompts.length ? `\n（暗线已触发，须自然写进本幕，不要点明是「隐藏分支」：${hidden.prompts.join("；")}）` : "";
-    const evText = `【固定事件：${ev.name}】\n${ev.prompt}${hiddenHint}${choiceHint}`;
-    // 插入对话流（酒馆式）：直接写进主剧情，作为幕后指令不显示成玩家气泡；否则弹出剧情幕并写剧情志
-    void (ev.inline
-      ? runTurn(merged, evText, false, true, undefined, true)
-      : runTurn(
+    void runTurn(
       merged,
-      evText,
+      `【特殊事件：${ev.name}】\n${ev.prompt}${hiddenHint}${choiceHint}`,
       true,
       false,
       { kind: "spot", srcId: ev.id, title: ev.name, seed: ev.prompt, location: merged.world.location, when: `第 ${merged.sim.week} 周 · ${weekdayName(merged.sim.day)}` },
       true,
-    )).then(() => {
-      // 事件选项：替换 AI 给的选项，玩家点击后由代码结算（见 submit）
+    ).then(() => {
       const cur = gameRef.current;
       if (opts.length && cur && cur.id === merged.id) persist({ ...cur, options: opts });
     }).finally(() => { fixedFiringRef.current = false; });
-  }, [cfg, commitSim, persist, runTurn]);
-  runFixedRef.current = runFixedCheck;
+  }, [busy, commitSim, persist, runTurn]);
   // 音频信号（播放结束 / 淡入完成 / 淡出完成）到来时立即检查一次触发器
   useEffect(() => onAudioSignal(() => runFixedRef.current?.()), []);
   commitSimRef.current = commitSim;
@@ -1502,8 +1759,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (res.settled) {
       const tailLines = next.log.slice(-3);
       const tail = tailLines.join("\n");
+      const weekReport = buildReport(next.log, prevSim.week, prevSim.week, relEvents, { grade: res.gradeLabel || undefined, act: res.actLabel, gains: res.gains });
+      weekDiaryRef.current?.(weekReport, diary, changes, next.lastBill, next.lastCheck?.amount);
       setPopup({
-        report: buildReport(next.log, prevSim.week, prevSim.week, relEvents, { grade: res.gradeLabel || undefined, act: res.actLabel, gains: res.gains }),
+        report: weekReport,
         diary,
         title: `${res.gradeLabel ? res.gradeLabel + " · " : ""}第 ${prevSim.week} 周结算`,
         segments: [{ kind: "system", text: `${res.dayText}${gainText}\n\n${next.log.length ? tail : ""}${relEvents.filter((e) => !tailLines.includes(e)).map((e) => "\n\n" + e).join("")}` }],
@@ -1619,10 +1878,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const span = `${n === 1 ? "一" : n}${UN}`;
     const weekTo = Math.max(g.sim.week, cur.week - (last.rolledWeek ? 1 : 0));
     const multi = weekTo > g.sim.week;
+    const spanDiary = makeDiary(g.sim, cur, texts, gains, g);
+    const spanReport = buildReport(cur.log, g.sim.week, weekTo, relAll.slice(-6), { grade: multi ? undefined : last.gradeLabel || undefined, act: last.actLabel, gains: multi ? [] : last.gains, span: multi ? span : undefined });
+    weekDiaryRef.current?.(spanReport, spanDiary, changes, multi ? null : cur.lastBill, multi ? undefined : cur.lastCheck?.amount);
     setPopup({
       title: multi ? `${span}结算 · 第 ${g.sim.week}～${weekTo} 周` : `第 ${g.sim.week} 周结算`,
-      diary: makeDiary(g.sim, cur, texts, gains, g),
-      report: buildReport(cur.log, g.sim.week, weekTo, relAll.slice(-6), { grade: multi ? undefined : last.gradeLabel || undefined, act: last.actLabel, gains: multi ? [] : last.gains, span: multi ? span : undefined }),
+      diary: spanDiary,
+      report: spanReport,
       segments: [{ kind: "system", text: texts.slice(-3).join("\n") }],
       changes,
     });
@@ -1793,8 +2055,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setLive("");
     const prompt = `【支线进行中：${br.title}｜场景：${br.location ?? base.world.location}】\n${br.annotation ? br.annotation + "\n" : ""}${br.seed}\n\n（这是一段独立支线，请只演绎本支线内的情节并给出 2~4 个可选行动；不要推进主线日程，不要改动体力。）${showInput ? `\n\n玩家行动：${input}` : ""}`;
     let full = "";
+    const branchMsgs = buildMessages({ ...working, story: working.branch!.turns }, prompt);
     try {
-      full = await streamChat({ ...cfg, stream: true }, buildMessages({ ...working, story: working.branch!.turns }, prompt), (_d, f) => setLive(displayText(f)));
+      full = await streamChat({ ...cfg, stream: true }, branchMsgs, (_d, f) => setLive(displayText(f)));
     } catch (e) {
       setBusy(false);
       setLive("");
@@ -1804,11 +2067,29 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setPopup({ title: friendlyAIError(e).title, segments: [{ kind: "system", text: `${friendlyAIError(e).text}${br.turns.length ? "" : `\n\n已退回进入支线扣的 ${br.cost} 个行动点。`}` }], changes: [] });
       return;
     }
-    const step = extractStep(full);
+    // 功能注释：同主线兜底——解析失败先请 AI 补状态块一次；仍失败则撤回本次输入、不结算，提示重试
+    let parsedB = parseStepDetailed(full);
+    if (!parsedB.step) {
+      setLive(`${displayText(full)}\n\n（状态没写完整，正在补全……）`);
+      try {
+        const fixed = parseStepDetailed(await complete(cfg, buildStepRepairMessages(branchMsgs, full, parsedB.reason ?? "no-json"), 40_000));
+        if (fixed.step) parsedB = fixed;
+      } catch { /* 按失败处理 */ }
+    }
+    const step = parsedB.step;
+    if (!step) {
+      setBusy(false);
+      setLive("");
+      if (!br.turns.length) persist({ ...base, branch: undefined, sim: { ...base.sim, ap: tripPoints(base.sim) + br.cost } });
+      else persist(base);
+      const prose = displayText(full);
+      setPopup({ title: "状态没解析成功", segments: [...(prose ? proseToSegments(prose) : []), { kind: "system", text: `这一段的状态没能读取，未结算任何数值${br.turns.length ? "，已撤回这次行动，可以再试一次" : `，已退回进入支线扣的 ${br.cost} 个行动点`}。` }], changes: [] });
+      return;
+    }
     let segments: Segment[] = proseToSegments(displayText(full));
-    if (!segments.length && step?.narration) segments = proseToSegments(step.narration);
-    if (step?.system) segments.push({ kind: "system", text: step.system });
-    const appliedB = applyStep(working, step ?? { options: [], narration: displayText(full) });
+    if (!segments.length && step.narration) segments = proseToSegments(step.narration);
+    if (step.system) segments.push({ kind: "system", text: step.system });
+    const appliedB = applyStep(working, step);
     const changes = appliedB.changes;
     const curB = gameRef.current; // 同主线：沿用生成期间最新的手机数据
     const synced = curB && curB.id === working.id && curB.phone ? { ...appliedB.next, phone: curB.phone } : appliedB.next;
@@ -2530,6 +2811,92 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, [persist]);
 
+  /* —— 日记本 · 周记：周结算后在后台请 AI 以主角口吻写约 800 字，写好落存档；失败可重写 —— */
+  const runWeekDiary = useCallback(async (id: string, req: ChatMsg[]) => {
+    const setEntry = (p: Partial<WeekDiaryEntry>) => patchGame((g) => ({ ...g, weekDiaries: (g.weekDiaries ?? []).map((e) => (e.id === id ? { ...e, ...p } : e)) }));
+    // 功能注释：真流式——每收到一段就更新内存里的正在写文本（节流 60ms 刷新），写完才落存档
+    let last = 0, pending: ReturnType<typeof setTimeout> | null = null, latest = "";
+    const flush = () => { pending = null; last = Date.now(); setWeekDiaryLive((m) => ({ ...m, [id]: latest })); };
+    try {
+      const full = await streamChat(cfg, req, (_chunk, all) => {
+        latest = all;
+        if (Date.now() - last >= 60) flush();
+        else if (!pending) pending = setTimeout(flush, 60);
+      });
+      if (pending) clearTimeout(pending);
+      const out = parseWeekDiary(full);
+      setEntry(out ? { status: "done", title: out.title, text: out.text, ts: Date.now() } : { status: "failed" });
+      // 功能注释：周记末尾的人物周记忆 → 各人物私有记忆（一句话，带周次）；同一句重复写会被 remember 去重
+      patchGame((g) => {
+        const e = (g.weekDiaries ?? []).find((x) => x.id === id);
+        const mems = parseNpcWeekMemories(full, g.npcs.map((n) => n.name));
+        if (!e || !mems.length) return g;
+        const label = e.weekTo && e.weekTo !== e.week ? `第${e.week}～${e.weekTo}周` : `第${e.week}周`;
+        let next = g;
+        for (const m of mems) {
+          const npc = findNpc(next.npcs, undefined, m.name);
+          // 功能注释：人物周记写的是 TA 自己的一周 → 记入自身经历 selfMemory
+          if (npc) next = remember(next, npc.id, "self", `${label}回顾：${m.text}`, e.date || next.world.time);
+        }
+        return next;
+      });
+    } catch {
+      if (pending) clearTimeout(pending);
+      setEntry({ status: "failed" });
+    } finally {
+      setWeekDiaryLive((m) => { const n = { ...m }; delete n[id]; return n; });
+    }
+  }, [cfg, patchGame]);
+  const writeWeekDiary = useCallback((report: WeekReport, diary: Diary, changes: string[], bill: SimState["lastBill"], earned?: number) => {
+    const g = gameRef.current;
+    if (!g || !isConfigured(cfg)) return;
+    const w = getWorld();
+    const goal = homeMainQuest(g.sim, getWorldStorylines(), dayDateLabel(g.sim.day ?? 0));
+    const prev = [...(g.weekDiaries ?? [])].reverse().find((e) => e.status === "done" && e.text);
+    const req = buildWeekDiaryMessages({
+      worldName: w.chain[0]?.name || "本作品",
+      scriptTone: readScriptTone(w.content.prompt) || undefined,
+      playerName: g.player.name || "主角",
+      playerIdentity: g.player.identity || undefined,
+      report, diary, changes, bill, earned,
+      money: (n) => wallet.fmt(Math.round(n)),
+      goal: goal ? { lineName: goal.lineName, stepName: goal.stepName, stepDesc: goal.stepDesc, done: goal.done, total: goal.total } : null,
+      daysLeft: diary.left,
+      memory: g.memory || undefined,
+      prevTail: prev?.text?.slice(-160),
+      // 功能注释：人物周记素材——已结识的人（最近有往来的在前，最多 10 人）：自己的经历 / 近况心情 / 与主角的往来分开给，
+      // 让人物周记写 TA 自己的一周；上周写进去的「第N周回顾」不再回灌，避免自我复读
+      npcs: g.npcs
+        .filter((n) => (g.sim.metPeople ?? []).includes(n.id))
+        .sort((a, b) => (b.interactions[b.interactions.length - 1]?.turn ?? -1) - (a.interactions[a.interactions.length - 1]?.turn ?? -1))
+        .slice(0, 10)
+        .map((n) => {
+          const kb = kbOf(g, n.id);
+          // 功能注释：「本周」= 上一篇周记之后的回合；没有上一篇时取最近 3 条
+          const lastTurn = [...(g.weekDiaries ?? [])].reverse().find((e) => typeof e.turn === "number" && e.week !== report.week)?.turn ?? -Infinity;
+          return {
+            name: n.name,
+            identity: n.identity,
+            mood: n.mood || undefined,
+            self: kb.selfMemory.filter((m) => !/^第\d+(～\d+)?周回顾：/.test(m.text)).slice(-3).map((m) => m.text),
+            withPlayer: n.interactions.filter((x) => x.turn > lastTurn).slice(-3).map((x) => x.text),
+          };
+        }),
+    });
+    const id = uid();
+    const entry: WeekDiaryEntry = { id, week: report.week, weekTo: report.weekTo, date: diary.date, status: "writing", req, ts: Date.now(), turn: g.turnCount };
+    // 同一周重复结算（读档重来）只留最新一篇
+    patchGame((x) => ({ ...x, weekDiaries: [...(x.weekDiaries ?? []).filter((e) => e.week !== report.week), entry] }));
+    void runWeekDiary(id, req);
+  }, [cfg, patchGame, runWeekDiary]);
+  weekDiaryRef.current = writeWeekDiary;
+  const retryWeekDiary = useCallback((id: string) => {
+    const e = gameRef.current?.weekDiaries?.find((x) => x.id === id);
+    if (!e || !isConfigured(cfg)) return;
+    patchGame((g) => ({ ...g, weekDiaries: (g.weekDiaries ?? []).map((x) => (x.id === id ? { ...x, status: "writing" } : x)) }));
+    void runWeekDiary(id, e.req);
+  }, [cfg, patchGame, runWeekDiary]);
+
   // —— 交换联系方式：随机同意/拒绝；同意则开通私聊通道 ——
   const phoneExchange = useCallback((personId: string): boolean => {
     const g = gameRef.current;
@@ -2595,35 +2962,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
       g.epilogue?.trim() ? `模型收场时留下的话：${g.epilogue.slice(0, 400)}` : "",
     ].filter(Boolean).join("\n");
     const MIN = 1000;
-    // 后记总时限：接口卡住或续写拖太久时，用已写好的部分或本地后记收尾，不能让一个挂起的请求挡住结局页
-    const deadline = Date.now() + 150_000;
-    const left = () => deadline - Date.now();
-    let epilogue = "";
-    try {
-      if (isConfigured(cfg)) {
-        const sys = { role: "system" as const, content: "你是深情细腻的传记作者。只输出后记正文，用空行分段，不要标题以外的说明。" };
-        epilogue = await complete(cfg, [
-          sys,
-          {
-            role: "user",
-            content: `请为这位${her}写一篇不少于${MIN}字（建议 1200–1800 字）的「生平记事及后传」。\n要求：\n1. 按人生阶段分段：初出茅庐、艰难打拼、高光与低谷、情感与抉择、结局之后的后传、暮年回望；每段写出该阶段的重点事件。\n2. 语言细腻感人，有画面与细节，不要流水账。\n3. 在结尾回扣「最初的场景」与剧情中的具体记忆，形成首尾呼应。\n4. 基调、成就与遗憾须与结局定级和人生评级相符。\n\n${material}`,
-          },
-        ], left());
-        // 字数不够就续写，最多两次；总时限只剩不到 30 秒就不再续写
-        for (let i = 0; i < 2 && epilogue.replace(/\s/g, "").length < MIN && left() > 30_000; i++) {
-          const more = await complete(cfg, [sys, { role: "user", content: `以下后记只有 ${epilogue.replace(/\s/g, "").length} 字，不足 ${MIN} 字。请紧接末尾续写后传与暮年回望，补足细节并回扣最初的记忆，只输出续写部分：\n\n${epilogue}\n\n素材：\n${material}` }], left());
-          if (!more.trim()) break;
-          epilogue = `${epilogue.trim()}\n\n${more.trim()}`;
-        }
-      }
-    } catch {
-      /* 退回本地后记 */
-    }
-    if (!epilogue.trim()) epilogue = localEpilogue(g, rank, grade, firstScenes, lastScenes, journal);
+    // 先用本地后记立即落幕进结局页（闭环不被长时间的 AI 请求卡住），AI 后记在后台生成后替换
+    const local = localEpilogue(g, rank, grade, firstScenes, lastScenes, journal);
+    const aiOn = isConfigured(cfg);
     persist({
       ...g,
       ended: true,
-      epilogue,
+      epilogue: local,
+      epiloguePending: aiOn,
       endingTitle: rank.title,
       endingTag: rank.body,
       endingId: custom?.id,
@@ -2639,6 +2985,35 @@ export function GameProvider({ children }: { children: ReactNode }) {
       endingKind: kind,
     });
     setScreen("ending");
+    if (!aiOn) return;
+    // 后记总时限：接口卡住或续写拖太久时，保留本地后记
+    const deadline = Date.now() + 150_000;
+    const left = () => deadline - Date.now();
+    let epilogue = "";
+    void (async () => {
+      try {
+        const sys = { role: "system" as const, content: "你是深情细腻的传记作者。只输出后记正文，用空行分段，不要标题以外的说明。" };
+        epilogue = await complete(cfg, [
+          sys,
+          {
+            role: "user",
+            content: `请为这位${her}写一篇不少于${MIN}字（建议 1200–1800 字）的「生平记事及后传」。\n要求：\n1. 按人生阶段分段：初出茅庐、艰难打拼、高光与低谷、情感与抉择、结局之后的后传、暮年回望；每段写出该阶段的重点事件。\n2. 语言细腻感人，有画面与细节，不要流水账。\n3. 在结尾回扣「最初的场景」与剧情中的具体记忆，形成首尾呼应。\n4. 基调、成就与遗憾须与结局定级和人生评级相符。\n\n${material}`,
+          },
+        ], left());
+        // 字数不够就续写，最多两次；总时限只剩不到 30 秒就不再续写
+        for (let i = 0; i < 2 && epilogue.replace(/\s/g, "").length < MIN && left() > 30_000; i++) {
+          const more = await complete(cfg, [sys, { role: "user", content: `以下后记只有 ${epilogue.replace(/\s/g, "").length} 字，不足 ${MIN} 字。请紧接末尾续写后传与暮年回望，补足细节并回扣最初的记忆，只输出续写部分：\n\n${epilogue}\n\n素材：\n${material}` }], left());
+          if (!more.trim()) break;
+          epilogue = `${epilogue.trim()}\n\n${more.trim()}`;
+        }
+      } catch {
+        /* 保留本地后记 */
+      }
+      const cur = gameRef.current;
+      // 玩家已开新局或切档：不回写
+      if (!cur || cur.id !== g.id || !cur.endingGrade) return;
+      persist({ ...cur, epilogue: epilogue.trim() ? epilogue : cur.epilogue, epiloguePending: false });
+    })();
   }, [cfg, persist]);
 
   const endManually = useCallback(async (kind: "bankrupt" | "finish" | "manual" | "ai" = "manual") => {
@@ -2663,12 +3038,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     () => ({
       cfg, setCfg, theme, setTheme, look: lookRes.look, activeLooks: lookRes.active, lookCss: lookRes.css, previewLook, lookPreview, screen, go, game, busy, lastChanges, popup, setPopup,
       startNew, loadState, submit, setPlayerAvatar, setNpcAvatar, setNpcPortrait, setRelValue, setRomanceable, setNpcDim, saveNow, regenerate, saveEpoch, canRetry, retryPopup, autosaveOn, setAutosaveOn, endManually, setWorldRules, setWorldBook, setMapEdits, setFixedEvents, setRandomGroups, previewFixedEvent,
-      branchAct, leaveBranch, setSchedule, runWeekNow, endDayNow, advanceNow, equipTitle, simVisit, simEvent, simMove, simPickup, simUseItem, simGiftItem, simActivity, simBuy, simAskIntel, simNegotiate, simAskOffers, simChooseArc, simConfirmDating,
+      directTurn, theaterTurn, removeTheater, meetStranger, branchAct, leaveBranch, setSchedule, runWeekNow, endDayNow, advanceNow, equipTitle, simVisit, simEvent, simMove, simPickup, simUseItem, simGiftItem, simActivity, simBuy, simAskIntel, simNegotiate, simAskOffers, simChooseArc, simConfirmDating,
       projApply, projSign, projNegotiate, projPromote, projWorkday, simContact, simConfess, simBridge, simWedding, simDivorce, simMeetProducer, simAskProducer,
-      personaDeclare, personaAct, crisisResolve, resolveBreach, buyCar, sellCar, setActiveCar, xianyuList, xianyuDelist, xianyuSell, commitGame, patchGame, phoneExchange, meetNewcomer,
+      personaDeclare, personaAct, crisisResolve, resolveBreach, buyCar, sellCar, setActiveCar, xianyuList, xianyuDelist, xianyuSell, commitGame, patchGame, retryWeekDiary, weekDiaryLive, playEventNotice, phoneExchange, meetNewcomer,
       playSpotEvent, playQuest, toggleFav, removeJournal, exportJournal,
     }),
-    [cfg, setCfg, theme, setTheme, lookRes, lookPreview, screen, go, game, busy, lastChanges, popup, startNew, loadState, submit, setPlayerAvatar, setNpcAvatar, setNpcPortrait, setRelValue, setRomanceable, setNpcDim, saveNow, regenerate, saveEpoch, canRetry, retryPopup, autosaveOn, setAutosaveOn, endManually, setWorldRules, setWorldBook, setMapEdits, setFixedEvents, setRandomGroups, previewFixedEvent, setSchedule, runWeekNow, endDayNow, advanceNow, equipTitle, simVisit, simEvent, simMove, simPickup, simUseItem, simGiftItem, simActivity, simBuy, simAskIntel, simNegotiate, simAskOffers, simChooseArc, simConfirmDating, projApply, projSign, projNegotiate, projPromote, projWorkday, simContact, simConfess, simBridge, simWedding, simDivorce, simMeetProducer, simAskProducer, personaDeclare, personaAct, crisisResolve, resolveBreach, buyCar, sellCar, setActiveCar, xianyuList, xianyuDelist, xianyuSell, commitGame, patchGame, phoneExchange, meetNewcomer, playSpotEvent, playQuest, toggleFav, removeJournal, exportJournal],
+    [cfg, setCfg, theme, setTheme, lookRes, lookPreview, screen, go, game, busy, lastChanges, popup, startNew, loadState, submit, directTurn, theaterTurn, removeTheater, meetStranger, setPlayerAvatar, setNpcAvatar, setNpcPortrait, setRelValue, setRomanceable, setNpcDim, saveNow, regenerate, saveEpoch, canRetry, retryPopup, autosaveOn, setAutosaveOn, endManually, setWorldRules, setWorldBook, setMapEdits, setFixedEvents, setRandomGroups, previewFixedEvent, setSchedule, runWeekNow, endDayNow, advanceNow, equipTitle, simVisit, simEvent, simMove, simPickup, simUseItem, simGiftItem, simActivity, simBuy, simAskIntel, simNegotiate, simAskOffers, simChooseArc, simConfirmDating, projApply, projSign, projNegotiate, projPromote, projWorkday, simContact, simConfess, simBridge, simWedding, simDivorce, simMeetProducer, simAskProducer, personaDeclare, personaAct, crisisResolve, resolveBreach, buyCar, sellCar, setActiveCar, xianyuList, xianyuDelist, xianyuSell, commitGame, patchGame, retryWeekDiary, weekDiaryLive, playEventNotice, phoneExchange, meetNewcomer, playSpotEvent, playQuest, toggleFav, removeJournal, exportJournal],
   );
 
   return (

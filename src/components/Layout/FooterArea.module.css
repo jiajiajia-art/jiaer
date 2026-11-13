@@ -1,14 +1,14 @@
 /* 功能注释：全站页脚——PC 品牌左+三列右；移动端仅法律一行（见 max-width:768） */
 .footer {
-  --footer-surface: #0A0A0A;
-  --footer-title: #ffffff;
-  --footer-muted: rgba(255, 255, 255, 0.55);
-  --footer-faint: rgba(255, 255, 255, 0.38);
+  --footer-surface: var(--color-bg);
+  --footer-title: var(--color-text);
+  --footer-muted: var(--color-text-secondary);
+  --footer-faint: var(--color-text-muted);
   width: 100%;
   flex: 0 0 auto;
   align-self: stretch;
   background-color: var(--footer-surface);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
   padding: 48px 0 56px;
   display: flex;
   justify-content: center;
@@ -63,7 +63,7 @@
 }
 
 .legalLink:hover {
-  color: rgba(255, 255, 255, 0.85);
+  color: color-mix(in srgb, var(--color-text) 85%, transparent);
 }
 
 .linkCols {
@@ -104,7 +104,7 @@
 
 .item:hover,
 .itemButton:hover {
-  color: rgba(255, 255, 255, 0.88);
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
 }
 
 @media screen and (min-width: 769px) and (max-width: 1080px) {
@@ -121,7 +121,12 @@
   /* 功能注释：有底栏的移动端不再挂完整官网站脚，只留 © + 隐私/协议 */
   .footer {
     display: flex;
-    padding: 14px 0 calc(14px + env(safe-area-inset-bottom, 0px));
+    padding: 14px 0 16px;
+  }
+
+  /* 功能注释：壳层已用 --app-bottom-nav-offset 避开底栏+Home Indicator；再垫 safe-area 会在版权下多出一块空白 */
+  :global([data-app-page-shell]) .footer {
+    padding-bottom: 16px;
   }
 
   .container {

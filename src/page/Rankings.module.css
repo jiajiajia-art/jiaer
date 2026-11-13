@@ -1,17 +1,17 @@
 /* ─── Page Shell — 与 Create 一致的深色主题 ─── */
 .pageRoot {
-    --rank-bg: #000000;
-    --rank-surface: #1C1C1E;
-    --rank-surface-elevated: #242426;
-    --rank-text: #FFFFFF;
-    --rank-muted: #8E8E93;
-    --rank-tag: rgba(255, 255, 255, 0.55);
-    --rank-primary: #A8283C;
-    --rank-primary-deep: #8E2135;
-    --rank-primary-hot: #C23A50;
-    --rank-rank-muted: #8E8E93;
-    --rank-border: rgba(255, 255, 255, 0.08);
-    --rank-divider: rgba(255, 255, 255, 0.12);
+    --rank-bg: var(--color-bg);
+    --rank-surface: var(--color-surface);
+    --rank-surface-elevated: var(--color-surface-2);
+    --rank-text: var(--color-text);
+    --rank-muted: var(--color-text-muted);
+    --rank-tag: color-mix(in srgb, var(--color-surface) 55%, transparent);
+    --rank-primary: var(--color-primary);
+    --rank-primary-deep: var(--color-primary-bold);
+    --rank-primary-hot: var(--color-primary);
+    --rank-rank-muted: var(--color-text-muted);
+    --rank-border: color-mix(in srgb, var(--color-text) 8%, transparent);
+    --rank-divider: color-mix(in srgb, var(--color-text) 12%, transparent);
     /* 功能注释：壳层高度由 AppPageShell 的 100dvh 控制，避免再垫 min-height 卡住中间滚动 */
     max-width: none;
     width: 100%;
@@ -27,12 +27,17 @@
     background: var(--rank-bg);
 }
 
+/* 功能注释：短内容时把页脚沉到滚动区底（贴底栏上方），避免版权下方再空出一大块黑底 */
+.page > :global(footer[data-site-footer]) {
+    margin-top: auto;
+}
+
 .pageInner {
     /* 功能注释：定位上下文留给 sticky Tab；勿写到壳层 main 上 */
     position: relative;
     max-width: 1360px;
     margin: 0 auto;
-    padding: 0 32px 96px;
+    padding: 0 32px 40px;
     width: 100%;
     box-sizing: border-box;
 }
@@ -60,7 +65,7 @@
     position: sticky;
     top: 0;
     z-index: 20;
-    background: rgba(0, 0, 0, 0.92);
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
 }
@@ -86,11 +91,11 @@
 }
 
 .tabBtn:hover {
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .tabBtnActive {
-    color: #ffffff;
+    color: var(--color-text);
     font-weight: 700;
 }
 
@@ -132,7 +137,7 @@
 
 .podiumCard:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 12px 32px color-mix(in srgb, var(--color-shadow) 15%, transparent);
 }
 
 .podiumCard:nth-child(1) { animation-delay: 0.05s; }
@@ -158,13 +163,13 @@
 
 .podiumCard1 .podiumCoverWrap {
     box-shadow:
-        0 0 0 2px rgba(168, 40, 60, 0.28),
-        0 12px 32px rgba(0, 0, 0, 0.12);
+        0 0 0 2px color-mix(in srgb, var(--color-primary) 28%, transparent),
+        0 12px 32px color-mix(in srgb, var(--color-shadow) 12%, transparent);
 }
 
 .podiumCard2 .podiumCoverWrap,
 .podiumCard3 .podiumCoverWrap {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--color-shadow) 10%, transparent);
 }
 
 .podiumCover {
@@ -185,9 +190,9 @@
     inset: 0;
     background: linear-gradient(
         to top,
-        rgba(0, 0, 0, 0.85) 0%,
-        rgba(0, 0, 0, 0.4) 35%,
-        rgba(0, 0, 0, 0.1) 60%,
+        color-mix(in srgb, var(--color-shadow) 85%, transparent) 0%,
+        color-mix(in srgb, var(--color-shadow) 40%, transparent) 35%,
+        color-mix(in srgb, var(--color-text) 10%, transparent) 60%,
         transparent 100%
     );
 }
@@ -209,8 +214,8 @@
 
 .podiumRankBadge[data-rank="1"] {
     background: linear-gradient(135deg, var(--rank-primary-deep), var(--rank-primary-hot));
-    color: #fff;
-    box-shadow: 0 4px 12px rgba(168, 40, 60, 0.4);
+    color: var(--color-text);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 40%, transparent);
     width: 38px;
     height: 38px;
     font-size: 20px;
@@ -219,7 +224,7 @@
 .podiumRankBadge[data-rank="2"],
 .podiumRankBadge[data-rank="3"] {
     background: linear-gradient(135deg, var(--rank-primary), var(--rank-primary-hot));
-    color: #fff;
+    color: var(--color-text);
 }
 
 .podiumCardContent {
@@ -238,7 +243,7 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--rank-primary);
-    background: rgba(168, 40, 60, 0.12);
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
     padding: 3px 8px;
     border-radius: 4px;
     margin-bottom: 6px;
@@ -247,7 +252,7 @@
 .podiumTitle {
     font-size: clamp(15px, 2vw, 20px);
     font-weight: 700;
-    color: #fff;
+    color: var(--color-text);
     margin: 0 0 4px;
     line-height: 1.3;
 }
@@ -255,7 +260,7 @@
 .podiumDesc {
     font-size: 12px;
     line-height: 1.5;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--color-text-secondary);
     margin: 0 0 8px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -272,12 +277,12 @@
 .podiumPlayCount {
     font-size: 12px;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.85);
+    color: color-mix(in srgb, var(--color-text) 85%, transparent);
 }
 
 .podiumUpdate {
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--color-text-secondary);
 }
 
 .podiumBase {
@@ -287,9 +292,9 @@
     justify-content: center;
 }
 
-.podiumBase[data-rank="1"] { background: rgba(168, 40, 60, 0.08); }
-.podiumBase[data-rank="2"] { background: rgba(168, 40, 60, 0.06); }
-.podiumBase[data-rank="3"] { background: rgba(168, 40, 60, 0.04); }
+.podiumBase[data-rank="1"] { background: color-mix(in srgb, var(--color-primary) 8%, transparent); }
+.podiumBase[data-rank="2"] { background: color-mix(in srgb, var(--color-primary) 6%, transparent); }
+.podiumBase[data-rank="3"] { background: color-mix(in srgb, var(--color-primary) 4%, transparent); }
 
 .podiumCrown {
     width: 16px;
@@ -342,12 +347,12 @@
 .horizontalCard:hover {
     transform: translateY(-2px);
     background: var(--rank-surface-elevated);
-    border-color: rgba(255, 255, 255, 0.16);
+    border-color: color-mix(in srgb, var(--color-text) 16%, transparent);
 }
 
 .horizontalCard:active {
     transform: translateY(0);
-    background: #2a2a2c;
+    background: var(--color-surface-2);
 }
 
 .horizontalCardCover {
@@ -410,8 +415,8 @@
 .horizontalCardBadge {
     width: 24px;
     height: 24px;
-    background: rgba(168, 40, 60, 0.28);
-    color: #ffffff;
+    background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+    color: var(--color-on-primary);
     font-size: 14px;
     font-weight: 700;
     display: flex;
@@ -490,8 +495,8 @@
     flex-shrink: 0;
     background: var(--rank-surface-elevated);
     box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.16),
-        0 0 0 2px rgba(142, 33, 53, 0.35);
+        0 0 0 1px color-mix(in srgb, var(--color-text) 16%, transparent),
+        0 0 0 2px color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 .horizontalCardAuthor {
@@ -517,8 +522,8 @@
     max-width: 7.5em;
     padding: 2px 7px;
     border-radius: 6px;
-    background: rgba(255, 59, 97, 0.6);
-    color: #ffffff;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
     font-size: 11px;
     font-weight: 500;
     line-height: 1.3;
@@ -561,19 +566,19 @@
 }
 
 .statValue {
-    color: rgba(255, 255, 255, 0.78);
+    color: color-mix(in srgb, var(--color-text) 78%, transparent);
 }
 
 .statFlame {
     width: 11px;
     height: 14px;
-    color: #FF8FA3;
+    color: var(--color-primary-fg);
 }
 
 .statHeart {
     width: 12px;
     height: 12px;
-    color: #FF8FA3;
+    color: var(--color-primary-fg);
 }
 
 .loadMoreSentinel {
@@ -672,7 +677,7 @@
     gap: 12px;
     margin: 0 -18px 16px;
     padding: 14px 18px;
-    background: linear-gradient(90deg, #8E2135 0%, #A8283C 55%, #C23A50 100%);
+    background: linear-gradient(90deg, var(--color-primary-bold) 0%, var(--color-primary) 55%, var(--color-primary) 100%);
     border-radius: 14px 14px 0 0;
 }
 
@@ -680,7 +685,7 @@
     margin: 0;
     font-size: 16px;
     font-weight: 800;
-    color: #fff;
+    color: var(--color-on-primary);
     letter-spacing: 0.02em;
     line-height: 1.2;
 }
@@ -696,7 +701,7 @@
     background: transparent;
     border: none;
     border-radius: 0;
-    color: rgba(255, 255, 255, 0.88);
+    color: color-mix(in srgb, var(--color-on-primary) 88%, transparent);
     font-size: 13px;
     font-weight: 600;
     line-height: 1;
@@ -706,7 +711,7 @@
 }
 
 .categoryBoxMore:hover {
-    color: #ffffff;
+    color: var(--color-text);
     background: transparent;
     transform: none;
 }
@@ -714,7 +719,7 @@
 .moreArrow {
     width: 11px;
     height: 11px;
-    filter: brightness(0) invert(1);
+    filter: var(--icon-invert-filter);
     opacity: 0.88;
 }
 
@@ -784,19 +789,19 @@
 }
 
 .categoryBoxRank[data-rank="1"] {
-    color: #FF5A6E;
+    color: var(--color-primary-fg);
     font-size: 30px;
     font-weight: 900;
 }
 
 .categoryBoxRank[data-rank="2"] {
-    color: #E88A5A;
+    color: var(--color-highlight);
     font-size: 26px;
     font-weight: 900;
 }
 
 .categoryBoxRank[data-rank="3"] {
-    color: #D4A84B;
+    color: var(--color-highlight);
     font-size: 26px;
     font-weight: 900;
 }
@@ -912,8 +917,8 @@
     padding: 2px 7px;
     border: none;
     border-radius: 6px;
-    background: rgba(255, 59, 97, 0.6);
-    color: #ffffff;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
     font-size: 11px;
     font-weight: 500;
     line-height: 1.3;
@@ -947,14 +952,14 @@
 
 .viewMoreBtn:hover {
     background: var(--rank-primary);
-    color: #fff;
+    color: var(--color-on-primary);
 }
 
 /* ─── Responsive ─────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .pageInner {
-        /* 功能注释：底栏避让已由 AppPageShell 负责，这里只留列表与页脚间距 */
-        padding: 0 16px 48px;
+        /* 功能注释：底栏避让已由 AppPageShell 负责；底距只留列表与页脚呼吸，勿再垫半屏空白 */
+        padding: 0 16px 20px;
     }
 
     .tabBar {
@@ -964,7 +969,7 @@
         gap: 2px;
         top: 0;
         border-bottom: 1px solid var(--rank-divider);
-        background: rgba(0, 0, 0, 0.94);
+        background: color-mix(in srgb, var(--color-bg) 94%, transparent);
     }
 
     .tabBtn {
@@ -1281,7 +1286,7 @@
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    border: 3px solid rgba(168, 40, 60, 0.15);
+    border: 3px solid color-mix(in srgb, var(--color-primary) 15%, transparent);
     border-top-color: var(--rank-primary);
     animation: spin 0.8s linear infinite;
 }
@@ -1309,7 +1314,7 @@
 
 .retryBtn:hover {
     background: var(--rank-primary);
-    color: #fff;
+    color: var(--color-on-primary);
 }
 
 /* ── Skeleton loading ── */
@@ -1327,7 +1332,7 @@
     width: 16px;
     height: 16px;
     border-radius: 4px;
-    background: linear-gradient(90deg, #242426 25%, #2e2e30 50%, #242426 75%);
+    background: linear-gradient(90deg, var(--color-surface-2) 25%, var(--color-surface-2) 50%, var(--color-surface-2) 75%);
     background-size: 400px 100%;
     animation: shimmer 1.4s ease infinite;
     flex-shrink: 0;
@@ -1339,7 +1344,7 @@
     max-width: 128px;
     aspect-ratio: 4 / 3;
     border-radius: 10px;
-    background: linear-gradient(90deg, #242426 25%, #2e2e30 50%, #242426 75%);
+    background: linear-gradient(90deg, var(--color-surface-2) 25%, var(--color-surface-2) 50%, var(--color-surface-2) 75%);
     background-size: 400px 100%;
     animation: shimmer 1.4s ease infinite;
     flex-shrink: 0;
@@ -1350,7 +1355,7 @@
     display: block;
     height: 12px;
     border-radius: 4px;
-    background: linear-gradient(90deg, #242426 25%, #2e2e30 50%, #242426 75%);
+    background: linear-gradient(90deg, var(--color-surface-2) 25%, var(--color-surface-2) 50%, var(--color-surface-2) 75%);
     background-size: 400px 100%;
     animation: shimmer 1.4s ease infinite;
 }

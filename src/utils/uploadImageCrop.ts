@@ -55,7 +55,8 @@ export const uploadCropPresets: Record<UploadCropPresetKey, Omit<UploadCropPrese
         aspectRatio: 1,
         aspectLabel: '1:1',
         descriptionKey: 'common.imageCrop.avatar.description',
-        defaultCropScale: 0.82,
+        // 功能注释：头像默认铺满最大 1:1 选区；原图已是方图时不再缩成中间小框
+        defaultCropScale: 1,
     },
     promotionCover: {
         titleKey: 'common.imageCrop.promotionCover.title',
@@ -69,7 +70,7 @@ export const uploadCropPresets: Record<UploadCropPresetKey, Omit<UploadCropPrese
         aspectRatio: 1,
         aspectLabel: '1:1',
         descriptionKey: 'common.imageCrop.objectIcon.description',
-        defaultCropScale: 0.86,
+        defaultCropScale: 1,
     },
 };
 

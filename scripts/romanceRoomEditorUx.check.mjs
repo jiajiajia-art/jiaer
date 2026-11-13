@@ -27,6 +27,11 @@ test('ModRoomTreeEditor_不展示房间id且无方向出口表', () => {
   assert.match(src, /LOCATION_SCENE_GEN_SIZE/);
   assert.match(src, /sceneDescFallback|你来到了/);
   assert.match(src, /addFromLibrary/);
+  // 功能注释：脏 parent/bgm/op 不得直接塞进 <select value>，须先收成标量字符串
+  assert.match(src, /selectStr|asReqList|parentVal|bgmVal/);
+  assert.doesNotMatch(src, /value=\{r\.parent \?\? ""\}/);
+  assert.doesNotMatch(src, /value=\{r\.bgm \?\? ""\}/);
+  assert.doesNotMatch(src, /value=\{q2\.op\}/);
 });
 
 test('ensureRoomSceneDescs_空描述按地名补全', async () => {
