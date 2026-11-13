@@ -21,7 +21,8 @@ dist-cn-prod/
 !.cursor/rules/**
 
 # Editor directories and files
-.figma/*
+# 功能注释：Figma Make 本地目录整棵忽略，禁止再入库
+.figma/
 .vscode/*
 !.vscode/extensions.json
 .idea
