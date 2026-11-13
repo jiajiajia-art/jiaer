@@ -3,19 +3,19 @@
    ============================================ */
 
 .appShell {
-    --primary: #A8283C;
-    --primary-light: #C23A50;
-    --primary-dark: #8E2135;
-    --editor-bg: #000000;
-    --editor-surface: #1A1A1A;
-    --editor-input: #1C1C1E;
-    --editor-border: rgba(255, 255, 255, 0.1);
-    --editor-text: #FFFFFF;
-    --editor-muted: rgba(255, 255, 255, 0.55);
-    --text-primary: #FFFFFF;
-    --text-secondary: rgba(255, 255, 255, 0.55);
-    --text-muted: rgba(255, 255, 255, 0.4);
-    --border-light: rgba(255, 255, 255, 0.08);
+    --primary: var(--color-primary);
+    --primary-light: var(--color-primary);
+    --primary-dark: var(--color-primary-bold);
+    --editor-bg: var(--color-bg);
+    --editor-surface: var(--color-surface);
+    --editor-input: var(--color-surface);
+    --editor-border: color-mix(in srgb, var(--color-text) 10%, transparent);
+    --editor-text: var(--color-text);
+    --editor-muted: var(--color-text-secondary);
+    --text-primary: var(--color-text);
+    --text-secondary: var(--color-text-secondary);
+    --text-muted: var(--color-text-muted);
+    --border-light: color-mix(in srgb, var(--color-text) 8%, transparent);
     display: flex;
     width: 100%;
     min-width: 0;
@@ -143,9 +143,9 @@
     font-size: 0.9rem;
     cursor: pointer;
     transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    color: #fff;
+    color: var(--color-text);
     background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    box-shadow: 0 4px 20px rgba(142, 33, 53, 0.35);
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--color-primary) 35%, transparent);
     position: relative;
     overflow: hidden;
 }
@@ -154,14 +154,14 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.1) 100%);
+    background: linear-gradient(135deg, transparent 0%, color-mix(in srgb, var(--color-text) 10%, transparent) 100%);
     opacity: 0;
     transition: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(142, 33, 53, 0.45);
+    box-shadow: 0 8px 28px color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 .primary:hover::before {
@@ -181,21 +181,21 @@
 
 .ghost {
     border-radius: 999px;
-    border: 1.5px solid rgba(255, 255, 255, 0.16);
+    border: 1.5px solid color-mix(in srgb, var(--color-text) 16%, transparent);
     padding: 11px 22px;
     font-weight: 600;
     font-size: 0.9rem;
     cursor: pointer;
     transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     color: var(--editor-text);
-    background: #1C1C1E;
+    background: var(--color-surface);
     box-shadow: none;
 }
 
 .ghost:hover {
     border-color: var(--primary);
-    color: #fff;
-    background: rgba(142, 33, 53, 0.22);
+    color: var(--color-on-primary);
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 
 .ghost:disabled {
@@ -351,7 +351,7 @@
         border: none;
         border-radius: 50%;
         background: transparent;
-        color: #ffffff;
+        color: var(--color-text);
         font-size: 1.75rem;
         line-height: 1;
         cursor: pointer;
@@ -367,7 +367,7 @@
         text-align: center;
         font-size: 1.05rem;
         font-weight: 700;
-        color: #ffffff;
+        color: var(--color-text);
         padding-right: 36px;
     }
 

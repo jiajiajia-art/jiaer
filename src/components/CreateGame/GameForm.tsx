@@ -370,7 +370,7 @@ const GameForm: React.FC<GameFormProps> = ({
                     {documentDisplayName ? (
                         <div className={styles.uploadInfo}>
                             <span className={styles.fileIcon}>
-                                <FaFileAlt color="#bfbfbf" />
+                                <FaFileAlt color="var(--color-text-secondary)" />
                             </span>
                             <div className={styles.fileMeta}>
                                 <span className={styles.fileName}>{documentDisplayName}</span>
@@ -388,7 +388,7 @@ const GameForm: React.FC<GameFormProps> = ({
                     ) : (
                         <div className={styles.uploadPlaceholder}>
                             <span className={styles.uploadIcon}>
-                                <FaFileAlt color="#bfbfbf" />
+                                <FaFileAlt color="var(--color-text-secondary)" />
                             </span>
                             <p className={styles.uploadText}>点击或拖拽文档文件到此处</p>
                             <p className={styles.uploadHint}>支持 DOCX 文件，最大 10MB</p>
@@ -430,7 +430,7 @@ const GameForm: React.FC<GameFormProps> = ({
                     {!coverImage ? (
                         <div className={styles.uploadPlaceholder}>
                             <span className={styles.uploadIcon}>
-                                <FaImage color='#bfbfbf' />
+                                <FaImage color='var(--color-text-secondary)' />
                             </span>
                             <p className={styles.uploadText}>点击或拖拽图片到此处</p>
                             <p className={styles.uploadHint}>支持 JPG、PNG 格式</p>

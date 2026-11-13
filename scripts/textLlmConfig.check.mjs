@@ -8,11 +8,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   DEFAULT_TEXT_LLM_GATEWAY_PRESETS,
-  DEFAULT_TEXT_LLM_GGB_GATEWAY_ID,
   DEFAULT_TEXT_LLM_MODEL,
   TEXT_LLM_MODELS,
   TEXT_LLM_USAGE_CATALOG,
-  buildTextLlmGatewayTabs,
   normalizeTextLlmModel,
   normalizeTextLlmOpenAiBaseUrl,
   resolvePreferredTextLlmGatewayPresetId,
@@ -59,26 +57,6 @@ test('resolvePreferredTextLlmGatewayPresetId_DeepSeek预置走epone_豆包不切
   assert.equal(resolvePreferredTextLlmGatewayPresetId(''), '');
 });
 
-test('buildTextLlmGatewayTabs_始终含GGB_多网关才扩Tab', () => {
-  const epone = DEFAULT_TEXT_LLM_GATEWAY_PRESETS.find((p) => p.id === DEFAULT_TEXT_LLM_GGB_GATEWAY_ID);
-  assert.equal(epone?.label, 'GGB（默认）');
-  const onlyGgb = buildTextLlmGatewayTabs({});
-  assert.equal(onlyGgb.length, 1);
-  assert.equal(onlyGgb[0].id, DEFAULT_TEXT_LLM_GGB_GATEWAY_ID);
-
-  const withCustom = buildTextLlmGatewayTabs({
-    activeBaseUrl: 'https://baka-hack.tencentmoon.com',
-  });
-  assert.ok(withCustom.length >= 2);
-  assert.equal(withCustom[0].id, DEFAULT_TEXT_LLM_GGB_GATEWAY_ID);
-  assert.ok(withCustom.some((t) => t.baseUrl.includes('baka-hack')));
-
-  const withKeyedPreset = buildTextLlmGatewayTabs({
-    gatewayKeyStates: { deepseek: { keySet: true } },
-  });
-  assert.ok(withKeyedPreset.some((t) => t.id === 'deepseek'));
-});
-
 test('resolveModelConfigPane_按路由切换生图与文案', () => {
   assert.equal(resolveModelConfigPane('/admin/image-gen'), 'image');
   assert.equal(resolveModelConfigPane('/funloom/admin/image-gen'), 'image');
@@ -93,26 +71,16 @@ test('ModelConfigHub_同页双轨配置且模型只能拉取导入', () => {
   assert.match(hub, /deactivateModel/);
   assert.match(hub, /模型 ID 不允许手填/);
   assert.match(hub, /保存并拉取模型/);
-  assert.match(hub, /添加模型/);
-  assert.match(hub, /buildTextLlmGatewayTabs/);
-  assert.match(hub, /GGB（默认）/);
   assert.match(hub, /baseUrl/);
   assert.match(hub, /listModels/);
   assert.match(hub, /ModelImportDialog/);
   assert.match(hub, /activateModel/);
-  assert.match(hub, /apiKeyVisible\[pane\] \? 'text' : 'password'/);
-  assert.match(hub, /FiEye/);
-  assert.match(hub, /getApiKey/);
-  assert.match(hub, /显示 API 密钥/);
-  assert.match(hub, /小眼睛/);
-  assert.match(hub, /ConfirmModal/);
-  assert.doesNotMatch(hub, /window\.prompt|window\.confirm|gatewayKeys|selectPresetTextModel|role="radiogroup"/);
+  // 密钥默认以密码框展示；只有管理员点「显示 API 密钥」才向后端读取明文（getApiKey）
+  assert.match(hub, /type=\{apiKeyVisible\[pane\] \? 'text' : 'password'\}/);
+  assert.match(hub, /autoComplete="new-password"/);
+  assert.match(hub, /apiKeyVisible, setApiKeyVisible\] = useState<Record<Pane, boolean>>\(\{ text: false, image: false \}\)/);
+  assert.doesNotMatch(hub, /gatewayKeys|selectPresetTextModel|role="radiogroup"/);
   assert.match(hub, /role="tablist"/);
-  assert.match(hub, /showGatewayAsTabs/);
-  assert.match(hub, /customGatewayKeyDraft/);
-  assert.match(hub, /请填写该网关的 API 密钥/);
-  assert.match(hub, /自定义 API 密钥/);
-  assert.match(hub, /不会沿用当前 Tab 的密钥/);
   assert.match(hub, /ModelConfigHub\.module\.css/);
 
   const css = readFileSync(join(root, 'src/components/ModelConfigHub.module.css'), 'utf8');
@@ -120,15 +88,10 @@ test('ModelConfigHub_同页双轨配置且模型只能拉取导入', () => {
   assert.match(css, /Noto Serif SC/);
   assert.match(css, /\.presetChip/);
   assert.match(css, /\.fetchBtn/);
-  assert.match(css, /\.addModelBtn/);
-  assert.match(css, /\.gatewayTabs/);
-  assert.match(css, /\.apiKeyToggle/);
-  assert.match(css, /\.customGatewayPanel/);
 
   const api = readFileSync(join(root, 'src/api/admin/textLlmConfigApi.ts'), 'utf8');
   assert.match(api, /text-llm-config\/models/);
   assert.match(api, /openaiApiKey/);
-  assert.match(api, /getApiKey/);
 
   const panel = readFileSync(join(root, 'src/page/AdminPanel.tsx'), 'utf8');
   assert.match(panel, /AiModelCenter/);

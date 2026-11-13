@@ -98,9 +98,10 @@ test('authorGate_预览发布共用弹窗且不再显示测试配置警告', () 
   const registry = read('mods/registry.ts');
   const ai = read('lib/ai.ts');
   assert.match(editor, /blockIfRequiredMissing\("预览"\)/);
-  // 功能注释：离开编辑器只是保存草稿，平台上架走提交发布审核（B6）
+  // 功能注释：离开编辑器只是保存草稿（B6）；「发布」按钮先过必填拦截，再走提交发布审核弹窗，不直接上架
   assert.match(editor, /blockIfRequiredMissing\("保存并离开"\)/);
-  assert.doesNotMatch(editor, /blockIfRequiredMissing\("发布"\)/);
+  assert.match(editor, /blockIfRequiredMissing\("发布"\)/);
+  assert.match(editor, /<PublishReviewModal/);
   assert.match(editor, /requiredGate\.issues\.map/);
   assert.match(editor, /goRequiredIssue/);
   assert.doesNotMatch(chrome, /测试配置不完整/);

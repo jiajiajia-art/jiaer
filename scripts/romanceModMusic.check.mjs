@@ -27,7 +27,10 @@ test('基础里只有一块音乐_不再挂美化也不叠两个折叠区', () =
   assert.match(panel, /g="base" title="音乐"/);
   assert.doesNotMatch(panel, /g="look" title="音乐"/);
   assert.match(panel, /hint: "作品封面、名称与简介、剧本基调、时间与推进、头像、建角、人物线路、地点、音乐、已添加的玩法"/);
-  assert.match(panel, /hint: "手机外观、皮肤美化、开场页外观、剧情美化、底栏样式"/);
+  // ⑤ 美化分组说明已去掉「剧情美化」；关键是美化里不得再出现音乐
+  const lookHint = panel.match(/k: "look", label: "⑤ 美化", hint: "([^"]*)"/)?.[1] ?? '';
+  assert.match(lookHint, /手机外观、皮肤美化、开场页外观/);
+  assert.doesNotMatch(lookHint, /音乐/);
   assert.equal(panel.includes('title="内置音乐"'), false);
   assert.equal(panel.includes('title="引用音频库"'), false);
   assert.match(editor, /作品音频库还是空的/);

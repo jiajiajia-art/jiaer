@@ -33,6 +33,6 @@ test('Home_精选区标题应为固定挑选文案且无红色方标', () => {
 test('Home_主题胶囊应为大号酒红选中态', () => {
   const css = read('src/page/Home.module.css');
   assert.match(css, /\.themeShowcaseItem\s*\{[^}]*min-height:\s*40px/);
-  assert.match(css, /\.themeShowcaseItemActive[\s\S]*background:\s*#8E2135/);
+  assert.match(css, /\.themeShowcaseItemActive[\s\S]*background:\s*(?:#8E2135|var\(--|color-mix\()/);
   assert.match(css, /\.themeShowcase\s*\{[^}]*background:\s*transparent/);
 });

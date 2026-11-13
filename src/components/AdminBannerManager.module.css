@@ -14,8 +14,8 @@
 .heroCard,
 .card {
     border-radius: 24px;
-    border: 1px solid var(--admin-border, rgba(201, 139, 92, 0.22));
-    box-shadow: 0 20px 56px var(--admin-shadow, rgba(98, 59, 33, 0.1));
+    border: 1px solid var(--admin-border, color-mix(in srgb, var(--color-highlight) 22%, transparent));
+    box-shadow: 0 20px 56px var(--admin-shadow, color-mix(in srgb, var(--color-highlight) 10%, transparent));
     backdrop-filter: blur(14px);
 }
 
@@ -25,7 +25,7 @@
     justify-content: space-between;
     gap: 20px;
     padding: 28px 30px;
-    background: #fff;
+    background: var(--color-surface);
 }
 
 .sectionBadge {
@@ -34,8 +34,8 @@
     justify-content: center;
     padding: 7px 14px;
     border-radius: 999px;
-    background: var(--admin-accent-soft, #e6f4ff);
-    color: var(--admin-accent-strong, #aa5a2d);
+    background: var(--admin-accent-soft, var(--color-bg));
+    color: var(--admin-accent-strong, var(--color-highlight));
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -43,7 +43,7 @@
 
 .heroTitle {
     margin: 18px 0 0;
-    color: var(--admin-text, #2f241d);
+    color: var(--admin-text, var(--color-text));
     font-size: 30px;
     line-height: 1.2;
 }
@@ -60,10 +60,10 @@
     justify-content: space-between;
     gap: 12px;
     padding: 15px 18px;
-    border: 1px solid var(--admin-border, rgba(201, 139, 92, 0.22));
+    border: 1px solid var(--admin-border, color-mix(in srgb, var(--color-highlight) 22%, transparent));
     border-radius: 16px;
-    background: #fff;
-    color: var(--admin-text, #2f241d);
+    background: var(--color-surface);
+    color: var(--admin-text, var(--color-text));
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
@@ -72,7 +72,7 @@
 
 .audienceTab:hover {
     transform: translateY(-1px);
-    border-color: var(--admin-border-strong, rgba(201, 115, 63, 0.34));
+    border-color: var(--admin-border-strong, color-mix(in srgb, var(--color-highlight) 34%, transparent));
 }
 
 .audienceTab:disabled {
@@ -82,9 +82,9 @@
 }
 
 .audienceTabActive {
-    border-color: var(--admin-border-strong, rgba(201, 115, 63, 0.34));
-    background: #e6f4ff;
-    color: var(--admin-accent-strong, #aa5a2d);
+    border-color: var(--admin-border-strong, color-mix(in srgb, var(--color-highlight) 34%, transparent));
+    background: var(--color-bg);
+    color: var(--admin-accent-strong, var(--color-highlight));
 }
 
 .audienceTabCount {
@@ -94,7 +94,7 @@
 
 .audienceHint {
     margin-top: -10px;
-    color: var(--admin-text-soft, #6f5a49);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     font-size: 13px;
     line-height: 1.6;
 }
@@ -121,21 +121,21 @@
 .primaryGhostButton,
 .secondaryButton,
 .iconButton {
-    color: var(--admin-text, #2f241d);
-    background: #fff;
-    box-shadow: inset 0 0 0 1px rgba(205, 157, 120, 0.32);
+    color: var(--admin-text, var(--color-text));
+    background: var(--color-surface);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-highlight) 32%, transparent);
 }
 
 .primaryButton {
-    color: #fff;
-    background: #1677ff;
-    box-shadow: 0 14px 28px rgba(201, 115, 63, 0.2);
+    color: var(--color-on-primary);
+    background: var(--color-primary);
+    box-shadow: 0 14px 28px color-mix(in srgb, var(--color-highlight) 20%, transparent);
 }
 
 .linkButton {
     padding: 0;
     background: transparent;
-    color: var(--admin-accent-strong, #aa5a2d);
+    color: var(--admin-accent-strong, var(--color-highlight));
     font-size: 13px;
     font-weight: 700;
 }
@@ -173,7 +173,7 @@
 }
 
 .card {
-    background: #fff;
+    background: var(--color-surface);
     padding: 24px;
     min-width: 0;
 }
@@ -188,12 +188,12 @@
 
 .cardTitle {
     margin: 0;
-    color: var(--admin-text, #2f241d);
+    color: var(--admin-text, var(--color-text));
     font-size: 24px;
 }
 
 .counter {
-    color: var(--admin-accent-strong, #aa5a2d);
+    color: var(--admin-accent-strong, var(--color-highlight));
     font-size: 14px;
     font-weight: 700;
 }
@@ -207,26 +207,26 @@
 .statusCard {
     padding: 16px;
     border-radius: 16px;
-    background: #fff;
-    border: 1px solid rgba(205, 157, 120, 0.22);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 22%, transparent);
 }
 
 .statusLabel {
-    color: var(--admin-accent-strong, #aa5a2d);
+    color: var(--admin-accent-strong, var(--color-highlight));
     font-size: 13px;
     font-weight: 700;
 }
 
 .statusValue {
     margin-top: 10px;
-    color: var(--admin-text, #2f241d);
+    color: var(--admin-text, var(--color-text));
     font-size: 28px;
     font-weight: 700;
 }
 
 .statusMeta {
     margin-top: 8px;
-    color: var(--admin-text-soft, #6f5a49);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     font-size: 13px;
 }
 
@@ -238,7 +238,7 @@
 }
 
 .listTitle {
-    color: var(--admin-text, #2f241d);
+    color: var(--admin-text, var(--color-text));
     font-size: 15px;
     font-weight: 700;
 }
@@ -248,9 +248,9 @@
     align-items: center;
     width: 100%;
     padding: 12px 14px;
-    border: 1px solid rgba(205, 157, 120, 0.24);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 24%, transparent);
     border-radius: 16px;
-    background: #fff;
+    background: var(--color-surface);
     cursor: pointer;
     text-align: left;
     transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
@@ -258,25 +258,25 @@
 
 .switchItem:hover {
     transform: translateY(-1px);
-    border-color: var(--admin-border-strong, rgba(201, 115, 63, 0.34));
-    background: #f5faff;
+    border-color: var(--admin-border-strong, color-mix(in srgb, var(--color-highlight) 34%, transparent));
+    background: var(--color-bg);
 }
 
 .switchItemActive {
-    border-color: var(--admin-border-strong, rgba(201, 115, 63, 0.34));
-    background: #fff;
-    box-shadow: inset 0 0 0 1px rgba(201, 115, 63, 0.08);
+    border-color: var(--admin-border-strong, color-mix(in srgb, var(--color-highlight) 34%, transparent));
+    background: var(--color-surface);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-highlight) 8%, transparent);
 }
 
 .switchTitle {
-    color: var(--admin-text, #2f241d);
+    color: var(--admin-text, var(--color-text));
     font-size: 14px;
     font-weight: 700;
 }
 
 .workflowStatus {
     margin-left: auto;
-    color: var(--admin-muted, #8a7365);
+    color: var(--admin-muted, var(--color-text-muted));
     font-size: 12px;
     font-weight: 600;
 }
@@ -302,8 +302,8 @@
 .emptyState {
     padding: 18px;
     border-radius: 18px;
-    background: #fff;
-    color: var(--admin-text-soft, #6f5a49);
+    background: var(--color-surface);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     font-size: 14px;
     line-height: 1.75;
 }
@@ -314,8 +314,8 @@
     gap: 18px;
     padding: 18px;
     border-radius: 16px;
-    border: 1px solid rgba(205, 157, 120, 0.22);
-    background: #fff;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 22%, transparent);
+    background: var(--color-surface);
 }
 
 .bannerEditorHeader {
@@ -326,7 +326,7 @@
 }
 
 .bannerEditorTitle {
-    color: var(--admin-text, #2f241d);
+    color: var(--admin-text, var(--color-text));
     font-size: 18px;
     font-weight: 700;
 }
@@ -344,7 +344,7 @@
     justify-content: center;
     min-height: 180px;
     border-radius: 18px;
-    background: #fff;
+    background: var(--color-surface);
     overflow: hidden;
 }
 
@@ -357,7 +357,7 @@
 
 .previewEmpty {
     padding: 18px;
-    color: var(--admin-text-soft, #6f5a49);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     font-size: 14px;
     text-align: center;
 }
@@ -372,7 +372,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    color: var(--admin-text, #2f241d);
+    color: var(--admin-text, var(--color-text));
     font-size: 14px;
     font-weight: 700;
 }
@@ -381,11 +381,11 @@
 .textArea,
 .fileInput {
     width: 100%;
-    border: 1px solid rgba(205, 157, 120, 0.34);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 34%, transparent);
     border-radius: 16px;
     padding: 13px 14px;
-    background: #fff;
-    color: var(--admin-text, #2f241d);
+    background: var(--color-surface);
+    color: var(--admin-text, var(--color-text));
     font-size: 14px;
     box-sizing: border-box;
 }
@@ -397,7 +397,7 @@
 
 .uploadHint {
     margin-top: -4px;
-    color: var(--admin-text-soft, #6f5a49);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     font-size: 12px;
 }
 
@@ -417,15 +417,15 @@
     max-height: 240px;
     padding: 10px;
     border-radius: 18px;
-    border: 1px solid rgba(205, 157, 120, 0.22);
-    background: #fff;
-    box-shadow: 0 16px 36px rgba(117, 72, 39, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 22%, transparent);
+    background: var(--color-surface);
+    box-shadow: 0 16px 36px color-mix(in srgb, var(--color-highlight) 12%, transparent);
     overflow-y: auto;
 }
 
 .searchEmpty {
     padding: 10px 12px;
-    color: var(--admin-text-soft, #6f5a49);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     font-size: 13px;
 }
 
@@ -435,26 +435,26 @@
     gap: 4px;
     width: 100%;
     padding: 12px 14px;
-    border: 1px solid rgba(205, 157, 120, 0.24);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 24%, transparent);
     border-radius: 14px;
-    background: #fff;
+    background: var(--color-surface);
     cursor: pointer;
     text-align: left;
 }
 
 .searchResultButton:hover {
-    border-color: var(--admin-border-strong, rgba(201, 115, 63, 0.34));
-    background: #f5faff;
+    border-color: var(--admin-border-strong, color-mix(in srgb, var(--color-highlight) 34%, transparent));
+    background: var(--color-bg);
 }
 
 .searchResultTitle {
-    color: var(--admin-text, #2f241d);
+    color: var(--admin-text, var(--color-text));
     font-size: 14px;
     font-weight: 700;
 }
 
 .searchResultMeta {
-    color: var(--admin-text-soft, #6f5a49);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     font-size: 12px;
     line-height: 1.5;
 }
@@ -478,8 +478,8 @@
     gap: 12px;
     padding: 10px;
     border-radius: 20px;
-    border: 1px solid var(--admin-border, rgba(201, 139, 92, 0.22));
-    background: #fff;
+    border: 1px solid var(--admin-border, color-mix(in srgb, var(--color-highlight) 22%, transparent));
+    background: var(--color-surface);
 }
 
 .placementTab {
@@ -487,22 +487,22 @@
     border: 1px solid transparent;
     border-radius: 14px;
     background: transparent;
-    color: var(--admin-text-soft, #6f5a49);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     font-size: 15px;
     font-weight: 700;
     cursor: pointer;
 }
 
 .placementTabActive {
-    border-color: var(--admin-border-strong, rgba(201, 115, 63, 0.34));
-    background: #e6f4ff;
-    color: var(--admin-accent-strong, #aa5a2d);
+    border-color: var(--admin-border-strong, color-mix(in srgb, var(--color-highlight) 34%, transparent));
+    background: var(--color-bg);
+    color: var(--admin-accent-strong, var(--color-highlight));
 }
 
 .heroDescription,
 .cardHint {
     margin: 8px 0 0;
-    color: var(--admin-text-soft, #6f5a49);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     font-size: 13px;
     line-height: 1.6;
 }
@@ -514,7 +514,7 @@
 }
 
 .scheduleHint {
-    color: var(--admin-text-soft, #6f5a49);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     font-size: 12px;
     line-height: 1.6;
 }
@@ -525,7 +525,7 @@
     gap: 10px;
     margin-top: 26px;
     padding-top: 22px;
-    border-top: 1px solid rgba(205, 157, 120, 0.22);
+    border-top: 1px solid color-mix(in srgb, var(--color-highlight) 22%, transparent);
 }
 
 .historyItem {
@@ -533,21 +533,21 @@
     flex-direction: column;
     gap: 12px;
     padding: 14px;
-    border: 1px solid rgba(205, 157, 120, 0.24);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 24%, transparent);
     border-radius: 16px;
-    background: #fff;
+    background: var(--color-surface);
 }
 
 .historyInfo {
     display: flex;
     flex-direction: column;
     gap: 5px;
-    color: var(--admin-text, #2f241d);
+    color: var(--admin-text, var(--color-text));
     font-size: 13px;
 }
 
 .historyInfo span {
-    color: var(--admin-text-soft, #6f5a49);
+    color: var(--admin-text-soft, var(--color-text-secondary));
 }
 
 .historyActions {

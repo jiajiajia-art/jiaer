@@ -282,7 +282,7 @@ test('worldGenWizard_第2步须覆盖ModEditorPanel全部可生成Section', asyn
   // 功能注释：创作者页已去掉「功能扩展与皮肤」等开发者 Section；玩法用卡片标题覆盖
   // 开局封面 / 手机应用 / 皮肤美化只给作者在编辑器手改；开场剧情已重回 AI 勾选（生成开场白）
   // 功能注释：经济与收官由「引擎规则与经济」一步覆盖；总养成开关本身不进 AI 清单（子项仍由各步骤生成）
-  const skip = new Set(['基本信息', '功能扩展与皮肤', '养成模块', '总养成开关', '开局封面', '手机应用配置', '皮肤美化', '势力', '经济与收官', '日程分类', '玩法数值绑定']);
+  const skip = new Set(['基本信息', '功能扩展与皮肤', '养成模块', '总养成开关', '开局封面', '手机应用配置', '皮肤美化', '势力', '经济与收官', '日程分类', '玩法数值绑定', '玩法叫法']);
   /** Hub 菜单或改名后的模组细项可满足的 Section 标题 */
   const alias = {
     人物: ['人物设定', '人物（模组库）'],
@@ -304,6 +304,7 @@ test('worldGenWizard_第2步须覆盖ModEditorPanel全部可生成Section', asyn
     培训课程: ['培训课程'],
     '打工 · 周末活动': ['打工 · 周末活动'],
     玩法规则: ['玩法规则'],
+    数值调节: ['引擎规则与经济'],
   };
   const names = new Set(mod.WORLD_GEN_EDITOR_STEPS.map((s) => s.name));
   const covered = (t) => names.has(t) || (alias[t] ?? []).some((a) => names.has(a));

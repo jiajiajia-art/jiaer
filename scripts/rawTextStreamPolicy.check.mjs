@@ -169,10 +169,10 @@ test('useStepStreamResponse_Aliyun过滤dialogue前须挂立绘', () => {
   assert.match(controller, /resolveRawBridgeDialogueImagePath/);
   const galgamePage = readFileSync(join(root, 'src/page/Galgame.tsx'), 'utf8');
   assert.match(galgamePage, /rawBridgePortrait\?\.characterImage/);
-  // 功能注释：局内覆盖后的消息立绘优先，旁路立绘只在消息层没图时兜底，避免盖住重生成头像
+  // 功能注释：旁路立绘优先于消息层，避免双源抢图连环闪
   assert.match(
     galgamePage,
-    /normalModeMessage\?\.characterImage\s*\|\|\s*controller\.rawBridgePortrait\?\.characterImage/,
+    /controller\.rawBridgePortrait\?\.characterImage\s*\|\|\s*normalModeMessage\?\.characterImage/,
   );
   assert.match(controller, /buildPortraitSpeakerKey/);
   assert.match(controller, /speakerKey/);

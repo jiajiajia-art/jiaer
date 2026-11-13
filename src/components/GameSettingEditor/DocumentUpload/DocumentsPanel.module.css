@@ -25,16 +25,16 @@
 
 .panelHeader h2 {
     margin: 4px 0 4px 0;
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .coverUploadIcon {
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--color-text-muted);
 }
 
 .subtitle {
     margin: 0;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     font-size: 0.95rem;
 }
 
@@ -47,7 +47,7 @@
     margin: 0 0 8px;
     font-size: 0.9rem;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .createMethodSelect {
@@ -64,9 +64,9 @@
     gap: 12px;
     padding: 12px 14px 12px 16px;
     border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: #1C1C1E;
-    color: #ffffff;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text);
     font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
@@ -75,19 +75,19 @@
 }
 
 .createMethodTrigger:hover:not(:disabled) {
-    border-color: rgba(168, 40, 60, 0.45);
-    background: #222226;
+    border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+    background: var(--color-surface-2);
 }
 
 .createMethodTrigger:focus-visible {
     outline: none;
-    border-color: #A8283C;
-    box-shadow: 0 0 0 3px rgba(168, 40, 60, 0.28);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 28%, transparent);
 }
 
 .createMethodTriggerOpen {
-    border-color: #A8283C;
-    box-shadow: 0 0 0 3px rgba(168, 40, 60, 0.22);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 
 .createMethodTrigger:disabled {
@@ -106,13 +106,13 @@
     width: 18px;
     height: 18px;
     flex-shrink: 0;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--color-text-muted);
     transition: transform 0.18s ease, color 0.15s ease;
 }
 
 .createMethodChevronOpen {
     transform: rotate(180deg);
-    color: #ffb3bf;
+    color: var(--color-primary-fg);
 }
 
 .createMethodMenu {
@@ -125,9 +125,9 @@
     list-style: none;
     z-index: 40;
     border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: #1A1A1A;
-    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    background: var(--color-surface);
+    box-shadow: 0 16px 36px color-mix(in srgb, var(--color-shadow) 55%, transparent);
     animation: createMethodMenuIn 0.16s ease;
 }
 
@@ -149,7 +149,7 @@
     border: none;
     border-radius: 10px;
     background: transparent;
-    color: rgba(255, 255, 255, 0.82);
+    color: color-mix(in srgb, var(--color-text) 82%, transparent);
     font-size: 0.92rem;
     font-weight: 600;
     text-align: left;
@@ -158,13 +158,13 @@
 }
 
 .createMethodOption:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #ffffff;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--color-text);
 }
 
 .createMethodOptionSelected {
-    background: rgba(168, 40, 60, 0.28);
-    color: #ffb3bf;
+    background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+    color: var(--color-primary-fg);
 }
 
 .hideOnMobile {
@@ -251,19 +251,19 @@
 
 .ghost {
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     padding: 10px 20px;
     font-weight: 600;
     cursor: pointer;
     transition: 0.25s ease;
-    color: #ffffff;
-    background: #1C1C1E;
+    color: var(--color-text);
+    background: var(--color-surface);
 }
 
 .ghost:hover {
     border-color: var(--primary);
-    color: #ffffff;
-    background: rgba(142, 33, 53, 0.22);
+    color: var(--color-on-primary);
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 
 .twoCol {
@@ -275,8 +275,8 @@
 }
 
 .card {
-    background: #1A1A1A;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     border-radius: 16px;
     padding: 20px;
     display: flex;
@@ -287,26 +287,26 @@
 .card h3 {
     margin: 0;
     font-size: 1.1rem;
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .muted {
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     margin: 0;
     font-size: 0.9rem;
     line-height: 1.5;
 }
 
 .mutedSmall {
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--color-text-muted);
     margin: 0;
     font-size: 0.8rem;
     padding-top: 12px;
-    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+    border-top: 1px dashed color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .dropzone {
-    border: 1px dashed rgba(255, 255, 255, 0.2);
+    border: 1px dashed color-mix(in srgb, var(--color-text) 20%, transparent);
     border-radius: 8px;
     padding: 32px;
     text-align: center;
@@ -318,17 +318,17 @@
     justify-content: center;
     gap: 12px;
     height: 160px;
-    background: #121212;
+    background: var(--color-surface);
 }
 
 .dropzone:hover {
     border-color: var(--primary);
-    background: rgba(142, 33, 53, 0.08);
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
 }
 
 .dropzone p {
     margin: 0;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     font-size: 0.9rem;
 }
 
@@ -345,8 +345,8 @@
 /* 已上传文件 */
 .uploadedFileBox {
     padding: 12px 16px;
-    background: #1C1C1E;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -357,7 +357,7 @@
 .fileName {
     flex: 1;
     font-size: 0.9rem;
-    color: #ffffff;
+    color: var(--color-text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -365,7 +365,7 @@
 
 .fileSize {
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
 }
 
 .retryLink {
@@ -390,9 +390,9 @@
     flex-direction: column;
     gap: 8px;
     padding: 10px 12px;
-    background: #1C1C1E;
+    background: var(--color-surface);
     border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 /* 进度头部 */
@@ -407,7 +407,7 @@
 .progressPercentage {
     font-size: 1.4rem;
     font-weight: 700;
-    background: linear-gradient(135deg, var(--primary) 0%, #C23A50 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--color-primary) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -417,17 +417,17 @@
 
 .progressStage {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     font-weight: 500;
     padding: 2px 6px;
-    background: rgba(255, 255, 255, 0.06);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
     border-radius: 8px;
     white-space: nowrap;
 }
 
 .progressMeta {
     font-size: 0.82rem;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     line-height: 1.45;
 }
 
@@ -445,28 +445,28 @@
     gap: 10px;
     padding: 8px 10px;
     position: relative;
-    background: #1A1A1A;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     border-radius: 8px;
     transition: all 0.2s ease;
 }
 
 .stepItem.stepPending {
     opacity: 0.6;
-    background: #121212;
+    background: var(--color-surface);
 }
 
 .stepItem.stepActive {
     opacity: 1;
-    background: rgba(142, 33, 53, 0.12);
-    border-color: rgba(142, 33, 53, 0.35);
-    box-shadow: 0 1px 3px rgba(142, 33, 53, 0.2);
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .stepItem.stepDone {
     opacity: 0.85;
-    background: rgba(46, 160, 90, 0.08);
-    border-color: rgba(46, 160, 90, 0.25);
+    background: color-mix(in srgb, var(--color-success) 8%, transparent);
+    border-color: color-mix(in srgb, var(--color-success) 25%, transparent);
 }
 
 /* 图标和连接线容器 */
@@ -487,27 +487,27 @@
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.06);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
     position: relative;
     z-index: 1;
     font-size: 13px;
 }
 
 .stepItem.stepPending .stepIcon {
-    color: rgba(255, 255, 255, 0.35);
-    background: rgba(255, 255, 255, 0.04);
+    color: var(--color-text-muted);
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
 .stepItem.stepActive .stepIcon {
-    color: #ffffff;
-    background: linear-gradient(135deg, var(--primary) 0%, #8E2135 100%);
-    box-shadow: 0 2px 4px rgba(142, 33, 53, 0.35);
+    color: var(--color-on-primary);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--color-primary-bold) 100%);
+    box-shadow: 0 2px 4px color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 .stepItem.stepDone .stepIcon {
-    color: #ffffff;
-    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-    box-shadow: 0 1px 3px rgba(34, 197, 94, 0.25);
+    color: var(--color-text);
+    background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success) 100%);
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--color-success) 25%, transparent);
 }
 
 /* 步骤连接线 - 在盒子之间 */
@@ -517,13 +517,13 @@
     top: 100%;
     width: 2px;
     height: 6px;
-    background: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
     border-radius: 1px;
     z-index: 0;
 }
 
 .stepConnectorDone {
-    background: linear-gradient(180deg, #22c55e 0%, rgba(34, 197, 94, 0.3) 100%);
+    background: linear-gradient(180deg, var(--color-success) 0%, color-mix(in srgb, var(--color-success) 30%, transparent) 100%);
 }
 
 .stepContent {
@@ -538,12 +538,12 @@
 .stepLabel {
     font-size: 0.85rem;
     font-weight: 500;
-    color: #ffffff;
+    color: var(--color-text);
     line-height: 1.4;
 }
 
 .stepItem.stepPending .stepLabel {
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--color-text-muted);
     font-weight: 400;
 }
 
@@ -553,12 +553,12 @@
 }
 
 .stepItem.stepDone .stepLabel {
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--color-text-secondary);
 }
 
 .stepDescription {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     line-height: 1.4;
     margin-top: 1px;
 }
@@ -568,16 +568,16 @@
 .generateFromIdeaCard {
     position: relative;
     overflow: hidden;
-    background: linear-gradient(135deg, rgba(142, 33, 53, 0.15) 0%, rgba(168, 40, 60, 0.08) 100%);
-    border: 2px solid rgba(142, 33, 53, 0.35);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 15%, transparent) 0%, color-mix(in srgb, var(--color-primary) 8%, transparent) 100%);
+    border: 2px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
     border-radius: 16px;
     padding: 24px;
     transition: all 0.3s ease;
 }
 
 .generateFromIdeaCard:hover {
-    border-color: rgba(142, 33, 53, 0.55);
-    box-shadow: 0 4px 12px rgba(142, 33, 53, 0.2);
+    border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 20%, transparent);
     transform: translateY(-2px);
 }
 
@@ -603,19 +603,19 @@
     margin: 0 0 8px 0;
     font-size: 1.2rem;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .generateFromIdeaDesc {
     margin: 0;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     font-size: 0.9rem;
     line-height: 1.5;
 }
 
 .generateFromIdeaHint {
     margin: 8px 0 0 0;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--color-text-muted);
     font-size: 0.8rem;
     line-height: 1.4;
 }
@@ -634,9 +634,9 @@
     flex: 1 1 0;
     min-width: 0;
     padding: 10px 14px;
-    background: #1C1C1E;
+    background: var(--color-surface);
     color: var(--primary);
-    border: 1.5px solid rgba(142, 33, 53, 0.45);
+    border: 1.5px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
     border-radius: 999px;
     font-size: 0.9rem;
     font-weight: 600;
@@ -647,7 +647,7 @@
 }
 
 .generateFromIdeaSecondary:hover:not(:disabled) {
-    background: rgba(142, 33, 53, 0.15);
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
 }
 
 .generateFromIdeaSecondary:disabled {
@@ -659,22 +659,22 @@
     flex: 1 1 0;
     min-width: 0;
     padding: 10px 14px;
-    background: linear-gradient(135deg, var(--primary) 0%, #8E2135 100%);
-    color: white;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--color-primary-bold) 100%);
+    color: var(--color-on-primary);
     border: none;
     border-radius: 999px;
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(142, 33, 53, 0.35);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 35%, transparent);
     white-space: nowrap;
     text-align: center;
 }
 
 .generateFromIdeaButton:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(142, 33, 53, 0.45);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 .generateFromIdeaButton:active:not(:disabled) {
@@ -694,7 +694,7 @@
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background: rgba(0, 0, 0, 0.72);
+    background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
     backdrop-filter: blur(6px);
     z-index: 1400;
 }
@@ -702,9 +702,9 @@
 .errorModalContent {
     width: min(100%, 640px);
     border-radius: 24px;
-    background: #1A1A1A;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 24px 72px rgba(0, 0, 0, 0.55);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    box-shadow: 0 24px 72px color-mix(in srgb, var(--color-shadow) 55%, transparent);
     overflow: hidden;
 }
 
@@ -714,7 +714,7 @@
     justify-content: space-between;
     gap: 16px;
     padding: 24px 24px 18px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .errorModalEyebrow {
@@ -729,7 +729,7 @@
 .errorModalHeader h3 {
     margin: 0;
     font-size: 1.35rem;
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .errorModalClose {
@@ -737,8 +737,8 @@
     height: 40px;
     border: none;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(255, 255, 255, 0.65);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--color-text-secondary);
     font-size: 1.5rem;
     line-height: 1;
     cursor: pointer;
@@ -746,7 +746,7 @@
 }
 
 .errorModalClose:hover {
-    background: rgba(142, 33, 53, 0.22);
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
     color: var(--primary);
 }
 
@@ -761,13 +761,13 @@
     margin: 0;
     font-size: 1rem;
     line-height: 1.7;
-    color: rgba(255, 255, 255, 0.72);
+    color: var(--color-text-secondary);
 }
 
 .errorDetailBlock {
-    border: 1px solid rgba(142, 33, 53, 0.25);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
     border-radius: 18px;
-    background: linear-gradient(180deg, rgba(142, 33, 53, 0.1) 0%, rgba(0, 0, 0, 0.25) 100%);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 10%, transparent) 0%, color-mix(in srgb, var(--color-text) 25%, transparent) 100%);
     overflow: hidden;
 }
 
@@ -777,20 +777,20 @@
     justify-content: space-between;
     gap: 12px;
     padding: 14px 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .errorDetailHeader span {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .copyErrorButton {
-    border: 1px solid rgba(142, 33, 53, 0.35);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
     border-radius: 999px;
     padding: 8px 14px;
-    background: #1C1C1E;
+    background: var(--color-surface);
     color: var(--primary);
     font-size: 0.85rem;
     font-weight: 600;
@@ -799,7 +799,7 @@
 }
 
 .copyErrorButton:hover {
-    background: rgba(142, 33, 53, 0.15);
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
 }
 
 .errorDetailText {
@@ -812,14 +812,14 @@
     line-height: 1.6;
     white-space: pre-wrap;
     word-break: break-word;
-    color: rgba(255, 255, 255, 0.78);
+    color: color-mix(in srgb, var(--color-text) 78%, transparent);
 }
 
 .errorModalHint {
     margin: 0;
     font-size: 0.9rem;
     line-height: 1.7;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
 }
 
 .errorModalFooter {
@@ -833,18 +833,18 @@
     border: none;
     border-radius: 999px;
     padding: 12px 22px;
-    background: linear-gradient(135deg, var(--primary) 0%, #8E2135 100%);
-    color: #fff;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--color-primary-bold) 100%);
+    color: var(--color-on-primary);
     font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
     transition: 0.2s ease;
-    box-shadow: 0 8px 18px rgba(142, 33, 53, 0.35);
+    box-shadow: 0 8px 18px color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 .errorModalPrimary:hover {
     transform: translateY(-1px);
-    box-shadow: 0 12px 24px rgba(142, 33, 53, 0.45);
+    box-shadow: 0 12px 24px color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 @media (max-width: 720px) {

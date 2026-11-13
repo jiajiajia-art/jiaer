@@ -10,7 +10,7 @@ import test from "node:test";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const romance = join(root, "Romance/src");
 
-test("ModRoomTreeEditor_大地图按钮同行_无简介_素材库走统一整包", () => {
+test("ModRoomTreeEditor_大地图按钮同行_无简介_素材库走平台用途", () => {
   const src = readFileSync(join(romance, "components/ModRoomTreeEditor.tsx"), "utf8");
   assert.match(src, /从地点库添加/);
   assert.match(src, /＋ 大地图/);
@@ -19,16 +19,14 @@ test("ModRoomTreeEditor_大地图按钮同行_无简介_素材库走统一整包
   assert.doesNotMatch(src, /给创作者自己看的备注/);
   assert.match(src, /platformAssetPurpose="world_map"/);
   assert.match(src, /platformAssetPurpose="location_scene"/);
-  assert.match(src, /CreatorAssetLibrary/);
-  assert.match(src, /initialTab="locationPack"/);
+  assert.match(src, /作者库兰号/);
 });
 
-test("ImagePicker_地点用途默认停在统一素材库地点图Tab", () => {
+test("ImagePicker_平台素材库与本地库分离", () => {
   const src = readFileSync(join(romance, "components/ImagePicker.tsx"), "utf8");
   assert.match(src, /platformAssetPurpose/);
-  assert.match(src, /CreatorAssetLibrary/);
-  assert.match(src, /locationImage/);
-  assert.doesNotMatch(src, /PlatformLocationAssetPicker/);
+  assert.match(src, /PlatformLocationAssetPicker/);
+  assert.match(src, /setPlatformLibOpen\(true\)/);
 });
 
 test("PlatformLocationAssetPicker_只选图不改结构", () => {
@@ -40,10 +38,12 @@ test("PlatformLocationAssetPicker_只选图不改结构", () => {
 
 test("ModEditorPanel_地点页不再有势力整块", () => {
   const panel = readFileSync(join(romance, "components/ModEditorPanel.tsx"), "utf8");
-  assert.doesNotMatch(panel, /title="势力"/);
+  // 功能注释：势力放在「① 基础」建角下方、人物线路之前
+  assert.match(panel, /<Section g="base" title="势力"/);
+  assert.doesNotMatch(panel, /<Section g="role" title="势力"/);
+  assert.ok(panel.indexOf('title="建角"') < panel.indexOf('title="势力"') && panel.indexOf('title="势力"') < panel.indexOf('title="人物线路"'), '势力须在建角之后、人物线路之前');
   assert.doesNotMatch(panel, /最多可选/);
   assert.doesNotMatch(panel, /＋ 新增势力/);
-  assert.doesNotMatch(panel, /① 基础 → 势力/);
 });
 
 test("locationAssetLibrary_api与运营入口", () => {

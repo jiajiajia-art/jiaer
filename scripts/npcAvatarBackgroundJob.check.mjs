@@ -7,15 +7,13 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mergeNpcAvatarIntoProfiles } from '../src/lib/galgame/npcAvatarMerge.ts';
+import { readBackend, skipNoBackend } from './_backendRepo.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const jobSrc = readFileSync(join(root, 'src/lib/galgame/npcAvatarBackgroundJob.ts'), 'utf8');
 const formSrc = readFileSync(join(root, 'src/components/Galgame/panels/CharacterProfileForm.tsx'), 'utf8');
 const galgameSrc = readFileSync(join(root, 'src/page/Galgame.tsx'), 'utf8');
-const handlerSrc = readFileSync(
-  join(root, '../Interactive-fiction-backend/interface/handlers/visual/sessionPlayerProfiles.js'),
-  'utf8',
-);
+const handlerSrc = readBackend('interface/handlers/visual/sessionPlayerProfiles.js');
 const apiSrc = readFileSync(join(root, 'src/api/galgame/playerCharacterCards.ts'), 'utf8');
 
 test('mergeNpcAvatarIntoProfiles_只改头像保留姓名人设', () => {
@@ -144,7 +142,7 @@ test('Galgame_订阅角色头像生成完成写回列表', () => {
   assert.match(galgameSrc, /pendingNpcAvatarsRef/);
 });
 
-test('backend_npc-avatar落盘重读session只补丁头像', () => {
+test('backend_npc-avatar落盘重读session只补丁头像', { skip: skipNoBackend }, () => {
   assert.match(handlerSrc, /落盘前重读 session，只补丁头像字段/);
   assert.match(handlerSrc, /patchSessionNpcAvatar/);
   assert.match(handlerSrc, /withSessionLockRetry/);
@@ -173,7 +171,7 @@ test('npcAvatarBackgroundJob_须有客户端超时与cancel清busy', () => {
   assert.match(apiSrc, /signal: opts\?\.signal/);
 });
 
-test('backend_npc-avatar取消不扣积分不落盘', () => {
+test('backend_npc-avatar取消不扣积分不落盘', { skip: skipNoBackend }, () => {
   assert.match(handlerSrc, /signal:\s*c\.req\.raw\?\.signal/);
   assert.match(handlerSrc, /IMAGE_GEN_ABORTED/);
   assert.match(handlerSrc, /已取消头像生成/);

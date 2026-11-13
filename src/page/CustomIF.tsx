@@ -105,19 +105,19 @@ const CustomIF: React.FC = () => {
   }, [session?.sessionId, session?.version, validEntryUrl, appId, manifest]);
 
   if (loading) return <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh'}}>{t('common.loading')}</div>;
-  if (error) return <div style={{padding:20,color:'#b91c1c'}}>{t('customIF.errorPrefix')}{error}</div>;
+  if (error) return <div style={{padding:20,color:'var(--color-primary)'}}>{t('customIF.errorPrefix')}{error}</div>;
   if (!session) return <div style={{padding:20}}>{t('customIF.noSession')}</div>;
 
   // Full-window canvas: the embedded UI should occupy the entire viewport.
   // We intentionally avoid any fixed-size container so the iframe can adapt.
   return (
-    <div style={{ position: 'fixed', inset: 0, background: '#000' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--color-bg)' }}>
       <iframe
         ref={iframeRef}
         src={validEntryUrl}
         title="CustomIF"
         // 让 iframe 与外层容器尺寸一致
-        style={{ display: 'block', width: '100%', height: '100%', border: 'none', background: '#000' }}
+        style={{ display: 'block', width: '100%', height: '100%', border: 'none', background: 'var(--color-bg)' }}
       />
     </div>
   );

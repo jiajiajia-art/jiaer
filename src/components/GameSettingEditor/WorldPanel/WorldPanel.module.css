@@ -14,7 +14,7 @@
     flex-wrap: wrap;
     gap: 16px;
     padding-bottom: 18px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .eyebrow {
@@ -29,13 +29,13 @@
 .panelHeader h2 {
     margin: 4px 0 0;
     font-size: 1.6rem;
-    color: #ffffff;
+    color: var(--color-text);
     font-weight: 700;
 }
 
 .subtitle {
     margin: 4px 0 0;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     font-size: 0.9rem;
 }
 
@@ -48,9 +48,9 @@
     font-size: 0.9rem;
     cursor: pointer;
     transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    color: #fff;
+    color: var(--color-text);
     background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-    box-shadow: 0 4px 20px rgba(142, 33, 53, 0.35);
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--color-primary) 35%, transparent);
     position: relative;
     overflow: hidden;
     flex-shrink: 0;
@@ -60,14 +60,14 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.1) 100%);
+    background: linear-gradient(135deg, transparent 0%, color-mix(in srgb, var(--color-text) 10%, transparent) 100%);
     opacity: 0;
     transition: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .primary:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(142, 33, 53, 0.45);
+    box-shadow: 0 8px 28px color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 .primary:hover:not(:disabled)::before {
@@ -85,57 +85,57 @@
 
 .ghost {
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     padding: 10px 20px;
     font-weight: 600;
     cursor: pointer;
     transition: 0.25s ease;
-    color: #ffffff;
-    background: #1C1C1E;
+    color: var(--color-text);
+    background: var(--color-surface);
 }
 
 .ghost:hover {
     border-color: var(--primary);
-    color: #ffffff;
-    background: rgba(142, 33, 53, 0.22);
+    color: var(--color-on-primary);
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 
 .ghostSmall {
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     padding: 6px 14px;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
     transition: 0.25s ease;
-    color: #ffffff;
-    background: #1C1C1E;
+    color: var(--color-text);
+    background: var(--color-surface);
     flex-shrink: 0;
 }
 
 .ghostSmall:hover {
     border-color: var(--primary);
-    color: #ffffff;
-    background: rgba(142, 33, 53, 0.15);
+    color: var(--color-on-primary);
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
 }
 
 .ghostSmall:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    color: rgba(255, 255, 255, 0.35);
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.08);
+    color: var(--color-text-muted);
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
+    border-color: color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .ghostTiny {
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     padding: 4px 10px;
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
     transition: 0.25s ease;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     background: transparent;
     align-self: flex-end;
 }
@@ -150,8 +150,8 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    background: #1A1A1A;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     border-radius: 20px;
     padding: 22px 20px 24px;
     box-shadow: none;
@@ -165,12 +165,12 @@
     align-items: center;
     gap: 12px;
     padding-bottom: 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .cardTitle {
     font-size: 1rem;
-    color: #ffffff;
+    color: var(--color-text);
     font-weight: 600;
 }
 
@@ -200,14 +200,14 @@
     margin: 0;
     font-size: 1.05rem;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .sectionDescription {
     margin: 6px 0 0;
     font-size: 0.85rem;
     line-height: 1.5;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
 }
 
 .detailBlock {
@@ -222,7 +222,7 @@
 
 .detailBlock + .detailBlock {
     padding-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .formGrid {
@@ -277,7 +277,7 @@
 
 .fieldLabel {
     font-size: 0.9rem;
-    color: #ffffff;
+    color: var(--color-text);
     font-weight: 600;
 }
 
@@ -288,7 +288,7 @@
 
 .fieldHint {
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     line-height: 1.4;
 }
 
@@ -301,9 +301,9 @@
     margin-top: 2px;
     padding: 3px 8px;
     border-radius: 6px;
-    border: 1px solid rgba(142, 33, 53, 0.35);
-    background: rgba(142, 33, 53, 0.12);
-    color: #C23A50;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-primary);
     font-size: 0.75rem;
     font-weight: 600;
     line-height: 1.35;
@@ -311,7 +311,7 @@
 
 .fieldHintItalic {
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     font-style: italic;
     line-height: 1.4;
 }
@@ -333,10 +333,10 @@
     content: '';
     position: absolute;
     inset: -8px;
-    border: 1px solid #8E2135;
+    border: 1px solid var(--color-primary-bold);
     border-radius: 16px;
-    background: rgba(142, 33, 53, 0.12);
-    box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.2);
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
     z-index: 0;
     pointer-events: none;
 }
@@ -348,9 +348,9 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    background: #1C1C1E;
-    color: rgba(255, 255, 255, 0.92);
+    border: 1px solid color-mix(in srgb, var(--color-text) 22%, transparent);
+    background: var(--color-surface);
+    color: color-mix(in srgb, var(--color-text) 92%, transparent);
     /* 功能注释：六列宽钮禁止 999px 胶囊，否则四角点不中 */
     border-radius: 14px;
     padding: 12px 8px;
@@ -367,20 +367,20 @@
     touch-action: manipulation;
     user-select: none;
     transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
-    -webkit-tap-highlight-color: rgba(168, 40, 60, 0.35);
+    -webkit-tap-highlight-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 @media (hover: hover) and (pointer: fine) {
     .themeTagChip:hover {
-        color: #ffffff;
-        border-color: rgba(168, 40, 60, 0.75);
-        background: #242426;
+        color: var(--color-text);
+        border-color: color-mix(in srgb, var(--color-primary) 75%, transparent);
+        background: var(--color-surface-2);
     }
 }
 
 .themeTagChip:active {
-    background: #2a1a1e;
-    border-color: #8E2135;
+    background: var(--color-surface-2);
+    border-color: var(--color-primary-bold);
 }
 
 .themeTagChipDisabled {
@@ -388,21 +388,21 @@
     border-style: dashed;
 }
 .themeTagChipActive {
-    border-color: #8E2135;
-    background: #8E2135;
-    color: #ffffff;
+    border-color: var(--color-primary-bold);
+    background: var(--color-primary-bold);
+    color: var(--color-on-primary);
     font-weight: 600;
 }
 
 .themeTagChipActive:hover {
-    background: #A8283C;
-    border-color: #A8283C;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
 }
 
 .wordCounter {
     font-size: 0.7rem;
     font-weight: 400;
-    color: rgba(255, 255, 255, 0.35);
+    color: var(--color-text-muted);
     white-space: nowrap;
 }
 
@@ -439,7 +439,7 @@
 
 .outputLengthLabel {
     font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     margin-bottom: 4px;
 }
 
@@ -456,10 +456,10 @@
 .storylineRow input,
 .storylineRow textarea {
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     padding: 12px 14px;
-    background: #1C1C1E;
-    color: #ffffff;
+    background: var(--color-surface);
+    color: var(--color-text);
     font-size: 0.95rem;
     font-family: inherit;
     transition: 0.2s ease;
@@ -473,32 +473,32 @@
 .storylineRow textarea:focus {
     outline: none;
     border-color: var(--primary);
-    background: #1C1C1E;
-    box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.2);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 /* 禁用输入框样式 */
 .formContainer input:disabled,
 .formContainer textarea:disabled {
-    background: rgba(255, 255, 255, 0.04);
-    color: rgba(255, 255, 255, 0.45);
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
+    color: var(--color-text-muted);
     cursor: not-allowed;
-    border-color: rgba(255, 255, 255, 0.08);
+    border-color: color-mix(in srgb, var(--color-text) 8%, transparent);
     opacity: 0.7;
 }
 
 .formContainer input:disabled:focus,
 .formContainer textarea:disabled:focus {
-    border-color: rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.04);
+    border-color: color-mix(in srgb, var(--color-text) 8%, transparent);
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
     box-shadow: none;
 }
 
 .disabledInput {
-    background: #1C1C1E !important;
-    color: #ffffff !important;
+    background: var(--color-surface) !important;
+    color: var(--color-text) !important;
     cursor: not-allowed !important;
-    border-color: rgba(255, 255, 255, 0.12) !important;
+    border-color: color-mix(in srgb, var(--color-text) 12%, transparent) !important;
     opacity: 1;
     min-height: 48px;
     padding: 14px 16px !important;
@@ -513,13 +513,13 @@
 
 /* 错误样式 */
 .errorInput {
-    border-color: #8E2135 !important;
-    background: rgba(142, 33, 53, 0.12) !important;
+    border-color: var(--color-primary-bold) !important;
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent) !important;
 }
 
 .errorInput:focus {
-    border-color: #8E2135 !important;
-    box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.25) !important;
+    border-color: var(--color-primary-bold) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 25%, transparent) !important;
 }
 
 .errorMessage {
@@ -531,7 +531,7 @@
 
 /* 故事线 / 文风：效果图设置行手风琴 */
 .storylineSection {
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     padding-top: 4px;
     margin-top: 4px;
 }
@@ -555,7 +555,7 @@
 .accordionTitle {
     font-size: 0.95rem;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--color-text);
     line-height: 1.35;
 }
 
@@ -567,7 +567,7 @@
 
 .accordionChevron {
     flex: 0 0 auto;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     transition: transform 0.2s ease;
 }
 
@@ -603,10 +603,10 @@
 }
 
 .storylineRow {
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     border-radius: 16px;
     padding: 16px;
-    background: #121212;
+    background: var(--color-surface);
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -615,8 +615,8 @@
 }
 
 .storylineRow:hover {
-    border-color: rgba(142, 33, 53, 0.35);
-    background: rgba(142, 33, 53, 0.06);
+    border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 6%, transparent);
 }
 
 .storylineMeta {
@@ -641,20 +641,20 @@
 
 .storylineRow label span {
     font-size: 0.82rem;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     font-weight: 500;
 }
 
 .emptyHint {
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--color-text-muted);
 }
 
 .emptyHintRequired {
     color: var(--primary);
     font-weight: 500;
     padding: 16px;
-    background: rgba(142, 33, 53, 0.1);
-    border: 1px dashed rgba(142, 33, 53, 0.4);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    border: 1px dashed color-mix(in srgb, var(--color-primary) 40%, transparent);
     border-radius: 12px;
     text-align: center;
     font-size: 0.85rem;
@@ -663,7 +663,7 @@
 
 .collapseIcon {
     font-size: 0.7rem;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--color-text-muted);
     transition: transform 0.2s ease;
     user-select: none;
 }
@@ -688,12 +688,12 @@
 .uploadCover h2 {
     margin: 0;
     font-size: 1.5rem;
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .coverDualHint {
     margin: 0;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     font-size: 0.82rem;
 }
 
@@ -730,20 +730,20 @@
     margin: 0;
     font-size: 0.95rem;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .coverSlotHint {
     margin: 4px 0 0;
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--color-text-secondary);
 }
 
 .coverAiBtn {
     flex-shrink: 0;
     border: none;
-    background: #A8283C;
-    color: #ffffff;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
     border-radius: 999px;
     padding: 8px 14px;
     font-size: 0.88rem;
@@ -753,9 +753,9 @@
 }
 
 .coverAiBtn:hover:not(:disabled) {
-    background: #8e2135;
+    background: var(--color-primary-bold);
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(142, 33, 53, 0.35);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 .coverAiBtn:disabled {
@@ -767,14 +767,14 @@
 
 /* —— AI 海报企划笺（独立于删除确认弹窗） —— */
 .coverBriefOverlay {
-    --brief-ink: #ffffff;
-    --brief-muted: rgba(255, 255, 255, 0.55);
-    --brief-line: rgba(255, 255, 255, 0.1);
-    --brief-paper: #1A1A1A;
-    --brief-panel: #1C1C1E;
-    --brief-coral: #A8283C;
-    --brief-coral-deep: #8E2135;
-    --brief-stage: #121212;
+    --brief-ink: var(--color-on-media);
+    --brief-muted: color-mix(in srgb, var(--color-on-media) 55%, transparent);
+    --brief-line: color-mix(in srgb, var(--color-text) 10%, transparent);
+    --brief-paper: var(--color-surface);
+    --brief-panel: var(--color-surface);
+    --brief-coral: var(--color-primary);
+    --brief-coral-deep: var(--color-primary-bold);
+    --brief-stage: var(--color-surface);
     --brief-display: 'Songti SC', 'STSong', 'Noto Serif SC', 'PingFang SC', serif;
 
     position: fixed;
@@ -786,8 +786,8 @@
     padding: 20px;
     box-sizing: border-box;
     background:
-        radial-gradient(ellipse 80% 60% at 50% 40%, rgba(142, 33, 53, 0.22), transparent 55%),
-        rgba(0, 0, 0, 0.78);
+        radial-gradient(ellipse 80% 60% at 50% 40%, color-mix(in srgb, var(--color-primary) 22%, transparent), transparent 55%),
+        color-mix(in srgb, var(--color-shadow) 78%, transparent);
     backdrop-filter: blur(8px);
     animation: coverBriefFade 0.22s ease both;
 }
@@ -802,10 +802,10 @@
     background: var(--brief-paper);
     border-radius: 18px;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     box-shadow:
-        0 1px 0 rgba(255, 255, 255, 0.06) inset,
-        0 24px 64px rgba(0, 0, 0, 0.55);
+        0 1px 0 color-mix(in srgb, var(--color-text) 6%, transparent) inset,
+        0 24px 64px color-mix(in srgb, var(--color-shadow) 55%, transparent);
     animation: coverBriefRise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
     position: relative;
 }
@@ -828,7 +828,7 @@
     top: 0;
     bottom: 0;
     width: 3px;
-    background: linear-gradient(180deg, var(--brief-coral), #f07a86 55%, transparent);
+    background: linear-gradient(180deg, var(--brief-coral), var(--color-primary-light) 55%, transparent);
     pointer-events: none;
 }
 
@@ -865,7 +865,7 @@
     height: 32px;
     border: none;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
     color: var(--brief-ink);
     font-size: 1.15rem;
     line-height: 1;
@@ -874,7 +874,7 @@
 }
 
 .coverBriefClose:hover {
-    background: rgba(255, 255, 255, 0.14);
+    background: color-mix(in srgb, var(--color-text) 14%, transparent);
 }
 
 .coverBriefClose:active {
@@ -894,10 +894,10 @@
     border-radius: 12px;
     overflow: hidden;
     background:
-        radial-gradient(ellipse 70% 80% at 30% 40%, rgba(142, 33, 53, 0.4), transparent 55%),
-        radial-gradient(ellipse 50% 60% at 80% 70%, rgba(168, 40, 60, 0.2), transparent 50%),
-        linear-gradient(160deg, #1c1418 0%, #0e0c0f 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+        radial-gradient(ellipse 70% 80% at 30% 40%, color-mix(in srgb, var(--color-primary) 40%, transparent), transparent 55%),
+        radial-gradient(ellipse 50% 60% at 80% 70%, color-mix(in srgb, var(--color-primary) 20%, transparent), transparent 50%),
+        linear-gradient(160deg, var(--color-surface) 0%, var(--color-surface) 100%);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -922,7 +922,7 @@
     font-size: 10px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--color-text-muted);
 }
 
 .coverBriefStageTitle {
@@ -932,19 +932,19 @@
     font-family: var(--brief-display);
     font-size: clamp(1rem, 3.6vw, 1.25rem);
     font-weight: 700;
-    color: #fff;
+    color: var(--color-on-media);
     line-height: 1.35;
-    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.45);
+    text-shadow: 0 2px 18px color-mix(in srgb, var(--color-shadow) 45%, transparent);
     max-width: 92%;
 }
 
 .coverBriefStageTitleCheese {
     font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
     font-weight: 400;
-    color: #FFE566;
-    -webkit-text-stroke: 1.5px #2B6CFF;
+    color: var(--color-highlight);
+    -webkit-text-stroke: 1.5px var(--color-info);
     paint-order: stroke fill;
-    text-shadow: 0 0 14px rgba(255, 214, 70, 0.85);
+    text-shadow: 0 0 14px color-mix(in srgb, var(--color-highlight) 85%, transparent);
 }
 
 .coverBriefStyleRow {
@@ -956,7 +956,7 @@
 .coverBriefStyleLabel {
     font-size: 0.78rem;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.72);
+    color: var(--color-text-secondary);
 }
 
 .coverBriefStyleChips {
@@ -967,9 +967,9 @@
 
 .coverBriefStyleChip {
     appearance: none;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: #141414;
-    color: rgba(255, 255, 255, 0.82);
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+    background: var(--color-surface);
+    color: color-mix(in srgb, var(--color-text) 82%, transparent);
     border-radius: 999px;
     min-height: 34px;
     padding: 0 14px;
@@ -980,13 +980,13 @@
 }
 
 .coverBriefStyleChip:hover {
-    border-color: rgba(168, 40, 60, 0.55);
+    border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
 }
 
 .coverBriefStyleChipActive {
-    border-color: #A8283C;
-    background: rgba(142, 33, 53, 0.28);
-    color: #fff;
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+    color: var(--color-on-primary);
 }
 
 .coverBriefStyleChipCheese {
@@ -994,9 +994,9 @@
 }
 
 .coverBriefStyleChipCheese.coverBriefStyleChipActive {
-    color: #FFE566;
-    border-color: #2B6CFF;
-    background: rgba(43, 108, 255, 0.18);
+    color: var(--color-highlight);
+    border-color: var(--color-info);
+    background: color-mix(in srgb, var(--color-info) 18%, transparent);
 }
 
 .coverBriefStyleChipMuted {
@@ -1007,7 +1007,7 @@
     margin: 0;
     font-size: 0.72rem;
     line-height: 1.4;
-    color: rgba(255, 214, 70, 0.88);
+    color: color-mix(in srgb, var(--color-highlight) 88%, transparent);
 }
 
 .coverBriefMetaRow {
@@ -1032,7 +1032,7 @@
     gap: 4px;
     padding: 5px 10px;
     border-radius: 999px;
-    background: rgba(142, 33, 53, 0.18);
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
     color: var(--brief-coral);
     font-size: 0.75rem;
     font-weight: 700;
@@ -1082,13 +1082,13 @@
 }
 
 .coverBriefTextarea::placeholder {
-    color: rgba(255, 255, 255, 0.35);
+    color: var(--color-text-muted);
 }
 
 .coverBriefTextarea:focus {
     outline: none;
-    border-color: rgba(142, 33, 53, 0.55);
-    box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.2);
+    border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .coverBriefCount {
@@ -1113,9 +1113,9 @@
     height: 44px;
     padding: 0 18px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: #141414;
-    color: rgba(255, 255, 255, 0.88);
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+    background: var(--color-surface);
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
     font-size: 0.9rem;
     font-weight: 600;
     letter-spacing: 0.02em;
@@ -1124,9 +1124,9 @@
 }
 
 .coverBriefGhost:hover {
-    background: rgba(142, 33, 53, 0.22);
-    border-color: rgba(168, 40, 60, 0.55);
-    color: #fff;
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+    color: var(--color-on-primary);
 }
 
 .coverBriefGhost:active {
@@ -1140,18 +1140,18 @@
     border: none;
     border-radius: 999px;
     background: linear-gradient(135deg, var(--brief-coral) 0%, var(--brief-coral-deep) 100%);
-    color: #fff;
+    color: var(--color-text);
     font-size: 0.92rem;
     font-weight: 700;
     letter-spacing: 0.04em;
     cursor: pointer;
-    box-shadow: 0 8px 20px rgba(142, 33, 53, 0.35);
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--color-primary) 35%, transparent);
     transition: transform 0.12s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
 
 .coverBriefPrimary:hover {
     filter: brightness(1.04);
-    box-shadow: 0 10px 24px rgba(142, 33, 53, 0.45);
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 .coverBriefPrimary:active {
@@ -1198,7 +1198,7 @@
     width: 100%;
     min-height: 0;
     box-sizing: border-box;
-    border: 1px dashed rgba(255, 255, 255, 0.2);
+    border: 1px dashed color-mix(in srgb, var(--color-text) 20%, transparent);
     border-radius: 10px;
     padding: 0;
     cursor: pointer;
@@ -1206,7 +1206,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #121212;
+    background: var(--color-surface);
     position: relative;
     overflow: hidden;
 }
@@ -1224,7 +1224,7 @@
 
 .coverUploadArea:hover {
     border-color: var(--primary);
-    background: rgba(142, 33, 53, 0.08);
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
 }
 
 .coverUploadArea:has(input:disabled) {
@@ -1244,19 +1244,19 @@
 }
 
 .coverUploadIcon {
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--color-text-muted);
 }
 
 .coverUploadText {
     margin: 0;
-    color: rgba(255, 255, 255, 0.85);
+    color: color-mix(in srgb, var(--color-text) 85%, transparent);
     font-size: 0.8rem;
     font-weight: 500;
 }
 
 .coverUploadHint {
     margin: 0;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     font-size: 0.68rem;
     line-height: 1.35;
 }
@@ -1278,14 +1278,14 @@
 .coverUploadAreaPreview {
     cursor: default;
     border-style: solid;
-    border-color: rgba(255, 255, 255, 0.12);
+    border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
     padding: 0;
-    background: #0d0d0d;
+    background: var(--color-surface);
 }
 
 .coverUploadAreaPreview:hover {
-    background: #0d0d0d;
-    border-color: rgba(255, 255, 255, 0.2);
+    background: var(--color-surface);
+    border-color: color-mix(in srgb, var(--color-text) 20%, transparent);
 }
 
 /* 仅图区可点预览；「更换」绝对定位叠在上层，不在此 button 内 */
@@ -1332,8 +1332,8 @@
     margin: 0;
     padding: 4px 10px;
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.55);
-    color: rgba(255, 255, 255, 0.92);
+    background: color-mix(in srgb, var(--color-shadow) 55%, transparent);
+    color: color-mix(in srgb, var(--color-on-media) 92%, transparent);
     font-size: 0.75rem;
     font-weight: 500;
     pointer-events: none;
@@ -1350,13 +1350,13 @@
     position: absolute;
     inset: 0;
     border-radius: 8px;
-    background: rgba(0, 0, 0, 0.48);
+    background: color-mix(in srgb, var(--color-shadow) 48%, transparent);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    color: #fff;
+    color: var(--color-on-media);
     font-size: 0.9rem;
     font-weight: 500;
     pointer-events: none;
@@ -1366,8 +1366,8 @@
 .coverGeneratingSpinner {
     width: 28px;
     height: 28px;
-    border: 3px solid rgba(255, 255, 255, 0.35);
-    border-top-color: #fff;
+    border: 3px solid color-mix(in srgb, var(--color-text) 35%, transparent);
+    border-top-color: var(--color-text);
     border-radius: 50%;
     animation: coverSpin 0.8s linear infinite;
 }
@@ -1386,8 +1386,8 @@
 
 .removeCoverBtn {
     padding: 6px 12px;
-    background: rgba(142, 33, 53, 0.92);
-    color: #fff;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
     border: none;
     border-radius: 6px;
     font-size: 0.85rem;
@@ -1400,7 +1400,7 @@
 .removeCoverBtn:hover:not(:disabled) {
     background: var(--primary);
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(142, 33, 53, 0.35);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 .removeCoverBtn:disabled {
@@ -1434,17 +1434,17 @@
 
 .storylineOrderLabel span {
     font-size: 0.82rem;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     font-weight: 500;
 }
 
 .orderInput {
     width: 100%;
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     padding: 12px 14px;
-    background: #1C1C1E;
-    color: #ffffff;
+    background: var(--color-surface);
+    color: var(--color-text);
     font-size: 0.95rem;
     font-family: inherit;
     transition: 0.2s ease;
@@ -1462,15 +1462,15 @@
 .orderInput:focus {
     outline: none;
     border-color: var(--primary);
-    background: #1C1C1E;
-    box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.2);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 /* 弹窗样式 - 简单表单 */
 .modalOverlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: color-mix(in srgb, var(--color-shadow) 50%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1479,10 +1479,10 @@
 }
 
 .modalContent {
-    background: #1A1A1A;
+    background: var(--color-surface);
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--color-shadow) 45%, transparent);
     max-width: 600px;
     width: 100%;
     max-height: 90vh;
@@ -1496,21 +1496,21 @@
     justify-content: space-between;
     align-items: center;
     padding: 20px 24px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .modalHeader h3 {
     margin: 0;
     font-size: 1.25rem;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .modalCloseBtn {
     background: transparent;
     border: none;
     font-size: 1.5rem;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     cursor: pointer;
     padding: 0;
     width: 32px;
@@ -1523,8 +1523,8 @@
 }
 
 .modalCloseBtn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    color: var(--color-text);
 }
 
 .modalBody {
@@ -1538,7 +1538,7 @@
     justify-content: flex-end;
     gap: 12px;
     padding: 20px 24px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .formGroup {
@@ -1561,16 +1561,16 @@
 .formGroup label span {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .formGroup input,
 .formGroup textarea {
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     padding: 12px 14px;
-    background: #1C1C1E;
-    color: #ffffff;
+    background: var(--color-surface);
+    color: var(--color-text);
     font-size: 0.95rem;
     font-family: inherit;
     transition: 0.2s ease;
@@ -1582,8 +1582,8 @@
 .formGroup textarea:focus {
     outline: none;
     border-color: var(--primary);
-    background: #1C1C1E;
-    box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.2);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .formGroup textarea {
@@ -1628,8 +1628,8 @@
     /* 功能注释：手机每个分区独立墨黑卡，禁止再挤在同一外框里 */
     .detailBlock,
     .storylineSection {
-        background: #1A1A1A;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: var(--color-surface);
+        border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
         border-radius: 20px;
         padding: 16px 16px 18px;
         margin-top: 0;
@@ -1637,14 +1637,14 @@
 
     .detailBlock + .detailBlock {
         padding-top: 16px;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        border-top: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     }
 
     .sectionTitleRow {
         justify-content: center;
         text-align: center;
         padding-bottom: 12px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     }
 
     .sectionTitleRow > div {
@@ -1656,7 +1656,7 @@
     .storylineRow input,
     .storylineRow textarea,
     .accordionBody textarea {
-        background: #111111;
+        background: var(--color-surface);
     }
 
     .formGrid,

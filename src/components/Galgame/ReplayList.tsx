@@ -32,12 +32,12 @@ const getVisibilityLabel = (vis: ReplaySummary['visibility'], t: (key: string) =
 const getVisibilityStyle = (visibility: ReplaySummary['visibility']) => {
   switch (visibility) {
     case 'private':
-      return { background: 'rgba(26, 26, 26, 0.08)', color: '#1a1a1a' };
+      return { background: 'color-mix(in srgb, var(--color-text) 8%, transparent)', color: 'var(--color-text)' };
     case 'unlisted':
-      return { background: 'rgba(255, 153, 0, 0.14)', color: '#a56200' };
+      return { background: 'color-mix(in srgb, var(--color-highlight) 14%, transparent)', color: 'var(--color-highlight)' };
     case 'public':
     default:
-      return { background: 'rgba(224, 61, 75, 0.12)', color: '#E03D4B' };
+      return { background: 'color-mix(in srgb, var(--color-primary) 12%, transparent)', color: 'var(--color-primary)' };
   }
 };
 

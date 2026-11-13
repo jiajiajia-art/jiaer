@@ -7,6 +7,9 @@ import { auth } from '../../api/account/authApi';
 import MembershipRedeemResultModal from '../../components/MembershipRedeemResultModal';
 import ConfirmModal from '../CommonModal/ConfirmModal';
 import DeleteAccountModal from './DeleteAccountModal';
+import AppearanceSettingsModal from './AppearanceSettingsModal';
+import { MdOutlineAdminPanelSettings, MdOutlineDashboard, MdOutlinePalette } from 'react-icons/md';
+import { isAdminRole, isOperatorRole } from '../../utils/userRoles';
 import { RiLogoutCircleRLine } from 'react-icons/ri';
 import {
     MdOutlineCardMembership,
@@ -235,8 +238,11 @@ const ProfileFunctionPanel: React.FC = () => {
         setSearchParams(nextParams, { replace: true });
     }, [searchParams, setSearchParams, user?.user?.phoneNumber]);
 
+    const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
+
     return (
         <div className={styles.profileFunctionPanel}>
+            <AppearanceSettingsModal isOpen={isAppearanceOpen} onClose={() => setIsAppearanceOpen(false)} />
             <div className={styles.functionList}>
                 <div className={styles.functionListHeading}>{t('profile.moreServices')}</div>
                     <div className={styles.functionGrid}>
@@ -275,6 +281,8 @@ const ProfileFunctionPanel: React.FC = () => {
                             <span className={styles.functionGridLabel}>{t('profile.membershipRedeem')}</span>
                         </button>
 
+                        
+
                         <button
                             type="button"
                             className={styles.functionGridItem}
@@ -297,6 +305,17 @@ const ProfileFunctionPanel: React.FC = () => {
                             <span className={styles.functionGridLabel}>{t('profile.privacySettings')}</span>
                         </button>
 
+                        <button
+                            type="button"
+                            className={styles.functionGridItem}
+                            onClick={() => setIsAppearanceOpen(true)}
+                        >
+                            <span className={styles.functionGridIcon} aria-hidden="true">
+                                <MdOutlinePalette />
+                            </span>
+                            <span className={styles.functionGridLabel}>{t('settings.title')}</span>
+                        </button>
+
                         {isWebViewEnv() && (
                             <button
                                 type="button"
@@ -307,6 +326,33 @@ const ProfileFunctionPanel: React.FC = () => {
                                     <MdOutlineManageAccounts />
                                 </span>
                                 <span className={styles.functionGridLabel}>{t('profile.accountBinding')}</span>
+                            </button>
+                        )}
+
+                        {/* 功能注释：手机端头像不再弹菜单，运营中心 / 管理面板入口放在个人中心；只对有权限的账号显示 */}
+                        {isOperatorRole(user?.user?.role) && (
+                            <button
+                                type="button"
+                                className={styles.functionGridItem}
+                                onClick={() => navigate('/operator')}
+                            >
+                                <span className={styles.functionGridIcon} aria-hidden="true">
+                                    <MdOutlineDashboard />
+                                </span>
+                                <span className={styles.functionGridLabel}>{t('nav.operatorPanel')}</span>
+                            </button>
+                        )}
+
+                        {isAdminRole(user?.user?.role) && (
+                            <button
+                                type="button"
+                                className={styles.functionGridItem}
+                                onClick={() => navigate('/admin')}
+                            >
+                                <span className={styles.functionGridIcon} aria-hidden="true">
+                                    <MdOutlineAdminPanelSettings />
+                                </span>
+                                <span className={styles.functionGridLabel}>{t('nav.admin')}</span>
                             </button>
                         )}
 

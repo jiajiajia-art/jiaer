@@ -43,6 +43,15 @@ export interface KkRechargePlan {
   firstTotalDiamonds: number;
   firstChargeEligible: boolean;
   label: string;
+  /** 后台为该档位配置的海外倍率（海外价 = 人民币价 × 倍率），未配置则用默认倍率 */
+  overseasMultiplier?: number;
+}
+
+/** 后台配置：海外价格 = 人民币价格 × 倍率 */
+export interface OverseasPricing {
+  currency: 'USD';
+  /** 默认倍率（档位未单独配置时使用） */
+  rate: number;
 }
 
 export interface MembershipKkReward {
@@ -195,6 +204,7 @@ export interface User {
   diamonds?: number;
   kkBalance?: KkBalance;
   kkRechargePlans?: KkRechargePlan[];
+  overseasPricing?: OverseasPricing;
   membership?: MembershipState;
   inviteCode: string;
   inviteStats?: InviteStats;

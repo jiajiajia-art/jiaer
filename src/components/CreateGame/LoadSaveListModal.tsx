@@ -14,9 +14,11 @@ interface LoadSaveListModalProps {
   // 是否允许新增存档入口（仅游戏内允许，详情页读取时不允许）
   allowCreateSlot?: boolean;
   onCreateSlotClick?: () => void;
+  /** 功能注释：置顶的云端自动存档位（上次游玩进度），点击即继续游戏 */
+  autoSlot?: { title: string; hint: string; actionText: string; onSelect: () => void } | null;
 }
 
-const LoadSaveListModal: React.FC<LoadSaveListModalProps> = ({ isOpen, onClose, fileId, onPreview, allowCreateSlot, onCreateSlotClick }) => {
+const LoadSaveListModal: React.FC<LoadSaveListModalProps> = ({ isOpen, onClose, fileId, onPreview, allowCreateSlot, onCreateSlotClick, autoSlot }) => {
   const { t } = useTranslation();
   const [items, setItems] = useState<SaveSummaryItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -48,6 +50,17 @@ const LoadSaveListModal: React.FC<LoadSaveListModalProps> = ({ isOpen, onClose, 
             <div className={styles.empty}>{t('createGame.loadSaveList.loading')}</div>
           ) : (
             <div className={styles.list}>
+              {autoSlot ? (
+                <div className={`${styles.item} ${styles.autoItem}`}>
+                  <div>
+                    <div className={styles.autoTitle}>{autoSlot.title}</div>
+                    <div className={styles.meta}>{autoSlot.hint}</div>
+                  </div>
+                  <div className={styles.actions}>
+                    <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={autoSlot.onSelect}>{autoSlot.actionText}</button>
+                  </div>
+                </div>
+              ) : null}
               {items.map((it) => (
                 <div key={it.saveId} className={styles.item}>
                   <div>
@@ -72,7 +85,7 @@ const LoadSaveListModal: React.FC<LoadSaveListModalProps> = ({ isOpen, onClose, 
                   </div>
                 ))
               )}
-              {!allowCreateSlot && items.length === 0 && (
+              {!allowCreateSlot && !autoSlot && items.length === 0 && (
                 <div className={styles.empty}>{t('createGame.loadSaveList.noSaves')}</div>
               )}
             </div>

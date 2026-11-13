@@ -7,17 +7,13 @@ export {
   coverUrlAfterDisplayCoverError,
 } from './displayCoverUrl';
 export { preferCharacterPortraitWebp } from './characterPortraitUrl';
-export { preferUserAvatarWebp } from './userAvatarUrl';
 import { preferCharacterPortraitWebp } from './characterPortraitUrl';
-import { preferUserAvatarWebp } from './userAvatarUrl';
 
 // ==================== 积分相关常量 ====================
 /** 局内角色档案字段 AI 生成（关系/简介/态度），对齐后端 txt_npc_profile_field */
 export const NPC_PROFILE_FIELD_GENERATION_COST = 1;
 /** TXT 文游：AI 一句话生成游戏设定，对齐后端 txt_idea_generate */
 export const TXT_IDEA_GENERATE_COST = 10;
-/** TXT 文游：文档解析导入，对齐后端 txt_doc_parse */
-export const TXT_DOC_PARSE_COST = 10;
 /** TXT 文游：一句话弹窗内创意描述 AI 生成，对齐后端 txt_idea_text */
 export const TXT_IDEA_TEXT_COST = 1;
 export const OPTION_COST = 2;
@@ -52,8 +48,7 @@ export const getImageUrl = (imagePath: string | null | undefined): string => {
   const displayPath = preferCharacterPortraitWebp(path);
 
   if (displayPath.startsWith("http://") || displayPath.startsWith("https://")) {
-    // 功能注释：绝对 URL 头像也统一加 format=webp，避免评论区等直出大 PNG
-    return preferUserAvatarWebp(displayPath);
+    return displayPath;
   }
   // 功能注释：Romance 草稿封面可能是 data:/blob:，禁止再拼 ASSET_HOST
   if (displayPath.startsWith("data:") || displayPath.startsWith("blob:")) {
@@ -73,8 +68,7 @@ export const getImageUrl = (imagePath: string | null | undefined): string => {
     ? displayPath
     : `/${displayPath}`;
   // 功能注释：封面走 ASSET_HOST；用户头像走 API 主机，见 resolveImageHostAddress
-  const absolute = `${resolveImageHostAddress(normalizedPath, HOST_ADDRESS)}${normalizedPath}`;
-  return preferUserAvatarWebp(absolute);
+  return `${resolveImageHostAddress(normalizedPath, HOST_ADDRESS)}${normalizedPath}`;
 };
 
 export const getPlayerImageUrl = (player: any, defaultImage?: string): string => {

@@ -9,7 +9,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { formatIdeaJobStage } from '../../utils/ideaJobStage';
 import { refreshAuthUserPoints } from '../../lib/auth/refreshUserPoints';
-import { TXT_DOC_PARSE_COST, TXT_IDEA_GENERATE_COST } from '../../utils/constants';
+import { TXT_IDEA_GENERATE_COST } from '../../utils/constants';
 import {
     DEFAULT_TEXT_GENERATE_OPTIONS,
     shouldGenerateAssetsAfterIdea,
@@ -161,7 +161,7 @@ const applyVisualDocPointsSuccess = async (
     kind: 'document' | 'idea',
     t: (key: string, options?: Record<string, unknown>) => string,
 ) => {
-    const fallbackCost = kind === 'idea' ? TXT_IDEA_GENERATE_COST : TXT_DOC_PARSE_COST;
+    const fallbackCost = kind === 'idea' ? TXT_IDEA_GENERATE_COST : 0;
     // 功能注释：仅在后端明确返回扣分时 toast；未扣则刷新余额但不假装已扣
     const hasDeductedField = typeof completedData.pointsDeducted === 'number';
     const deducted = hasDeductedField
@@ -427,16 +427,6 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                 fileType: file.type,
             });
 
-            // 功能注释：TXT 文档解析按固定织梦豆预检（后端仍会再扣）
-            if (mode !== 'worldInteraction') {
-                const enough = await ensureEnoughPointsForVisualDoc(TXT_DOC_PARSE_COST, t);
-                if (!enough) {
-                    return { success: false, error: t('createGame.insufficientPointsForDoc', {
-                        required: TXT_DOC_PARSE_COST,
-                        current: useAuthStore.getState().user?.user?.points ?? 0,
-                    }) };
-                }
-            }
 
             const uploadResponse = mode === 'worldInteraction'
                 ? await worldEditor.uploadWorldFile(file)

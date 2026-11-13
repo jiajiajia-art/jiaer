@@ -1,13 +1,13 @@
 .pageRoot {
-    --ad-bg: #000000;
-    --ad-card: #1c1c1e;
-    --ad-elevated: #242426;
-    --ad-border: #2c2c2e;
-    --ad-label: #8e8e93;
-    --ad-value: #ffffff;
-    --ad-primary: #a8283c;
-    --ad-primary-hover: #c23a50;
-    --ad-divider: rgba(255, 255, 255, 0.1);
+    --ad-bg: var(--color-bg);
+    --ad-card: var(--color-surface);
+    --ad-elevated: var(--color-surface-2);
+    --ad-border: var(--color-border);
+    --ad-label: var(--color-text-muted);
+    --ad-value: var(--color-text);
+    --ad-primary: var(--color-primary);
+    --ad-primary-hover: var(--color-primary);
+    --ad-divider: color-mix(in srgb, var(--color-text) 10%, transparent);
     min-height: 100vh;
     background: var(--ad-bg);
     color: var(--ad-value);
@@ -30,7 +30,7 @@
     top: 0;
     z-index: 20;
     padding: calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px;
-    background: rgba(0, 0, 0, 0.92);
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
     box-sizing: border-box;
     backdrop-filter: blur(8px);
 }
@@ -76,7 +76,7 @@
     padding: 10px;
     border: 1px solid var(--ad-border);
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.025);
+    background: color-mix(in srgb, var(--color-text) 2.5%, transparent);
 }
 
 .kkBreakdownHeading {
@@ -111,7 +111,7 @@
 }
 
 .kkBreakdownButton:hover {
-    border-color: rgba(255, 255, 255, 0.28);
+    border-color: color-mix(in srgb, var(--color-text) 28%, transparent);
     background: var(--ad-elevated);
 }
 
@@ -120,13 +120,13 @@
 }
 
 .kkBreakdownButton:focus-visible {
-    outline: 2px solid rgba(232, 90, 112, 0.75);
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 75%, transparent);
     outline-offset: 2px;
 }
 
 .kkBreakdownButtonActive {
     border-color: var(--ad-primary);
-    background: rgba(168, 40, 60, 0.16);
+    background: color-mix(in srgb, var(--color-primary) 16%, transparent);
 }
 
 .kkBreakdownButton span,
@@ -215,7 +215,7 @@
     align-items: center;
     gap: 2px;
     background: transparent;
-    color: #e85a70;
+    color: var(--color-primary-fg);
     font-size: 12px;
     line-height: 1;
     font-weight: 600;
@@ -231,7 +231,7 @@
 }
 
 .balanceAction:hover {
-    color: #ff7188;
+    color: var(--color-primary-fg);
 }
 
 .balanceAction:active {
@@ -239,7 +239,7 @@
 }
 
 .balanceAction:focus-visible {
-    outline: 2px solid rgba(232, 90, 112, 0.75);
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 75%, transparent);
     outline-offset: 2px;
 }
 
@@ -253,7 +253,7 @@
     flex-wrap: nowrap;
     gap: 8px;
     padding: 10px 16px;
-    background: rgba(0, 0, 0, 0.92);
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
     border-bottom: 1px solid var(--ad-border);
     backdrop-filter: blur(8px);
 }
@@ -384,7 +384,7 @@
     border: 1px solid var(--ad-border);
     border-radius: 12px;
     background: var(--ad-elevated);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.48);
+    box-shadow: 0 12px 32px color-mix(in srgb, var(--color-shadow) 48%, transparent);
     overflow: hidden;
 }
 
@@ -405,7 +405,7 @@
 }
 
 .selectOption:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
     color: var(--ad-value);
 }
 
@@ -430,7 +430,7 @@
     border: 1px solid var(--ad-border);
     border-radius: 12px;
     background: var(--ad-elevated);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.48);
+    box-shadow: 0 12px 32px color-mix(in srgb, var(--color-shadow) 48%, transparent);
     overflow: hidden;
 }
 
@@ -465,14 +465,14 @@
 }
 
 .filterOption:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
     color: var(--ad-value);
 }
 
 .filterOptionActive {
     color: var(--ad-value);
     font-weight: 600;
-    background: rgba(168, 40, 60, 0.18);
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
 .filterActions {
@@ -498,19 +498,19 @@
 
 .filterActionButton:hover {
     color: var(--ad-value);
-    border-color: #3a3a3c;
+    border-color: var(--color-border);
 }
 
 .filterConfirmButton {
     background: var(--ad-primary);
     border-color: var(--ad-primary);
-    color: #ffffff;
+    color: var(--color-on-primary);
 }
 
 .filterConfirmButton:hover {
     background: var(--ad-primary-hover);
     border-color: var(--ad-primary-hover);
-    color: #ffffff;
+    color: var(--color-on-primary);
 }
 
 .listSection {
@@ -553,16 +553,16 @@
     min-height: 22px;
     padding: 0 8px;
     border-radius: 6px;
-    background: rgba(168, 40, 60, 0.2);
-    color: #e85a70;
+    background: color-mix(in srgb, var(--color-primary) 20%, transparent);
+    color: var(--color-primary-fg);
     font-size: 11px;
     line-height: 1;
     font-weight: 600;
 }
 
 .itemTypeBadgePoints {
-    background: rgba(142, 142, 147, 0.22);
-    color: #c7c7cc;
+    background: color-mix(in srgb, var(--color-text) 22%, transparent);
+    color: var(--color-text-secondary);
 }
 
 .kkFilterPopup {
@@ -605,18 +605,18 @@
 
 .kkFilterOption:hover,
 .kkFilterOption:focus-visible {
-    border-color: rgba(255, 255, 255, 0.28);
+    border-color: color-mix(in srgb, var(--color-text) 28%, transparent);
     color: var(--ad-value);
 }
 
 .kkFilterOption:focus-visible {
-    outline: 2px solid rgba(232, 90, 112, 0.75);
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 75%, transparent);
     outline-offset: 2px;
 }
 
 .kkFilterOptionActive {
     border-color: var(--ad-primary);
-    background: rgba(168, 40, 60, 0.18);
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
     color: var(--ad-value);
     font-weight: 600;
 }
@@ -701,7 +701,7 @@
 }
 
 .itemAmountExpense {
-    color: #e85a70;
+    color: var(--color-primary-fg);
 }
 
 .itemAmountStack {
@@ -734,10 +734,10 @@
     align-items: center;
     min-height: 20px;
     padding: 0 6px;
-    border: 1px solid rgba(232, 90, 112, 0.35);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
     border-radius: 5px;
-    background: rgba(168, 40, 60, 0.12);
-    color: #e85a70;
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-primary-fg);
     font-size: 10px;
     line-height: 1;
     font-weight: 600;
@@ -777,7 +777,7 @@
 
 .loadMoreButton:hover:not(:disabled) {
     color: var(--ad-value);
-    border-color: #3a3a3c;
+    border-color: var(--color-border);
     background: var(--ad-elevated);
 }
 

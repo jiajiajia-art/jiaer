@@ -23,12 +23,12 @@ test('defaultTheme_默认竖屏', () => {
   assert.match(store, /orient:\s*"portrait"/);
 });
 
-test('PlayPrefsPicker_仍可选手方向但建角不展示', () => {
+test('PlayPrefsPicker_不再提供方向选择_剧情模式锁定', () => {
   const picker = read('components/PlayPrefsPicker.tsx');
-  assert.match(picker, /showOrient/);
-  assert.match(picker, /aria-label="屏幕方向"/);
-  assert.match(picker, /v: "landscape"/);
-  assert.match(picker, /v: "portrait"/);
+  // 功能注释：暂不支持选择横竖屏；剧情模式暂未开放
+  assert.doesNotMatch(picker, /aria-label="屏幕方向"/);
+  assert.doesNotMatch(picker, /v: "landscape"/);
+  assert.match(picker, /暂未开放/);
   assert.doesNotMatch(picker, /orientLock|锁定方向|选好后锁定/);
 });
 
@@ -55,15 +55,18 @@ test('loadState_读档进局复位竖屏', () => {
   assert.match(ctx, /读档进局同样默认竖屏/);
 });
 
-test('GameShell_无首次方向弹窗且设置无锁定开关', () => {
+test('GameShell_设置里不再有屏幕方向_固定竖屏', () => {
   const shell = read('components/GameShell.tsx');
   assert.doesNotMatch(shell, /选好后锁定方向/);
   assert.doesNotMatch(shell, /竖屏，还是横屏？/);
   assert.doesNotMatch(shell, /lockPick/);
   assert.doesNotMatch(shell, /orientChosen/);
-  assert.doesNotMatch(shell, /已锁定|解锁后才能切换/);
-  assert.match(shell, /屏幕方向/);
-  assert.match(shell, /id: "landscape"/);
-  assert.match(shell, /id: "portrait"/);
-  assert.match(shell, /每局默认竖屏/);
+  assert.doesNotMatch(shell, /id: "landscape"/);
+  assert.doesNotMatch(shell, /每局默认竖屏/);
+  const topbar = read('components/TopbarDiyPanel.tsx');
+  assert.doesNotMatch(topbar, /aria-label="预览方向"/);
+  const ctx = read('store/GameContext.tsx');
+  assert.match(ctx, /orient: "portrait" as const, orientLock: false/, 'setTheme 固定竖屏');
+  const ai = read('lib/ai.ts');
+  assert.match(ai, /orient: "portrait" as const/, '旧存档横屏按竖屏');
 });

@@ -121,7 +121,7 @@ test('NormalModeDisplay_选项须全宽单列横条禁止两列夹角色', () =>
   assert.doesNotMatch(container, /grid-template-columns:\s*repeat\(2/);
   assert.doesNotMatch(css, /\.choiceContainer\s*>\s*\.choiceOption:last-child:nth-child\(odd\)/);
   assert.match(option, /width:\s*100%/);
-  assert.match(option, /background:\s*rgba\(0,\s*0,\s*0,\s*0\.58\)/);
+  assert.match(option, /background:\s*(?:rgba\(0,\s*0,\s*0,\s*0\.58\)|var\(--|color-mix\()/);
   assert.doesNotMatch(option, /background:\s*transparent/);
   assert.doesNotMatch(option, /skewX\(-6deg\)/);
 });
@@ -131,7 +131,7 @@ test('TextModeDisplay_选项须卡片横条禁止斜切HUD', () => {
   const css = readFileSync(join(dir, '../src/components/Galgame/TextModeDisplay.module.css'), 'utf8');
   const option = css.match(/\.optionItem\s*\{[^}]+\}/s)?.[0] || '';
   assert.match(option, /width:\s*100%/);
-  assert.match(option, /background:\s*rgba\(0,\s*0,\s*0,\s*0\.58\)/);
+  assert.match(option, /background:\s*(?:rgba\(0,\s*0,\s*0,\s*0\.58\)|var\(--|color-mix\()/);
   assert.match(option, /border-radius:\s*0\.45rem/);
   assert.doesNotMatch(option, /skewX\(/);
   assert.doesNotMatch(css, /optionHudScanDrift/);

@@ -15,7 +15,7 @@
     height: 100vh;
     height: 100dvh;
     overflow-y: auto;
-    background: rgba(0, 0, 0, 0.7);
+    background: color-mix(in srgb, var(--color-shadow) 70%, transparent);
     backdrop-filter: blur(5px);
     animation: editNicknameFadeIn 0.3s ease-out;
 }
@@ -36,8 +36,8 @@
     border-radius: 10px;
     opacity: 1;
     background:
-        linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
-        linear-gradient(180deg, #343434 0%, rgba(52, 52, 52, 0.72) 100%);
+        linear-gradient(0deg, color-mix(in srgb, var(--color-text) 15%, transparent), color-mix(in srgb, var(--color-text) 15%, transparent)),
+        linear-gradient(180deg, var(--color-surface-2) 0%, color-mix(in srgb, var(--color-surface) 72%, transparent) 100%);
     box-sizing: border-box;
     border: 0.68px solid transparent;
     backdrop-filter: blur(47px);
@@ -48,7 +48,7 @@
     flex-direction: column;
     padding: 20px 18px 22px;
     overflow: hidden;
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .modal::before {
@@ -59,13 +59,13 @@
     padding: 0.68px;
     background: linear-gradient(
         135deg,
-        rgba(255, 255, 255, 0.55) 0%,
-        rgba(255, 255, 255, 0.18) 60%,
-        rgba(255, 255, 255, 0) 90%
+        color-mix(in srgb, var(--color-surface) 55%, transparent) 0%,
+        color-mix(in srgb, var(--color-text) 18%, transparent) 60%,
+        transparent 90%
     );
     -webkit-mask:
-        linear-gradient(#fff 0 0) content-box,
-        linear-gradient(#fff 0 0);
+        linear-gradient(var(--color-surface) 0 0) content-box,
+        linear-gradient(var(--color-surface) 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;
@@ -96,7 +96,7 @@
     cursor: pointer;
     z-index: 10;
     transition: opacity 0.2s ease;
-    color: #ffffff;
+    color: var(--color-text);
     background: transparent;
     border: none;
     padding: 0;
@@ -115,8 +115,8 @@
     display: block;
     width: 10px;
     height: 10px;
-    border-left: 2px solid #ffffff;
-    border-bottom: 2px solid #ffffff;
+    border-left: 2px solid var(--color-text);
+    border-bottom: 2px solid var(--color-text);
     transform: rotate(45deg);
     margin-left: 4px;
 }
@@ -126,7 +126,7 @@
     padding: 0 40px;
     font-size: 16px;
     font-weight: 500;
-    color: #ffffff;
+    color: var(--color-text);
     letter-spacing: 0;
     line-height: normal;
     text-align: center;
@@ -150,20 +150,20 @@
     min-height: 44px;
     padding: 10px 14px;
     border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    background: rgba(0, 0, 0, 0.22);
-    color: #ffffff;
+    border: 1px solid color-mix(in srgb, var(--color-text) 18%, transparent);
+    background: color-mix(in srgb, var(--color-text) 22%, transparent);
+    color: var(--color-text);
     font-size: 15px;
     line-height: 1.4;
     outline: none;
 }
 
 .input::placeholder {
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--color-text-muted);
 }
 
 .input:focus {
-    border-color: rgba(255, 255, 255, 0.35);
+    border-color: color-mix(in srgb, var(--color-text) 35%, transparent);
 }
 
 .input:disabled {
@@ -174,7 +174,7 @@
     margin: 0;
     font-size: 12px;
     line-height: 1.5;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
 }
 
 .confirm {
@@ -186,8 +186,8 @@
     height: 42px;
     padding: 0 16px;
     margin: 18px auto 0;
-    background: rgba(255, 255, 255, 0.1);
-    color: #ffffff;
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
+    color: var(--color-text);
     border: none;
     border-radius: 200px;
     font-size: 15px;
@@ -200,11 +200,31 @@
 }
 
 .confirm:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.16);
+    background: color-mix(in srgb, var(--color-text) 16%, transparent);
 }
 
 .confirm:disabled {
-    background: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.35);
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    color: var(--color-text-muted);
     cursor: not-allowed;
 }
+
+/* ================= 统一弹窗风格 ================= */
+.modal {
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 18px;
+    background: var(--color-surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 24px 64px color-mix(in srgb, var(--color-shadow) 50%, transparent);
+}
+.modal::before { display: none; }
+.confirm {
+    border: 0;
+    border-radius: 12px;
+    background: var(--color-primary);
+    background-image: none;
+    box-shadow: none;
+    color: var(--color-on-primary);
+}
+.confirm:hover:not(:disabled) { background: var(--color-primary-bold); color: var(--color-on-primary); }

@@ -34,17 +34,17 @@
 }
 
 .messagesContainer::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
+    background: color-mix(in srgb, var(--color-text) 5%, transparent);
     border-radius: 0.25rem; /* 4px */
 }
 
 .messagesContainer::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
+    background: color-mix(in srgb, var(--color-text) 20%, transparent);
     border-radius: 0.25rem; /* 4px */
 }
 
 .messagesContainer::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: color-mix(in srgb, var(--color-text) 30%, transparent);
 }
 
 .emptyState {
@@ -52,7 +52,7 @@
     justify-content: center;
     align-items: center;
     height: 100%;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--color-text-secondary);
     font-size: 1rem; /* 16px */
 }
 
@@ -77,8 +77,8 @@
     position: absolute;
     width: 100%;
     height: 100%;
-    border: 0.125rem solid rgba(255, 255, 255, 0.2); /* 2px */
-    border-top-color: rgba(255, 255, 255, 0.8);
+    border: 0.125rem solid color-mix(in srgb, var(--color-text) 20%, transparent); /* 2px */
+    border-top-color: color-mix(in srgb, var(--color-text) 80%, transparent);
     border-radius: 50%;
     animation: spin 1.2s linear infinite;
 }
@@ -89,8 +89,8 @@
     left: 15%;
     width: 70%;
     height: 70%;
-    border: 0.125rem solid rgba(255, 255, 255, 0.15); /* 2px */
-    border-top-color: rgba(255, 255, 255, 0.6);
+    border: 0.125rem solid color-mix(in srgb, var(--color-text) 15%, transparent); /* 2px */
+    border-top-color: color-mix(in srgb, var(--color-text) 60%, transparent);
     border-radius: 50%;
     animation: spin 0.8s linear infinite reverse;
 }
@@ -102,7 +102,7 @@
     transform: translate(-50%, -50%);
     width: 1.25rem; /* 20px */
     height: 1.25rem; /* 20px */
-    background: rgba(255, 255, 255, 0.9);
+    background: color-mix(in srgb, var(--color-surface) 90%, transparent);
     border-radius: 50%;
     animation: pulse 1.5s ease-in-out infinite;
 }
@@ -125,7 +125,7 @@
 }
 
 .statusText {
-    color: rgba(255, 255, 255, 0.9);
+    color: color-mix(in srgb, var(--color-text) 90%, transparent);
     font-size: 1rem; /* 16px */
     font-weight: 500;
 }
@@ -156,15 +156,15 @@
 
 /* 旁白气泡 */
 .narrationBubble {
-    background: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
     border-radius: 0.75rem; /* 12px */
     padding: 0.75rem 1rem; /* 12px 16px */
-    border-left: 0.1875rem solid rgba(255, 255, 255, 0.3); /* 3px */
+    border-left: 0.1875rem solid color-mix(in srgb, var(--color-text) 30%, transparent); /* 3px */
 }
 
 .narrationLabel {
     font-size: 0.75rem; /* 12px */
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--color-text-secondary);
     margin-bottom: 0.375rem; /* 6px */
     font-weight: 500;
 }
@@ -176,23 +176,23 @@
 }
 
 .narrationContent > div {
-    color: rgba(255, 255, 255, 0.9);
+    color: color-mix(in srgb, var(--color-text) 90%, transparent);
 }
 
 /* 对话气泡 */
 .dialogueBubble {
-    background: rgba(255, 255, 255, 0.1);
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
     border-radius: 0.75rem; /* 12px */
     padding: 0.75rem 1rem; /* 12px 16px */
-    border-left: 0.1875rem solid rgba(255, 255, 255, 0.4); /* 3px */
+    border-left: 0.1875rem solid color-mix(in srgb, var(--color-text) 40%, transparent); /* 3px */
 }
 
 .speakerName {
     font-size: 0.8125rem; /* 13px */
-    color: rgba(255, 154, 163, 0.95);
+    color: color-mix(in srgb, var(--color-primary-fg) 95%, transparent);
     margin-bottom: 0.375rem; /* 6px */
     font-weight: 600;
-    border-left: 0.1875rem solid #fb4655; /* 3px */
+    border-left: 0.1875rem solid var(--color-primary-light); /* 3px */
     padding-left: 0.5rem; /* 8px */
 }
 
@@ -203,27 +203,27 @@
 }
 
 .dialogueContent > div {
-    color: rgba(255, 255, 255, 0.95);
+    color: color-mix(in srgb, var(--color-text) 95%, transparent);
 }
 
 /* 选择气泡 — Funloom 朱红点缀，与正常模式选项卡片对齐 */
 .choiceBubble {
-    --choice-accent: #fb4655;
-    --choice-accent-soft: #ff9aa3;
+    --choice-accent: var(--color-primary-light);
+    --choice-accent-soft: var(--color-primary-light);
     background: linear-gradient(
         165deg,
-        rgba(28, 16, 18, 0.78) 0%,
-        rgba(12, 10, 14, 0.72) 100%
+        color-mix(in srgb, var(--color-surface) 78%, transparent) 0%,
+        color-mix(in srgb, var(--color-surface) 72%, transparent) 100%
     );
     border-radius: 0.75rem;
     padding: 1rem;
-    border: 0.0625rem solid rgba(251, 70, 85, 0.28);
-    box-shadow: 0 0.35rem 1.1rem rgba(0, 0, 0, 0.28);
+    border: 0.0625rem solid color-mix(in srgb, var(--color-primary) 28%, transparent);
+    box-shadow: 0 0.35rem 1.1rem color-mix(in srgb, var(--color-shadow) 28%, transparent);
 }
 
 .choiceTitle {
     font-size: 1rem;
-    color: rgba(255, 245, 242, 0.96);
+    color: color-mix(in srgb, var(--color-text) 96%, transparent);
     margin-bottom: 0.5rem;
     font-weight: 650;
     letter-spacing: 0.02em;
@@ -236,7 +236,7 @@
 }
 
 .choiceDescription > div {
-    color: rgba(255, 245, 242, 0.78);
+    color: color-mix(in srgb, var(--color-text) 78%, transparent);
 }
 
 .optionsList {
@@ -256,8 +256,8 @@
     min-width: 0;
     box-sizing: border-box;
     min-height: 2.75rem;
-    background: rgba(0, 0, 0, 0.58);
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: color-mix(in srgb, var(--color-shadow) 58%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
     border-radius: 0.45rem;
     padding: 0.7rem 0.9rem 0.7rem 2.6rem;
     display: flex;
@@ -265,8 +265,8 @@
     justify-content: space-between;
     gap: 0.75rem;
     font-weight: 600;
-    text-shadow: 0 0.0625rem 0.1875rem rgba(0, 0, 0, 0.75);
-    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.28);
+    text-shadow: 0 0.0625rem 0.1875rem color-mix(in srgb, var(--color-shadow) 75%, transparent);
+    box-shadow: 0 0.25rem 0.75rem color-mix(in srgb, var(--color-shadow) 28%, transparent);
     transform: none;
     cursor: pointer;
     transition:
@@ -292,16 +292,16 @@
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0;
-    color: rgba(255, 245, 242, 0.92);
-    background: rgba(251, 70, 85, 0.28);
-    border: 1px solid rgba(251, 70, 85, 0.42);
+    color: color-mix(in srgb, var(--color-text) 92%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 42%, transparent);
     pointer-events: none;
 }
 
 .optionItem:hover {
-    background: rgba(0, 0, 0, 0.72);
-    border-color: rgba(251, 70, 85, 0.38);
-    box-shadow: 0 0.3rem 0.9rem rgba(0, 0, 0, 0.36);
+    background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 38%, transparent);
+    box-shadow: 0 0.3rem 0.9rem color-mix(in srgb, var(--color-shadow) 36%, transparent);
     transform: translateY(-0.0625rem);
 }
 
@@ -310,7 +310,7 @@
 }
 
 .optionNumber {
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--color-text-secondary);
     font-size: 0.875rem;
     font-weight: 600;
     flex-shrink: 0;
@@ -319,7 +319,7 @@
 .optionText {
     position: relative;
     z-index: 1;
-    color: rgba(255, 245, 242, 0.96);
+    color: color-mix(in srgb, var(--color-text) 96%, transparent);
     font-size: 0.9375rem;
     font-weight: 600;
     line-height: 1.45;
@@ -341,29 +341,29 @@
 
 /* 主选项：暖金描边，与正常模式 mainOption 同级强调 */
 .optionItemMain {
-    border-color: rgba(255, 245, 207, 0.35);
-    background: rgba(40, 28, 12, 0.68);
+    border-color: color-mix(in srgb, var(--color-highlight) 35%, transparent);
+    background: color-mix(in srgb, var(--color-surface) 68%, transparent);
 }
 
 .optionItemMain:hover {
-    background: rgba(52, 36, 14, 0.8);
-    border-color: rgba(255, 245, 207, 0.48);
+    background: color-mix(in srgb, var(--color-highlight) 80%, transparent);
+    border-color: color-mix(in srgb, var(--color-highlight) 48%, transparent);
 }
 
 .optionItemMain::before {
-    color: #fff5cf;
-    background: rgba(255, 180, 80, 0.22);
-    border-color: rgba(255, 245, 207, 0.42);
+    color: var(--color-highlight);
+    background: color-mix(in srgb, var(--color-highlight) 22%, transparent);
+    border-color: color-mix(in srgb, var(--color-highlight) 42%, transparent);
 }
 
 .optionTextMain {
-    color: #fff5cf;
+    color: var(--color-highlight);
 }
 
 .pointsCost {
     position: relative;
     z-index: 1;
-    color: rgba(255, 200, 100, 0.85);
+    color: color-mix(in srgb, var(--color-highlight) 85%, transparent);
     font-size: 0.75rem;
     font-weight: 600;
     flex-shrink: 0;
@@ -376,7 +376,7 @@
     align-items: center;
     gap: 0.25rem; /* 4px */
     flex-shrink: 0;
-    color: #fff;
+    color: var(--color-text);
     font-size: 0.875rem; /* 14px */
     font-weight: 600;
 }
@@ -389,7 +389,7 @@
 }
 
 .freeBadge {
-    color: rgba(74, 222, 128, 0.9);
+    color: color-mix(in srgb, var(--color-success) 90%, transparent);
     font-size: 0.75rem; /* 12px */
     flex-shrink: 0;
     margin-left: auto;
@@ -400,10 +400,10 @@
   flex-shrink: 0;
   padding: 0.75rem 1.25rem 0.625rem;
   padding-bottom: max(0.625rem, env(safe-area-inset-bottom, 0px));
-  border-top: 0.0625rem solid rgba(255, 255, 255, 0.14);
+  border-top: 0.0625rem solid color-mix(in srgb, var(--color-text) 14%, transparent);
   background:
-    linear-gradient(180deg, rgba(14, 10, 12, 0.9) 0%, rgba(8, 6, 8, 0.98) 100%);
-  box-shadow: 0 -0.35rem 1.1rem rgba(0, 0, 0, 0.38);
+    linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 90%, transparent) 0%, color-mix(in srgb, var(--color-shadow) 98%, transparent) 100%);
+  box-shadow: 0 -0.35rem 1.1rem color-mix(in srgb, var(--color-shadow) 38%, transparent);
   z-index: 6;
 }
 
@@ -415,7 +415,7 @@
 .customInputSection {
     margin-top: 1rem;
     padding-top: 1rem;
-    border-top: 0.0625rem solid rgba(255, 255, 255, 0.12);
+    border-top: 0.0625rem solid color-mix(in srgb, var(--color-text) 12%, transparent);
 }
 
 .customInputHeader {
@@ -424,16 +424,16 @@
     align-items: center;
     margin-bottom: 0.625rem; /* 10px */
     font-size: 0.8125rem; /* 13px */
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--color-text-secondary);
 }
 
 .pointsCostHint {
-    color: rgba(255, 200, 100, 0.8);
+    color: color-mix(in srgb, var(--color-highlight) 80%, transparent);
     font-size: 0.75rem; /* 12px */
 }
 
 .freeHint {
-    color: rgba(74, 222, 128, 0.9);
+    color: color-mix(in srgb, var(--color-success) 90%, transparent);
     font-size: 0.75rem; /* 12px */
 }
 
@@ -444,23 +444,23 @@
 
 .customInput {
     flex: 1;
-    background: rgba(255, 255, 255, 0.08);
-    border: 0.0625rem solid rgba(255, 255, 255, 0.15); /* 1px */
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    border: 0.0625rem solid color-mix(in srgb, var(--color-text) 15%, transparent); /* 1px */
     border-radius: 0.5rem; /* 8px */
     padding: 0.625rem 0.875rem; /* 10px 14px */
-    color: rgba(255, 255, 255, 0.95);
+    color: color-mix(in srgb, var(--color-text) 95%, transparent);
     font-size: 0.875rem; /* 14px */
     outline: none;
     transition: all 0.2s ease;
 }
 
 .customInput::placeholder {
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--color-text-muted);
 }
 
 .customInput:focus {
-    border-color: rgba(255, 255, 255, 0.3);
-    background: rgba(255, 255, 255, 0.1);
+    border-color: color-mix(in srgb, var(--color-text) 30%, transparent);
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
 }
 
 .customInput:disabled {
@@ -469,8 +469,8 @@
 }
 
 .customInputButton {
-    background: rgba(224, 61, 75, 0.8);
-    color: #fff;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
     border: none;
     border-radius: 0.5rem; /* 8px */
     padding: 0.625rem 1.25rem; /* 10px 20px */
@@ -482,7 +482,7 @@
 }
 
 .customInputButton:hover:not(:disabled) {
-    background: rgba(224, 61, 75, 1);
+    background: var(--color-primary);
 }
 
 .customInputButton:disabled {
@@ -492,15 +492,15 @@
 
 /* 场景切换气泡 */
 .sceneChangeBubble {
-    background: rgba(255, 255, 255, 0.06);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
     border-radius: 0.75rem; /* 12px */
     padding: 0.75rem 1rem; /* 12px 16px */
-    border: 0.0625rem dashed rgba(255, 255, 255, 0.2); /* 1px */
+    border: 0.0625rem dashed color-mix(in srgb, var(--color-text) 20%, transparent); /* 1px */
     text-align: center;
 }
 
 .sceneChangeBubble > div > div {
-    color: rgba(255, 255, 255, 0.8);
+    color: color-mix(in srgb, var(--color-text) 80%, transparent);
 }
 
 .sceneChangeBubble > div {
@@ -511,27 +511,27 @@
 
 /* 文本颜色标记样式 - 使用 !important 确保覆盖父元素颜色 */
 .colorRed {
-    color: #ff4444 !important;
+    color: var(--color-primary-fg) !important;
     font-weight: 500;
 }
 
 .colorYellow {
-    color: #ffd700 !important;
+    color: var(--color-highlight) !important;
     font-weight: 500;
 }
 
 .colorGreen {
-    color: #4ade80 !important;
+    color: var(--color-success) !important;
     font-weight: 500;
 }
 
 .colorBlue {
-    color: #60a5fa !important;
+    color: var(--color-info) !important;
     font-weight: 500;
 }
 
 .colorPurple {
-    color: rgba(255, 255, 255, 0.9) !important;
+    color: color-mix(in srgb, var(--color-text) 90%, transparent) !important;
     font-weight: 500;
 }
 
@@ -540,7 +540,7 @@
     display: inline-block;
     width: 0.125rem; /* 2px */
     height: 1em;
-    background-color: rgba(255, 255, 255, 0.9);
+    background-color: color-mix(in srgb, var(--color-surface) 90%, transparent);
     margin-left: 0.125rem; /* 2px */
     animation: blink 1s infinite;
     vertical-align: baseline;
@@ -580,7 +580,7 @@
 
 /* 小说阅读器等浅色背景场景 */
 .textModeContainerLight .emptyState {
-    color: #666;
+    color: var(--color-text-secondary);
 }
 
 .textModeContainerLight .messagesContainer {
@@ -588,127 +588,127 @@
 }
 
 .textModeContainerLight .messagesContainer::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.04);
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
 .textModeContainerLight .messagesContainer::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.18);
+    background: color-mix(in srgb, var(--color-text) 18%, transparent);
 }
 
 .textModeContainerLight .messagesContainer::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.28);
+    background: color-mix(in srgb, var(--color-text) 28%, transparent);
 }
 
 .textModeContainerLight .narrationBubble {
-    background: #f5f5f5;
-    border-left-color: #b69b74;
+    background: var(--color-bg);
+    border-left-color: var(--color-highlight);
     border-left-width: 3px;
     border-left-style: solid;
 }
 
 .textModeContainerLight .narrationLabel {
-    color: #888;
+    color: var(--color-text-muted);
 }
 
 .textModeContainerLight .narrationContent > div,
 .textModeContainerLight .dialogueContent > div,
 .textModeContainerLight .choiceDescription > div {
-    color: #333;
+    color: var(--color-text);
 }
 
 .textModeContainerLight .dialogueBubble {
-    background: #f8f8f8;
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    background: var(--color-bg);
+    border: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .textModeContainerLight .playerDialogueBubble {
-    background: #fff5f5;
-    border-color: rgba(251, 91, 103, 0.2);
+    background: var(--color-bg);
+    border-color: color-mix(in srgb, var(--color-primary-light) 20%, transparent);
 }
 
 .textModeContainerLight .npcDialogueBubble {
-    background: #f5f8ff;
-    border-color: rgba(59, 130, 246, 0.15);
+    background: var(--color-bg);
+    border-color: color-mix(in srgb, var(--color-info) 15%, transparent);
 }
 
 .textModeContainerLight .speakerName {
-    color: #555;
+    color: var(--color-text-secondary);
 }
 
 .textModeContainerLight .choiceBubble {
-    background: #fafafa;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: var(--color-bg);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     box-shadow: none;
 }
 
 .textModeContainerLight .choiceTitle {
-    color: #222;
+    color: var(--color-text);
 }
 
 .textModeContainerLight .choiceDescription {
-    color: #444;
+    color: var(--color-text-secondary);
 }
 
 .textModeContainerLight .optionItem {
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     text-shadow: none;
     transform: none;
-    box-shadow: 0 0.125rem 0.4rem rgba(0, 0, 0, 0.06);
+    box-shadow: 0 0.125rem 0.4rem color-mix(in srgb, var(--color-shadow) 6%, transparent);
 }
 
 .textModeContainerLight .optionItem::before {
-    color: #fff;
-    background: #fb4655;
-    border-color: #e03d4b;
+    color: var(--color-on-primary);
+    background: var(--color-primary-light);
+    border-color: var(--color-primary);
 }
 
 .textModeContainerLight .optionItem:hover {
-    background: #fff7f8;
-    border-color: rgba(251, 70, 85, 0.35);
+    background: var(--color-bg);
+    border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
     filter: none;
 }
 
 .textModeContainerLight .optionItemMain {
-    background: #fff8ef;
-    border-color: rgba(194, 65, 12, 0.28);
+    background: var(--color-bg);
+    border-color: color-mix(in srgb, var(--color-highlight) 28%, transparent);
 }
 
 .textModeContainerLight .optionText {
     animation: none;
     transform: none;
-    color: #222;
+    color: var(--color-text);
 }
 
 .textModeContainerLight .optionTextMain {
-    color: #c2410c;
+    color: var(--color-highlight);
 }
 
 .textModeContainerLight .pointsCost,
 .textModeContainerLight .pointsCostHint {
-    color: #888;
+    color: var(--color-text-muted);
 }
 
 .textModeContainerLight .statusText {
-    color: #444;
+    color: var(--color-text-secondary);
 }
 
 .textModeContainerLight .orbit {
-    border-color: rgba(0, 0, 0, 0.12);
-    border-top-color: rgba(0, 0, 0, 0.45);
+    border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-top-color: color-mix(in srgb, var(--color-text) 45%, transparent);
 }
 
 .textModeContainerLight .orbitInner {
-    border-top-color: rgba(0, 0, 0, 0.3);
+    border-top-color: color-mix(in srgb, var(--color-text) 30%, transparent);
 }
 
 .textModeContainerLight .core {
-    background: rgba(251, 91, 103, 0.85);
+    background: color-mix(in srgb, var(--color-primary-light) 85%, transparent);
 }
 
 .textModeContainerLight .textModeComposer {
-    border-top-color: rgba(0, 0, 0, 0.08);
+    border-top-color: color-mix(in srgb, var(--color-text) 8%, transparent);
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 250, 250, 1) 100%);
-    box-shadow: 0 -0.25rem 0.85rem rgba(0, 0, 0, 0.08);
+        linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 98%, transparent) 0%, var(--color-bg) 100%);
+    box-shadow: 0 -0.25rem 0.85rem color-mix(in srgb, var(--color-shadow) 8%, transparent);
 }

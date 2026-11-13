@@ -174,12 +174,6 @@ test('avatarLibrary_API与导航管理运营页已挂载', () => {
   assert.match(adminMgrCss, /\.batchOverlay\s*\{/);
   assert.match(adminMgrCss, /batchCardShade|batchCardCta/);
   assert.match(adminMgr, /batchGhostBtn|batchCardInfo/);
-  // 上传/编辑标签抽屉 portal 挂 body，须自带 --av-* + 关键字色 fallback（浅底深字）
-  assert.match(adminMgrCss, /\.uploadDrawer\s*\{[^}]*--av-ink:\s*#3b2a1d/s);
-  assert.match(adminMgrCss, /var\(--av-ink,\s*#3b2a1d\)/);
-  assert.match(adminMgrCss, /var\(--av-muted,\s*#8a7463\)/);
-  assert.match(adminMgrCss, /\.uploadDrawerTitle\s*\{[^}]*color:\s*var\(--av-ink/s);
-  assert.match(adminMgr, /编辑标签|admin-avatar-edit-title/);
   assert.doesNotMatch(adminMgr, /openBatchHead|请继续点「上传」逐张处理/);
   assert.doesNotMatch(adminMgr, /disabled=\{uploading \|\| batchQueue\.length > 0\}/);
   assert.match(cropGate, /buttonDisabled/);

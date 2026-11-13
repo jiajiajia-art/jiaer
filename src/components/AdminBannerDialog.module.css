@@ -6,7 +6,7 @@
     place-items: center;
     padding: 24px;
     box-sizing: border-box;
-    background: rgba(31, 24, 19, 0.56);
+    background: color-mix(in srgb, var(--color-surface) 56%, transparent);
     backdrop-filter: blur(7px);
     animation: overlayEnter 180ms ease-out both;
 }
@@ -14,17 +14,17 @@
 .dialog {
     width: min(520px, 100%);
     overflow: hidden;
-    border: 1px solid var(--admin-border, rgba(201, 139, 92, 0.24));
+    border: 1px solid var(--admin-border, color-mix(in srgb, var(--color-highlight) 24%, transparent));
     border-radius: 24px;
-    background: #fff;
-    box-shadow: 0 28px 80px rgba(54, 35, 23, 0.26);
-    color: var(--admin-text, #2f241d);
+    background: var(--color-surface);
+    box-shadow: 0 28px 80px color-mix(in srgb, var(--color-highlight) 26%, transparent);
+    color: var(--admin-text, var(--color-text));
     animation: dialogEnter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .accentLine {
     height: 4px;
-    background: #1677ff;
+    background: var(--color-primary);
 }
 
 .header {
@@ -41,8 +41,8 @@
     min-height: 28px;
     padding: 0 11px;
     border-radius: 999px;
-    background: var(--admin-accent-soft, #e6f4ff);
-    color: var(--admin-accent-strong, #aa5a2d);
+    background: var(--admin-accent-soft, var(--color-bg));
+    color: var(--admin-accent-strong, var(--color-highlight));
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -50,7 +50,7 @@
 
 .title {
     margin: 14px 0 0;
-    color: var(--admin-text, #2f241d);
+    color: var(--admin-text, var(--color-text));
     font-size: 22px;
     line-height: 1.35;
 }
@@ -64,14 +64,14 @@
     border: 0;
     border-radius: 14px;
     background: transparent;
-    color: var(--admin-text-soft, #6f5a49);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     cursor: pointer;
     transition: background 180ms ease, color 180ms ease;
 }
 
 .closeButton:hover {
-    background: #e6f4ff;
-    color: var(--admin-accent-strong, #aa5a2d);
+    background: var(--color-bg);
+    color: var(--admin-accent-strong, var(--color-highlight));
 }
 
 .closeIcon,
@@ -106,7 +106,7 @@
 .message {
     margin: 0;
     padding: 20px 30px 28px;
-    color: var(--admin-text-soft, #6f5a49);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     font-size: 15px;
     line-height: 1.8;
     text-align: left;
@@ -117,8 +117,8 @@
     justify-content: flex-end;
     gap: 12px;
     padding: 20px 30px 24px;
-    border-top: 1px solid var(--admin-border, rgba(201, 139, 92, 0.18));
-    background: #fff;
+    border-top: 1px solid var(--admin-border, color-mix(in srgb, var(--color-highlight) 18%, transparent));
+    background: var(--color-surface);
 }
 
 .actionButton {
@@ -133,16 +133,16 @@
 }
 
 .cancelButton {
-    border: 1px solid var(--admin-border, rgba(201, 139, 92, 0.3));
-    background: #fff;
-    color: var(--admin-text, #2f241d);
+    border: 1px solid var(--admin-border, color-mix(in srgb, var(--color-highlight) 30%, transparent));
+    background: var(--color-surface);
+    color: var(--admin-text, var(--color-text));
 }
 
 .confirmButton {
-    border: 1px solid #1677ff;
-    background: #1677ff;
+    border: 1px solid var(--color-primary);
+    background: var(--color-primary);
     box-shadow: none;
-    color: #fff;
+    color: var(--color-on-primary);
 }
 
 .actionButton:hover {
@@ -150,16 +150,16 @@
 }
 
 .cancelButton:hover {
-    background: #fff9f3;
+    background: var(--color-bg);
 }
 
 .confirmButton:hover {
-    box-shadow: 0 15px 28px rgba(201, 115, 63, 0.28);
+    box-shadow: 0 15px 28px color-mix(in srgb, var(--color-highlight) 28%, transparent);
 }
 
 .closeButton:focus-visible,
 .actionButton:focus-visible {
-    outline: 3px solid rgba(201, 115, 63, 0.3);
+    outline: 3px solid color-mix(in srgb, var(--color-highlight) 30%, transparent);
     outline-offset: 3px;
 }
 

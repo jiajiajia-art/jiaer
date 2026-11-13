@@ -30,12 +30,17 @@ const GameGridSkeleton: React.FC<GameGridSkeletonProps> = ({
                 <div key={idx} className={skeletonCardClassName}>
                     <div className={styles.coverSkeleton} />
                     <div className={styles.body}>
-                        <div className={styles.titleWrap}>
-                            <div className={styles.titleSkeleton} />
-                            <div className={styles.subtitleSkeleton} />
-                            <div className={styles.tagSkeleton} />
+                        {/* 功能注释：骨架与真实卡片同结构：两行标题 / 作者行 / 标签行 */}
+                        <div className={styles.cardTitleLine} />
+                        <div className={`${styles.cardTitleLine} ${styles.cardTitleLineShort}`} />
+                        <div className={styles.cardAuthorRow}>
+                            <span className={styles.cardAvatar} />
+                            <span className={styles.cardAuthorName} />
                         </div>
-                        {!isWorksLayout ? <div className={styles.priceSkeleton} /> : null}
+                        <div className={styles.cardTagRow}>
+                            <span className={styles.cardTag} />
+                            <span className={styles.cardTag} />
+                        </div>
                     </div>
                 </div>
             ))}

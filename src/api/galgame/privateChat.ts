@@ -2,6 +2,7 @@
  * 私聊 API 客户端
  */
 import { HOST_ADDRESS } from '../../config';
+import { withAiRouteParam } from '../../lib/aiRouteSelection';
 
 async function parseJson(res: Response) {
   const text = await res.text();
@@ -109,7 +110,7 @@ async function consumeSse(
 export const privateChatApi = {
   getThread: async (token: string, sessionId: string, npcId: string) => {
     const res = await fetch(
-      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}`,
+      withAiRouteParam(`${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}`),
       { headers: authHeaders(token, false) },
     );
     return parseJson(res) as Promise<{
@@ -132,7 +133,7 @@ export const privateChatApi = {
     onEvent: (ev: PrivateChatSseEvent) => void,
   ) => {
     const res = await fetch(
-      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}/message`,
+      withAiRouteParam(`${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}/message`),
       {
         method: 'POST',
         headers: authHeaders(token),
@@ -149,7 +150,7 @@ export const privateChatApi = {
     onEvent: (ev: PrivateChatSseEvent) => void,
   ) => {
     const res = await fetch(
-      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}/regenerate`,
+      withAiRouteParam(`${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}/regenerate`),
       {
         method: 'POST',
         headers: authHeaders(token),
@@ -167,7 +168,7 @@ export const privateChatApi = {
     onEvent: (ev: PrivateChatSseEvent) => void,
   ) => {
     const res = await fetch(
-      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}/continue`,
+      withAiRouteParam(`${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}/continue`),
       {
         method: 'POST',
         headers: authHeaders(token),
@@ -180,7 +181,7 @@ export const privateChatApi = {
   /** 删除指定气泡（index 为 thread.messages 下标） */
   deleteMessage: async (token: string, sessionId: string, npcId: string, index: number) => {
     const res = await fetch(
-      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}/delete-message`,
+      withAiRouteParam(`${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}/delete-message`),
       {
         method: 'POST',
         headers: authHeaders(token),
@@ -202,7 +203,7 @@ export const privateChatApi = {
     onEvent: (ev: PrivateChatSseEvent) => void,
   ) => {
     const res = await fetch(
-      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}/greet`,
+      withAiRouteParam(`${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}/greet`),
       {
         method: 'POST',
         headers: authHeaders(token),
@@ -220,7 +221,7 @@ export const privateChatApi = {
     onEvent: (ev: PrivateChatSseEvent) => void,
   ) => {
     const res = await fetch(
-      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}/nudge`,
+      withAiRouteParam(`${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}/nudge`),
       {
         method: 'POST',
         headers: authHeaders(token),
@@ -233,7 +234,7 @@ export const privateChatApi = {
   /** 清空该角色私聊历史（不碰主线） */
   clearThread: async (token: string, sessionId: string, npcId: string) => {
     const res = await fetch(
-      `${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}`,
+      withAiRouteParam(`${HOST_ADDRESS}/api/visual/session/${encodeURIComponent(sessionId)}/private-chat/${encodeURIComponent(npcId)}`),
       {
         method: 'DELETE',
         headers: authHeaders(token, false),

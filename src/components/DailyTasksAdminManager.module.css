@@ -8,10 +8,10 @@
 .heroCard,
 .card,
 .modalCard {
-    background: #fff;
-    border: 1px solid rgba(222, 191, 166, 0.45);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 45%, transparent);
     border-radius: 22px;
-    box-shadow: 0 18px 40px rgba(181, 135, 92, 0.14);
+    box-shadow: 0 18px 40px color-mix(in srgb, var(--color-highlight) 14%, transparent);
 }
 
 .heroCard {
@@ -27,8 +27,8 @@
     align-items: center;
     padding: 8px 16px;
     border-radius: 999px;
-    background: #e6f4ff;
-    color: #a5602f;
+    background: var(--color-bg);
+    color: var(--color-highlight);
     font-size: 14px;
     font-weight: 700;
 }
@@ -36,13 +36,13 @@
 .heroTitle {
     margin: 18px 0 12px;
     font-size: 24px;
-    color: #2e241d;
+    color: var(--color-text);
 }
 
 .heroDesc,
 .cardDesc,
 .emptyState {
-    color: #705b4b;
+    color: var(--color-text-secondary);
     line-height: 1.7;
 }
 
@@ -67,8 +67,8 @@
     gap: 6px;
     padding: 8px 12px;
     border-radius: 999px;
-    background: #e6f4ff;
-    color: #7c593f;
+    background: var(--color-bg);
+    color: var(--color-highlight);
     font-size: 12px;
     font-weight: 700;
 }
@@ -84,17 +84,17 @@
 .cardTitle {
     margin: 0 0 8px;
     font-size: 18px;
-    color: #2e241d;
+    color: var(--color-text);
 }
 
 .tableWrapper {
     overflow-x: auto;
     overflow-y: hidden;
     border-radius: 16px;
-    border: 1px solid rgba(228, 205, 187, 0.72);
-    background: #fff;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 72%, transparent);
+    background: var(--color-surface);
     scrollbar-width: thin;
-    scrollbar-color: rgba(181, 135, 92, 0.5) rgba(246, 236, 224, 0.5);
+    scrollbar-color: color-mix(in srgb, var(--color-highlight) 50%, transparent) color-mix(in srgb, var(--color-surface) 50%, transparent);
 }
 
 .tableWrapper::-webkit-scrollbar {
@@ -102,22 +102,22 @@
 }
 
 .tableWrapper::-webkit-scrollbar-track {
-    background: #fff;
+    background: var(--color-surface);
     border-radius: 5px;
 }
 
 .tableWrapper::-webkit-scrollbar-thumb {
-    background: #1677ff;
+    background: var(--color-primary);
     border-radius: 5px;
-    border: 2px solid rgba(246, 236, 224, 0.5);
+    border: 2px solid color-mix(in srgb, var(--color-text) 50%, transparent);
 }
 
 .tableWrapper::-webkit-scrollbar-thumb:hover {
-    background: #1677ff;
+    background: var(--color-primary);
 }
 
 .tableWrapper::-webkit-scrollbar-corner {
-    background: #fff;
+    background: var(--color-surface);
 }
 
 .table {
@@ -130,17 +130,17 @@
 .table th,
 .table td {
     padding: 12px 12px;
-    border-bottom: 1px solid rgba(205, 157, 120, 0.16);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-highlight) 16%, transparent);
     text-align: left;
-    color: #3c2f25;
+    color: var(--color-text);
     font-size: 13px;
     vertical-align: middle;
 }
 
 .table th {
     font-size: 12px;
-    color: #6f5a49;
-    background: #fff;
+    color: var(--color-text-secondary);
+    background: var(--color-surface);
     white-space: nowrap;
 }
 
@@ -149,7 +149,7 @@
 }
 
 .table tbody tr:hover {
-    background: #f5faff;
+    background: var(--color-bg);
 }
 
 .taskTitle {
@@ -160,11 +160,11 @@
 
 .taskTitleMain {
     font-weight: 700;
-    color: #2e241d;
+    color: var(--color-text);
 }
 
 .taskTitleSub {
-    color: #7a6758;
+    color: var(--color-text-secondary);
     line-height: 1.5;
 }
 
@@ -172,7 +172,7 @@
 .gameCode {
     font-family: Consolas, 'Courier New', monospace;
     font-size: 12px;
-    color: #6a4d38;
+    color: var(--color-highlight);
     word-break: break-all;
 }
 
@@ -194,18 +194,18 @@
 }
 
 .statusPublished {
-    background: rgba(74, 154, 101, 0.14);
-    color: #2e7b48;
+    background: color-mix(in srgb, var(--color-success) 14%, transparent);
+    color: var(--color-success);
 }
 
 .statusDraft {
-    background: rgba(201, 147, 99, 0.14);
-    color: #9a6234;
+    background: color-mix(in srgb, var(--color-highlight) 14%, transparent);
+    color: var(--color-highlight);
 }
 
 .statusOffline {
-    background: rgba(112, 91, 75, 0.12);
-    color: #705b4b;
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: var(--color-text-secondary);
 }
 
 .actionRow {
@@ -226,20 +226,20 @@
 
 .primaryButton {
     border: none;
-    background: #1677ff;
-    color: #fffaf4;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
 }
 
 .secondaryButton {
-    border: 1px solid rgba(220, 195, 175, 0.88);
-    background: #fff;
-    color: #4c3d31;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 88%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
 }
 
 .dangerButton {
-    border: 1px solid rgba(187, 53, 53, 0.2);
-    background: rgba(187, 53, 53, 0.08);
-    color: #b73a3a;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    color: var(--color-primary);
 }
 
 .primaryButton:disabled,
@@ -252,14 +252,14 @@
 .emptyState {
     padding: 18px;
     border-radius: 16px;
-    background: #fff;
+    background: var(--color-surface);
 }
 
 .modalOverlay {
     position: fixed;
     inset: 0;
     z-index: 1100;
-    background: rgba(48, 34, 24, 0.4);
+    background: color-mix(in srgb, var(--color-surface) 40%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -289,13 +289,13 @@
     gap: 8px;
     font-size: 14px;
     font-weight: 700;
-    color: #4c3d31;
+    color: var(--color-text-secondary);
 }
 
 .fieldHint {
     font-size: 12px;
     font-weight: 500;
-    color: #8b735f;
+    color: var(--color-text-muted);
     line-height: 1.5;
 }
 
@@ -306,9 +306,9 @@
     min-height: 46px;
     padding: 0 14px;
     border-radius: 14px;
-    border: 1px solid rgba(220, 195, 175, 0.88);
-    background: #fff;
-    color: #34281f;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 88%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text);
     font-size: 14px;
     box-sizing: border-box;
     outline: none;
@@ -324,14 +324,14 @@
 .textInput:focus,
 .select:focus,
 .textArea:focus {
-    border-color: rgba(201, 115, 63, 0.74);
-    box-shadow: 0 0 0 4px rgba(201, 115, 63, 0.12);
-    background: #fff;
+    border-color: color-mix(in srgb, var(--color-highlight) 74%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-highlight) 12%, transparent);
+    background: var(--color-surface);
 }
 
 .fieldError {
     font-size: 12px;
-    color: #b73a3a;
+    color: var(--color-primary);
 }
 
 .modalFooter {
@@ -354,15 +354,15 @@
     gap: 8px;
     padding: 8px 12px;
     border-radius: 12px;
-    background: #e6f4ff;
-    border: 1px solid rgba(201, 115, 63, 0.3);
+    background: var(--color-bg);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 30%, transparent);
 }
 
 .gameSearchSelectedTitle {
     flex: 1;
     font-weight: 700;
     font-size: 14px;
-    color: #2e241d;
+    color: var(--color-text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -371,8 +371,8 @@
 .gameSearchSelectedId {
     font-family: Consolas, 'Courier New', monospace;
     font-size: 12px;
-    color: #6a4d38;
-    background: #fff;
+    color: var(--color-highlight);
+    background: var(--color-surface);
     padding: 2px 6px;
     border-radius: 6px;
     flex-shrink: 0;
@@ -386,8 +386,8 @@
     height: 24px;
     border: none;
     border-radius: 50%;
-    background: rgba(112, 91, 75, 0.14);
-    color: #705b4b;
+    background: color-mix(in srgb, var(--color-text) 14%, transparent);
+    color: var(--color-text-secondary);
     font-size: 16px;
     cursor: pointer;
     flex-shrink: 0;
@@ -397,8 +397,8 @@
 }
 
 .gameSearchClearBtn:hover {
-    background: rgba(187, 53, 53, 0.2);
-    color: #b73a3a;
+    background: color-mix(in srgb, var(--color-primary) 20%, transparent);
+    color: var(--color-primary);
 }
 
 .gameSearchInputRow {
@@ -414,9 +414,9 @@
     max-height: 260px;
     overflow-y: auto;
     border-radius: 14px;
-    border: 1px solid rgba(220, 195, 175, 0.88);
-    background: #fff;
-    box-shadow: 0 8px 24px rgba(181, 135, 92, 0.18);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 88%, transparent);
+    background: var(--color-surface);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--color-highlight) 18%, transparent);
 }
 
 .gameSearchItem {
@@ -426,7 +426,7 @@
     padding: 10px 14px;
     cursor: pointer;
     transition: background 0.12s;
-    border-bottom: 1px solid rgba(205, 157, 120, 0.12);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-highlight) 12%, transparent);
 }
 
 .gameSearchItem:last-child {
@@ -434,22 +434,22 @@
 }
 
 .gameSearchItem:hover {
-    background: #f5faff;
+    background: var(--color-bg);
 }
 
 .gameSearchItemSelected {
-    background: #e6f4ff;
+    background: var(--color-bg);
 }
 
 .gameSearchItemSelected:hover {
-    background: #e6f4ff;
+    background: var(--color-bg);
 }
 
 .gameSearchItemTitle {
     flex: 1;
     font-size: 14px;
     font-weight: 600;
-    color: #2e241d;
+    color: var(--color-text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -458,7 +458,7 @@
 .gameSearchItemMeta {
     font-family: Consolas, 'Courier New', monospace;
     font-size: 11px;
-    color: #8b735f;
+    color: var(--color-text-muted);
     flex-shrink: 0;
 }
 

@@ -974,9 +974,9 @@ const StGameCreate: React.FC = () => {
                     title={t('stGameCreate.dragPriority')}
                   >
                     <div className={styles.row2} style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ fontSize: 12, color: '#888' }}>{t('stGameCreate.priority', { index: idx + 1 })}</div>
+                      <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{t('stGameCreate.priority', { index: idx + 1 })}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <button type="button" aria-label={t('stGameCreate.delete')} title={t('stGameCreate.delete')} onClick={() => { const next = entries.filter((_, i) => i !== idx); updateEntries(next); }} style={{ background: 'transparent', border: 'none', color: '#999', fontSize: 16, lineHeight: '1', cursor: 'pointer', padding: '4px 6px' }}>×</button>
+                        <button type="button" aria-label={t('stGameCreate.delete')} title={t('stGameCreate.delete')} onClick={() => { const next = entries.filter((_, i) => i !== idx); updateEntries(next); }} style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', fontSize: 16, lineHeight: '1', cursor: 'pointer', padding: '4px 6px' }}>×</button>
                         <div style={{ cursor: 'grab', userSelect: 'none' }}>☰</div>
                       </div>
                     </div>

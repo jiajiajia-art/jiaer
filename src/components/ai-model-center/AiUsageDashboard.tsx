@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Button,
@@ -35,6 +35,7 @@ import aiModelCenterApi, {
   type AiBillingUsageFilters,
   type AiBillingUsageRow,
   type AiBillingUsageSummary,
+  type AiBillingUserRankingRow,
 } from '../../api/operator/aiModelCenterApi';
 import {
   formatKkMinor,
@@ -46,6 +47,7 @@ import {
 } from '../../lib/aiUsageFormatting';
 import { getApiErrorMessage } from '../../utils/error';
 import styles from './AiUsageDashboard.module.css';
+import { useAdminTheme } from '../admin-shell/adminTheme';
 import { groupTxtDocParseAttempts, type AiBillingUsageDisplayRow } from '../../lib/groupTxtDocParseAttempts';
 
 type PeriodPreset = UsagePreset | 'custom';
@@ -92,6 +94,51 @@ const statusColors: Record<string, string> = {
   cancelled: 'default',
 };
 
+/** 功能注释：用途 / 未扣费原因的中文名（交接文档 5.1、5.4） */
+const SCENE_LABEL: Record<string, string> = {
+  create_text: '创作 · 生文',
+  create_image: '创作 · 生图',
+  play_text: '游玩 · 生文',
+  play_image: '游玩 · 生图',
+  review_text: '审核预览 · 生文',
+  review_image: '审核预览 · 生图',
+  txt_doc_parse: 'TXT 文档解析',
+  unknown: '未记录用途',
+};
+const sceneLabel = (scene?: string | null) => (scene ? SCENE_LABEL[scene] || scene : '未记录');
+
+const NOT_BILLED_LABEL: Record<string, string> = {
+  free_quota: '免费额度',
+  failed_no_charge: '失败不扣费',
+  refunded: '已退款',
+  author_preview: '作者试玩',
+  operator: '运营 / 内部',
+};
+
+/** 功能注释：下钻条件——点排行 / 趋势 / 聚合行后套到调用明细上 */
+type DrillState = {
+  label: string;
+  filters: AiBillingUsageFilters;
+};
+
+/** 功能注释：某一天（YYYY-MM-DD，本地时区）的起止 ISO */
+function dayRange(date: string): { from: string; to: string } | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(date);
+  if (!m) return null;
+  const from = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 0, 0, 0, 0);
+  const to = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 23, 59, 59, 999);
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
+const TraceField: React.FC<{ label: string; value?: React.ReactNode; mono?: boolean }> = ({ label, value, mono }) => (
+  <div className={styles.traceField}>
+    <span className={styles.traceLabel}>{label}</span>
+    {value === undefined || value === null || value === ''
+      ? <span className={styles.traceMissing}>未返回</span>
+      : <span className={mono ? styles.traceMono : styles.traceValue}>{value}</span>}
+  </div>
+);
+
 const StatusTag: React.FC<{ status: string }> = ({ status }) => (
   <Tag color={statusColors[status] || 'default'}>{statusLabels[status] || status}</Tag>
 );
@@ -119,6 +166,7 @@ const AttemptPageSizeSelect: React.FC<{
 );
 
 const AiUsageDashboard: React.FC = () => {
+  const adminTheme = useAdminTheme();
   const [period, setPeriod] = useState<PeriodPreset>('7d');
   const [customRange, setCustomRange] = useState<{ from: string; to: string } | null>(null);
   const [userKeyword, setUserKeyword] = useState('');
@@ -144,6 +192,10 @@ const AiUsageDashboard: React.FC = () => {
   const [summaryError, setSummaryError] = useState('');
   const [aggregateError, setAggregateError] = useState('');
   const [attemptError, setAttemptError] = useState('');
+  const [scene, setScene] = useState('');
+  const [traceKeyword, setTraceKeyword] = useState('');
+  const [drill, setDrill] = useState<DrillState | null>(null);
+  const detailRef = useRef<HTMLDivElement>(null);
 
   const loadSummary = useCallback(async (filters: AiBillingUsageFilters) => {
     setSummaryLoading(true);
@@ -203,8 +255,10 @@ const AiUsageDashboard: React.FC = () => {
       status: status || undefined,
       billedToUser: billedToUser || undefined,
       currencyType: currencyType || undefined,
+      scene: scene || undefined,
+      traceKeyword: traceKeyword.trim() || undefined,
     };
-  }, [billedToUser, currencyType, customRange, gameKeyword, modelId, period, status, userKeyword]);
+  }, [billedToUser, currencyType, customRange, gameKeyword, modelId, period, scene, status, traceKeyword, userKeyword]);
 
   const resolveAggregateFilters = useCallback((page = aggregatePage, pageSize = aggregatePageSize, sortBy = aggregateSortBy, sortOrder = aggregateSortOrder): AiBillingUsageFilters | null => {
     const timeRange = aggregatePeriod === 'custom'
@@ -245,6 +299,7 @@ const AiUsageDashboard: React.FC = () => {
   const query = useCallback(() => {
     const filters = resolveDraftFilters();
     if (!filters || attemptLoading) return;
+    setDrill(null);
     setAppliedFilters(filters);
     setPagination((current) => ({ ...current, page: 1 }));
     void loadAttempts(filters, 1, pagination.pageSize);
@@ -264,15 +319,47 @@ const AiUsageDashboard: React.FC = () => {
     void loadAttempts(appliedFilters, nextPage, pageSize);
   }, [appliedFilters, loadAttempts, pagination.pageSize]);
 
+  /** 功能注释：下钻——用给定条件查明细，并滚到明细区；不改动运营手填的筛选框 */
+  const drillDown = useCallback((label: string, patch: AiBillingUsageFilters) => {
+    const filters: AiBillingUsageFilters = { ...DEFAULT_FILTERS, ...patch };
+    setDrill({ label, filters });
+    setAppliedFilters(filters);
+    setPagination((current) => ({ ...current, page: 1 }));
+    void loadAttempts(filters, 1, pagination.pageSize);
+    requestAnimationFrame(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }, [loadAttempts, pagination.pageSize]);
+
+  const clearDrill = useCallback(() => {
+    setDrill(null);
+    const filters = resolveDraftFilters() || DEFAULT_FILTERS;
+    setAppliedFilters(filters);
+    void loadAttempts(filters, 1, pagination.pageSize);
+  }, [loadAttempts, pagination.pageSize, resolveDraftFilters]);
+
+  const aggregateRange = useMemo(() => (aggregatePeriod === 'custom'
+    ? aggregateCustomRange
+    : resolveUsagePresetRange(aggregatePeriod)), [aggregateCustomRange, aggregatePeriod]);
+
   const overview = summary.overview;
   const unsuccessfulCalls = overview.failedCalls + overview.incompleteCalls + overview.cancelledCalls;
   const successRate = overview.totalCalls > 0
     ? (overview.succeededCalls / overview.totalCalls) * 100
     : 0;
+  const avgCostMicro = overview.totalCalls > 0 ? Math.round(overview.platformCostMicroYuan / overview.totalCalls) : 0;
+  const hasUserCharge = summary.trend.some((row) => typeof row.userChargeMicroYuan === 'number');
   const trendData = useMemo(() => summary.trend.map((row) => ({
     ...row,
     platformCostYuan: Number(formatMicroYuan(row.platformCostMicroYuan)),
+    ...(typeof row.userChargeMicroYuan === 'number' ? {
+      userChargeYuan: Number(formatMicroYuan(row.userChargeMicroYuan)),
+      marginYuan: Number(formatMicroYuan(row.userChargeMicroYuan - row.platformCostMicroYuan)),
+    } : {}),
   })), [summary.trend]);
+  const sceneRows = summary.sceneBreakdown ?? [];
+  const unbilledRows = summary.unbilledByReason ?? [];
+  const userRows = summary.userRanking ?? [];
+  // 功能注释：后端开始返回溯源字段后，才显示「用途」列与用途 / 请求编号筛选，避免出现点了没用的控件
+  const hasTraceData = sceneRows.length > 0 || attempts.some((a) => a.scene || a.clientRequestId || a.traceGroupId);
   const callRanking = useMemo(() => [...summary.modelRanking]
     .sort((a, b) => b.callCount - a.callCount)
     .slice(0, 8)
@@ -339,6 +426,19 @@ const AiUsageDashboard: React.FC = () => {
         <span>{chargeText(row.currencyType, row.billedUnits)}</span>
       </div>,
     },
+    {
+      title: '明细',
+      key: 'drill',
+      width: 88,
+      render: (_, row) => <Button
+        size="small"
+        onClick={() => aggregateRange && drillDown(
+          `作品「${row.gameTitle || row.fileId || '未关联作品'}」· ${row.modelId}`,
+          { ...aggregateRange, gameKeyword: row.fileId || row.gameTitle || undefined, modelId: row.modelId, currencyType: row.currencyType },
+        )}
+        disabled={!aggregateRange}
+      >查看</Button>,
+    },
   ];
 
   const attemptColumns: ColumnsType<AiBillingUsageDisplayRow> = [
@@ -359,6 +459,15 @@ const AiUsageDashboard: React.FC = () => {
         <strong>{row.gameTitle || '未关联游戏'}</strong>
       </div>,
     },
+    ...(hasTraceData ? [{
+      title: '用途',
+      key: 'scene',
+      width: 130,
+      render: (_: unknown, row: AiBillingUsageDisplayRow) => <div className={styles.cellStack}>
+        <strong>{sceneLabel(row.scene)}</strong>
+        {row.feature ? <span>{row.feature}</span> : null}
+      </div>,
+    }] : []),
     {
       title: '模型',
       key: 'model',
@@ -423,13 +532,41 @@ const AiUsageDashboard: React.FC = () => {
     },
   ];
 
+  const userColumns: ColumnsType<AiBillingUserRankingRow> = [
+    { title: '用户', key: 'user', render: (_, row) => <div className={styles.cellStack}><strong>{row.userNickname || row.userCode || row.userId}</strong><span>{row.userCode || row.userId}</span></div> },
+    { title: '调用', dataIndex: 'callCount', key: 'callCount', render: (v) => formatPoints(v) },
+    { title: '平台成本', dataIndex: 'platformCostMicroYuan', key: 'cost', render: (v) => `¥ ${formatMicroYuan(v)}` },
+    { title: '用户扣费', key: 'charge', render: (_, row) => <div className={styles.cellStack}><span>{formatPoints(row.billedPoints)} 织梦豆</span><span>{formatKkMinor(row.billedKkMinor)} KK币</span></div> },
+    { title: '', key: 'drill', width: 72, render: (_, row) => <Button size="small" onClick={() => drillDown(`用户「${row.userNickname || row.userCode || row.userId}」`, { userKeyword: row.userCode || row.userId })}>明细</Button> },
+  ];
+
+  const renderTrace = (row: AiBillingUsageDisplayRow) => (
+    <div className={styles.traceGrid}>
+      <TraceField label="用途（后端复核）" value={row.scene ? sceneLabel(row.scene) : undefined} />
+      <TraceField label="用途（前端原值）" value={row.sceneClient || undefined} mono />
+      <TraceField label="功能点" value={row.feature || undefined} mono />
+      <TraceField label="接口" value={row.endpoint || undefined} mono />
+      <TraceField label="前端请求编号" value={row.clientRequestId || undefined} mono />
+      <TraceField label="任务分组" value={row.traceGroupId || undefined} mono />
+      <TraceField label="后端请求编号" value={row.requestId || undefined} mono />
+      <TraceField label="上游请求编号" value={row.upstreamRequestId || undefined} mono />
+      <TraceField label="作品 / 来源" value={row.fileId ? `${row.fileId}${row.fileIdSource ? ` · ${row.fileIdSource}` : ''}${row.fileIdVerified === false ? ' · 校验未通过' : ''}` : undefined} mono />
+      <TraceField label="线路" value={row.routeId || undefined} mono />
+      <TraceField label="计价版本" value={`#${row.billingVersionId} / 费率 #${row.billingModelRateId}`} mono />
+      <TraceField label="Token 来源" value={row.usageSource || undefined} />
+      <TraceField label="成本公式" value={row.costFormula || undefined} mono />
+      <TraceField label="扣费流水" value={row.ledgerTxnIds?.length ? row.ledgerTxnIds.join('、') : undefined} mono />
+      <TraceField label="未扣费原因" value={row.billedToUser ? '—（已扣费）' : (row.notBilledReason ? NOT_BILLED_LABEL[row.notBilledReason] || row.notBilledReason : undefined)} />
+      <TraceField label="退款" value={row.refundTxnId ? `${row.refundTxnId}${row.refundReason ? ` · ${row.refundReason}` : ''}` : undefined} mono />
+      <TraceField label="会员折扣" value={typeof row.memberDiscountPercent === 'number' ? `${row.memberDiscountPercent}%` : undefined} />
+      <TraceField label="结算状态" value={row.settlementStatus || undefined} />
+      {row.migratedFrom ? <TraceField label="迁移来源" value={row.migratedFrom} mono /> : null}
+    </div>
+  );
+
   return <ConfigProvider locale={zhCN} theme={{
-    token: {
-      colorPrimary: '#654bd6',
-      colorInfo: '#654bd6',
-      borderRadius: 10,
-      controlHeightLG: 44,
-    },
+    ...adminTheme,
+    token: { ...adminTheme.token, borderRadius: 10, controlHeightLG: 44 },
   }}>
     <div className={styles.root}>
       {summaryError ? <Alert type="error" showIcon message={summaryError} action={<Button onClick={() => void loadSummary(DEFAULT_FILTERS)}>重试汇总</Button>} /> : null}
@@ -443,54 +580,107 @@ const AiUsageDashboard: React.FC = () => {
             <Col xs={24} sm={12} xl={6}><Card className={styles.metric}><Statistic title="平台总成本" value={formatMicroYuan(overview.platformCostMicroYuan)} prefix="¥" /></Card></Col>
             <Col xs={24} sm={12} xl={8}><Card className={styles.metric}><Statistic title="用户实际扣除织梦豆" value={formatPoints(overview.billedPoints)} suffix="织梦豆" /></Card></Col>
             <Col xs={24} sm={12} xl={8}><Card className={styles.metric}><Statistic title="用户实际扣除 KK币" value={formatKkMinor(overview.billedKkMinor)} suffix="KK币" /></Card></Col>
-            <Col xs={24} sm={12} xl={8}><Card className={`${styles.metric} ${styles.warningMetric}`}><Statistic title="已产生成本但未向用户扣费" value={formatMicroYuan(overview.unbilledPlatformCostMicroYuan)} prefix="¥" /></Card></Col>
+            <Col xs={24} sm={12} xl={8}><Card className={`${styles.metric} ${styles.warningMetric}`}>
+              <Statistic title="已产生成本但未向用户扣费" value={formatMicroYuan(overview.unbilledPlatformCostMicroYuan)} prefix="¥" />
+              {unbilledRows.length ? <ul className={styles.reasonList}>
+                {unbilledRows.map((r) => <li key={r.reason}>
+                  <span>{NOT_BILLED_LABEL[r.reason] || r.reason}</span>
+                  <span>{formatPoints(r.callCount)} 次 · ¥ {formatMicroYuan(r.platformCostMicroYuan)}</span>
+                </li>)}
+              </ul> : null}
+              <Button size="small" type="link" className={styles.metricLink} onClick={() => drillDown('未向用户扣费的调用', { billedToUser: 'false' })}>查看这些调用</Button>
+            </Card></Col>
+            <Col xs={24} sm={12} xl={8}><Card className={styles.metric}><Statistic title="平均每次调用成本" value={formatMicroYuan(avgCostMicro)} prefix="¥" /></Card></Col>
+            {typeof overview.userOperationCount === 'number' ? <Col xs={24} sm={12} xl={8}><Card className={styles.metric}><Statistic title="用户操作次数（按请求编号去重）" value={overview.userOperationCount} /></Card></Col> : null}
+            {typeof overview.refundedPoints === 'number' || typeof overview.refundedKkMinor === 'number' ? <Col xs={24} sm={12} xl={8}><Card className={styles.metric}>
+              <Statistic title="退款合计" value={`${formatPoints(overview.refundedPoints ?? 0)} 织梦豆 · ${formatKkMinor(overview.refundedKkMinor ?? 0)} KK币`} />
+            </Card></Col> : null}
+            {typeof overview.walletDiffMicroUnits === 'number' ? <Col xs={24} sm={12} xl={8}><Card className={`${styles.metric} ${overview.walletDiffMicroUnits !== 0 ? styles.warningMetric : ''}`}>
+              <Statistic title="钱包核对差额（应为 0）" value={overview.walletDiffMicroUnits} />
+            </Card></Col> : null}
           </Row>
         </section>
 
+        {sceneRows.length ? <section aria-label="按用途拆分" className={styles.section}>
+          <div className={styles.sectionTitle}><h3>按用途</h3><span>点卡片查看该用途的调用明细</span></div>
+          <div className={styles.sceneGrid}>
+            {[...sceneRows].sort((a, b) => b.platformCostMicroYuan - a.platformCostMicroYuan).map((r) => {
+              const share = overview.platformCostMicroYuan > 0 ? (r.platformCostMicroYuan / overview.platformCostMicroYuan) * 100 : 0;
+              return <button key={r.scene} type="button" className={styles.sceneCard} onClick={() => drillDown(`用途「${sceneLabel(r.scene)}」`, { scene: r.scene })}>
+                <span className={styles.sceneName}>{sceneLabel(r.scene)}</span>
+                <span className={styles.sceneCost}>¥ {formatMicroYuan(r.platformCostMicroYuan)}</span>
+                <span className={styles.sceneBar}><span style={{ width: `${Math.min(100, share).toFixed(1)}%` }} /></span>
+                <span className={styles.sceneMeta}>{formatPoints(r.callCount)} 次 · 扣 {formatPoints(r.billedPoints)} 织梦豆 / {formatKkMinor(r.billedKkMinor)} KK币 · 占成本 {share.toFixed(1)}%</span>
+              </button>;
+            })}
+          </div>
+        </section> : null}
         <section className={styles.chartGrid}>
-          <Card title="调用量与平台成本趋势" className={styles.chartCard}>
+          <Card title={hasUserCharge ? '调用量、成本与毛利趋势' : '调用量与平台成本趋势'} className={styles.chartCard} extra={<span className={styles.tableHint}>点某一天查看当天明细</span>}>
             {trendData.length ? <div role="img" aria-label="按日期展示调用次数和平台成本趋势" className={styles.chart}>
               <ResponsiveContainer width="100%" height={280}>
-                <LineChart data={trendData} margin={{ top: 12, right: 8, left: 0, bottom: 4 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e8ebf2" />
-                  <XAxis dataKey="date" tick={{ fill: '#667085', fontSize: 12 }} />
-                  <YAxis yAxisId="calls" allowDecimals={false} tick={{ fill: '#667085', fontSize: 12 }} />
-                  <YAxis yAxisId="cost" orientation="right" tick={{ fill: '#667085', fontSize: 12 }} />
+                <LineChart
+                  data={trendData}
+                  margin={{ top: 12, right: 8, left: 0, bottom: 4 }}
+                  style={{ cursor: 'pointer' }}
+                  onClick={(state) => {
+                    const label = (state as { activeLabel?: string | number } | null)?.activeLabel;
+                    const range = typeof label === 'string' ? dayRange(label) : null;
+                    if (range) drillDown(`日期 ${label}`, range);
+                  }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-text)" />
+                  <XAxis dataKey="date" tick={{ fill: 'var(--color-text-muted)', fontSize: 12 }} />
+                  <YAxis yAxisId="calls" allowDecimals={false} tick={{ fill: 'var(--color-text-muted)', fontSize: 12 }} />
+                  <YAxis yAxisId="cost" orientation="right" tick={{ fill: 'var(--color-text-muted)', fontSize: 12 }} />
                   <ChartTooltip />
                   <Legend />
-                  <Line isAnimationActive={false} yAxisId="calls" type="monotone" dataKey="callCount" name="调用次数" stroke="#654bd6" strokeWidth={2.5} dot={{ r: 3 }} />
-                  <Line isAnimationActive={false} yAxisId="cost" type="monotone" dataKey="platformCostYuan" name="平台成本（元）" stroke="#e0783f" strokeWidth={2.5} dot={{ r: 3 }} />
+                  <Line isAnimationActive={false} yAxisId="calls" type="monotone" dataKey="callCount" name="调用次数" stroke="var(--color-accent)" strokeWidth={2.5} dot={{ r: 3 }} />
+                  <Line isAnimationActive={false} yAxisId="cost" type="monotone" dataKey="platformCostYuan" name="平台成本（元）" stroke="var(--color-highlight)" strokeWidth={2.5} dot={{ r: 3 }} />
+                  {hasUserCharge ? <Line isAnimationActive={false} yAxisId="cost" type="monotone" dataKey="userChargeYuan" name="用户扣费折算（元）" stroke="var(--color-success, #3fb37f)" strokeWidth={2} dot={{ r: 2 }} /> : null}
+                  {hasUserCharge ? <Line isAnimationActive={false} yAxisId="cost" type="monotone" dataKey="marginYuan" name="毛利（元）" stroke="var(--color-primary)" strokeDasharray="5 4" strokeWidth={2} dot={false} /> : null}
                 </LineChart>
               </ResponsiveContainer>
             </div> : <Empty description="暂无趋势数据" />}
           </Card>
-          <Card title="模型调用排行" className={styles.chartCard}>
+          <Card title="模型调用排行" className={styles.chartCard} extra={<span className={styles.tableHint}>点柱子查看明细</span>}>
             {callRanking.length ? <div role="img" aria-label="按模型展示调用次数排行" className={styles.chart}>
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={callRanking} layout="vertical" margin={{ top: 8, right: 12, left: 28, bottom: 4 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e8ebf2" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-text)" />
                   <XAxis type="number" allowDecimals={false} />
-                  <YAxis type="category" dataKey="name" width={108} tick={{ fill: '#475467', fontSize: 12 }} />
+                  <YAxis type="category" dataKey="name" width={108} tick={{ fill: 'var(--color-text-secondary)', fontSize: 12 }} />
                   <ChartTooltip />
-                  <Bar isAnimationActive={false} dataKey="callCount" name="调用次数" fill="#654bd6" radius={[0, 6, 6, 0]} />
+                  <Bar isAnimationActive={false} dataKey="callCount" name="调用次数" fill="var(--color-accent)" radius={[0, 6, 6, 0]} cursor="pointer" onClick={(d) => { const id = (d as { payload?: { modelId?: string } })?.payload?.modelId; if (id) drillDown(`模型 ${id}`, { modelId: id }); }} />
                 </BarChart>
               </ResponsiveContainer>
             </div> : <Empty description="暂无排行数据" />}
           </Card>
-          <Card title="模型成本排行" className={styles.chartCard}>
+          <Card title="模型成本排行" className={styles.chartCard} extra={<span className={styles.tableHint}>点柱子查看明细</span>}>
             {costRanking.length ? <div role="img" aria-label="按模型展示平台成本排行" className={styles.chart}>
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={costRanking} layout="vertical" margin={{ top: 8, right: 12, left: 28, bottom: 4 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e8ebf2" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-text)" />
                   <XAxis type="number" />
-                  <YAxis type="category" dataKey="name" width={108} tick={{ fill: '#475467', fontSize: 12 }} />
+                  <YAxis type="category" dataKey="name" width={108} tick={{ fill: 'var(--color-text-secondary)', fontSize: 12 }} />
                   <ChartTooltip />
-                  <Bar isAnimationActive={false} dataKey="platformCostYuan" name="平台成本（元）" fill="#e0783f" radius={[0, 6, 6, 0]} />
+                  <Bar isAnimationActive={false} dataKey="platformCostYuan" name="平台成本（元）" fill="var(--color-highlight)" radius={[0, 6, 6, 0]} cursor="pointer" onClick={(d) => { const id = (d as { payload?: { modelId?: string } })?.payload?.modelId; if (id) drillDown(`模型 ${id}`, { modelId: id }); }} />
                 </BarChart>
               </ResponsiveContainer>
             </div> : <Empty description="暂无排行数据" />}
           </Card>
         </section>
+
+        {userRows.length ? <Card title="用户排行" className={styles.tableCard} extra={<span className={styles.tableHint}>按平台成本排序 · 点「明细」查看该用户的调用</span>}>
+          <Table<AiBillingUserRankingRow>
+            rowKey="userId"
+            size="small"
+            columns={userColumns}
+            dataSource={[...userRows].sort((a, b) => b.platformCostMicroYuan - a.platformCostMicroYuan).slice(0, 10)}
+            pagination={false}
+            scroll={{ x: 640 }}
+          />
+        </Card> : null}
 
         <Card title="聚合筛选" className={`${styles.filterCard} ${styles.aggregateFilterCard}`}>
           <div className={`${styles.filters} ${styles.aggregateFilters}`}>
@@ -626,16 +816,32 @@ const AiUsageDashboard: React.FC = () => {
             { label: 'KK币', value: 'kk' },
             { label: '织梦豆', value: 'points' },
           ]} /></label>
+          {hasTraceData ? <label className={`${styles.field} ${styles.statusFilterField}`}><span>用途</span><Select size="middle" value={scene} onChange={setScene} options={[
+            { label: '全部用途', value: '' },
+            ...Object.entries(SCENE_LABEL).map(([value, label]) => ({ label, value })),
+          ]} /></label> : null}
+          {hasTraceData ? <label className={styles.field}><span>请求编号 / 任务分组</span><Input size="middle" allowClear value={traceKeyword} onChange={(event) => setTraceKeyword(event.target.value)} placeholder="clientRequestId / traceGroupId" /></label> : null}
           <Button type="primary" className={`${styles.queryButton} ${styles.detailQueryButton}`} onClick={query} loading={attemptLoading} disabled={period === 'custom' && !customRange}>查询</Button>
         </div>
       </Card>
 
+      <div ref={detailRef} className={styles.detailAnchor} />
+      {drill ? <div className={styles.drillBar} role="status">
+        <span className={styles.drillLabel}>正在查看</span>
+        <Tag closable onClose={(e) => { e.preventDefault(); clearDrill(); }} className={styles.drillTag}>{drill.label}</Tag>
+        <span className={styles.tableHint}>来自上方图表 / 聚合的下钻，时间范围默认近 7 天（聚合行按聚合时间）</span>
+      </div> : null}
       {attemptError ? <Alert type="error" showIcon message={attemptError} action={<Button onClick={() => void loadAttempts(appliedFilters, pagination.page, pagination.pageSize)}>重试明细</Button>} /> : null}
       <Card title="调用明细" className={styles.tableCard} extra={<span className={styles.tableHint}>TXT 文档解析按任务汇总，其它调用按上游尝试展示 · 时间倒序</span>}>
         <Table<AiBillingUsageDisplayRow>
           rowKey="id"
           columns={attemptColumns}
           dataSource={displayAttempts}
+          expandable={{
+            expandedRowRender: renderTrace,
+            rowExpandable: (row) => !row.isTxtDocParseSummary,
+            columnTitle: '溯源',
+          }}
           loading={attemptLoading}
           scroll={{ x: 1720 }}
           locale={{ emptyText: <Empty description="暂无符合条件的调用明细" /> }}

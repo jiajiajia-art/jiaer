@@ -2,7 +2,7 @@
  * Funloom 全局 Toast 皮肤：珊瑚红点缀卡片，替代 react-hot-toast 默认白底红叉。
  */
 .funloom-toast {
-  --funloom-toast-accent: #fb4655;
+  --funloom-toast-accent: var(--color-primary-light);
   display: flex !important;
   align-items: flex-start !important;
   gap: 12px !important;
@@ -10,14 +10,14 @@
   min-width: 260px !important;
   padding: 14px 16px 14px 14px !important;
   border-radius: 12px !important;
-  border: 1px solid rgba(224, 61, 75, 0.14) !important;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 14%, transparent) !important;
   background:
-    linear-gradient(180deg, #fff8f8 0%, #ffffff 42%) padding-box,
-    linear-gradient(135deg, rgba(251, 70, 85, 0.55), rgba(255, 123, 87, 0.25)) border-box !important;
+    linear-gradient(180deg, var(--color-surface) 0%, var(--color-surface) 42%) padding-box,
+    linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 55%, transparent), color-mix(in srgb, var(--color-primary-light) 25%, transparent)) border-box !important;
   box-shadow:
-    0 12px 36px rgba(45, 18, 24, 0.14),
-    0 2px 0 rgba(255, 255, 255, 0.7) inset !important;
-  color: #1a1d21 !important;
+    0 12px 36px color-mix(in srgb, var(--color-primary) 14%, transparent),
+    0 2px 0 color-mix(in srgb, var(--color-surface) 70%, transparent) inset !important;
+  color: var(--color-text) !important;
   font-size: 15px !important;
   font-weight: 500 !important;
   line-height: 1.55 !important;
@@ -45,7 +45,7 @@
   bottom: 10px;
   width: 4px;
   border-radius: 0 4px 4px 0;
-  background: linear-gradient(180deg, #ff7b57 0%, var(--funloom-toast-accent) 100%);
+  background: linear-gradient(180deg, var(--color-primary-light) 0%, var(--funloom-toast-accent) 100%);
 }
 
 .funloom-toast {
@@ -55,24 +55,24 @@
 
 /* 成功 / 错误图标色 */
 .funloom-toast-success {
-  --funloom-toast-accent: #2f9d6a;
-  border-color: rgba(47, 157, 106, 0.18) !important;
+  --funloom-toast-accent: var(--color-success);
+  border-color: color-mix(in srgb, var(--color-success) 18%, transparent) !important;
   background:
-    linear-gradient(180deg, #f4fff8 0%, #ffffff 42%) padding-box,
-    linear-gradient(135deg, rgba(47, 157, 106, 0.4), rgba(120, 200, 160, 0.2)) border-box !important;
+    linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface) 42%) padding-box,
+    linear-gradient(135deg, color-mix(in srgb, var(--color-success) 40%, transparent), color-mix(in srgb, var(--color-success) 20%, transparent)) border-box !important;
 }
 
 .funloom-toast-error {
-  --funloom-toast-accent: #fb4655;
+  --funloom-toast-accent: var(--color-primary-light);
 }
 
 .funloom-toast-blank,
 .funloom-toast-loading {
-  --funloom-toast-accent: #c9a27a;
-  border-color: rgba(182, 155, 116, 0.28) !important;
+  --funloom-toast-accent: var(--color-highlight);
+  border-color: color-mix(in srgb, var(--color-highlight) 28%, transparent) !important;
   background:
-    linear-gradient(180deg, #fffaf3 0%, #ffffff 42%) padding-box,
-    linear-gradient(135deg, rgba(201, 162, 122, 0.45), rgba(255, 220, 180, 0.2)) border-box !important;
+    linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface) 42%) padding-box,
+    linear-gradient(135deg, color-mix(in srgb, var(--color-highlight) 45%, transparent), color-mix(in srgb, var(--color-highlight) 20%, transparent)) border-box !important;
 }
 
 @keyframes funloomToastIn {

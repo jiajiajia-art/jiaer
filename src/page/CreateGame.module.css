@@ -3,14 +3,14 @@
     width: 100%;
     max-width: none;
     margin: 0;
-    background: #000000;
-    color: #FFFFFF;
+    background: var(--color-bg);
+    color: var(--color-text);
 }
 
 .gameStatsWrapper {
     min-height: 100vh;
     margin-bottom: 0;
-    background: #000000;
+    background: var(--color-bg);
 }
 
 .detailLoading,
@@ -18,7 +18,7 @@
     width: 100%;
     text-align: center;
     padding: 120px 16px 40px;
-    color: #FF8A9A;
+    color: var(--color-primary-fg);
     font-size: 18px;
 }
 

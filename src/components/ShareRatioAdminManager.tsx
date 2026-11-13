@@ -262,7 +262,7 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
                                                             max="100"
                                                             step="0.1"
                                                         />
-                                                        <span style={{ fontSize: '14px', color: '#705b4b' }}>%</span>
+                                                        <span style={{ fontSize: '14px', color: 'var(--color-text-secondary)' }}>%</span>
                                                     </div>
                                                 ) : (
                                                     <>
@@ -280,7 +280,7 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
                                                     {game.isPublic ? '已发布' : '未发布'}
                                                 </span>
                                             </td>
-                                            <td style={{ fontSize: '13px', color: '#705b4b' }}>
+                                            <td style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
                                                 {formatTime(game.createdAt)}
                                             </td>
                                             <td>

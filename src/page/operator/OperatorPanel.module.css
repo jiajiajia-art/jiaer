@@ -10,19 +10,19 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .table th,
 .table td {
   padding: 12px 14px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
   text-align: left;
   font-size: 14px;
 }
 
 .table th {
-  color: #666;
+  color: var(--color-text-secondary);
   font-weight: 600;
 }
 
@@ -50,21 +50,21 @@
 }
 
 .sortableHeader:hover {
-  color: var(--admin-accent-strong, #0958d9);
+  color: var(--admin-accent-strong, var(--color-primary));
 }
 
 .sortableHeaderActive {
-  color: var(--admin-accent-strong, #0958d9);
+  color: var(--admin-accent-strong, var(--color-primary));
 }
 
 .sortIconMuted {
-  color: #bbb;
+  color: var(--color-text-secondary);
   font-size: 18px;
   line-height: 1;
 }
 
 .sortIconActive {
-  color: var(--admin-accent-strong, #0958d9);
+  color: var(--admin-accent-strong, var(--color-primary));
   font-size: 18px;
   line-height: 1;
   font-weight: 700;
@@ -73,7 +73,7 @@
 .linkLikeButton {
   border: none;
   background: transparent;
-  color: var(--admin-accent, #1677ff);
+  color: var(--admin-accent, var(--color-primary));
   cursor: pointer;
   padding: 0;
 }
@@ -88,12 +88,12 @@
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 8px;
-  color: #777;
+  color: var(--color-text-muted);
   font-size: 13px;
 }
 
 .emptyState {
   padding: 24px;
   text-align: center;
-  color: #777;
+  color: var(--color-text-muted);
 }

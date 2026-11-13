@@ -13,6 +13,7 @@ import {
 import { getApiErrorMessage } from '../utils/error';
 import AdminManualAdjustmentHistory from './AdminManualAdjustmentHistory';
 import styles from './DiamondAdminManager.module.css';
+import OverseasPricingAdminManager from './admin/OverseasPricingAdminManager';
 
 type ApiErrorData = {
   code?: string;
@@ -210,6 +211,7 @@ const DiamondAdminManager: React.FC = () => {
 
   return (
     <div className={styles.panelStack}>
+      <OverseasPricingAdminManager />
       <div className={styles.managementGrid}>
         <section className={styles.card}>
           <div className={styles.cardHeader}>

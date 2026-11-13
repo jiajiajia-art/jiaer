@@ -263,7 +263,7 @@ const InteractWithNpcModal: React.FC<InteractWithNpcModalProps> = ({
           className={styles.mainContent}
           style={{
             position: 'relative',
-            backgroundColor: '#000',
+            backgroundColor: 'var(--color-bg)',
           }}
         >
           {!isTextMode && (

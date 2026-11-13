@@ -3,10 +3,12 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
+// 业务模块有无后缀 / 目录导入（'../i18n'），先注册测试解析钩子再动态加载
+await import('./_tsResolve.mjs');
+const {
   getApiErrorMessage,
   sanitizeUpstreamLlmErrorMessage,
-} from '../src/utils/error.ts';
+} = await import('../src/utils/error.ts');
 
 test('sanitizeUpstreamLlmErrorMessage_额度不足友好文案', () => {
   const raw =

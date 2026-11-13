@@ -2,8 +2,8 @@
 
 .pageRoot {
   min-height: 100vh;
-  background: #0b0b0c;
-  color: #ffffff;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .main {
@@ -34,7 +34,7 @@
   border: none;
   border-radius: 999px;
   background: transparent;
-  color: #ffffff;
+  color: var(--color-text);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -59,8 +59,8 @@
 
 .profileCard,
 .card {
-  background: #1a1a1a;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
   border-radius: 16px;
 }
 
@@ -76,7 +76,7 @@
   height: 48px;
   border-radius: 999px;
   object-fit: cover;
-  background: #2a2a2c;
+  background: var(--color-surface-2);
   flex-shrink: 0;
 }
 
@@ -89,7 +89,7 @@
 .accountId {
   margin: 4px 0 0;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--color-text-muted);
 }
 
 .card {
@@ -112,14 +112,14 @@
 
 .cardCount {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--color-text-muted);
 }
 
 .bodyText {
   margin: 0;
   font-size: 14px;
   line-height: 1.6;
-  color: rgba(255, 255, 255, 0.88);
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -128,7 +128,7 @@
   margin: 8px 0 0;
   font-size: 13px;
   line-height: 1.55;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--color-text-secondary);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -140,13 +140,13 @@
   margin-top: 12px;
   padding: 4px 8px;
   border-radius: 6px;
-  background: #2a2a2c;
+  background: var(--color-surface-2);
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--color-text-secondary);
 }
 
 .statusValue {
-  color: rgba(255, 255, 255, 0.88);
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
 }
 
 .footer {
@@ -157,7 +157,7 @@
   display: flex;
   justify-content: center;
   padding: 10px 16px 12px;
-  background: linear-gradient(to top, #0b0b0c 70%, rgba(11, 11, 12, 0));
+  background: linear-gradient(to top, var(--color-bg) 70%, transparent);
   pointer-events: none;
 }
 
@@ -178,7 +178,7 @@
   font-size: 12px;
   line-height: 1.45;
   letter-spacing: 0.01em;
-  color: rgba(255, 210, 170, 0.72);
+  color: color-mix(in srgb, var(--color-highlight) 72%, transparent);
 }
 
 .footerHintMuted {
@@ -187,7 +187,7 @@
   text-align: center;
   font-size: 13px;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--color-text-muted);
 }
 
 .appealBtn {
@@ -196,23 +196,23 @@
   min-width: 220px;
   padding: 12px 28px;
   border-radius: 999px;
-  border: 1px solid #8e2135;
-  background: #8e2135;
-  color: #ffffff;
+  border: 1px solid var(--color-primary-bold);
+  background: var(--color-primary-bold);
+  color: var(--color-on-primary);
   font-size: 15px;
   font-weight: 650;
   cursor: pointer;
 }
 
 .appealBtn:hover:not(:disabled) {
-  background: #a8283c;
-  border-color: #a8283c;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .appealBtn:disabled {
-  background: #2a2a2c;
+  background: var(--color-surface-2);
   border-color: transparent;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--color-text-muted);
   cursor: not-allowed;
 }
 
@@ -221,11 +221,11 @@
   margin: 32px 8px;
   text-align: center;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-secondary);
 }
 
 .error {
-  color: #ff8a9a;
+  color: var(--color-primary-fg);
 }
 
 @media (min-width: 769px) {

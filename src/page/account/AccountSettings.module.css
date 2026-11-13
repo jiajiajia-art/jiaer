@@ -1,11 +1,11 @@
 .pageRoot {
-    --set-bg: #000000;
-    --set-surface: #1C1C1E;
-    --set-label: #8E8E93;
-    --set-value: #FFFFFF;
-    --set-accent: #A8283C;
-    --set-edge: rgba(255, 255, 255, 0.1);
-    --set-focus: rgba(168, 40, 60, 0.55);
+    --set-bg: var(--color-bg);
+    --set-surface: var(--color-surface);
+    --set-label: var(--color-text-muted);
+    --set-value: var(--color-text);
+    --set-accent: var(--color-primary);
+    --set-edge: color-mix(in srgb, var(--color-text) 10%, transparent);
+    --set-focus: color-mix(in srgb, var(--color-primary) 55%, transparent);
     width: 100%;
     min-height: 100vh;
     max-width: 720px;
@@ -38,7 +38,7 @@
     background: transparent;
     cursor: pointer;
     padding: 0;
-    color: #ffffff;
+    color: var(--color-text);
     border-radius: 10px;
 }
 
@@ -55,8 +55,8 @@
     display: block;
     width: 10px;
     height: 10px;
-    border-left: 2px solid #ffffff;
-    border-bottom: 2px solid #ffffff;
+    border-left: 2px solid var(--color-text);
+    border-bottom: 2px solid var(--color-text);
     transform: rotate(45deg);
     margin-left: 4px;
 }
@@ -105,11 +105,11 @@
 }
 
 .bannerBandEmpty {
-    background: #8E8E93;
+    background: var(--color-text-muted);
 }
 
 .bannerBandFilled {
-    background-color: #2c2c2e;
+    background-color: var(--color-surface-2);
 }
 
 .bannerActions {
@@ -132,8 +132,8 @@
     padding: 0 12px;
     border: none;
     border-radius: 10px;
-    background: rgba(28, 28, 30, 0.72);
-    color: #ffffff;
+    background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
+    color: var(--color-on-media);
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
@@ -145,7 +145,7 @@
 }
 
 .uploadCoverBtn:hover:not(:disabled) {
-    background: rgba(28, 28, 30, 0.9);
+    background: color-mix(in srgb, var(--color-surface) 90%, transparent);
 }
 
 .uploadCoverBtn:disabled {
@@ -204,8 +204,8 @@
     border-radius: 50%;
     object-fit: cover;
     display: block;
-    border: 2px solid rgba(255, 255, 255, 0.12);
-    background: #2c2c2e;
+    border: 2px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    background: var(--color-surface-2);
     box-sizing: border-box;
 }
 
@@ -213,7 +213,7 @@
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.45);
+    background: color-mix(in srgb, var(--color-shadow) 45%, transparent);
 }
 
 .avatarCameraBadge {
@@ -226,12 +226,12 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #ffffff;
-    color: #3a3a3c;
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
     font-size: 14px;
     border: 2px solid var(--set-bg);
     pointer-events: none;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 1px 4px color-mix(in srgb, var(--color-shadow) 35%, transparent);
 }
 
 .identity {
@@ -285,7 +285,7 @@
 
 .editNameBtn:hover {
     color: var(--set-value);
-    background: rgba(255, 255, 255, 0.06);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .editNameBtn:focus-visible {
@@ -334,8 +334,8 @@
     padding: 0 12px;
     border-radius: 12px;
     border: 1px solid var(--set-edge);
-    background: #111111;
-    color: rgba(255, 255, 255, 0.72);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
     font: inherit;
     font-size: 15px;
     font-weight: 500;
@@ -344,15 +344,15 @@
 }
 
 .genderOptionMale.genderOptionActive {
-    border-color: rgba(90, 160, 255, 0.55);
-    background: rgba(90, 160, 255, 0.12);
-    color: #ffffff;
+    border-color: color-mix(in srgb, var(--color-info) 55%, transparent);
+    background: color-mix(in srgb, var(--color-info) 12%, transparent);
+    color: var(--color-text);
 }
 
 .genderOptionFemale.genderOptionActive {
-    border-color: rgba(255, 120, 160, 0.55);
-    background: rgba(255, 120, 160, 0.12);
-    color: #ffffff;
+    border-color: color-mix(in srgb, var(--color-primary-light) 55%, transparent);
+    background: color-mix(in srgb, var(--color-primary-light) 12%, transparent);
+    color: var(--color-text);
 }
 
 .genderOption:disabled {
@@ -398,7 +398,7 @@
     min-height: 40px;
     font-size: 16px;
     line-height: 1.55;
-    color: rgba(255, 255, 255, 0.78);
+    color: color-mix(in srgb, var(--color-text) 78%, transparent);
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
@@ -436,7 +436,7 @@
     padding: 12px;
     border-radius: 12px;
     border: 1px solid var(--set-edge);
-    background: #111111;
+    background: var(--color-surface);
     color: var(--set-value);
     font: inherit;
     font-size: 14px;
@@ -449,8 +449,8 @@
 
 .bioInput:focus {
     outline: none;
-    border-color: rgba(168, 40, 60, 0.65);
-    box-shadow: 0 0 0 3px rgba(168, 40, 60, 0.18);
+    border-color: color-mix(in srgb, var(--color-primary) 65%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
 .bioFooter {
@@ -473,7 +473,7 @@
 }
 
 .charCountWarn {
-    color: #ff8a9a;
+    color: var(--color-primary-fg);
 }
 
 .textBtn {
@@ -487,7 +487,7 @@
 }
 
 .textBtn:hover:not(:disabled) {
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .textBtn:disabled {
@@ -506,7 +506,7 @@
     font-weight: 600;
     cursor: pointer;
     background: var(--set-accent);
-    color: #ffffff;
+    color: var(--color-on-primary);
 }
 
 .primaryBtn:hover:not(:disabled) {
@@ -599,7 +599,7 @@
     width: 46px;
     height: 28px;
     border-radius: 999px;
-    background: #3a3a3c;
+    background: var(--color-surface-2);
     position: relative;
     pointer-events: none;
 }
@@ -612,7 +612,7 @@
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    background: #ffffff;
+    background: var(--color-surface);
     transition: transform 0.18s ease;
 }
 
@@ -628,9 +628,9 @@
     border-radius: 16px;
     background: linear-gradient(
         90deg,
-        #1c1c1e 0%,
-        #2a2a2c 45%,
-        #1c1c1e 100%
+        var(--color-surface) 0%,
+        var(--color-surface-2) 45%,
+        var(--color-surface) 100%
     );
     background-size: 200% 100%;
     animation: shimmer 1.2s ease-in-out infinite;

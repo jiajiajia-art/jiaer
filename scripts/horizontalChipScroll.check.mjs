@@ -70,7 +70,7 @@ test('Categories_应使用推荐内容玩法文案与卡外标题布局', () => 
   assert.match(tsx, /<Navbar\s*\/>/);
   assert.doesNotMatch(tsx, /filtersCardHead/);
   assert.match(css, /\.filterSection\s*\{[\s\S]*?flex-direction:\s*row/);
-  assert.match(css, /\.tagChipActive\s*\{[^}]*background:\s*#8E2135/);
+  assert.match(css, /\.tagChipActive\s*\{[^}]*background:\s*(?:#8E2135|var\(--|color-mix\()/);
   assert.match(zh, /"pageTitle":\s*"推荐内容"/);
   assert.match(zh, /"pageTitles"[\s\S]*"hot":\s*"最热推荐"/);
   assert.match(zh, /"mode":\s*"玩法"/);

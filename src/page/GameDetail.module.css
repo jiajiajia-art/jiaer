@@ -4,15 +4,15 @@
     --game-detail-shell-max: var(--app-desktop-shell-max);
     --game-detail-gutter: var(--app-desktop-gutter);
     /* 功能注释：平台酒红皮肤；效果图结构对齐 SVG，色值走皮肤变量 */
-    --primary: #A8283C;
-    --primary-light: #C23A50;
-    --primary-dark: #8E2135;
-    --detail-surface: #0B0B0D;
-    --detail-card: #1C1C1C;
-    --detail-chip: #252525;
-    --detail-border: #3B3B43;
-    --detail-muted: #A1A1AB;
-    --detail-star: #F5C842;
+    --primary: var(--color-primary);
+    --primary-light: var(--color-primary);
+    --primary-dark: var(--color-primary-bold);
+    --detail-surface: var(--color-bg);
+    --detail-card: var(--color-surface);
+    --detail-chip: var(--color-surface-2);
+    --detail-border: var(--color-border);
+    --detail-muted: var(--color-text-secondary);
+    --detail-star: var(--color-highlight);
     min-height: 100vh;
     max-width: none;
     width: 100%;
@@ -22,7 +22,7 @@
     background: var(--detail-surface);
     position: relative;
     padding-top: 0;
-    color: #F5F5F7;
+    color: var(--color-text);
 }
 
 /* 功能注释：顶栏叠在封面上，黑底透明度 0.2，透出封面图 */
@@ -33,12 +33,12 @@
     right: 0;
     z-index: 20;
     padding: 0.25rem 0;
-    color: #F5F5F7;
+    color: var(--color-text);
     max-width: none;
     width: 100%;
     margin: 0;
     pointer-events: none;
-    background: rgba(0, 0, 0, 0.2);
+    background: color-mix(in srgb, var(--color-text) 20%, transparent);
     border-bottom: none;
 }
 
@@ -64,10 +64,10 @@
     height: 2.45rem;
     min-width: 2.45rem;
     min-height: 2.45rem;
-    background: #141417;
-    border: 0.5px solid #2A2A2E;
+    background: var(--color-surface);
+    border: 0.5px solid var(--color-border);
     border-radius: 999px;
-    color: #F5F5F7;
+    color: var(--color-text);
     cursor: pointer;
     flex-shrink: 0;
     pointer-events: auto;
@@ -105,7 +105,7 @@
     justify-content: center;
     gap: 1.25rem;
     padding: 2.5rem 1.25rem;
-    background: #000000;
+    background: var(--color-bg);
 }
 
 .loadingContainer,
@@ -122,7 +122,7 @@
 .loadingSpinner {
     width: 3rem;
     height: 3rem;
-    border: 0.25rem solid rgba(224, 61, 75, 0.1);
+    border: 0.25rem solid color-mix(in srgb, var(--color-primary) 10%, transparent);
     border-top-color: var(--primary);
     border-radius: 50%;
     animation: spinnerRotate 1s linear infinite;
@@ -136,17 +136,17 @@
 
 .errorContainer p {
     font-size: 1.1rem;
-    color: #8E8E93;
+    color: var(--color-text-muted);
 }
 
 .backButton {
     padding: 0.625rem 1.25rem;
-    background: #8E2135;
+    background: var(--color-primary-bold);
     border: none;
     border-radius: 999px;
     font-size: 0.9rem;
     font-weight: 600;
-    color: #fff;
+    color: var(--color-on-primary);
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -166,7 +166,7 @@
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    background-color: #1a1a1a;
+    background-color: var(--color-surface);
     z-index: 0;
     margin: 0;
     display: flex;
@@ -181,10 +181,10 @@
     /* 功能注释：顶部不再压暗，避免像顶栏底；底部仍渐变保证标题可读 */
     background: linear-gradient(
         180deg,
-        rgba(0, 0, 0, 0) 0%,
-        rgba(0, 0, 0, 0) 28%,
-        rgba(0, 0, 0, 0.55) 72%,
-        #000000 100%
+        transparent 0%,
+        transparent 28%,
+        color-mix(in srgb, var(--color-shadow) 55%, transparent) 72%,
+        var(--color-bg) 100%
     );
     pointer-events: none;
     z-index: 1;
@@ -214,8 +214,8 @@
     padding: 0.28rem 0.72rem;
     border-radius: 999px;
     background: var(--detail-chip);
-    border: 1px solid #3B3B3B;
-    color: #F0F0F2;
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
     font-size: 0.75rem;
     font-weight: 500;
     line-height: 1.2;
@@ -233,7 +233,7 @@
     margin: 0;
     font-size: clamp(1.55rem, 5vw, 1.85rem);
     font-weight: 700;
-    color: #FFFFFF;
+    color: var(--color-text);
     line-height: 1.25;
     letter-spacing: -0.02em;
 }
@@ -245,8 +245,8 @@
     padding: 0.28rem 0.55rem;
     border-radius: 0.5rem;
     /* 功能注释：效果图酒红描边 + 金星分值 */
-    background: rgba(168, 40, 60, 0.15);
-    border: 1px solid rgba(168, 40, 60, 0.4);
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     color: var(--detail-star);
@@ -299,7 +299,7 @@
 }
 
 .heroMetaRowClickable:hover .heroMeta {
-    color: rgba(255, 255, 255, 0.92);
+    color: color-mix(in srgb, var(--color-text) 92%, transparent);
 }
 
 .heroAuthorAvatar {
@@ -308,15 +308,15 @@
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
-    background: #2C2C2E;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+    background: var(--color-surface-2);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 12%, transparent);
 }
 
 .heroMeta {
     margin: 0;
     font-size: 0.875rem;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.88);
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
     line-height: 1.4;
     min-width: 0;
     overflow: hidden;
@@ -355,7 +355,7 @@
 
 .followBtnIdle {
     background: var(--primary);
-    color: #ffffff;
+    color: var(--color-on-primary);
     border-color: var(--primary);
     border-radius: 0.5rem;
     height: 2rem;
@@ -369,25 +369,25 @@
 }
 
 .followBtnActive {
-    background: rgba(44, 44, 46, 0.72);
-    color: rgba(255, 255, 255, 0.78);
-    border-color: rgba(255, 255, 255, 0.16);
+    background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
+    color: color-mix(in srgb, var(--color-on-media) 78%, transparent);
+    border-color: color-mix(in srgb, var(--color-text) 16%, transparent);
 }
 
 .followBtnActive:hover {
-    background: rgba(44, 44, 46, 0.88);
-    color: #ffffff;
+    background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+    color: var(--color-text);
 }
 
 /* 功能注释：已屏蔽 / 无法关注 — 只读态，弱化对比 */
 .followBtnMuted {
-    background: rgba(0, 0, 0, 0.28);
-    color: rgba(255, 255, 255, 0.58);
-    border-color: rgba(255, 255, 255, 0.14);
+    background: color-mix(in srgb, var(--color-text) 28%, transparent);
+    color: var(--color-text-secondary);
+    border-color: color-mix(in srgb, var(--color-text) 14%, transparent);
 }
 
 .followBtn:focus-visible {
-    outline: 2px solid rgba(255, 255, 255, 0.45);
+    outline: 2px solid color-mix(in srgb, var(--color-text) 45%, transparent);
     outline-offset: 2px;
 }
 
@@ -439,7 +439,7 @@
     font-size: 1rem;
     font-weight: 600;
     line-height: 1.3;
-    color: #F5F5F7;
+    color: var(--color-text);
     pointer-events: none;
     text-shadow: none;
     white-space: nowrap;
@@ -451,7 +451,7 @@
 .heroSectionCoverOnly {
     min-height: 13.75rem;
     height: min(36vh, 15.5rem);
-    background-color: #0B0B0D;
+    background-color: var(--color-bg);
     overflow: hidden;
 }
 
@@ -464,18 +464,18 @@
     top: 50%;
     transform: translateY(-35%);
     border-radius: 50%;
-    background: rgba(168, 40, 60, 0.22);
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
     pointer-events: none;
     z-index: 0;
 }
 
 .heroSectionCoverOnly::after {
     background:
-        radial-gradient(circle at 70% 55%, rgba(142, 33, 53, 0.28) 0%, transparent 42%),
+        radial-gradient(circle at 70% 55%, color-mix(in srgb, var(--color-primary) 28%, transparent) 0%, transparent 42%),
         linear-gradient(
             180deg,
-            rgba(11, 11, 13, 0.15) 0%,
-            rgba(11, 11, 13, 0.35) 55%,
+            color-mix(in srgb, var(--color-text) 15%, transparent) 0%,
+            color-mix(in srgb, var(--color-surface) 35%, transparent) 55%,
             var(--detail-surface) 100%
         );
 }
@@ -490,14 +490,14 @@
     align-items: center;
     padding: 0.28rem 0.55rem;
     border-radius: 0.5rem;
-    background: rgba(168, 40, 60, 0.88);
-    border: 1px solid rgba(168, 40, 60, 0.45);
-    color: #FFFFFF;
+    background: var(--color-primary);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
+    color: var(--color-on-primary);
     font-size: 0.72rem;
     font-weight: 600;
     line-height: 1.2;
     pointer-events: none;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 35%, transparent);
 }
 
 .titleBlock {
@@ -513,8 +513,8 @@
     margin: 0 0 0.65rem;
     padding: 0.9rem 1rem;
     border-radius: 11.5px;
-    background: #141416;
-    border: 1px solid #464650;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
 }
 
 .updateLogCardHeader {
@@ -538,8 +538,8 @@
     align-items: center;
     padding: 0.12rem 0.45rem;
     border-radius: 0.3rem;
-    background: rgba(168, 40, 60, 0.22);
-    color: #F16C83;
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+    color: var(--color-primary-fg);
     font-size: 0.7rem;
     font-weight: 600;
     line-height: 1.2;
@@ -547,7 +547,7 @@
 
 .updateLogTime {
     font-size: 0.75rem;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     line-height: 1.2;
 }
 
@@ -557,7 +557,7 @@
     padding: 0;
     border: none;
     background: transparent;
-    color: #F16C83;
+    color: var(--color-primary-fg);
     font-size: 0.8125rem;
     font-weight: 500;
     cursor: pointer;
@@ -565,21 +565,21 @@
 }
 
 .updateLogViewAll:hover {
-    color: #FF8A9A;
+    color: var(--color-primary-fg);
 }
 
 .updateLogBody {
     margin: 0;
     font-size: 0.875rem;
     line-height: 1.55;
-    color: rgba(255, 255, 255, 0.82);
+    color: color-mix(in srgb, var(--color-text) 82%, transparent);
     white-space: pre-wrap;
     word-break: break-word;
 }
 
 .updateLogEmpty {
     margin: 0;
-    color: #8E8E93 !important;
+    color: var(--color-text-muted) !important;
     font-size: 0.875rem;
 }
 
@@ -595,7 +595,7 @@
     padding: 0;
     border: none;
     background: transparent;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     font-size: 0.8125rem;
     text-decoration: underline;
     text-underline-offset: 2px;
@@ -603,7 +603,7 @@
 }
 
 .feedbackEntry:hover {
-    color: #C7C7CC;
+    color: var(--color-text-secondary);
 }
 
 .contentWrapper {
@@ -637,7 +637,7 @@
     background: var(--detail-card);
     border: 1px solid var(--detail-border);
     border-radius: 11.5px;
-    color: #F5F5F7;
+    color: var(--color-text);
     cursor: pointer;
     position: relative;
     -webkit-tap-highlight-color: transparent;
@@ -645,9 +645,23 @@
 }
 
 .statsItemActive {
-    border-color: rgba(168, 40, 60, 0.75);
-    color: #F16C83;
-    background: rgba(168, 40, 60, 0.16);
+    border-color: color-mix(in srgb, var(--color-primary) 75%, transparent);
+    color: var(--color-primary-fg);
+    background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+}
+
+.statsIconPop {
+    animation: statsIconPop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes statsIconPop {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.45); }
+    100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .statsIconPop { animation: none; }
 }
 
 .statsItem:disabled {
@@ -688,7 +702,7 @@
 .sectionBlock {
     padding-top: 1.05rem;
     margin-top: 0.35rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .synopsisHeader {
@@ -702,27 +716,8 @@
     margin: 0;
     font-size: 1.05rem;
     font-weight: 700;
-    color: #F5F5F7;
+    color: var(--color-text);
     line-height: 1.3;
-}
-
-.loadSaveBadge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.2rem 0.55rem;
-    border-radius: 999px;
-    background: #2C2C2E;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: #C7C7CC;
-    font-size: 0.72rem;
-    font-weight: 600;
-    line-height: 1.2;
-    cursor: pointer;
-}
-
-.loadSaveBadge:hover {
-    background: #3A3A3C;
-    color: #FFFFFF;
 }
 
 .synopsisHeaderSpacer {
@@ -732,7 +727,7 @@
 .reviewsTabLink {
     border: none;
     background: transparent;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     font-size: 0.8125rem;
     font-weight: 600;
     cursor: pointer;
@@ -740,7 +735,7 @@
 }
 
 .reviewsTabLinkActive {
-    color: #FFFFFF;
+    color: var(--color-text);
 }
 
 .readMoreButton {
@@ -749,7 +744,7 @@
     padding: 0;
     border: none;
     background: transparent;
-    color: #F16C83;
+    color: var(--color-primary-fg);
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
@@ -758,7 +753,7 @@
 }
 
 .readMoreButton:hover {
-    color: #FF8A9A;
+    color: var(--color-primary-fg);
 }
 
 .descriptionCollapsed {
@@ -777,9 +772,9 @@
     width: 100%;
     height: 3.25rem;
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: #1C1C1E;
-    color: #FFFFFF;
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text);
     /* 与 startButton 同字号，避免双 CTA 视觉不一致 */
     font-size: 1.15rem;
     font-weight: 600;
@@ -789,7 +784,7 @@
 }
 
 .replayButton:hover {
-    background: #2C2C2E;
+    background: var(--color-surface-2);
     transform: translateY(-0.0625rem);
 }
 
@@ -844,17 +839,17 @@
     width: 2.5rem;
     height: 2.5rem;
     padding: 0;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     border-radius: 999px;
-    background: #1C1C1E;
-    color: #C7C7CC;
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .favoriteButton:hover {
-    background: #2C2C2E;
-    border-color: rgba(255, 255, 255, 0.18);
+    background: var(--color-surface-2);
+    border-color: color-mix(in srgb, var(--color-text) 18%, transparent);
     transform: translateY(-0.0625rem);
 }
 
@@ -872,9 +867,9 @@
 }
 
 .favoriteButton.favorited {
-    background: rgba(142, 33, 53, 0.35);
-    border-color: #A8283C;
-    color: #FF8A9A;
+    background: color-mix(in srgb, var(--color-primary) 35%, transparent);
+    border-color: var(--color-primary);
+    color: var(--color-primary-fg);
 }
 
 .favoriteIconIdle {
@@ -898,7 +893,7 @@
 .gameTitle {
     font-size: 2rem;
     font-weight: 700;
-    color: #FFFFFF;
+    color: var(--color-text);
     margin: 0;
     line-height: 1.3;
     letter-spacing: -0.02em;
@@ -913,8 +908,8 @@
     margin-bottom: 0.75rem;
     padding: 0.55rem 0.75rem;
     border-radius: 999px;
-    background: #1C1C1E;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .metaLeft {
@@ -928,13 +923,13 @@
 .gameType {
     padding: 0.375rem 0.875rem;
     /* 底色由 resolveGameTypeToneStyle 内联写入 */
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--color-on-media);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     border-radius: 999px;
     font-size: 0.875rem;
     font-weight: 600;
     line-height: 1.4;
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.18);
+    text-shadow: 0 1px 1px color-mix(in srgb, var(--color-shadow) 18%, transparent);
     box-shadow: none;
 }
 
@@ -947,11 +942,11 @@
 .rating {
     font-size: 0.95rem;
     font-weight: 700;
-    color: #FFFFFF;
+    color: var(--color-on-primary);
     line-height: 1;
     padding: 0.35rem 0.75rem;
     border-radius: 999px;
-    background: #8E2135;
+    background: var(--color-primary-bold);
 }
 
 .ratingUnit {
@@ -962,7 +957,7 @@
 
 .ratingCount {
     font-size: 0.9rem;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     font-weight: 400;
     line-height: 1;
 }
@@ -991,15 +986,15 @@
 
 .authorName {
     font-size: 0.875rem;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     font-weight: 500;
 }
 
 .sourceAuthorLink {
     margin-left: 12px;
     border: none;
-    background: rgba(142, 33, 53, 0.28);
-    color: #FF8A9A;
+    background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+    color: var(--color-primary-fg);
     border-radius: 999px;
     padding: 0.35rem 0.75rem;
     font-size: 0.8125rem;
@@ -1012,11 +1007,11 @@
     align-items: center;
     gap: 0.25rem;
     padding: 0.25rem 0.625rem;
-    background: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
     border-radius: 999px;
     font-size: 0.8125rem;
     font-weight: 500;
-    color: #C7C7CC;
+    color: var(--color-text-secondary);
 }
 
 .groupNoIcon {
@@ -1034,12 +1029,12 @@
     padding: 0;
     margin-left: 0.125rem;
     cursor: pointer;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     transition: color 0.2s;
 }
 
 .groupNoCopyBtn:hover {
-    color: #FFFFFF;
+    color: var(--color-text);
 }
 
 .likeButton {
@@ -1047,27 +1042,27 @@
     align-items: center;
     gap: 0.375rem;
     padding: 0.625rem 1rem;
-    background: #1C1C1E;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     border-radius: 999px;
     font-size: 0.875rem;
     font-weight: 600;
-    color: #FFFFFF;
+    color: var(--color-text);
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
 }
 
 .likeButton:hover {
-    background: #2C2C2E;
-    border-color: rgba(255, 255, 255, 0.18);
+    background: var(--color-surface-2);
+    border-color: color-mix(in srgb, var(--color-text) 18%, transparent);
     transform: translateY(-0.0625rem);
 }
 
 .likeButton.liked {
-    background: rgba(142, 33, 53, 0.35);
-    border-color: #A8283C;
-    color: #FF8A9A;
+    background: color-mix(in srgb, var(--color-primary) 35%, transparent);
+    border-color: var(--color-primary);
+    color: var(--color-primary-fg);
 }
 
 .likeButton img {
@@ -1177,7 +1172,7 @@
 .detailSectionTitle {
     font-size: 1rem;
     font-weight: 600;
-    color: #FFFFFF;
+    color: var(--color-text);
     margin: 0 0 0.75rem;
 }
 
@@ -1193,18 +1188,18 @@
     padding: 0.5rem 0;
     font-size: 1rem;
     font-weight: 600;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     cursor: pointer;
     position: relative;
     transition: color 0.2s ease;
 }
 
 .sectionTab:hover {
-    color: #FFFFFF;
+    color: var(--color-text);
 }
 
 .sectionTabActive {
-    color: #FFFFFF;
+    color: var(--color-text);
 }
 
 .sectionTabActive::after {
@@ -1228,7 +1223,7 @@
 .descriptionSection p {
     font-size: 0.9375rem;
     line-height: 1.7;
-    color: #FFFFFF;
+    color: var(--color-text);
     margin: 0;
     max-height: none;
     overflow: visible;
@@ -1249,7 +1244,7 @@
 .descriptionHtml {
     font-size: 0.9375rem;
     line-height: 1.7;
-    color: #FFFFFF;
+    color: var(--color-text);
     margin: 0;
     /* 容纳右飘图片，避免高度塌陷 */
     display: flow-root;
@@ -1302,18 +1297,18 @@
     margin: 0 0 0.75rem;
     font-size: 1rem;
     font-weight: 700;
-    color: #FFFFFF;
+    color: var(--color-text);
 }
 
 .derivedNovelsLoading {
     font-size: 0.875rem;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     padding: 0.75rem 0.25rem;
 }
 
 .derivedNovelsEmpty {
     font-size: 0.875rem;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     padding: 1.25rem 0.25rem;
     text-align: center;
 }
@@ -1333,9 +1328,9 @@
     align-items: center;
     gap: 0.85rem;
     padding: 0.65rem 0.75rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     border-radius: 0.9rem;
-    background: #1C1C1E;
+    background: var(--color-surface);
     cursor: pointer;
     text-align: left;
 }
@@ -1346,7 +1341,7 @@
     border-radius: 0.55rem;
     object-fit: cover;
     flex-shrink: 0;
-    background: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .derivedNovelMeta {
@@ -1357,7 +1352,7 @@
 .derivedNovelName {
     font-size: 0.95rem;
     font-weight: 650;
-    color: #FFFFFF;
+    color: var(--color-text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1366,7 +1361,7 @@
 .derivedNovelAuthor {
     margin-top: 0.2rem;
     font-size: 0.8rem;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1383,9 +1378,9 @@
     justify-content: space-between;
     gap: 1rem;
     padding: 1rem 1.15rem;
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
     border-radius: 999px;
-    background: #1C1C1E;
+    background: var(--color-surface);
     cursor: pointer;
     text-align: left;
     transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
@@ -1393,8 +1388,8 @@
 
 .replayEntryButton:hover {
     transform: translateY(-0.0625rem);
-    border-color: rgba(168, 40, 60, 0.45);
-    background: #2C2C2E;
+    border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+    background: var(--color-surface-2);
 }
 
 .replayMetaButton {
@@ -1403,9 +1398,9 @@
     justify-content: space-between;
     gap: 0.5rem;
     padding: 0.5rem 0.85rem;
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
     border-radius: 999px;
-    background: #1C1C1E;
+    background: var(--color-surface);
     cursor: pointer;
     transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
     flex-shrink: 0;
@@ -1413,26 +1408,26 @@
 
 .replayMetaButton:hover {
     transform: translateY(-0.0625rem);
-    border-color: rgba(168, 40, 60, 0.45);
-    background: #2C2C2E;
+    border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+    background: var(--color-surface-2);
 }
 
 .replayEntryLabel {
     font-size: 0.875rem;
     font-weight: 700;
-    color: #FFFFFF;
+    color: var(--color-text);
 }
 
 .replayEntryArrow {
     font-size: 1rem;
     font-weight: 700;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     flex-shrink: 0;
 }
 
 /* Tabs */
-.tab { color: #8E8E93; font-weight: 600; border-bottom: 2px solid transparent; }
-.tabActive { color: #FFFFFF; font-weight: 700; border-bottom: 2px solid #A8283C; }
+.tab { color: var(--color-text-muted); font-weight: 600; border-bottom: 2px solid transparent; }
+.tabActive { color: var(--color-text); font-weight: 700; border-bottom: 2px solid var(--color-primary); }
 
 /* ==================== 操作区域（价格和按钮） ==================== */
 .actionSection {
@@ -1447,9 +1442,9 @@
     bottom: 0;
     z-index: 20;
     padding: 0;
-    background: rgba(0, 0, 0, 0.92);
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
     backdrop-filter: blur(10px);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .floatingActionInner {
@@ -1473,26 +1468,26 @@
 
 .deleteInlineButton {
     padding: 0.625rem 1rem;
-    background: #1C1C1E;
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
     border-radius: 999px;
     font-size: 0.95rem;
     font-weight: 600;
-    color: #C7C7CC;
+    color: var(--color-text-secondary);
     cursor: pointer;
     white-space: nowrap;
     flex-shrink: 0;
 }
 
 .deleteInlineButton:hover {
-    background: #2C2C2E;
+    background: var(--color-surface-2);
 }
 
 .topDeleteButton {
     padding: 0.55rem 1rem;
-    background: #8E2135;
+    background: var(--color-primary-bold);
     border-radius: 999px;
-    color: #fff;
+    color: var(--color-on-primary);
     font-weight: 700;
     font-size: 0.95rem;
     cursor: pointer;
@@ -1531,7 +1526,7 @@
     display: flex;
     align-items: center;
     gap: 0.25rem;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     text-decoration: line-through;
 }
 
@@ -1548,7 +1543,7 @@
     gap: 0.65rem;
     position: relative;
     background-image: none;
-    background-color: #8E2135;
+    background-color: var(--color-primary-bold);
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -1557,7 +1552,7 @@
     border: none;
     border-radius: 999px;
     cursor: pointer;
-    color: #fff;
+    color: var(--color-on-primary);
     font-size: 1.15rem;
     font-weight: 600;
     box-sizing: border-box;
@@ -1568,8 +1563,8 @@
 
 /* 酒红→珊瑚渐变，不拖到白粉，深色页上更稳 */
 .startButton {
-    background-color: #A8283C;
-    background-image: linear-gradient(90deg, #8E2135 0%, #A8283C 42%, #E23A52 100%);
+    background-color: var(--color-primary);
+    background-image: linear-gradient(90deg, var(--color-primary-bold) 0%, var(--color-primary) 42%, var(--color-primary) 100%);
 }
 
 .startButton:hover:not(:disabled),
@@ -1651,7 +1646,7 @@
     position: fixed;
     inset: 0;
     z-index: 1200;
-    background: rgba(0, 0, 0, 0.45);
+    background: color-mix(in srgb, var(--color-shadow) 45%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1660,43 +1655,43 @@
 
 .startOptionsModal {
     width: min(26rem, 92vw);
-    background: #1A1A1A;
+    background: var(--color-surface);
     border-radius: 1.25rem;
-    box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.45);
+    box-shadow: 0 1.5rem 3rem color-mix(in srgb, var(--color-shadow) 45%, transparent);
     padding: 1.25rem 1.25rem 1.5rem;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    color: #FFFFFF;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--color-text);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .replayDrawerOverlay {
     justify-content: flex-end;
     align-items: stretch;
     padding: 1rem 0 1rem 1rem;
-    background: rgba(8, 12, 20, 0.42);
+    background: color-mix(in srgb, var(--color-surface) 42%, transparent);
 }
 
 .replayDrawer {
     width: min(32rem, calc(100vw - 4rem));
     height: 100%;
-    background: #1A1A1A;
+    background: var(--color-surface);
     border-radius: 1.5rem 0 0 1.5rem;
-    box-shadow: -1rem 0 2.5rem rgba(0, 0, 0, 0.35);
+    box-shadow: -1rem 0 2.5rem color-mix(in srgb, var(--color-shadow) 35%, transparent);
     padding: 1.1rem 1rem 1rem 1rem;
     display: flex;
     flex-direction: column;
     gap: 0.7rem;
     overflow: hidden;
     animation: replayDrawerEnter 0.24s ease;
-    color: #FFFFFF;
+    color: var(--color-text);
 }
 
 .replayDrawerClose {
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
-    color: #C7C7CC;
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    color: var(--color-text-secondary);
     font-size: 1.35rem;
     line-height: 1;
 }
@@ -1706,14 +1701,14 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.3rem;
     padding: 0.3rem;
-    background: #121212;
+    background: var(--color-surface);
     border-radius: 0.875rem;
 }
 
 .replayDrawerTab {
     border: none;
     background: transparent;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     border-radius: 0.75rem;
     padding: 0.7rem 0.55rem;
     font-size: 0.875rem;
@@ -1724,13 +1719,13 @@
 }
 
 .replayDrawerTab:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #FFFFFF;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--color-text);
 }
 
 .replayDrawerTabActive {
-    background: #2C2C2E;
-    color: #FFFFFF;
+    background: var(--color-surface-2);
+    color: var(--color-text);
     box-shadow: none;
 }
 
@@ -1774,13 +1769,13 @@
     margin: 0;
     font-size: 1.1rem;
     font-weight: 700;
-    color: #FFFFFF;
+    color: var(--color-text);
 }
 
 .startOptionsBack {
     border: none;
-    background: rgba(255, 255, 255, 0.08);
-    color: #FFFFFF;
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    color: var(--color-text);
     border-radius: 999px;
     padding: 0.4rem 0.75rem;
     font-size: 0.875rem;
@@ -1807,13 +1802,13 @@
 
 .startOptionsDesc {
     margin: 0;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     font-size: 0.95rem;
 }
 
 .interactiveVideoBuyoutMessage {
     margin: 0;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     font-size: 0.95rem;
     line-height: 1.6;
 }
@@ -1837,7 +1832,7 @@
 
 .replayModalNote {
     margin: 0;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     font-size: 0.92rem;
     line-height: 1.6;
 }
@@ -1854,31 +1849,31 @@
 }
 
 .startOptionsPrimary {
-    background: #8E2135;
-    color: #fff;
+    background: var(--color-primary-bold);
+    color: var(--color-on-primary);
     box-shadow: none;
 }
 
 .startOptionsSecondary {
-    background: #1C1C1E;
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
     box-shadow: none;
 }
 
 .startOptionsGhost {
-    background: #1C1C1E;
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
     box-shadow: none;
 }
 
 .startOptionsPrimary:disabled,
 .startOptionsSecondary:disabled,
 .startOptionsGhost:disabled {
-    background: #2C2C2E;
-    color: #8E8E93;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-surface-2);
+    color: var(--color-text-muted);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     box-shadow: none;
     cursor: not-allowed;
 }
@@ -2302,7 +2297,7 @@
     .startButton,
     .purchaseButton {
         background-image: none;
-        background-color: #8E2135;
+        background-color: var(--color-primary-bold);
         background-size: 100% 100%;
         box-shadow: none;
     }
@@ -2348,15 +2343,36 @@
 .ratingBadgeCount {
     margin-left: 0.3rem;
     padding-left: 0.3rem;
-    border-left: 1px solid rgba(255, 255, 255, 0.16);
-    color: rgba(245, 245, 247, 0.6);
+    border-left: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+    color: var(--color-text-secondary);
     font-size: 0.6875rem;
     font-weight: 500;
 }
 
 .ratingBadgeEmpty {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.12);
-    color: rgba(245, 245, 247, 0.55);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: var(--color-text-secondary);
     font-weight: 500;
 }
+
+/* 功能注释：详情页修正——
+   1) 「读取存档」统一收进「继续体验」弹出的选项面板，简介区不再重复；
+   2) 主按钮去掉左深右浅渐变与 105% 背景缩放（会在左侧形成一道错位暗边），统一纯色，
+      次按钮细描边，两按钮完全同宽同圆角对齐。 */
+.inlineActionRow .startButton,
+.inlineActionRow .replayButton {
+    width: 100%;
+    margin: 0;
+    background-size: 100% 100% !important;
+    transform: none;
+}
+.inlineActionRow .startButton {
+    background-image: none !important;
+    background-color: var(--color-primary-bold);
+}
+.inlineActionRow .replayButton {
+    background: transparent;
+    border: 1px solid color-mix(in srgb, var(--color-text) 18%, transparent);
+}
+.inlineActionRow .replayButton:hover { background: var(--color-surface); }

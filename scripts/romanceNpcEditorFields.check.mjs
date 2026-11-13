@@ -36,7 +36,10 @@ test('npcEditor_标签选择器与代表作按玩法显示', () => {
   assert.match(picker, /PLATFORM_NPC_TAGS\.map/);
   assert.match(picker, /自定义标签/);
   // 功能注释：地点页已撤势力整块；人物仍可读所属势力字段
-  assert.doesNotMatch(panel, /title="势力"/);
+  // 功能注释：势力放在「① 基础」建角下方、人物线路之前
+  assert.match(panel, /<Section g="base" title="势力"/);
+  assert.doesNotMatch(panel, /<Section g="role" title="势力"/);
+  assert.ok(panel.indexOf('title="建角"') < panel.indexOf('title="势力"') && panel.indexOf('title="势力"') < panel.indexOf('title="人物线路"'), '势力须在建角之后、人物线路之前');
   assert.match(panel, /所属势力/);
   assert.match(panel, /factionId/);
   assert.match(panel, /onMergeNpcs/);
@@ -50,7 +53,6 @@ test('npcEditor_线路AI须回写人物资料', () => {
   assert.match(paths, /platformNpcTagsPromptLine/);
   assert.match(paths, /"npcs"/);
   assert.doesNotMatch(paths, /开局势力（玩家勾选加入）/);
-  assert.doesNotMatch(panel, /① 基础 → 势力/);
 });
 
 test('npcEditor_世界生成人物契约含完整资料校验', () => {

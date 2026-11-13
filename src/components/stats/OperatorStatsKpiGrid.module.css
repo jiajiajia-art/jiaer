@@ -9,14 +9,14 @@
   min-width: 0;
   padding: 14px 16px;
   border-radius: 14px;
-  border: 1px solid rgba(22, 119, 255, 0.12);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 6px 18px rgba(9, 88, 217, 0.05);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 12%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--color-primary) 5%, transparent);
 }
 
 .label {
   margin: 0;
-  color: #888;
+  color: var(--color-text-muted);
   font-size: 13px;
   font-weight: 500;
   line-height: 1.4;
@@ -27,37 +27,37 @@
   font-size: 22px;
   font-weight: 700;
   line-height: 1.2;
-  color: var(--admin-accent-strong, #0958d9);
+  color: var(--admin-accent-strong, var(--color-primary));
 }
 
 .delta {
   margin-top: 6px;
   font-size: 12px;
   line-height: 1.3;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .deltaUp {
-  color: #2f9b63;
+  color: var(--color-success);
 }
 
 .deltaDown {
-  color: #c44b3a;
+  color: var(--color-primary);
 }
 
 .failed {
   grid-column: 1 / -1;
   padding: 16px;
   text-align: center;
-  color: #8a3b23;
+  color: var(--color-primary-bold);
 }
 
 .retryButton {
   margin-top: 8px;
-  border: 1px solid rgba(138, 59, 35, 0.28);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 28%, transparent);
   border-radius: 8px;
-  background: #fff;
-  color: #8a3b23;
+  background: var(--color-surface);
+  color: var(--color-primary-bold);
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;

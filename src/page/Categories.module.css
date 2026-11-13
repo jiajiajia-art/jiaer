@@ -1,15 +1,15 @@
 .pageRoot {
     /* 功能注释：分类页本地暗色，对齐效果图黑底酒红强调 */
-    --primary: #A8283C;
-    --primary-light: #C23A50;
-    --primary-dark: #8E2135;
+    --primary: var(--color-primary);
+    --primary-light: var(--color-primary);
+    --primary-dark: var(--color-primary-bold);
     --categories-label-width: 44px;
     width: 100%;
     min-height: 100vh;
     max-width: none;
     margin: 0;
-    background: #000000;
-    color: #FFFFFF;
+    background: var(--color-bg);
+    color: var(--color-text);
     overflow-x: hidden;
 }
 
@@ -53,7 +53,7 @@
     border: none;
     border-radius: 999px;
     background: transparent;
-    color: #FFFFFF;
+    color: var(--color-text);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -77,7 +77,7 @@
     font-weight: 700;
     line-height: 1.35;
     letter-spacing: 0.02em;
-    color: #FFFFFF;
+    color: var(--color-text);
     text-align: center;
 }
 
@@ -96,7 +96,7 @@
     border: none;
     border-radius: 18px;
     /* 功能注释：严格对齐效果图滤镜卡底色取样 #0A0A0A（非 #1A1A1A） */
-    background: #0A0A0A;
+    background: var(--color-bg);
     box-shadow: none;
     display: flex;
     flex-direction: column;
@@ -121,7 +121,7 @@
     font-size: 13px;
     font-weight: 600;
     line-height: 1.25;
-    color: #FFFFFF;
+    color: var(--color-text);
     white-space: nowrap;
 }
 
@@ -169,7 +169,7 @@
     border-radius: 999px;
     padding: 5px 10px;
     background: transparent;
-    color: #AEAEB2;
+    color: var(--color-text-secondary);
     cursor: pointer;
     font-size: 12px;
     font-weight: 500;
@@ -181,13 +181,13 @@
 }
 
 .tagChip:hover {
-    color: #FFFFFF;
+    color: var(--color-text);
 }
 
 .tagChipActive {
     border: none;
-    background: #8E2135;
-    color: #FFFFFF;
+    background: var(--color-primary-bold);
+    color: var(--color-on-primary);
     font-weight: 600;
 }
 
@@ -200,7 +200,7 @@
 
 .tagSummaryText {
     font-size: 13px;
-    color: #8E8E93;
+    color: var(--color-text-muted);
 }
 
 .listBlock {

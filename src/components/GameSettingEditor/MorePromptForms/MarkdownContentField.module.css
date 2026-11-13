@@ -9,12 +9,12 @@
   width: 100%;
   min-height: 220px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: #1C1C1E;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: var(--color-surface);
   box-sizing: border-box;
   font-size: 0.95rem;
   line-height: 1.6;
-  color: #ffffff;
+  color: var(--color-text);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -26,8 +26,8 @@
 
 .textarea:focus {
   outline: none;
-  border-color: #8E2135;
-  box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.2);
+  border-color: var(--color-primary-bold);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .preview {
@@ -43,8 +43,8 @@
 }
 
 .preview:hover:not(:disabled) {
-  border-color: rgba(168, 40, 60, 0.55);
-  background: #1C1C1E;
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  background: var(--color-surface);
 }
 
 .preview:disabled {
@@ -53,7 +53,7 @@
 }
 
 .previewEmpty {
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--color-text-muted);
 }
 
 .placeholder {
@@ -62,7 +62,7 @@
 
 .markdownBody {
   width: 100%;
-  color: rgba(255, 255, 255, 0.88);
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
 }
 
 .markdownBody :global(> *:first-child) {
@@ -88,7 +88,7 @@
 .markdownBody :global(h3) {
   margin: 0 0 0.5em;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .markdownBody :global(h1) {
@@ -104,14 +104,14 @@
 }
 
 .markdownBody :global(code) {
-  background: rgba(0, 0, 0, 0.4);
+  background: color-mix(in srgb, var(--color-shadow) 40%, transparent);
   padding: 0.1em 0.35em;
   border-radius: 4px;
   font-size: 0.9em;
 }
 
 .markdownBody :global(pre) {
-  background: rgba(0, 0, 0, 0.4);
+  background: color-mix(in srgb, var(--color-shadow) 40%, transparent);
   padding: 12px;
   border-radius: 10px;
   overflow-x: auto;

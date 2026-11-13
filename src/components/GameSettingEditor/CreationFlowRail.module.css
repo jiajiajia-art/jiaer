@@ -24,8 +24,8 @@
   gap: 4px;
   padding: 8px 10px 10px;
   min-width: 96px;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.45);
+  border-bottom: 2px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  color: var(--color-text-muted);
 }
 
 .step + .step::before {
@@ -35,7 +35,7 @@
   top: 18px;
   width: 1px;
   height: 18px;
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--color-text) 10%, transparent);
 }
 
 .index {
@@ -47,10 +47,10 @@
   justify-content: center;
   font-size: 0.68rem;
   font-weight: 700;
-  background: #1C1C1E;
-  color: rgba(255, 255, 255, 0.55);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
 }
 
 .label {
@@ -61,30 +61,30 @@
 }
 
 .active {
-  border-bottom-color: #8E2135;
-  color: #ffffff;
+  border-bottom-color: var(--color-primary-bold);
+  color: var(--color-text);
 }
 
 .active .index {
-  background: #8E2135;
+  background: var(--color-primary-bold);
   border-color: transparent;
-  color: #fff;
-  box-shadow: 0 0 0 4px rgba(142, 33, 53, 0.28);
+  color: var(--color-on-primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 28%, transparent);
 }
 
 .active .label {
-  color: #FF8A9A;
+  color: var(--color-primary-fg);
 }
 
 .done {
-  color: rgba(255, 255, 255, 0.7);
-  border-bottom-color: rgba(46, 160, 90, 0.55);
+  color: var(--color-text-secondary);
+  border-bottom-color: color-mix(in srgb, var(--color-success) 55%, transparent);
 }
 
 .done .index {
-  background: #2ea05a;
+  background: color-mix(in srgb, var(--color-success) 68%, var(--color-shadow));
   border-color: transparent;
-  color: #fff;
+  color: var(--color-on-primary);
 }
 
 @media (max-width: 768px) {

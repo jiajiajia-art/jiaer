@@ -106,8 +106,8 @@ const FunctionalNPCList: React.FC<FunctionalNPCListProps> = ({ abilityNodeSettin
                                         top: -1000px;
                                         left: -1000px;
                                         padding: 8px 16px;
-                                        background: rgba(43, 43, 43, 0.65);
-                                        color: white;
+                                        background: color-mix(in srgb, var(--color-shadow) 65%, transparent);
+                                        color: var(--color-on-media);
                                         border-radius: 8px;
                                         font-size: 14px;
                                         font-weight: 600;

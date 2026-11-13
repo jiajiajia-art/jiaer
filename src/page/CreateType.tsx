@@ -478,24 +478,7 @@ const CreateType: React.FC = () => {
                   navigate('/romance/?createPlayMod=1');
                 }}
               />
-              {/* 功能注释：C2.3 我的玩法 Mod 稳定入口；只看本人记录，未激活创作者同样拦截 */}
-              <TypeOptionRow
-                title="我的玩法 Mod"
-                badge={creatorActivated === false ? 'locked' : undefined}
-                badgeText={creatorActivated === false ? '锁定' : undefined}
-                hint="查看自己的草稿、私有测试和已上架玩法包，继续编辑或上传 .kkmod 玩法包。"
-                icon={HiOutlinePuzzle}
-                thumbClass={styles.createTypeOptionThumbCustom}
-                onClick={() => {
-                  if (creatorActivated === false) {
-                    openCreatorLockedGate();
-                    return;
-                  }
-                  if (creatorActivated == null) return;
-                  setRomanceSubOpen(false);
-                  navigate('/create/play-mods');
-                }}
-              />
+              {/* 功能注释：「我的玩法 Mod」与「玩法 Mod」重复，已从创作入口移除 */}
               <TypeOptionRow
                 title="手机应用"
                 badge={creatorActivated === false ? 'locked' : undefined}

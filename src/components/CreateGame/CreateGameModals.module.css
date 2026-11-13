@@ -3,7 +3,7 @@
 .createTypeModalOverlay {
     position: fixed;
     inset: 0;
-    background-color: rgba(0, 0, 0, 0.72);
+    background-color: color-mix(in srgb, var(--color-shadow) 72%, transparent);
     backdrop-filter: blur(6px);
     display: flex;
     align-items: center;
@@ -13,20 +13,20 @@
 }
 
 .createTypeModal {
-    --type-primary: #A8283C;
-    --type-primary-deep: #8E2135;
-    --type-surface: #1A1A1A;
-    --type-card: #1C1C1E;
-    --type-border: rgba(255, 255, 255, 0.1);
+    --type-primary: var(--color-primary);
+    --type-primary-deep: var(--color-primary-bold);
+    --type-surface: var(--color-surface);
+    --type-card: var(--color-surface);
+    --type-border: color-mix(in srgb, var(--color-text) 10%, transparent);
     background-color: var(--type-surface);
     border-radius: 20px;
     padding: 22px 20px 18px;
     min-width: 300px;
     max-width: 420px;
     width: 100%;
-    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 20px 48px color-mix(in srgb, var(--color-shadow) 55%, transparent);
     border: 1px solid var(--type-border);
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .createTypeModalHeader {
@@ -40,14 +40,14 @@
 .createTypeModalTitle {
     font-size: 18px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-text);
     flex: 1;
     letter-spacing: -0.02em;
 }
 
 .createTypeModalDesc {
     font-size: 13px;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--color-text-secondary);
     margin-bottom: 16px;
     line-height: 1.6;
 }
@@ -69,7 +69,7 @@
     padding: 18px 14px;
     border-radius: 14px;
     background-color: var(--type-card);
-    color: #ffffff;
+    color: var(--color-text);
     border: 1px solid var(--type-border);
     cursor: pointer;
     text-align: left;
@@ -77,8 +77,8 @@
 }
 
 .createTypeOption:hover:not(:disabled) {
-    border-color: rgba(255, 255, 255, 0.16);
-    background-color: #222226;
+    border-color: color-mix(in srgb, var(--color-text) 16%, transparent);
+    background-color: var(--color-surface-2);
     transform: translateY(-1px);
 }
 
@@ -90,9 +90,9 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(145deg, #3a3a42 0%, #2a2a30 100%);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    color: rgba(255, 255, 255, 0.88);
+    background: linear-gradient(145deg, var(--color-surface-2) 0%, var(--color-surface-2) 100%);
+    border: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
 }
 
 .createTypeOptionIcon {
@@ -103,42 +103,42 @@
 
 /* 功能注释：各模式缩略图色调不同，扫一眼能区分，不靠同一灰块 */
 .createTypeOptionThumbTxt {
-    background: linear-gradient(145deg, rgba(168, 40, 60, 0.55) 0%, rgba(88, 20, 32, 0.95) 100%);
-    border-color: rgba(245, 180, 190, 0.22);
-    color: #ffd6dc;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    background: linear-gradient(145deg, color-mix(in srgb, var(--color-primary) 55%, transparent) 0%, color-mix(in srgb, var(--color-primary) 95%, transparent) 100%);
+    border-color: color-mix(in srgb, var(--color-primary-light) 22%, transparent);
+    color: var(--color-primary-lighter);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent);
 }
 
 .createTypeOptionThumbAvg {
-    background: linear-gradient(145deg, rgba(160, 110, 55, 0.45) 0%, rgba(72, 48, 28, 0.95) 100%);
-    border-color: rgba(245, 208, 169, 0.28);
-    color: #f5d0a9;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--color-highlight) 45%, transparent) 0%, color-mix(in srgb, var(--color-highlight) 95%, transparent) 100%);
+    border-color: color-mix(in srgb, var(--color-highlight) 28%, transparent);
+    color: var(--color-highlight);
 }
 
 /* 功能注释：创作游戏（Romance）入口色调，介于文游酒红与酒馆卡暖棕之间 */
 .createTypeOptionThumbRomance {
-    background: linear-gradient(145deg, rgba(90, 140, 120, 0.5) 0%, rgba(36, 64, 56, 0.98) 100%);
-    border-color: rgba(160, 220, 190, 0.28);
-    color: #c8f0dc;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--color-surface) 50%, transparent) 0%, color-mix(in srgb, var(--color-success) 98%, transparent) 100%);
+    border-color: color-mix(in srgb, var(--color-success) 28%, transparent);
+    color: var(--color-success);
 }
 
 .createTypeOptionThumbIvg {
-    background: linear-gradient(145deg, rgba(70, 88, 120, 0.5) 0%, rgba(32, 40, 58, 0.98) 100%);
-    border-color: rgba(170, 190, 230, 0.22);
-    color: #c8d6f0;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--color-surface) 50%, transparent) 0%, color-mix(in srgb, var(--color-surface) 98%, transparent) 100%);
+    border-color: color-mix(in srgb, var(--color-info) 22%, transparent);
+    color: var(--color-info);
 }
 
 .createTypeOptionThumbCustom {
-    background: linear-gradient(145deg, rgba(90, 90, 100, 0.55) 0%, rgba(40, 40, 48, 0.98) 100%);
-    border-color: rgba(255, 255, 255, 0.12);
-    color: #e8e8ed;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--color-surface) 55%, transparent) 0%, color-mix(in srgb, var(--color-surface) 98%, transparent) 100%);
+    border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: var(--color-text);
 }
 
 .createTypeOptionThumbRpg {
-    background: linear-gradient(145deg, #2a2a30 0%, #1a1a1e 100%);
-    border-color: rgba(255, 255, 255, 0.06);
+    background: linear-gradient(145deg, var(--color-surface-2) 0%, var(--color-surface) 100%);
+    border-color: color-mix(in srgb, var(--color-text) 6%, transparent);
     border-style: dashed;
-    color: rgba(255, 255, 255, 0.38);
+    color: var(--color-text-muted);
 }
 
 .createTypeOptionBody {
@@ -160,13 +160,13 @@
 .createTypeOptionName {
     font-size: 15px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-text);
     line-height: 1.3;
 }
 
 .createTypeOptionHint {
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.42);
+    color: var(--color-text-muted);
     line-height: 1.4;
     white-space: nowrap;
     overflow: hidden;
@@ -177,29 +177,29 @@
     width: 18px;
     height: 18px;
     flex-shrink: 0;
-    color: rgba(255, 255, 255, 0.35);
+    color: var(--color-text-muted);
 }
 
 /* 锁定态 */
 .createTypeOptionDisabled {
     opacity: 0.55;
     cursor: not-allowed;
-    background-color: #151517;
+    background-color: var(--color-surface);
     border-style: dashed;
-    border-color: rgba(255, 255, 255, 0.12);
+    border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
 }
 
 .createTypeOptionDisabled:hover {
     transform: none;
-    border-color: rgba(255, 255, 255, 0.12);
-    background-color: #151517;
+    border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+    background-color: var(--color-surface);
 }
 
 .createTypeOptionRecommend {
     font-size: 11px;
     font-weight: 500;
-    color: #ffffff;
-    background-color: rgba(255, 175, 54, 0.5);
+    color: var(--color-text);
+    background-color: color-mix(in srgb, var(--color-highlight) 50%, transparent);
     padding: 2px 7px;
     border-radius: 6px;
     line-height: 1.3;
@@ -208,8 +208,8 @@
 .createTypeOptionLockedTag {
     font-size: 11px;
     font-weight: 500;
-    color: #ffffff;
-    background: rgba(255, 59, 97, 0.6);
+    color: var(--color-on-primary);
+    background: var(--color-primary);
     padding: 2px 7px;
     border-radius: 6px;
     line-height: 1.3;
@@ -218,8 +218,8 @@
 .createTypeOptionLocked {
     font-size: 11px;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.45);
-    background-color: rgba(255, 255, 255, 0.08);
+    color: var(--color-text-muted);
+    background-color: color-mix(in srgb, var(--color-text) 8%, transparent);
     padding: 2px 7px;
     border-radius: 999px;
     line-height: 1.3;
@@ -242,7 +242,7 @@
     border-radius: 14px;
     border: 1px solid var(--type-border);
     background-color: var(--type-card);
-    color: rgba(255, 255, 255, 0.88);
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
     font-size: 14px;
     font-weight: 600;
     line-height: 1.25;
@@ -251,9 +251,9 @@
 }
 
 .createTypeCancelButton:hover {
-    background-color: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
-    border-color: rgba(168, 40, 60, 0.45);
+    background-color: color-mix(in srgb, var(--color-text) 8%, transparent);
+    color: var(--color-text);
+    border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 .createTypeCancelButton:active {
@@ -261,7 +261,7 @@
 }
 
 .createTypeCancelButton:focus-visible {
-    outline: 2px solid rgba(168, 40, 60, 0.8);
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 80%, transparent);
     outline-offset: 2px;
 }
 
@@ -285,7 +285,7 @@
     border-radius: 12px;
     border: 1px solid var(--type-border);
     background-color: var(--type-card);
-    color: #ffffff;
+    color: var(--color-text);
     font-size: 14px;
     font-weight: 600;
     text-decoration: none;
@@ -298,13 +298,13 @@
 
 .ivgToolAction:hover {
     transform: translateY(-1px);
-    border-color: rgba(168, 40, 60, 0.45);
+    border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 .ivgToolDownloadAction {
     background: linear-gradient(135deg, var(--type-primary) 0%, var(--type-primary-deep) 100%);
     border-color: var(--type-primary);
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .ivgToolActionIcon {
@@ -364,8 +364,8 @@
     height: 32px;
     border-radius: 50%;
     border: 1px solid var(--type-border);
-    background-color: #1C1C1E;
-    color: rgba(255, 255, 255, 0.6);
+    background-color: var(--color-surface);
+    color: var(--color-text-secondary);
     font-size: 24px;
     line-height: 1;
     cursor: pointer;
@@ -377,8 +377,8 @@
 }
 
 .inviteCodeCloseButton:hover {
-    background-color: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
+    background-color: color-mix(in srgb, var(--color-text) 8%, transparent);
+    color: var(--color-text);
     transform: scale(1.05);
 }
 
@@ -397,35 +397,35 @@
     border: 1px solid var(--type-border);
     font-size: 14px;
     outline: none;
-    background-color: #1C1C1E;
-    color: #ffffff;
+    background-color: var(--color-surface);
+    color: var(--color-text);
     transition: all 0.2s ease;
     box-sizing: border-box;
 }
 
 .inviteCodeInput:focus {
     border-color: var(--type-primary-deep);
-    box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.25);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 25%, transparent);
 }
 
 .inviteCodeInput::placeholder {
-    color: rgba(255, 255, 255, 0.35);
+    color: var(--color-text-muted);
 }
 
 .inviteCodeInputError {
-    border-color: #C23A50;
-    background-color: rgba(194, 58, 80, 0.12);
+    border-color: var(--color-primary);
+    background-color: color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
 .inviteCodeInputError:focus {
-    border-color: #C23A50;
-    box-shadow: 0 0 0 3px rgba(194, 58, 80, 0.2);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .inviteCodeErrorText {
     margin-top: 8px;
     font-size: 12px;
-    color: #FF8A9A;
+    color: var(--color-primary-fg);
     display: flex;
     align-items: center;
     gap: 4px;
@@ -438,7 +438,7 @@
 
 .inviteCodeConfirmButton {
     font-size: 13px;
-    color: #ffffff;
+    color: var(--color-text);
     padding: 10px 20px;
     border-radius: 999px;
     border: none;

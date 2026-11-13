@@ -13,8 +13,8 @@
   width: 100%;
   padding: 0.85rem 0.9rem;
   border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
   color: inherit;
   font: inherit;
   text-align: left;
@@ -22,8 +22,8 @@
 }
 
 .overviewCard:hover {
-  border-color: rgba(224, 61, 75, 0.45);
-  background: rgba(224, 61, 75, 0.08);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
 }
 
 .overviewIcon {
@@ -33,9 +33,9 @@
   border-radius: 0.55rem;
   display: grid;
   place-items: center;
-  background: rgba(224, 61, 75, 0.16);
-  border: 1px solid rgba(255, 90, 103, 0.35);
-  color: #ffb3ba;
+  background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 35%, transparent);
+  color: var(--color-primary-fg);
   font-size: 0.95rem;
   font-weight: 800;
 }
@@ -54,13 +54,13 @@
 .overviewDesc {
   margin: 0.2rem 0 0;
   font-size: 0.75rem;
-  color: rgba(255, 220, 224, 0.55);
+  color: color-mix(in srgb, var(--color-primary-lighter) 55%, transparent);
   line-height: 1.35;
 }
 
 .chevron {
   flex-shrink: 0;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--color-text-muted);
   font-size: 1.2rem;
   font-weight: 300;
 }
@@ -77,8 +77,8 @@
   align-items: flex-start;
   padding: 0.85rem 0.9rem;
   border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
 .wbMain {
@@ -96,13 +96,13 @@
   margin: 0.35rem 0 0;
   font-size: 0.8rem;
   line-height: 1.45;
-  color: rgba(232, 238, 248, 0.82);
+  color: color-mix(in srgb, var(--color-text) 82%, transparent);
 }
 
 .wbMeta {
   margin: 0.4rem 0 0;
   font-size: 0.72rem;
-  color: rgba(255, 220, 224, 0.55);
+  color: color-mix(in srgb, var(--color-primary-lighter) 55%, transparent);
 }
 
 .wbSide {
@@ -118,9 +118,9 @@
   font-weight: 700;
   padding: 0.15rem 0.45rem;
   border-radius: 999px;
-  border: 1px solid rgba(224, 61, 75, 0.4);
-  background: rgba(224, 61, 75, 0.14);
-  color: #ffb3ba;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  color: var(--color-primary-fg);
 }
 
 .toggleRow {
@@ -128,7 +128,7 @@
   align-items: center;
   gap: 0.4rem;
   font-size: 0.72rem;
-  color: rgba(255, 220, 224, 0.7);
+  color: color-mix(in srgb, var(--color-primary-lighter) 70%, transparent);
 }
 
 .switch {
@@ -136,15 +136,15 @@
   width: 2.4rem;
   height: 1.35rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in srgb, var(--color-text) 20%, transparent);
+  background: color-mix(in srgb, var(--color-text) 10%, transparent);
   cursor: pointer;
   padding: 0;
 }
 
 .switchOn {
-  background: rgba(224, 61, 75, 0.55);
-  border-color: rgba(224, 61, 75, 0.8);
+  background: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary) 80%, transparent);
 }
 
 .switchKnob {
@@ -154,7 +154,7 @@
   width: 1rem;
   height: 1rem;
   border-radius: 999px;
-  background: #fff;
+  background: var(--color-surface);
   transition: transform 0.15s ease;
 }
 
@@ -166,17 +166,17 @@
   min-height: 1.85rem;
   padding: 0.25rem 0.7rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 90, 103, 0.55);
-  background: rgba(224, 61, 75, 0.14);
-  color: #ffb3ba;
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 55%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  color: var(--color-primary-fg);
   font-size: 0.75rem;
   font-weight: 750;
   cursor: pointer;
 }
 
 .editBtn:hover {
-  background: rgba(224, 61, 75, 0.26);
-  color: #fff;
+  background: color-mix(in srgb, var(--color-primary) 26%, transparent);
+  color: var(--color-on-primary);
 }
 
 .form {
@@ -191,7 +191,7 @@
   flex-direction: column;
   gap: 0.35rem;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-secondary);
 }
 
 .labelRow {
@@ -199,7 +199,7 @@
   justify-content: space-between;
   gap: 0.5rem;
   font-weight: 650;
-  color: rgba(255, 236, 238, 0.85);
+  color: color-mix(in srgb, var(--color-text) 85%, transparent);
 }
 
 .labelWithAi {
@@ -218,9 +218,9 @@
   min-height: 1.65rem;
   padding: 0.2rem 0.65rem;
   border-radius: 0.35rem;
-  border: 1px solid rgba(224, 61, 75, 0.75);
-  background: rgba(224, 61, 75, 0.12);
-  color: #ff8a94;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 75%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary-fg);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -229,9 +229,9 @@
 }
 
 .fieldAiBtn:hover:not(:disabled) {
-  background: rgba(224, 61, 75, 0.22);
-  border-color: rgba(255, 90, 103, 0.95);
-  color: #ffb3ba;
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary-light) 95%, transparent);
+  color: var(--color-primary-fg);
 }
 
 .fieldAiBtn:disabled {
@@ -242,7 +242,7 @@
 .counter {
   font-size: 0.7rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--color-text-muted);
 }
 
 .field input,
@@ -251,9 +251,9 @@
 .search {
   width: 100%;
   border-radius: 0.55rem;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(0, 0, 0, 0.38);
-  color: #e8eef8;
+  border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+  background: color-mix(in srgb, var(--color-shadow) 38%, transparent);
+  color: var(--color-on-media);
   padding: 0.55rem 0.7rem;
   font: inherit;
   box-sizing: border-box;
@@ -271,8 +271,8 @@
 .pasteArea:focus,
 .search:focus {
   outline: none;
-  border-color: rgba(224, 61, 75, 0.55);
-  box-shadow: 0 0 0 2px rgba(224, 61, 75, 0.16);
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 16%, transparent);
 }
 
 .statusChips {
@@ -285,18 +285,18 @@
   min-height: 2rem;
   padding: 0.3rem 0.85rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(232, 238, 248, 0.88);
+  border: 1px solid color-mix(in srgb, var(--color-text) 18%, transparent);
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
   font-size: 0.8rem;
   font-weight: 650;
   cursor: pointer;
 }
 
 .statusChipActive {
-  border-color: rgba(224, 61, 75, 0.7);
-  background: rgba(224, 61, 75, 0.22);
-  color: #ffc4c9;
+  border-color: color-mix(in srgb, var(--color-primary) 70%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  color: var(--color-primary-fg);
 }
 
 .actions {
@@ -316,16 +316,16 @@
 }
 
 .secondaryBtn {
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(232, 238, 248, 0.92);
+  border: 1px solid color-mix(in srgb, var(--color-text) 22%, transparent);
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  color: color-mix(in srgb, var(--color-text) 92%, transparent);
 }
 
 .primaryBtn {
-  border: 1px solid rgba(224, 61, 75, 0.75);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 75%, transparent);
   background: linear-gradient(165deg, var(--primary-light) 0%, var(--primary) 52%, var(--primary-dark) 100%);
-  color: #fff;
-  box-shadow: 0 6px 16px rgba(224, 61, 75, 0.3);
+  color: var(--color-text);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 .secondaryBtn:disabled,
@@ -354,18 +354,18 @@
   min-height: 2rem;
   padding: 0.3rem 0.75rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(232, 238, 248, 0.88);
+  border: 1px solid color-mix(in srgb, var(--color-text) 18%, transparent);
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
   font-size: 0.78rem;
   font-weight: 650;
   cursor: pointer;
 }
 
 .importTabActive {
-  border-color: rgba(224, 61, 75, 0.7);
-  background: rgba(224, 61, 75, 0.22);
-  color: #ffc4c9;
+  border-color: color-mix(in srgb, var(--color-primary) 70%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  color: var(--color-primary-fg);
 }
 
 .uploadBox {
@@ -377,9 +377,9 @@
   min-height: 7rem;
   padding: 1rem;
   border-radius: 0.75rem;
-  border: 1.5px dashed rgba(224, 61, 75, 0.45);
-  background: rgba(224, 61, 75, 0.06);
-  color: rgba(255, 220, 224, 0.75);
+  border: 1.5px dashed color-mix(in srgb, var(--color-primary) 45%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+  color: color-mix(in srgb, var(--color-primary-lighter) 75%, transparent);
   font-size: 0.82rem;
   cursor: pointer;
   text-align: center;
@@ -396,8 +396,8 @@
   width: 100%;
   padding: 0.7rem 0.75rem;
   border-radius: 0.65rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
   color: inherit;
   font: inherit;
   text-align: left;
@@ -405,8 +405,8 @@
 }
 
 .templateRowSelected {
-  border-color: rgba(224, 61, 75, 0.65);
-  background: rgba(224, 61, 75, 0.1);
+  border-color: color-mix(in srgb, var(--color-primary) 65%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
 .templateBody {
@@ -423,7 +423,7 @@
 .templateDesc {
   margin: 0.2rem 0 0;
   font-size: 0.75rem;
-  color: rgba(255, 220, 224, 0.55);
+  color: color-mix(in srgb, var(--color-primary-lighter) 55%, transparent);
 }
 
 .sectionBlock {
@@ -437,7 +437,7 @@
   margin: 0;
   font-size: 0.88rem;
   font-weight: 750;
-  color: rgba(255, 240, 242, 0.9);
+  color: color-mix(in srgb, var(--color-text) 90%, transparent);
 }
 
 .presetRow {
@@ -446,7 +446,7 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.55rem 0.15rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .presetLabel {
@@ -457,7 +457,7 @@
 .presetHint {
   margin: 0.15rem 0 0;
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--color-text-muted);
 }
 
 .paceRow {
@@ -477,9 +477,9 @@
   gap: 0.3rem;
   padding: 0.28rem 0.55rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 90, 103, 0.35);
-  background: rgba(224, 61, 75, 0.12);
-  color: #ffc4c9;
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 35%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary-fg);
   font-size: 0.75rem;
   font-weight: 650;
 }
@@ -487,7 +487,7 @@
 .tagX {
   border: none;
   background: transparent;
-  color: rgba(255, 180, 186, 0.85);
+  color: color-mix(in srgb, var(--color-primary-fg) 85%, transparent);
   cursor: pointer;
   font-size: 0.9rem;
   line-height: 1;
@@ -506,8 +506,8 @@
   gap: 0.5rem;
   padding: 0.55rem 0.65rem;
   border-radius: 0.55rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
 .avoidEditText {
@@ -519,8 +519,8 @@
 .positionCard {
   padding: 0.85rem 0.9rem;
   border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
 .positionRow {
@@ -533,19 +533,19 @@
 .positionKey {
   font-size: 0.72rem;
   font-weight: 650;
-  color: rgba(255, 220, 224, 0.55);
+  color: color-mix(in srgb, var(--color-primary-lighter) 55%, transparent);
 }
 
 .positionVal {
   font-size: 0.88rem;
   line-height: 1.45;
-  color: rgba(232, 238, 248, 0.9);
+  color: color-mix(in srgb, var(--color-text) 90%, transparent);
   white-space: pre-wrap;
 }
 
 .infoHint {
   margin: 0 0 0.55rem;
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--color-text-muted);
   line-height: 1.4;
 }

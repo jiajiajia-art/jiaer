@@ -304,7 +304,7 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
                                                     <div 
                                                         className={styles.npcButtonText}
                                                         style={{
-                                                            backgroundColor: npc.backgroundColor || '#37333480',
+                                                            backgroundColor: npc.backgroundColor || 'color-mix(in srgb, var(--color-shadow) 50.2%, transparent)',
                                                         }}
                                                     >
                                                         {npc.name}
@@ -399,7 +399,7 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
                                                     {/* 按钮型NPC的颜色选择器 */}
                                                     {npc.type === 'button' && (
                                                         <ColorPicker
-                                                            color={npc.backgroundColor || '#37333480'}
+                                                            color={npc.backgroundColor || 'color-mix(in srgb, var(--color-text) 50.2%, transparent)'}
                                                             onChange={(color) => {
                                                                 handleChangeBackgroundColor(npc.id, color);
                                                             }}

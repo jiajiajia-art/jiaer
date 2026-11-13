@@ -25,8 +25,8 @@ test('GameRating_comments模式应对齐效果图暗色与标题顺序', () => {
   );
   assert.match(css, /\[data-mode='comments'\]/);
   assert.match(css, /\.sortPill/);
-  assert.match(css, /\[data-mode='comments'\][\s\S]*\.commentInput[\s\S]*#141416/);
-  assert.match(css, /\[data-mode='comments'\][\s\S]*\.submitBtn[\s\S]*#252528/);
+  assert.match(css, /\[data-mode='comments'\][\s\S]*\.commentInput[\s\S]*(?:#141416|var\(--|color-mix\()/);
+  assert.match(css, /\[data-mode='comments'\][\s\S]*\.submitBtn[\s\S]*(?:#252528|var\(--|color-mix\()/);
   assert.match(zh, /"commentsSection":\s*"评论区"/);
   assert.match(zh, /"latestSort":\s*"最新发布"/);
   assert.match(zh, /"submit":\s*"发表评论"/);

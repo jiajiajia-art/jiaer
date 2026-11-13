@@ -1,7 +1,7 @@
 .modalOverlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.72);
+    background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -21,22 +21,22 @@
 }
 
 .modalContent {
-    --type-primary: #A8283C;
-    --type-primary-deep: #8E2135;
-    --type-surface: #1A1A1A;
-    --type-card: #1C1C1E;
-    --type-border: rgba(255, 255, 255, 0.1);
+    --type-primary: var(--color-primary);
+    --type-primary-deep: var(--color-primary-bold);
+    --type-surface: var(--color-surface);
+    --type-card: var(--color-surface);
+    --type-border: color-mix(in srgb, var(--color-text) 10%, transparent);
     position: relative;
     background:
-        linear-gradient(0deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.12)),
-        linear-gradient(180deg, #2e2e2e 0%, rgba(28, 28, 30, 0.92) 100%);
+        linear-gradient(0deg, color-mix(in srgb, var(--color-text) 12%, transparent), color-mix(in srgb, var(--color-text) 12%, transparent)),
+        linear-gradient(180deg, var(--color-surface-2) 0%, color-mix(in srgb, var(--color-surface) 92%, transparent) 100%);
     border-radius: 16px;
     border: 1px solid var(--type-border);
-    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 20px 48px color-mix(in srgb, var(--color-shadow) 55%, transparent);
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    color: #ffffff;
+    color: var(--color-text);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
 }
@@ -56,7 +56,7 @@
     margin: 0;
     font-size: 1.2rem;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-text);
     letter-spacing: -0.02em;
 }
 
@@ -75,7 +75,7 @@
 
 .closeButton:hover {
     opacity: 1;
-    background: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .closeButton img {
@@ -111,8 +111,8 @@
 }
 
 .pdfItem:hover {
-    border-color: rgba(168, 40, 60, 0.45);
-    background: rgba(168, 40, 60, 0.12);
+    border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
 .pdfInfo {
@@ -132,14 +132,14 @@
 .pdfName {
     font-size: 0.95rem;
     font-weight: 500;
-    color: #ffffff;
+    color: var(--color-text);
     word-break: break-word;
 }
 
 .downloadButton {
     padding: 8px 18px;
     background: linear-gradient(135deg, var(--type-primary-deep) 0%, var(--type-primary) 100%);
-    color: #ffffff;
+    color: var(--color-text);
     border: none;
     border-radius: 8px;
     font-size: 0.9rem;
@@ -152,7 +152,7 @@
 
 .downloadButton:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(168, 40, 60, 0.4);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary) 40%, transparent);
 }
 
 .downloadButton:active {

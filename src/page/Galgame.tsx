@@ -129,6 +129,7 @@ import { streamAttributePanels } from "../api/galgame/attributePanelsStream";
 import { runSessionAutoStartOnce } from "../lib/galgame/sessionStartInflight";
 import { ensurePlayUiHydratedOnce, resetPlayUiHydrationGate } from "../lib/galgame/playUiHydrationGate";
 import RechargeModal from "../components/Purchase/RechargeModal";
+import AiRouteFab from "../components/AiRoute/AiRouteFab";
 import payApi from "../api/pay/payApi";
 import type { PayOrderRequest } from "../api/pay/pay.type";
 import { auth } from "../api/account/authApi";
@@ -1736,6 +1737,8 @@ const Galgame = () => {
 
     return (
         <>
+            {/* 功能注释：AI 线路悬浮球（回放不调用 AI，不显示） */}
+            {!controller.isReplay && <AiRouteFab />}
             <div className={styles.pageRoot}>
                 <div
                     className={`${styles.mainContent} ${characterAnimation === 'injury' ? styles.worldInjury : ''}${controller.isTextMode ? ` ${styles.mainContentTextMode}` : ''}`}
@@ -1863,7 +1866,7 @@ const Galgame = () => {
                             <span
                                 className={`${styles.contextMemoryProgress} ${controller.stepHandlers.isCompressingContext ? styles.contextMemoryProgressActive : ''}`}
                                 style={{
-                                    background: `conic-gradient(rgba(255, 255, 255, 0.92) ${Math.min(contextMemoryPercent, 100) * 3.6}deg, rgba(255, 255, 255, 0.24) 0deg)`
+                                    background: `conic-gradient(color-mix(in srgb, var(--color-surface) 92%, transparent) ${Math.min(contextMemoryPercent, 100) * 3.6}deg, color-mix(in srgb, var(--color-text) 24%, transparent) 0deg)`
                                 }}
                             />
                             {controller.stepHandlers.isCompressingContext && (
@@ -1871,13 +1874,13 @@ const Galgame = () => {
                             )}
                         </div>
                     )} */}
-                    {/* 功能注释：局内覆盖后的 normalModeMessage 优先，Aliyun raw bridge 只做立绘兜底 */}
-                    {(normalModeMessage?.characterImage || controller.rawBridgePortrait?.characterImage)
+                    {/* 功能注释：旁路立绘优先，避免消息层与 bridge 抢源导致连环换图闪屏 */}
+                    {(controller.rawBridgePortrait?.characterImage || normalModeMessage?.characterImage)
                         && !controller.isTextMode && (
                         <CharacterLayer
                             characterImage={
-                                normalModeMessage?.characterImage
-                                || controller.rawBridgePortrait?.characterImage
+                                controller.rawBridgePortrait?.characterImage
+                                || normalModeMessage?.characterImage
                             }
                             characterPosition={
                                 controller.rawBridgePortrait?.characterPosition

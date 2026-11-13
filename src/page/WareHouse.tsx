@@ -141,7 +141,7 @@ const WareHouse: React.FC = () => {
                                 </div>
                             )}
                             {/* {!hasMore && games.length > 0 && (
-                                <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+                                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
                                     没有更多数据了
                                 </div>
                             )} */}

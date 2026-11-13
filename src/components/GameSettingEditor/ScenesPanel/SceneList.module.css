@@ -2,14 +2,14 @@
 
 /* 卡片样式 */
 .card {
-    background: #1A1A1A;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     padding: 20px;
     border-radius: 16px;
     display: flex;
     flex-direction: column;
     gap: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 25%, transparent);
     max-height: 80vh;
     overflow-y: auto;
 }
@@ -17,7 +17,7 @@
 .card h3 {
     margin: 0;
     font-size: 1.1rem;
-    color: #ffffff;
+    color: var(--color-text);
     font-weight: 600;
 }
 
@@ -32,14 +32,14 @@
 /* 按钮样式 */
 .ghostSmall {
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     padding: 6px 14px;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
     transition: 0.25s ease;
-    color: #ffffff;
-    background: #1C1C1E;
+    color: var(--color-text);
+    background: var(--color-surface);
 }
 
 .ghostSmall:hover {
@@ -48,8 +48,8 @@
 }
 
 .ghostSmall:disabled:hover {
-    border-color: rgba(255, 255, 255, 0.12);
-    color: #ffffff;
+    border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: var(--color-text);
 }
 
 /* 场景列表 */
@@ -65,22 +65,22 @@
     grid-template-columns: 88px minmax(0, 1fr) 32px;
     gap: 10px;
     align-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     border-radius: 14px;
     cursor: pointer;
-    background: #121212;
+    background: var(--color-surface);
     transition: 0.2s ease;
     padding: 8px;
     overflow: hidden;
 }
 
 .sceneRow:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
 .sceneRow.active {
     border-color: var(--primary);
-    background: rgba(142, 33, 53, 0.04);
+    background: color-mix(in srgb, var(--color-primary) 4%, transparent);
 }
 
 .sceneThumb {
@@ -93,11 +93,11 @@
 }
 
 .sceneThumb.empty {
-    border: 1px dashed rgba(255, 255, 255, 0.2);
-    background: #1C1C1E;
+    border: 1px dashed color-mix(in srgb, var(--color-text) 20%, transparent);
+    background: var(--color-surface);
     display: grid;
     place-items: center;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--color-text-muted);
     font-size: 0.75rem;
 }
 
@@ -117,7 +117,7 @@
 
 .sceneMeta strong {
     font-size: 0.95rem;
-    color: #ffffff;
+    color: var(--color-text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -130,9 +130,9 @@
     min-height: 32px;
     padding: 0;
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: #1C1C1E;
-    color: rgba(255, 255, 255, 0.55);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
     font-size: 15px;
     line-height: 1;
     cursor: pointer;
@@ -145,14 +145,14 @@
 }
 
 .deleteButton:hover {
-    color: #ffffff;
-    border-color: #A8283C;
-    background: rgba(142, 33, 53, 0.4);
+    color: var(--color-primary-fg);
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 40%, transparent);
 }
 
 .sceneMeta p {
     margin: 0;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     font-size: 0.82rem;
     line-height: 1.4;
     overflow: hidden;
@@ -164,7 +164,7 @@
 }
 
 .mutedSmall {
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     margin: 0;
     font-size: 0.8rem;
     line-height: 1.4;
@@ -189,13 +189,13 @@
 
 .subsceneHeaderText {
     font-size: 0.78rem;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--color-text-muted);
 }
 
 /* 子场景独立卡片：在父场景下方，整体小一号并稍微缩进 */
 .subsceneRowCard {
     margin-left: 12px; /* 视觉上与父场景拉开一点层级 */
-    background: #121212;
+    background: var(--color-surface);
 }
 
 .subsceneTag {
@@ -204,7 +204,7 @@
     justify-content: center;
     padding: 2px 6px;
     border-radius: 999px;
-    background: rgba(142, 33, 53, 0.08);
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
     color: var(--primary);
     font-size: 0.7rem;
     margin-left: 4px;
@@ -265,10 +265,10 @@
         align-items: center;
         justify-content: center;
         width: 100%;
-        border: 1px solid rgba(142, 33, 53, 0.14);
+        border: 1px solid color-mix(in srgb, var(--color-primary) 14%, transparent);
         border-radius: 999px;
         padding: 10px 14px;
-        background: rgba(142, 33, 53, 0.04);
+        background: color-mix(in srgb, var(--color-primary) 4%, transparent);
         color: var(--primary);
         font-size: 0.85rem;
         font-weight: 600;
@@ -277,7 +277,7 @@
     }
 
     .mobileToggleButton:hover {
-        background: rgba(142, 33, 53, 0.08);
+        background: color-mix(in srgb, var(--color-primary) 8%, transparent);
     }
 }
 

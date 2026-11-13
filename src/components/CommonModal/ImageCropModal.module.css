@@ -1,13 +1,13 @@
 /* 功能注释：封面裁剪对齐 funloom 墨黑账本，禁止白卡粉渐变主按钮 */
 
 .overlay {
-    --crop-surface: #1A1A1A;
-    --crop-input: #1C1C1E;
-    --crop-accent: #8E2135;
-    --crop-accent-hot: #A8283C;
+    --crop-surface: var(--color-surface);
+    --crop-input: var(--color-surface);
+    --crop-accent: var(--color-primary-bold);
+    --crop-accent-hot: var(--color-primary);
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.72);
+    background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -19,15 +19,15 @@
 .modal {
     background: var(--crop-surface);
     border-radius: 18px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    box-shadow: 0 24px 64px color-mix(in srgb, var(--color-shadow) 55%, transparent);
     width: 100%;
     max-width: 700px;
     max-height: 90vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    color: #ffffff;
+    color: var(--color-text);
     animation: modalSlideIn 0.2s ease-out;
 }
 
@@ -47,7 +47,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 14px 18px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     background: var(--crop-surface);
 }
 
@@ -55,7 +55,7 @@
     margin: 0;
     font-size: 1.1rem;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-text);
     letter-spacing: -0.02em;
 }
 
@@ -70,7 +70,7 @@
     flex: 1;
     font-size: 13px;
     line-height: 1.4;
-    color: rgba(255, 255, 255, 0.65);
+    color: var(--color-text-secondary);
     align-self: center;
 }
 
@@ -83,7 +83,7 @@
     border: none;
     border-radius: 0;
     background: transparent;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--color-text-secondary);
     font-size: 20px;
     line-height: 1;
     cursor: pointer;
@@ -94,7 +94,7 @@
 }
 
 .closeBtn:hover:not(:disabled) {
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .closeBtn:disabled {
@@ -113,14 +113,14 @@
 
 .cropContainer {
     width: 100%;
-    background: #000;
+    background: var(--color-bg);
     border-radius: 12px;
     overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 300px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .reactCrop {
@@ -129,14 +129,14 @@
 }
 
 .reactCrop :global(.ReactCrop__crop-selection) {
-    border: 2px solid #fff !important;
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5) !important;
+    border: 2px solid var(--color-text) !important;
+    box-shadow: 0 0 0 9999px color-mix(in srgb, var(--color-shadow) 50%, transparent) !important;
 }
 
 .reactCrop :global(.ReactCrop__drag-handle) {
     width: 12px !important;
     height: 12px !important;
-    background: #fff !important;
+    background: var(--color-surface) !important;
     border: 2px solid var(--crop-accent) !important;
     border-radius: 50% !important;
 }
@@ -155,16 +155,16 @@
 .hints p {
     margin: 4px 0;
     font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.48);
+    color: var(--color-text-muted);
 }
 
 .hints p:first-child {
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.72);
+    color: var(--color-text-secondary);
 }
 
 .errorText {
-    color: #ffb4bf !important;
+    color: var(--color-primary-fg) !important;
     font-weight: 500;
 }
 
@@ -174,7 +174,7 @@
     justify-content: center;
     gap: 12px;
     padding: 14px 18px calc(14px + env(safe-area-inset-bottom, 0px));
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     background: var(--crop-surface);
 }
 
@@ -193,14 +193,14 @@
     flex: 0 0 auto;
     min-width: 108px;
     padding: 0 22px;
-    border: 1.5px solid rgba(255, 255, 255, 0.16);
+    border: 1.5px solid color-mix(in srgb, var(--color-text) 16%, transparent);
     background: var(--crop-input);
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .cancelBtn:hover:not(:disabled) {
     border-color: var(--crop-accent-hot);
-    background: rgba(142, 33, 53, 0.22);
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 
 .confirmBtn {
@@ -209,7 +209,7 @@
     padding: 0 28px;
     border: none;
     background: var(--crop-accent);
-    color: #fff;
+    color: var(--color-on-primary);
 }
 
 .confirmBtn:hover:not(:disabled) {

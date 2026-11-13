@@ -1,0 +1,182 @@
+/* 绯夜主题：参考「红色夜店」登录页——近黑带红的底色、鲜红主色、
+   顶部红色描边与发光主按钮。深色为主推，浅色为暖白配绯红。 */
+[data-theme="crimson"] {
+  --color-primary: #d42a2a;
+  --color-primary-bold: #b01c1f;
+  --color-primary-light: #f0524f;
+  --color-primary-lighter: #fdeceb;
+  --color-bg: #faf6f5;
+  --color-surface: #ffffff;
+  --color-surface-2: #f6eceb;
+  --color-border: #ecdcdb;
+  --main-background: linear-gradient(90deg, #b01c1f 0%, #e8302c 60%, #f0524f 100%);
+}
+
+[data-theme="crimson"][data-mode="dark"] {
+  --color-primary: #e8302c;
+  --color-primary-bold: #c41e21;
+  --color-primary-light: #ff5a52;
+  --color-primary-lighter: #2a0b0c;
+  --color-bg: #0b0405;
+  --color-surface: #1a0809;
+  --color-surface-2: #26100f;
+  --color-border: #3a1716;
+  --color-text: #f7eeee;
+  --color-text-secondary: #c9a9a8;
+  --color-text-muted: #a08584;
+  --color-highlight: #e2b878;
+  --color-shadow: #000000;
+  --main-background: linear-gradient(90deg, #c41e21 0%, #ef2f2a 55%, #ff5a52 100%);
+}
+
+/* 氛围：页面底部一层暗红光晕；主按钮带红色发光（只在本主题生效） */
+[data-theme="crimson"][data-mode="dark"] body {
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgba(232, 48, 44, 0.10) 0%, transparent 60%),
+    var(--color-bg);
+  background-attachment: fixed;
+}
+
+[data-theme="crimson"][data-mode="dark"] [class*="startButton"]:not(:disabled),
+[data-theme="crimson"][data-mode="dark"] [class*="purchaseButton"]:not(:disabled) {
+  background-image: var(--main-background) !important;
+  box-shadow: 0 0 0 1px rgba(255, 90, 82, 0.35), 0 8px 24px rgba(232, 48, 44, 0.35) !important;
+}
+
+/* ===== 绯夜 · 组件风格（仅深色生效，参考红色夜店登录页） =====
+   - 面板：深酒红渐变底 + 顶部 2px 红色发光描边 + 小圆角
+   - 标题：红色粗体；链接/次要操作：红字
+   - 输入框：透明底 + 浅色细描边，聚焦变红并带外发光
+   - 主按钮：横向红色渐变 + 红色光晕
+   - 背景：极淡扫描线纹理 */
+[data-theme="crimson"][data-mode="dark"] {
+  --crimson-panel: linear-gradient(180deg, #240a0c 0%, #14070a 45%, #0f0507 100%);
+  --crimson-edge: linear-gradient(90deg, transparent 0%, #ff3b33 20%, #ff3b33 80%, transparent 100%);
+  --crimson-glow: 0 0 0 1px rgba(255, 90, 82, 0.30), 0 8px 24px rgba(232, 48, 44, 0.35);
+}
+
+[data-theme="crimson"][data-mode="dark"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 3px);
+}
+
+/* 面板（登录、确认、分享等弹窗主体） */
+[data-theme="crimson"][data-mode="dark"] :is([class*="_modalContent_"], [class*="_modalWrapper_"], [class*="_modalCard_"], [class*="_dialog_"]) {
+  position: relative;
+  background: var(--crimson-panel) !important;
+  border: 1px solid #3a1716 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(232, 48, 44, 0.08) !important;
+  overflow: hidden;
+}
+[data-theme="crimson"][data-mode="dark"] :is([class*="_modalContent_"], [class*="_modalWrapper_"], [class*="_modalCard_"], [class*="_dialog_"])::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: var(--crimson-edge);
+  box-shadow: 0 0 12px rgba(255, 59, 51, 0.8);
+  pointer-events: none;
+  z-index: 1;
+}
+/* 遮罩加深并带红调 */
+[data-theme="crimson"][data-mode="dark"] [class*="_modalOverlay_"] {
+  background: radial-gradient(ellipse at center, rgba(40, 6, 8, 0.72) 0%, rgba(0, 0, 0, 0.86) 100%) !important;
+}
+
+/* 弹窗标题红色 */
+[data-theme="crimson"][data-mode="dark"] :is([class*="_modalContent_"], [class*="_modalWrapper_"]) :is(h1, h2, h3, [class*="_title_"]) {
+  color: var(--color-primary-light) !important;
+  letter-spacing: 0.02em;
+}
+
+/* 输入框：透明底细描边，聚焦红色发光 */
+[data-theme="crimson"][data-mode="dark"] :is(input[type="text"], input[type="password"], input[type="tel"], input[type="email"], input[type="search"], textarea):not([class*="ant-"]) {
+  background-color: rgba(0, 0, 0, 0.25);
+  border-color: rgba(247, 238, 238, 0.28);
+  caret-color: var(--color-primary-light);
+}
+[data-theme="crimson"][data-mode="dark"] :is(input, textarea):focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(232, 48, 44, 0.18) !important;
+  outline: none;
+}
+
+/* 主按钮：红色渐变发光（弹窗确认、提交、开始游戏、购买） */
+[data-theme="crimson"][data-mode="dark"] :is([class*="_confirmButton_"], [class*="_submitBtn_"], [class*="_submitButton_"], [class*="_primaryBtn_"], [class*="_primaryButton_"], [class*="_startButton_"], [class*="_purchaseButton_"]):not(:disabled) {
+  background: var(--main-background) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: var(--crimson-glow) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+[data-theme="crimson"][data-mode="dark"] :is([class*="_confirmButton_"], [class*="_submitBtn_"], [class*="_submitButton_"], [class*="_primaryBtn_"], [class*="_primaryButton_"], [class*="_startButton_"], [class*="_purchaseButton_"]):not(:disabled):hover {
+  filter: brightness(1.08);
+  box-shadow: 0 0 0 1px rgba(255, 90, 82, 0.45), 0 10px 30px rgba(232, 48, 44, 0.5) !important;
+}
+
+/* 次要操作 / 链接红字 */
+[data-theme="crimson"][data-mode="dark"] :is([class*="_forgetPassword_"], [class*="_switchMode_"], [class*="_switchBtn_"], [class*="_linkBtn_"], [class*="_privacyLink_"], [class*="_readMore_"]) {
+  color: var(--color-primary-light) !important;
+}
+/* 错误提示 */
+[data-theme="crimson"][data-mode="dark"] [class*="_errorMessage_"] {
+  color: #ff6b63 !important;
+}
+
+/* 内容卡片：深酒红底 + 暗红细边，悬停边框转红 */
+[data-theme="crimson"][data-mode="dark"] [class*="_goodsCard_"] {
+  background: linear-gradient(180deg, #1c090b 0%, #14070a 100%) !important;
+  border-color: #3a1716 !important;
+}
+
+/* ===== 绯夜 · 跑马灯 =====
+   面板顶部红线改为一束亮光从左到右循环扫过；主按钮表面有一道高光掠过。 */
+@keyframes crimson-marquee {
+  0% { background-position: -60% 0; }
+  100% { background-position: 160% 0; }
+}
+@keyframes crimson-sheen {
+  0% { transform: translateX(-120%) skewX(-20deg); }
+  60%, 100% { transform: translateX(320%) skewX(-20deg); }
+}
+
+[data-theme="crimson"][data-mode="dark"] :is([class*="_modalContent_"], [class*="_modalWrapper_"], [class*="_modalCard_"], [class*="_dialog_"])::before {
+  height: 2px;
+  background:
+    linear-gradient(90deg, transparent 0%, #ffd2cf 45%, #ff3b33 50%, #ffd2cf 55%, transparent 100%) no-repeat,
+    linear-gradient(90deg, rgba(255, 59, 51, 0.15), rgba(255, 59, 51, 0.55), rgba(255, 59, 51, 0.15));
+  background-size: 40% 100%, 100% 100%;
+  animation: crimson-marquee 2.8s linear infinite;
+}
+
+[data-theme="crimson"][data-mode="dark"] :is([class*="_confirmButton_"], [class*="_submitBtn_"], [class*="_submitButton_"], [class*="_primaryBtn_"], [class*="_primaryButton_"], [class*="_startButton_"], [class*="_purchaseButton_"]):not(:disabled) {
+  position: relative;
+  overflow: hidden !important;
+  isolation: isolate;
+}
+[data-theme="crimson"][data-mode="dark"] :is([class*="_confirmButton_"], [class*="_submitBtn_"], [class*="_submitButton_"], [class*="_primaryBtn_"], [class*="_primaryButton_"], [class*="_startButton_"], [class*="_purchaseButton_"]):not(:disabled)::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  animation: crimson-sheen 3.2s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="crimson"] *::before,
+  [data-theme="crimson"] *::after {
+    animation: none !important;
+  }
+}

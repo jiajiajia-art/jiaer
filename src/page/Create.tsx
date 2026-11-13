@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MdContentCopy, MdOutlineEdit, MdOutlineTaskAlt } from 'react-icons/md';
 import ExchangeModal from '../components/Purchase/ExchangeModal';
+import ConfirmModal from '../components/CommonModal/ConfirmModal';
+import confirmModalStyles from '../components/CommonModal/ConfirmModal.module.css';
 import { RiAccountCircleLine } from 'react-icons/ri';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import styles from './Create.module.css';
 import AppPageShell from '../components/Layout/AppPageShell';
@@ -20,6 +22,7 @@ import statisticsApi from '../api/statistics/statisticsApi';
 import payApi from '../api/pay/payApi';
 import type { PayOrderRequest } from '../api/pay/pay.type';
 import { auth } from '../api/account/authApi';
+import { getApiErrorMessage } from '../utils/error';
 import { copyTextToClipboard } from '../utils/clipboard';
 import { getImageUrl } from '../utils/constants';
 import { getGenderSymbol, normalizeGender } from '../utils/profileCompletion';
@@ -68,6 +71,10 @@ const Create: React.FC = () => {
     const [isVipStatusModalOpen, setIsVipStatusModalOpen] = useState(false);
     const [streakDays, setStreakDays] = useState(0);
     const [isExchangeModalOpen, setIsExchangeModalOpen] = useState(false);
+    const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
+    const [isSettleDiamondsModalOpen, setIsSettleDiamondsModalOpen] = useState(false);
+    const [isSettling, setIsSettling] = useState(false);
+    const [isEarningsModalOpen, setIsEarningsModalOpen] = useState(false);
     const [isProfilePreferenceOpen, setIsProfilePreferenceOpen] = useState(false);
     const [followingCount, setFollowingCount] = useState(0);
     const [followersCount, setFollowersCount] = useState(0);
@@ -84,6 +91,12 @@ const Create: React.FC = () => {
     const membership = user?.user?.membership;
     const isVipActive = hasActiveVip(membership);
     const isPromotionPartner = Boolean(user?.user?.userSegment && user.user.userSegment !== 'normal');
+    const isWorkIncentive = stats.incentiveType === 'incentive' || stats.incentiveType === 'game_incentive' || stats.incentiveType === 'all_incentive';
+    const isCodeIncentive = stats.incentiveType === 'code_incentive' || stats.incentiveType === 'all_incentive';
+    const hasExtraEarnings = isWorkIncentive || isCodeIncentive;
+
+    const formatEarningsValue = (value: number) => (Number(value) || 0).toLocaleString('zh-CN');
+
     const getGameTotalStats = async () => {
         if (!user?.user?.id) {
             return;
@@ -278,6 +291,56 @@ const Create: React.FC = () => {
         return null;
     };
 
+    const handleSettle = async () => {
+        if (isSettling) return;
+        setIsSettling(true);
+        try {
+            const response = await auth.settlePoints('points');
+            if (!response.data.success || !response.data.data) {
+                toast.error(response.data.message || t('create.settleFailed'));
+                return;
+            }
+            const pointsAmount = response.data.data.pointsSettled || 0;
+            const diamondsAmount = response.data.data.diamondsSettled || 0;
+            const successMsg = pointsAmount > 0 && diamondsAmount > 0
+                ? t('create.settleSuccessDual', { points: pointsAmount, diamonds: diamondsAmount })
+                : pointsAmount > 0
+                    ? t('create.settleSuccess', { amount: pointsAmount })
+                    : diamondsAmount > 0
+                        ? t('create.settleSuccessDiamonds', { amount: diamondsAmount })
+                        : t('create.settleSuccessZero');
+            toast.success(successMsg);
+            await Promise.all([getGameTotalStats(), getUserInfo()]);
+            setIsSettleModalOpen(false);
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, t('create.settleFailed')));
+        } finally {
+            setIsSettling(false);
+        }
+    };
+
+    const handleSettleDiamonds = async () => {
+        if (isSettling) return;
+        setIsSettling(true);
+        try {
+            const response = await auth.settlePoints('diamonds');
+            if (!response.data.success || !response.data.data) {
+                toast.error(response.data.message || t('create.settleFailed'));
+                return;
+            }
+            const amount = response.data.data.diamondsSettled || 0;
+            toast.success(amount > 0
+                ? t('create.settleSuccessDiamonds', { amount })
+                : t('create.settleSuccessZero'));
+            await Promise.all([getGameTotalStats(), getUserInfo()]);
+            setIsSettleDiamondsModalOpen(false);
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, t('create.settleFailed')));
+        } finally {
+            setIsSettling(false);
+        }
+    };
+
     return (
         <>
         <AppPageShell shellClassName={styles.pageRoot} mainClassName={styles.mainContent}>
@@ -416,7 +479,6 @@ const Create: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* 功能注释：7.1 精简个人中心——只保留 KK / 织梦豆 / 作品数，去掉总点赞与「更多数据」 */}
                             <div className={styles.creatorHeroStats}>
                                 <div className={styles.primaryStatsBar}>
                                     <div
@@ -558,7 +620,129 @@ const Create: React.FC = () => {
                     void getUserInfo();
                 }}
             />
+            {isEarningsModalOpen && (
+                <div
+                    className={styles.earningsModalOverlay}
+                    onClick={() => setIsEarningsModalOpen(false)}
+                >
+                    <div
+                        className={styles.earningsModal}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label={t('create.accountRewardSettlement')}
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <button
+                            type="button"
+                            className={styles.earningsModalCloseBtn}
+                            onClick={() => setIsEarningsModalOpen(false)}
+                            aria-label={t('common.close')}
+                        >
+                            <span className={styles.earningsModalCloseIcon} aria-hidden="true" />
+                        </button>
+                        <h3 className={styles.earningsModalTitle}>{t('create.accountRewardSettlement')}</h3>
+                        <div className={styles.earningsModalBody}>
+                            <div className={styles.earningsModalPrimary}>
+                                <div className={styles.earningsPanelItem}>
+                                    <div className={styles.earningsPanelLabel}>{t('create.pendingRewardPoints')}</div>
+                                    <div className={styles.earningsPanelValueRow}>
+                                        <div className={styles.earningsPanelValue}>{formatEarningsValue(stats.totalAmount)}</div>
+                                        {stats.totalAmount > 0 && (
+                                            <button
+                                                type="button"
+                                                className={styles.earningsInlineSettleButton}
+                                                onClick={() => setIsSettleModalOpen(true)}
+                                                disabled={isSettling}
+                                            >
+                                                {t('create.settle')}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className={styles.earningsPanelItem}>
+                                    <div className={styles.earningsPanelLabel}>{t('create.pendingRewardDiamonds')}</div>
+                                    <div className={styles.earningsPanelValueRow}>
+                                        <div className={styles.earningsPanelValue}>{formatEarningsValue(stats.totalDiamondsAmount)}</div>
+                                        {stats.totalDiamondsAmount > 0 && (
+                                            <button
+                                                type="button"
+                                                className={styles.earningsInlineSettleButton}
+                                                onClick={() => setIsSettleDiamondsModalOpen(true)}
+                                                disabled={isSettling}
+                                            >
+                                                {t('create.settle')}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            {hasExtraEarnings && (
+                                <div className={styles.earningsModalExtra}>
+                                    {isWorkIncentive && (
+                                        <div className={styles.earningsExtraItem}>
+                                            <div className={styles.earningsExtraLabel}>{t('create.totalIncentiveEarnings')}</div>
+                                            <div className={styles.earningsExtraValue}>{stats.totalIncentiveAmount}</div>
+                                        </div>
+                                    )}
+                                    {isWorkIncentive && (
+                                        <div className={styles.earningsExtraItem}>
+                                            <div className={styles.earningsExtraLabel}>{t('create.pendingIncentiveEarnings')}</div>
+                                            <div className={styles.earningsExtraValue}>{stats.pendingIncome}</div>
+                                        </div>
+                                    )}
+                                    {isCodeIncentive && (
+                                        <div className={styles.earningsExtraItem}>
+                                            <div className={styles.earningsExtraLabel}>{t('create.inviteCodeTotalEarnings')}</div>
+                                            <div className={styles.earningsExtraValue}>{stats.inviteTotalAmount}</div>
+                                        </div>
+                                    )}
+                                    {isCodeIncentive && (
+                                        <div className={styles.earningsExtraItem}>
+                                            <div className={styles.earningsExtraLabel}>{t('create.inviteCodePendingEarnings')}</div>
+                                            <div className={styles.earningsExtraValue}>{stats.invitePendingIncome}</div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {identityEditModal}
+
+            <ConfirmModal
+                isOpen={isSettleModalOpen}
+                onConfirm={handleSettle}
+                onCancel={() => setIsSettleModalOpen(false)}
+                title={t('create.confirmSettle')}
+                message={(
+                    <Trans
+                        i18nKey="create.settleConfirmMessage"
+                        values={{ amount: stats.totalAmount }}
+                        components={{ hl: <strong className={confirmModalStyles.amountHighlight} /> }}
+                    />
+                )}
+                confirmButtonText={isSettling ? t('create.settling') : t('create.confirmSettleBtn')}
+                cancelButtonText={t('create.cancel')}
+                tone="dark"
+            />
+            <ConfirmModal
+                isOpen={isSettleDiamondsModalOpen}
+                onConfirm={handleSettleDiamonds}
+                onCancel={() => setIsSettleDiamondsModalOpen(false)}
+                title={t('create.confirmSettleDiamonds')}
+                message={(
+                    <Trans
+                        i18nKey="create.settleConfirmDiamondsMessage"
+                        values={{ amount: stats.totalDiamondsAmount }}
+                        components={{ hl: <strong className={confirmModalStyles.amountHighlight} /> }}
+                    />
+                )}
+                confirmButtonText={isSettling ? t('create.settling') : t('create.confirmSettleBtn')}
+                cancelButtonText={t('create.cancel')}
+                tone="dark"
+            />
 
             <ProfilePreferenceModal
                 isOpen={isProfilePreferenceOpen}

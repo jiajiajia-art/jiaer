@@ -92,7 +92,7 @@ const ServerAttributesPanel: React.FC<ServerAttributesPanelProps> = ({ isOpen, o
 
           <div className={styles.header}>
             <div className={styles.headerBar}>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)' }}>
+              <div style={{ fontSize: 12, color: 'color-mix(in srgb, var(--color-text) 80%, transparent)' }}>
                 {loading ? '加载中…' : ''}
               </div>
               <button

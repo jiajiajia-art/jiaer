@@ -1,8 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../CommonModal/ConfirmModal';
-import { getAppBasePath } from '../../lib/appBasePath';
 
 /** 功能注释：与正本 md 文件头版本对齐；换版后须重新勾选 */
 export const CREATOR_AGREEMENT_VERSION = '1.0.0';
@@ -34,7 +33,6 @@ const CreatorPublishAgreementModal: React.FC<Props> = ({
 }) => {
   const [agreeCreator, setAgreeCreator] = useState(false);
   const [agreeStandards, setAgreeStandards] = useState(false);
-  const base = useMemo(() => getAppBasePath().replace(/\/$/, ''), []);
 
   const handleConfirm = () => {
     if (!agreeCreator || !agreeStandards) {
@@ -75,7 +73,7 @@ const CreatorPublishAgreementModal: React.FC<Props> = ({
             />
             <span>
               我已阅读并同意
-              <Link to={`${base}/legal/creator-agreement`} target="_blank" rel="noreferrer">
+              <Link to="/legal/creator-agreement" target="_blank" rel="noreferrer">
                 《创作者协议》
               </Link>
               （v{CREATOR_AGREEMENT_VERSION}）
@@ -90,7 +88,7 @@ const CreatorPublishAgreementModal: React.FC<Props> = ({
             />
             <span>
               我确认作品已达到
-              <Link to={`${base}/legal/work-review-standards`} target="_blank" rel="noreferrer">
+              <Link to="/legal/work-review-standards" target="_blank" rel="noreferrer">
                 《作品审核标准》
               </Link>
               （v{WORK_REVIEW_STANDARDS_VERSION}）

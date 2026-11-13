@@ -94,3 +94,37 @@ test('ModEditorPanel_地点区不展示开局出行说明文案', () => {
   assert.doesNotMatch(panel, /起始地点请在地点树里/);
   assert.doesNotMatch(panel, /出行方式请到本页/);
 });
+
+test('inferWorldMapName_大地图不与顶层地点同名', () => {
+  const r = (n) => ({ name: n, exits: {} });
+  assert.equal(mod.inferWorldMapName({ rooms: { a: r('山岚旅馆大堂'), b: r('旅馆餐厅'), c: r('庭院') } }), '山岚旅馆');
+  assert.equal(mod.inferWorldMapName({ rooms: { a: r('青云宗山门'), b: r('青云宗藏经阁') } }), '青云宗');
+});
+
+test('healGeneratedWorldMaps_同名改区域名_子地点随父图', () => {
+  const r = (n, extra = {}) => ({ name: n, desc: 'd', exits: {}, ...extra });
+  const c = {
+    worldMaps: [{ id: 'm1', name: '山岚旅馆大堂' }],
+    rooms: { a: r('山岚旅馆大堂', { mapId: 'm1' }), b: r('前台', { parent: 'a', mapId: 'bad' }), c: r('旅馆餐厅', { mapId: 'm1' }) },
+  };
+  mod.healGeneratedWorldMaps(c);
+  assert.equal(c.worldMaps[0].name, '山岚旅馆');
+  assert.equal(c.rooms.b.mapId, 'm1');
+});
+
+test('importLibraryMapTree_带内部地图与各层点位', () => {
+  const out = mod.importLibraryMapTree({
+    mapName: '太虚宗',
+    tree: { rooms: [
+      { key: 'yard', name: '竹院', mapX: 40, mapY: 30, innerMapUrl: 'yard.png' },
+      { key: 'well', name: '井', parentKey: 'yard', mapX: 80, mapY: 45 },
+    ] },
+    existingRooms: {},
+  });
+  const rooms = Object.values(out.rooms);
+  const yard = rooms.find((r) => r.name === '竹院');
+  const well = rooms.find((r) => r.name === '井');
+  assert.equal(yard.innerMap, 'yard.png');
+  assert.equal(well.mapX, 80);
+  assert.equal(well.mapY, 45);
+});

@@ -1,5 +1,5 @@
 /**
- * Create 页：邀请好友卡片挂在账户区底部，且不在 ProfileFunctionPanel 列表内。
+ * Create 页：邀请好友卡片应挂在「我的账户」面板底部，且不再出现在 ProfileFunctionPanel 列表顶部。
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -18,10 +18,10 @@ test('Create_邀请卡片应在账户面板底部且离开功能列表', () => {
   const authTypes = read('src/api/account/auth.type.ts');
 
   assert.match(create, /import InviteCampaignCard from '\.\.\/components\/Profile\/InviteCampaignCard'/);
-  // 功能注释：精简个人中心后不再插入 TodayEarnPointsPanel，邀请卡紧挨更多服务
+  // 「今日可赚织梦豆」已迁到独立页 /points/earn，账户面板底部只剩邀请卡片 + 功能面板
   assert.match(
     create,
-    /<InviteCampaignCard\s*\/>\s*<ProfileFunctionPanel\s*\/>/,
+    /<\/div>\s*<InviteCampaignCard\s*\/>\s*<ProfileFunctionPanel\s*\/>\s*<\/div>/,
   );
   assert.doesNotMatch(
     create,
@@ -34,8 +34,8 @@ test('Create_邀请卡片应在账户面板底部且离开功能列表', () => {
   assert.match(card, /inviteCampaignFields/);
   assert.match(card, /inviteCampaignCodeTray|inviteCampaignCodeRow/);
   assert.match(card, /inviteCampaignRedeemRow/);
-  // 功能注释：可读 user.inviteStats 展示人数；禁止旧领奖弹窗与独立 claim/stats API
-  assert.doesNotMatch(card, /InviteRewardModal|getInviteStats|claimPoints\(/);
+  // 邀请统计改由用户信息下发（user.inviteStats），不再单独请求 / 领取
+  assert.doesNotMatch(card, /InviteRewardModal|getInviteStats|claimPoints/);
   assert.doesNotMatch(card, /inviteCampaignFooterRow|inviteCampaignMeta|inviteCampaignRewardBtn/);
   assert.doesNotMatch(authApi, /getInviteStats|claimInviteReward|\/auth\/invite\/stats|\/auth\/invite\/claim/);
   assert.doesNotMatch(authTypes, /InviteRewardItem|InviteClaimResult/);
@@ -51,6 +51,7 @@ test('Create_邀请卡片应在账户面板底部且离开功能列表', () => {
 
   const en = read('src/i18n/locales/en.json');
   const zh = read('src/i18n/locales/zh.json');
+  // 奖励数额改为参数，且为限时 KK 币
   assert.match(en, /"inviteCampaignTitle":\s*"Invite a friend and you both get \{\{amount\}\} limited-time KK Coins!"/);
   assert.match(zh, /"inviteCampaignTitle":\s*"邀请好友，双方各得 \{\{amount\}\} 限时KK币！"/);
   assert.doesNotMatch(en, /"inviteStatsText"|\n  "inviteReward": \{/);
@@ -61,6 +62,6 @@ test('Create_邀请卡片应在账户面板底部且离开功能列表', () => {
   assert.doesNotMatch(panel, /InviteRewardModal/);
   assert.doesNotMatch(panel, /getInviteStats/);
   assert.doesNotMatch(panel, /useInviteCode|redeemInviteCode|showInputInviteCode/);
-  // 功能注释：7.1 更多服务去掉消费记录入口；/asset/details 页本身保留
-  assert.doesNotMatch(panel, /profile\.purchaseRecords|\/asset\/details/);
+  // 消费记录并入资产明细页（/asset/details 的「消费」筛选），入口在账户面板
+  assert.match(create, /navigate\('\/asset\/details'\)/);
 });

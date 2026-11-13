@@ -1786,7 +1786,7 @@ const buildInteractiveVideoTreeFlow = (
     const addFlowEdge = (id: string, source: string, target: string, active: boolean) => {
         if (flowEdgeIds.has(id)) return;
         flowEdgeIds.add(id);
-        const color = active ? '#e5b35f' : 'rgba(170, 184, 177, 0.64)';
+        const color = active ? 'var(--color-highlight)' : 'color-mix(in srgb, var(--color-text) 64%, transparent)';
         edges.push({
             id,
             source,
@@ -2171,7 +2171,7 @@ function InteractiveVideoTreeCanvas({
                 }}
                 proOptions={TREE_PRO_OPTIONS}
             >
-                <Background color="rgba(245, 240, 232, 0.22)" gap={28} size={1} />
+                <Background color="color-mix(in srgb, var(--color-text) 22%, transparent)" gap={28} size={1} />
                 <Controls showInteractive={false} />
             </ReactFlow>
         </div>

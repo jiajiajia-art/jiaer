@@ -1122,7 +1122,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                 style={{
                                     textAlign: 'center',
                                     marginTop: '0px',
-                                    color: submitError.includes('成功') ? '#28a745' : '#DC3545'
+                                    color: submitError.includes('成功') ? 'var(--color-success)' : 'var(--color-primary)'
                                 }}
                             >
                                 {submitError}

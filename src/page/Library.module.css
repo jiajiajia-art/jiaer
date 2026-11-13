@@ -7,7 +7,7 @@
 
 .mainContent {
     /* 功能注释：纵向布局，页脚落底部 */
-    color: black;
+    color: var(--color-text);
     display: flex;
     flex-direction: column;
     margin: 0;

@@ -1,14 +1,14 @@
 .pageRoot {
     /* 功能注释：消息页本地暗色，对齐效果图会话列表 */
-    --primary: #A8283C;
-    --primary-light: #C23A50;
-    --primary-dark: #8E2135;
-    --messages-card: #1C1C1E;
-    --messages-muted: #8E8E93;
-    --messages-preview: #AEAEB2;
+    --primary: var(--color-primary);
+    --primary-light: var(--color-primary);
+    --primary-dark: var(--color-primary-bold);
+    --messages-card: var(--color-surface);
+    --messages-muted: var(--color-text-muted);
+    --messages-preview: var(--color-text-muted);
     min-height: 100vh;
-    background: #000000;
-    color: #FFFFFF;
+    background: var(--color-bg);
+    color: var(--color-text);
 }
 
 .desktopChrome {
@@ -42,7 +42,7 @@
     border: none;
     border-radius: 999px;
     background: transparent;
-    color: #FFFFFF;
+    color: var(--color-text);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -65,7 +65,7 @@
     font-size: 18px;
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: #FFFFFF;
+    color: var(--color-text);
 }
 
 .markAllButton {
@@ -79,7 +79,7 @@
     padding: 6px 0;
     border: none;
     background: transparent;
-    color: #FFFFFF;
+    color: var(--color-text);
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
@@ -144,7 +144,7 @@
 }
 
 .safetyNoticeCard:active {
-    background: #222224;
+    background: var(--color-surface-2);
 }
 
 .safetyUnreadDot {
@@ -154,7 +154,7 @@
     width: 8px;
     height: 8px;
     border-radius: 999px;
-    background: #E11D48;
+    background: var(--color-primary);
 }
 
 .safetyNoticeHead {
@@ -169,7 +169,7 @@
     font-size: 17px;
     font-weight: 700;
     line-height: 1.35;
-    color: #FFFFFF;
+    color: var(--color-text);
 }
 
 .safetyNoticeDate {
@@ -207,7 +207,7 @@
     flex: 1 1 auto;
     min-width: 0;
     margin: 0;
-    color: rgba(255, 255, 255, 0.88);
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
     word-break: break-word;
 }
 
@@ -218,13 +218,13 @@
     gap: 12px;
     margin-top: 2px;
     padding: 16px 0 18px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .safetyNoticeAction {
     font-size: 14px;
     font-weight: 500;
-    color: #FFFFFF;
+    color: var(--color-text);
 }
 
 .safetyNoticeChevron {
@@ -259,11 +259,11 @@
 }
 
 .messageRow + .messageRow {
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .messageRow:active {
-    background: rgba(255, 255, 255, 0.04);
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
 .avatarWrap {
@@ -277,7 +277,7 @@
     width: 48px;
     height: 48px;
     border-radius: 10px;
-    border: 1.5px dashed rgba(255, 255, 255, 0.28);
+    border: none;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -305,7 +305,7 @@
     width: 10px;
     height: 10px;
     border-radius: 999px;
-    background: #E11D48;
+    background: var(--color-primary);
     border: 2px solid var(--messages-card);
     box-sizing: border-box;
 }
@@ -315,8 +315,8 @@
     height: 18px;
     padding: 0 5px;
     border-radius: 999px;
-    background: #E11D48;
-    color: #FFFFFF;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
     font-size: 11px;
     font-weight: 700;
     line-height: 18px;
@@ -342,7 +342,7 @@
     margin: 0;
     font-size: 15px;
     font-weight: 650;
-    color: #FFFFFF;
+    color: var(--color-text);
     line-height: 1.35;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -377,7 +377,7 @@
 .safetyAction {
     border: none;
     background: transparent;
-    color: #ff7a93;
+    color: var(--color-primary-fg);
     padding: 0;
     cursor: pointer;
     font-size: inherit;
@@ -388,11 +388,11 @@
 }
 
 .safetyAction:hover {
-    color: #ff3b61;
+    color: var(--color-primary);
 }
 
 .safetyAction:focus-visible {
-    outline: 2px solid rgba(255, 59, 97, 0.45);
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
     outline-offset: 3px;
     border-radius: 4px;
 }

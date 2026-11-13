@@ -2,8 +2,8 @@
 
 .pageRoot {
   min-height: 100vh;
-  background: #0b0b0c;
-  color: #ffffff;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .main {
@@ -34,7 +34,7 @@
   border: none;
   border-radius: 999px;
   background: transparent;
-  color: #ffffff;
+  color: var(--color-text);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -55,7 +55,7 @@
   margin: 0;
   font-size: 17px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .statusBlock {
@@ -76,7 +76,7 @@
   font-size: 32px;
   font-weight: 700;
   line-height: 1;
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .statusCheck {
@@ -86,22 +86,22 @@
 }
 
 .statusIconRejected {
-  background: #e89a2e;
+  background: var(--color-highlight);
 }
 
 .statusIconApproved {
-  background: #2f9e6b;
+  background: var(--color-success);
 }
 
 .statusIconPending {
-  background: #6b7280;
+  background: var(--color-text-muted);
 }
 
 .statusLabel {
   margin: 0;
   font-size: 20px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .notifyBody {
@@ -111,12 +111,12 @@
   font-size: 13px;
   font-weight: 400;
   line-height: 1.55;
-  color: rgba(255, 255, 255, 0.62);
+  color: var(--color-text-secondary);
 }
 
 .card {
-  background: #1a1a1a;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
   border-radius: 16px;
   padding: 18px 16px 8px;
 }
@@ -125,7 +125,7 @@
   margin: 0 0 14px;
   font-size: 16px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .rows {
@@ -139,7 +139,7 @@
   grid-template-columns: 88px minmax(0, 1fr);
   gap: 12px;
   padding: 12px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .row:first-of-type {
@@ -151,14 +151,14 @@
   margin: 0;
   font-size: 13px;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--color-text-muted);
 }
 
 .rowValue {
   margin: 0;
   font-size: 13px;
   line-height: 1.55;
-  color: rgba(255, 255, 255, 0.9);
+  color: color-mix(in srgb, var(--color-text) 90%, transparent);
   word-break: break-word;
 }
 
@@ -178,7 +178,7 @@
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--color-text-secondary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -186,8 +186,8 @@
 }
 
 .copyBtn:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .copyBtn svg {
@@ -211,8 +211,8 @@
   height: 64px;
   border-radius: 8px;
   object-fit: cover;
-  background: #1c1c1e;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .descClamp {
@@ -231,7 +231,7 @@
   padding: 0;
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -252,9 +252,9 @@
   margin: 40px 16px;
   text-align: center;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-secondary);
 }
 
 .error {
-  color: #ff8a9a;
+  color: var(--color-primary-fg);
 }

@@ -1,18 +1,18 @@
 .pageRoot {
-    --admin-accent: #1677ff;
-    --admin-accent-strong: #0958d9;
-    --admin-accent-soft: #e6f4ff;
-    --admin-border: #d9d9d9;
-    --admin-border-strong: #91caff;
-    --admin-surface: #ffffff;
-    --admin-surface-strong: #ffffff;
-    --admin-surface-soft: #fafcff;
-    --admin-panel: #ffffff;
-    --admin-panel-strong: #f5faff;
-    --admin-shadow: rgba(31, 56, 88, 0.08);
-    --admin-text: #262626;
-    --admin-text-soft: #595959;
-    --admin-muted: #8c8c8c;
+    --admin-accent: var(--color-primary);
+    --admin-accent-strong: var(--color-primary);
+    --admin-accent-soft: var(--color-bg);
+    --admin-border: var(--color-border);
+    --admin-border-strong: var(--color-primary);
+    --admin-surface: var(--color-surface);
+    --admin-surface-strong: var(--color-surface);
+    --admin-surface-soft: var(--color-surface);
+    --admin-panel: var(--color-surface);
+    --admin-panel-strong: var(--color-bg);
+    --admin-shadow: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    --admin-text: var(--color-text);
+    --admin-text-soft: var(--color-text-secondary);
+    --admin-muted: var(--color-text-muted);
     width: 100%;
     min-height: 100%;
     background: transparent;
@@ -187,9 +187,9 @@
     gap: 12px;
     padding: 16px;
     border-radius: 16px;
-    border: 1px solid rgba(205, 157, 120, 0.24);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 24%, transparent);
     background: var(--admin-surface-strong);
-    box-shadow: 0 8px 22px rgba(117, 72, 39, 0.06);
+    box-shadow: 0 8px 22px color-mix(in srgb, var(--color-highlight) 6%, transparent);
     min-width: 0;
 }
 
@@ -215,8 +215,8 @@
 }
 
 .historyCardActive {
-    border-color: rgba(201, 115, 63, 0.42);
-    box-shadow: 0 16px 34px rgba(201, 115, 63, 0.14);
+    border-color: color-mix(in srgb, var(--color-highlight) 42%, transparent);
+    box-shadow: 0 16px 34px color-mix(in srgb, var(--color-highlight) 14%, transparent);
 }
 
 .historyMeta {
@@ -237,7 +237,7 @@
 }
 
 .statusPublished {
-    background: rgba(178, 109, 56, 0.12);
+    background: color-mix(in srgb, var(--color-highlight) 12%, transparent);
     color: var(--admin-accent-strong);
 }
 
@@ -291,9 +291,9 @@
 .textInput,
 .textArea {
     width: 100%;
-    border: 1px solid rgba(205, 157, 120, 0.38);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 38%, transparent);
     border-radius: 18px;
-    background: #fff;
+    background: var(--color-surface);
     color: var(--admin-text);
     font-size: 15px;
     padding: 14px 16px;
@@ -304,9 +304,9 @@
 
 .textInput:focus,
 .textArea:focus {
-    border-color: rgba(201, 115, 63, 0.74);
-    box-shadow: 0 0 0 4px rgba(201, 115, 63, 0.12);
-    background: #fff;
+    border-color: color-mix(in srgb, var(--color-highlight) 74%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-highlight) 12%, transparent);
+    background: var(--color-surface);
 }
 
 .textArea {
@@ -328,8 +328,8 @@
     gap: 12px;
     padding: 16px;
     border-radius: 16px;
-    border: 1px solid rgba(205, 157, 120, 0.24);
-    background: #fff;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 24%, transparent);
+    background: var(--color-surface);
 }
 
 .sectionEditorActions {
@@ -381,23 +381,23 @@
 }
 
 .primaryButton {
-    background: #1677ff;
-    color: #fff;
-    box-shadow: 0 12px 28px rgba(201, 115, 63, 0.24);
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    box-shadow: 0 12px 28px color-mix(in srgb, var(--color-highlight) 24%, transparent);
 }
 
 .secondaryButton,
 .primaryGhostButton,
 .actionButton {
-    background: #fff;
+    background: var(--color-surface);
     color: var(--admin-text);
-    border: 1px solid rgba(205, 157, 120, 0.42);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 42%, transparent);
 }
 
 .dangerButton {
-    background: rgba(187, 53, 53, 0.08);
-    color: #b73a3a;
-    border: 1px solid rgba(187, 53, 53, 0.18);
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    color: var(--color-primary);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
 .primaryButton:hover,
@@ -443,7 +443,7 @@
     margin-top: 24px;
     padding: 24px;
     border-radius: 18px;
-    border: 1px dashed rgba(201, 139, 92, 0.4);
+    border: 1px dashed color-mix(in srgb, var(--color-highlight) 40%, transparent);
     background: var(--admin-panel);
     box-sizing: border-box;
 }
@@ -532,9 +532,9 @@
 .featuredThemeCard,
 .themeCard {
     border-radius: 16px;
-    border: 1px solid rgba(205, 157, 120, 0.22);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 22%, transparent);
     background: var(--admin-surface-strong);
-    box-shadow: 0 8px 22px rgba(117, 72, 39, 0.06);
+    box-shadow: 0 8px 22px color-mix(in srgb, var(--color-highlight) 6%, transparent);
 }
 
 .featuredThemeCard {
@@ -638,7 +638,7 @@
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background: rgba(45, 28, 18, 0.38);
+    background: color-mix(in srgb, var(--color-highlight) 38%, transparent);
     backdrop-filter: blur(6px);
 }
 
@@ -652,7 +652,7 @@
     border-radius: 16px;
     border: 1px solid var(--admin-border);
     background: var(--admin-surface);
-    box-shadow: 0 28px 70px rgba(69, 42, 24, 0.22);
+    box-shadow: 0 28px 70px color-mix(in srgb, var(--color-highlight) 22%, transparent);
     box-sizing: border-box;
 }
 
@@ -682,7 +682,7 @@
 }
 
 .formError {
-    color: #b54545;
+    color: var(--color-primary);
     font-size: 13px;
     line-height: 1.5;
 }
@@ -739,16 +739,16 @@
     gap: 14px;
     padding: 16px 18px;
     border-radius: 16px;
-    border: 1px solid rgba(205, 157, 120, 0.22);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 22%, transparent);
     background: var(--admin-surface-strong);
-    box-shadow: 0 10px 26px rgba(117, 72, 39, 0.08);
+    box-shadow: 0 10px 26px color-mix(in srgb, var(--color-highlight) 8%, transparent);
     cursor: grab;
 }
 
 .sortItemDragging {
     opacity: 0.72;
-    border-color: rgba(201, 115, 63, 0.42);
-    box-shadow: 0 16px 32px rgba(201, 115, 63, 0.16);
+    border-color: color-mix(in srgb, var(--color-highlight) 42%, transparent);
+    box-shadow: 0 16px 32px color-mix(in srgb, var(--color-highlight) 16%, transparent);
 }
 
 .sortItemOrder {
@@ -758,7 +758,7 @@
     width: 40px;
     height: 40px;
     border-radius: 14px;
-    background: #e6f4ff;
+    background: var(--color-bg);
     color: var(--admin-accent-strong);
     font-size: 15px;
     font-weight: 700;
@@ -795,8 +795,8 @@
     min-width: 84px;
     padding: 9px 12px;
     border-radius: 999px;
-    background: #fff;
-    border: 1px solid rgba(205, 157, 120, 0.32);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 32%, transparent);
     color: var(--admin-text-soft);
     font-size: 12px;
     font-weight: 700;
@@ -930,17 +930,17 @@
     justify-content: center;
     min-height: 160px;
     padding: 24px;
-    border: 2px dashed #d1d5db;
+    border: 2px dashed var(--color-border);
     border-radius: 12px;
-    background: #f9fafb;
+    background: var(--color-bg);
     cursor: pointer;
     transition: all 0.2s ease;
     text-align: center;
 }
 
 .fileUploadArea:hover {
-    border-color: #c42d3a;
-    background: #fef2f2;
+    border-color: var(--color-primary);
+    background: var(--color-bg);
 }
 
 .fileInput {
@@ -960,13 +960,13 @@
 .uploadText {
     font-size: 14px;
     font-weight: 500;
-    color: #374151;
+    color: var(--color-text-secondary);
     margin-bottom: 4px;
 }
 
 .uploadHint {
     font-size: 12px;
-    color: #9ca3af;
+    color: var(--color-text-secondary);
 }
 
 .selectedFile {
@@ -979,28 +979,28 @@
 .fileName {
     font-size: 14px;
     font-weight: 500;
-    color: #1f2937;
+    color: var(--color-text);
     word-break: break-all;
 }
 
 .fileSize {
     font-size: 12px;
-    color: #6b7280;
+    color: var(--color-text-muted);
 }
 
 .uploadInstructions {
     margin-top: 8px;
     padding: 12px;
-    background: #f3f4f6;
+    background: var(--color-bg);
     border-radius: 8px;
     font-size: 12px;
-    color: #4b5563;
+    color: var(--color-text-secondary);
 }
 
 .uploadInstructionsTitle {
     font-weight: 600;
     margin-bottom: 8px;
-    color: #1f2937;
+    color: var(--color-text);
 }
 
 .uploadInstructionsList {
@@ -1011,7 +1011,7 @@
 
 .uploadInstructionsList code {
     padding: 1px 4px;
-    background: #e5e7eb;
+    background: var(--color-surface-2);
     border-radius: 4px;
     font-size: 11px;
 }
@@ -1031,7 +1031,7 @@
     flex-direction: column;
     gap: 14px;
     padding: 18px;
-    background: #fff;
+    background: var(--color-surface);
     border: 1px solid var(--admin-border);
     border-radius: 22px;
     box-shadow: 0 18px 48px var(--admin-shadow);
@@ -1092,7 +1092,7 @@
 }
 
 .guideGroupHeader:hover {
-    background: #e6f4ff;
+    background: var(--color-bg);
 }
 
 .guideGroupIcon {
@@ -1141,7 +1141,7 @@
 }
 
 .categoryHeader:hover {
-    background: #e6f4ff;
+    background: var(--color-bg);
 }
 
 .categoryIcon {
@@ -1185,12 +1185,12 @@
 }
 
 .documentItem:hover {
-    background: #e6f4ff;
+    background: var(--color-bg);
 }
 
 .documentItemActive {
     background: var(--admin-accent-soft);
-    border-color: rgba(201, 115, 63, 0.3);
+    border-color: color-mix(in srgb, var(--color-highlight) 30%, transparent);
 }
 
 .documentItemIcon {
@@ -1344,12 +1344,12 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
-    border: 1px solid rgba(205, 157, 120, 0.32);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 32%, transparent);
 }
 
 .confirmButton {
-    background: var(--admin-accent);
-    color: #fff;
+    background: color-mix(in srgb, var(--admin-accent) 68%, var(--color-shadow));
+    color: var(--color-on-primary);
 }
 
 .confirmButton:hover:not(:disabled) {
@@ -1362,13 +1362,13 @@
 }
 
 .cancelButton {
-    background: #fff;
+    background: var(--color-surface);
     color: var(--admin-text);
 }
 
 .cancelButton:hover:not(:disabled) {
     background: var(--admin-surface);
-    border-color: rgba(205, 157, 120, 0.5);
+    border-color: color-mix(in srgb, var(--color-highlight) 50%, transparent);
 }
 
 .cancelButton:disabled {
@@ -1383,9 +1383,9 @@
 .documentPreviewCard,
 .sortModal,
 .sortItem {
-    border-color: #f0f0f0;
+    border-color: var(--color-border);
     border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(31, 56, 88, 0.06);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary) 6%, transparent);
     backdrop-filter: none;
 }
 
@@ -1395,31 +1395,31 @@
 .documentTreePanel,
 .documentPreviewCard,
 .sortItem {
-    background: #fff;
+    background: var(--color-surface);
 }
 
 .historyCard,
 .sectionEditor,
 .sortItemHandle,
 .orderActions {
-    border-color: #f0f0f0;
+    border-color: var(--color-border);
     border-radius: 10px;
     box-shadow: none;
-    background: #fafcff;
+    background: var(--color-surface);
 }
 
 .textInput,
 .textArea {
-    border-color: #d9d9d9;
+    border-color: var(--color-border);
     border-radius: 8px;
-    background: #fff;
+    background: var(--color-surface);
     padding: 10px 12px;
 }
 
 .textInput:focus,
 .textArea:focus {
-    border-color: #1677ff;
-    box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
 .primaryButton,
@@ -1433,7 +1433,7 @@
 }
 
 .primaryButton {
-    background: #1677ff;
+    background: var(--color-primary);
 }
 
 .primaryButton:hover,

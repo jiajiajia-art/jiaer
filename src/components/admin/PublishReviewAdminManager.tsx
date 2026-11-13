@@ -342,8 +342,8 @@ const PublishReviewAdminManager: React.FC = () => {
                               fontWeight: 700,
                               padding: '2px 8px',
                               borderRadius: 999,
-                              background: romance ? 'rgba(200, 80, 120, 0.12)' : 'rgba(0,0,0,0.06)',
-                              color: romance ? '#a12d5a' : '#444',
+                              background: romance ? 'color-mix(in srgb, var(--color-primary) 12%, transparent)' : 'color-mix(in srgb, var(--color-text) 6%, transparent)',
+                              color: romance ? 'var(--color-primary)' : 'var(--color-text-secondary)',
                             }}
                           >
                             {eng}
@@ -413,9 +413,9 @@ const PublishReviewAdminManager: React.FC = () => {
                             type="button"
                             className={local.decisionBtn}
                             style={{
-                              background: '#fffdfb',
-                              color: '#5e3f2a',
-                              borderColor: 'rgba(165, 96, 47, 0.45)',
+                              background: 'var(--color-surface)',
+                              color: 'var(--color-highlight)',
+                              borderColor: 'color-mix(in srgb, var(--color-highlight) 45%, transparent)',
                             }}
                             disabled={Boolean(busyKey) || !row.creatorUserId}
                             onClick={() => setConfirm({ kind: 'clearNeedReview', item: row })}
@@ -483,8 +483,8 @@ const PublishReviewAdminManager: React.FC = () => {
                       aria-pressed={on}
                       className={local.decisionBtn}
                       style={{
-                        background: on ? 'rgba(200,80,80,0.12)' : undefined,
-                        borderColor: on ? 'rgba(180,60,60,0.5)' : undefined,
+                        background: on ? 'color-mix(in srgb, var(--color-primary) 12%, transparent)' : undefined,
+                        borderColor: on ? 'color-mix(in srgb, var(--color-primary) 50%, transparent)' : undefined,
                       }}
                       onClick={() => toggleRejectReason(opt.id)}
                       disabled={Boolean(busyKey)}
@@ -532,7 +532,7 @@ const PublishReviewAdminManager: React.FC = () => {
           formPreview?.loading ? (
             <p>加载待审快照…</p>
           ) : formPreview?.error ? (
-            <p style={{ color: '#a12d5a' }}>{formPreview.error}</p>
+            <p style={{ color: 'var(--color-primary)' }}>{formPreview.error}</p>
           ) : formPreview?.summary ? (
             <div style={{ fontSize: 13, lineHeight: 1.55 }}>
               <p style={{ margin: '0 0 8px' }}>

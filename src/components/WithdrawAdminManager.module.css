@@ -10,20 +10,20 @@
 }
 
 .tab {
-  border: 1px solid rgba(205, 157, 120, 0.42);
-  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 42%, transparent);
+  background: var(--color-surface);
   border-radius: 8px;
   padding: 8px 16px;
   cursor: pointer;
   font-weight: 600;
-  color: #3b2a1d;
+  color: var(--color-highlight);
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
 .tabActive {
-  border-color: var(--admin-accent, #c9733f);
-  color: var(--admin-accent-strong, #aa5a2d);
-  background: #e6f4ff;
+  border-color: var(--admin-accent, var(--color-highlight));
+  color: var(--admin-accent-strong, var(--color-highlight));
+  background: var(--color-bg);
 }
 
 .toolbar {
@@ -37,13 +37,13 @@
 .select,
 .textarea {
   box-sizing: border-box;
-  border: 1px solid rgba(205, 157, 120, 0.42);
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 42%, transparent);
   border-radius: 8px;
   padding: 0 12px;
   font-size: 14px;
   font-family: inherit;
-  color: #3b2a1d;
-  background: #fff;
+  color: var(--color-highlight);
+  background: var(--color-surface);
 }
 
 .input,
@@ -68,8 +68,8 @@
 .select:focus,
 .textarea:focus {
   outline: none;
-  border-color: var(--admin-accent, #c9733f);
-  box-shadow: 0 0 0 3px rgba(201, 115, 63, 0.16);
+  border-color: var(--admin-accent, var(--color-highlight));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-highlight) 16%, transparent);
 }
 
 .primaryButton,
@@ -89,36 +89,36 @@
 
 /* 暖陶土主按钮：贴合 AdminPanel 色板，避免高饱和红块 */
 .primaryButton {
-  background: #1677ff;
-  color: #fff;
-  box-shadow: 0 8px 18px rgba(201, 115, 63, 0.22);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--color-highlight) 22%, transparent);
 }
 
 .primaryButton:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(201, 115, 63, 0.3);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--color-highlight) 30%, transparent);
 }
 
 .primaryButton:active {
   transform: translateY(0);
-  box-shadow: 0 4px 10px rgba(201, 115, 63, 0.18);
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--color-highlight) 18%, transparent);
 }
 
 .secondaryButton {
-  background: #fff;
-  border: 1px solid rgba(205, 157, 120, 0.42);
-  color: #3b2a1d;
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 42%, transparent);
+  color: var(--color-highlight);
 }
 
 .secondaryButton:hover {
-  border-color: var(--admin-accent, #c9733f);
-  color: var(--admin-accent-strong, #aa5a2d);
+  border-color: var(--admin-accent, var(--color-highlight));
+  color: var(--admin-accent-strong, var(--color-highlight));
 }
 
 .dangerButton {
-  background: rgba(187, 53, 53, 0.08);
-  border: 1px solid rgba(187, 53, 53, 0.18);
-  color: #b73a3a;
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, transparent);
+  color: var(--color-primary);
 }
 
 .dangerSolidButton {
@@ -131,15 +131,15 @@
   font-weight: 700;
   letter-spacing: 0.02em;
   cursor: pointer;
-  color: #fff;
-  background: linear-gradient(135deg, #c45a4a 0%, #9e3a30 100%);
-  box-shadow: 0 8px 18px rgba(158, 58, 48, 0.22);
+  color: var(--color-on-primary);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--color-primary) 22%, transparent);
   transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }
 
 .dangerSolidButton:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(158, 58, 48, 0.3);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 .dangerSolidButton:disabled,
@@ -154,32 +154,32 @@
 .tableWrap {
   overflow: auto;
   border-radius: 14px;
-  border: 1px solid #eee;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
-  color: #2f241e;
+  color: var(--color-text);
 }
 
 .table th,
 .table td {
   padding: 10px 12px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--color-text);
   text-align: left;
   white-space: nowrap;
 }
 
 .table td {
-  color: #3b2a1d;
+  color: var(--color-highlight);
 }
 
 .table th {
-  background: #fff;
-  color: #3b2a1d;
+  background: var(--color-surface);
+  color: var(--color-highlight);
   font-weight: 700;
 }
 
@@ -187,7 +187,7 @@
   display: inline-block;
   max-width: 220px;
   overflow: hidden;
-  color: #2f241e;
+  color: var(--color-text);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 12px;
   text-overflow: ellipsis;
@@ -197,23 +197,23 @@
 .copyButton {
   margin-left: 6px;
   padding: 3px 7px;
-  border: 1px solid #b9a28e;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: #fff;
-  color: #513c2d;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
   cursor: pointer;
   font-size: 11px;
 }
 
 .copyButton:hover {
-  border-color: #8f5c38;
-  color: #713e20;
+  border-color: var(--color-highlight);
+  color: var(--color-highlight);
 }
 
 .linkButton {
   border: none;
   background: transparent;
-  color: #9a3f14;
+  color: var(--color-highlight);
   cursor: pointer;
   margin-right: 8px;
   font-weight: 600;
@@ -222,11 +222,11 @@
 .empty {
   padding: 24px;
   text-align: center;
-  color: #9ca3af;
+  color: var(--color-text-secondary);
 }
 
 .table td.empty {
-  color: #9ca3af;
+  color: var(--color-text-secondary);
 }
 
 /* 状态文字着色：待审橙、通过绿、驳回红 */
@@ -235,20 +235,20 @@
 }
 
 .statusPending {
-  color: #c9782a;
+  color: var(--color-highlight);
 }
 
 .statusApproved {
-  color: #2d8c58;
+  color: var(--color-success);
 }
 
 .statusRejected {
-  color: #b73a3a;
+  color: var(--color-primary);
 }
 
-.table td .statusPending { color: #c9782a; }
-.table td .statusApproved { color: #2d8c58; }
-.table td .statusRejected { color: #b73a3a; }
+.table td .statusPending { color: var(--color-highlight); }
+.table td .statusApproved { color: var(--color-success); }
+.table td .statusRejected { color: var(--color-primary); }
 
 .pager {
   display: flex;
@@ -257,8 +257,8 @@
 }
 
 .pager button {
-  border: 1px solid #e5e7eb;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   border-radius: 8px;
   padding: 6px 12px;
   cursor: pointer;
@@ -273,7 +273,7 @@
   position: fixed;
   inset: 0;
   z-index: 1400;
-  background: rgba(15, 23, 42, 0.4);
+  background: color-mix(in srgb, var(--color-surface) 40%, transparent);
   display: flex;
   justify-content: flex-end;
 }
@@ -287,7 +287,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(45, 32, 22, 0.48);
+  background: color-mix(in srgb, var(--color-surface) 48%, transparent);
   backdrop-filter: blur(3px);
 }
 
@@ -295,12 +295,12 @@
   width: min(440px, 100%);
   padding: 22px 24px 20px;
   border-radius: 16px;
-  border: 1px solid rgba(201, 139, 92, 0.3);
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 30%, transparent);
   background:
-    #fff;
+    var(--color-surface);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.7) inset,
-    0 24px 48px rgba(59, 42, 29, 0.2);
+    0 1px 0 color-mix(in srgb, var(--color-text) 70%, transparent) inset,
+    0 24px 48px color-mix(in srgb, var(--color-highlight) 20%, transparent);
   animation: withdrawModalIn 0.18s ease-out;
 }
 
@@ -320,21 +320,21 @@
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
-  color: #b73a3a;
+  color: var(--color-primary);
 }
 
 .modalTitle {
   margin: 0 0 8px;
   font-size: 20px;
   font-weight: 700;
-  color: #3b2a1d;
+  color: var(--color-highlight);
 }
 
 .modalHint {
   margin: 0 0 14px;
   font-size: 13px;
   line-height: 1.55;
-  color: #7a6452;
+  color: var(--color-text-secondary);
 }
 
 .modalActions {
@@ -348,10 +348,10 @@
   width: min(520px, 100%);
   height: 100%;
   overflow: auto;
-  background: #fff;
-  color: #2f241e;
+  background: var(--color-surface);
+  color: var(--color-text);
   padding: 20px;
-  box-shadow: -12px 0 40px rgba(59, 42, 29, 0.18);
+  box-shadow: -12px 0 40px color-mix(in srgb, var(--color-highlight) 18%, transparent);
 }
 
 .creatorDrawer {
@@ -360,9 +360,9 @@
   width: min(600px, 100%);
   overflow: hidden;
   padding: 0;
-  background: #f7f8fa;
-  color: #17212f;
-  box-shadow: -16px 0 48px rgba(15, 23, 42, 0.2);
+  background: var(--color-bg);
+  color: var(--color-text);
+  box-shadow: -16px 0 48px color-mix(in srgb, var(--color-shadow) 20%, transparent);
 }
 
 .creatorDrawerHeader {
@@ -372,8 +372,8 @@
   align-items: flex-start;
   gap: 20px;
   padding: 24px 28px 20px;
-  border-bottom: 1px solid #e5e9ef;
-  background: #fff;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
 }
 
 .creatorDrawerHeading { min-width: 0; }
@@ -381,14 +381,14 @@
 .drawerEyebrow {
   display: block;
   margin-bottom: 7px;
-  color: #637083;
+  color: var(--color-text-muted);
   font-size: 12px;
   font-weight: 600;
 }
 
 .creatorDrawerHeader h3 {
   margin: 0;
-  color: #17212f;
+  color: var(--color-text);
   font-size: 20px;
   font-weight: 700;
 }
@@ -397,7 +397,7 @@
   max-width: 430px;
   margin-top: 8px;
   overflow: hidden;
-  color: #667085;
+  color: var(--color-text-muted);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 12px;
   text-overflow: ellipsis;
@@ -423,16 +423,16 @@
   height: 8px;
   flex: 0 0 8px;
   border-radius: 50%;
-  background: #667085;
+  background: var(--color-text-muted);
 }
 
-.statusDot.statusPending { background: #c27a24; }
-.statusDot.statusApproved { background: #27815a; }
-.statusDot.statusRejected { background: #bd4545; }
+.statusDot.statusPending { background: var(--color-highlight); }
+.statusDot.statusApproved { background: var(--color-success); }
+.statusDot.statusRejected { background: var(--color-primary); }
 
 .creatorApplyTime {
   margin-left: auto;
-  color: #667085;
+  color: var(--color-text-muted);
   font-size: 12px;
 }
 
@@ -442,22 +442,22 @@
   gap: 20px;
   align-items: center;
   padding: 18px 20px;
-  border: 1px solid #e1e6ed;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .payoutMain span,
 .payoutBreakdown span {
   display: block;
-  color: #667085;
+  color: var(--color-text-muted);
   font-size: 12px;
 }
 
 .payoutMain strong {
   display: block;
   margin-top: 5px;
-  color: #17212f;
+  color: var(--color-text);
   font-size: 28px;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
@@ -467,7 +467,7 @@
   display: grid;
   gap: 12px;
   padding-left: 18px;
-  border-left: 1px solid #e5e9ef;
+  border-left: 1px solid var(--color-border);
 }
 
 .payoutBreakdown div {
@@ -477,7 +477,7 @@
 }
 
 .payoutBreakdown strong {
-  color: #344054;
+  color: var(--color-text-secondary);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -489,7 +489,7 @@
 
 .sectionTitle {
   margin: 0 0 12px;
-  color: #344054;
+  color: var(--color-text-secondary);
   font-size: 14px;
   font-weight: 700;
 }
@@ -502,7 +502,7 @@
 }
 
 .sectionHeading > span {
-  color: #667085;
+  color: var(--color-text-muted);
   font-size: 12px;
 }
 
@@ -517,12 +517,12 @@
 .creatorDrawer .detailGrid > div {
   min-width: 0;
   padding: 11px 0;
-  border-bottom: 1px solid #e7ebf0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .creatorDrawer .detailGrid span {
   margin-bottom: 5px;
-  color: #667085;
+  color: var(--color-text-muted);
   font-size: 12px;
   font-weight: 500;
 }
@@ -530,7 +530,7 @@
 .creatorDrawer .detailGrid strong {
   display: block;
   overflow-wrap: anywhere;
-  color: #17212f;
+  color: var(--color-text);
   font-size: 13px;
   font-weight: 600;
 }
@@ -538,13 +538,13 @@
 .rejectionNotice {
   margin-top: 20px;
   padding: 12px 14px;
-  border: 1px solid #f2d2d2;
+  border: 1px solid var(--color-primary-light);
   border-radius: 6px;
-  background: #fff6f6;
+  background: var(--color-bg);
 }
 
 .rejectionNotice span {
-  color: #a83b3b;
+  color: var(--color-primary);
   font-size: 12px;
   font-weight: 700;
 }
@@ -552,7 +552,7 @@
 .rejectionNotice p,
 .drawerRemark {
   margin: 6px 0 0;
-  color: #344054;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.55;
   overflow-wrap: anywhere;
@@ -568,8 +568,8 @@
 
 .creatorItemsHeader {
   padding: 9px 12px;
-  border-bottom: 1px solid #dfe4eb;
-  color: #667085;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-muted);
   font-size: 11px;
   font-weight: 600;
 }
@@ -579,11 +579,11 @@
 .creatorDrawer .creatorWithdrawalItems {
   gap: 0;
   margin: 0;
-  border: 1px solid #e3e7ed;
+  border: 1px solid var(--color-border);
   border-top: 0;
   border-radius: 0 0 6px 6px;
   overflow: hidden;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .creatorDrawer .creatorWithdrawalItem {
@@ -591,33 +591,33 @@
   padding: 11px 12px;
   border: 0;
   border-radius: 0;
-  border-bottom: 1px solid #edf0f4;
-  background: #fff;
-  color: #17212f;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 
 .creatorDrawer .creatorWithdrawalItem:last-child { border-bottom: 0; }
-.creatorDrawer .creatorWithdrawalItem:hover { background: #f8fafc; }
+.creatorDrawer .creatorWithdrawalItem:hover { background: var(--color-bg); }
 
 .creatorDrawer .creatorGameType {
-  color: #475467;
+  color: var(--color-text-secondary);
   font-size: 11px;
 }
 
 .creatorDrawer .creatorGameTitle {
-  color: #17212f;
+  color: var(--color-text);
   font-size: 13px;
   font-weight: 500;
 }
 
 .creatorDrawer .creatorGameAmount {
-  color: #17212f;
+  color: var(--color-text);
   font-size: 13px;
 }
 
 .creatorItemsEmpty {
   padding: 18px 12px;
-  color: #667085;
+  color: var(--color-text-muted);
   font-size: 13px;
   text-align: center;
 }
@@ -627,16 +627,16 @@
   display: grid;
   gap: 12px;
   padding: 16px 28px 20px;
-  border-top: 1px solid #e5e9ef;
-  background: #fff;
-  box-shadow: 0 -6px 16px rgba(16, 24, 40, 0.04);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: 0 -6px 16px color-mix(in srgb, var(--color-shadow) 4%, transparent);
 }
 
 .creatorActionFooter .textarea {
   min-height: 58px;
-  border-color: #d0d5dd;
-  color: #17212f;
-  background: #fff;
+  border-color: var(--color-border);
+  color: var(--color-text);
+  background: var(--color-surface);
 }
 
 .creatorActionFooter .actionRow {
@@ -644,41 +644,41 @@
 }
 
 .creatorActionFooter .primaryButton {
-  background: #245d8f;
+  background: var(--color-primary);
   box-shadow: none;
 }
 
 .creatorActionFooter .primaryButton:hover {
-  background: #194c79;
+  background: var(--color-primary);
   box-shadow: none;
 }
 
 .creatorActionFooter .dangerButton {
-  background: #fff;
-  border-color: #e6b8b8;
-  color: #a83b3b;
+  background: var(--color-surface);
+  border-color: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 .creatorActionFooter .dangerButton:hover {
-  background: #fff6f6;
+  background: var(--color-bg);
 }
 
 .drawerHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: #2f241e;
+  color: var(--color-text);
 }
 
 .drawerHeader h3 {
-  color: #2f241e;
+  color: var(--color-text);
 }
 
 .close {
-  border: 1px solid #b9a28e;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: #fff;
-  color: #513c2d;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
   font-size: 22px;
   line-height: 1;
   padding: 3px 8px;
@@ -686,32 +686,32 @@
 }
 
 .close:hover {
-  border-color: #8f5c38;
-  background: #e6f4ff;
-  color: #2f241e;
+  border-color: var(--color-highlight);
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .detailGrid {
-  color: #2f241e;
+  color: var(--color-text);
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
   margin: 20px 0;
   padding-bottom: 18px;
-  border-bottom: 1px solid #eadfd3;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .detailGrid span {
   display: block;
   margin-bottom: 4px;
   font-size: 12px;
-  color: #675344;
+  color: var(--color-text-secondary);
   font-weight: 600;
 }
 
 .detailGrid strong {
   font-size: 14px;
-  color: #2f241e;
+  color: var(--color-text);
   word-break: break-all;
 }
 
@@ -729,7 +729,7 @@
 
 .timelineTitle {
   margin: 8px 0 10px;
-  color: #2f241e;
+  color: var(--color-text);
 }
 
 .timeline {
@@ -753,14 +753,14 @@
   gap: 12px;
   min-width: 0;
   padding: 11px 13px;
-  border: 1px solid #eadfd3;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: #fff;
-  color: #2f241e;
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 
 .creatorGameType {
-  color: #675344;
+  color: var(--color-text-secondary);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 12px;
   font-weight: 700;
@@ -768,7 +768,7 @@
 
 .creatorGameTitle {
   overflow: hidden;
-  color: #2f241e;
+  color: var(--color-text);
   font-size: 13px;
   font-weight: 600;
   text-overflow: ellipsis;
@@ -776,7 +776,7 @@
 }
 
 .creatorGameAmount {
-  color: #2f241e;
+  color: var(--color-text);
   font-size: 14px;
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -789,10 +789,10 @@
   gap: 12px;
   align-items: start;
   padding: 12px 14px;
-  border: 1px solid #eadfd3;
+  border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: #fff;
-  color: #2f241e;
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 
 .timelineLeft {
@@ -803,7 +803,7 @@
 
 .timelineTime {
   font-size: 12px;
-  color: #675344;
+  color: var(--color-text-secondary);
   line-height: 1.35;
   word-break: break-all;
 }
@@ -817,12 +817,12 @@
 .timelineRight {
   font-size: 13px;
   line-height: 1.55;
-  color: #111827;
+  color: var(--color-text);
   word-break: break-word;
 }
 
-.plus { color: #15803d; }
-.minus { color: #b91c1c; }
+.plus { color: var(--color-success); }
+.minus { color: var(--color-primary); }
 
 @media (max-width: 560px) {
   .timelineItem {
@@ -844,7 +844,7 @@
   .payoutBreakdown {
     padding-top: 14px;
     padding-left: 0;
-    border-top: 1px solid #e5e9ef;
+    border-top: 1px solid var(--color-border);
     border-left: 0;
   }
 

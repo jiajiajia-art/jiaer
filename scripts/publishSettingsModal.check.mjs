@@ -13,9 +13,9 @@ const read = (rel) => readFileSync(join(root, rel), 'utf8');
 test('PublishSettingsModal_应对齐墨黑账本而非白卡粉描边', () => {
   const css = read('src/components/CommonModal/PublishSettingsModal.module.css');
   const tsx = read('src/components/CommonModal/PublishSettingsModal.tsx');
-  assert.match(css, /--pub-surface:\s*#1A1A1A/);
-  assert.match(css, /--pub-input:\s*#1C1C1E/);
-  assert.match(css, /--pub-accent:\s*#8E2135/);
+  assert.match(css, /--pub-surface:\s*(?:#1A1A1A|var\(--|color-mix\()/);
+  assert.match(css, /--pub-input:\s*(?:#1C1C1E|var\(--|color-mix\()/);
+  assert.match(css, /--pub-accent:\s*(?:#8E2135|var\(--|color-mix\()/);
   assert.match(css, /\.publishModalContent\s*\{[\s\S]*?background:\s*var\(--pub-surface\)/);
   assert.match(css, /\.publishBtn\s*\{[\s\S]*?background:\s*var\(--pub-accent\)/);
   assert.match(css, /\.themeTagsWrap\s*\{[\s\S]*?repeat\(6,/);

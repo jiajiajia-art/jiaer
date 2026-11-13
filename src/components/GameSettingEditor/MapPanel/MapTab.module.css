@@ -35,21 +35,21 @@
     height: 100%;
     object-fit: cover;
     border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.9);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    background: #fff;
+    border: 2px solid color-mix(in srgb, var(--color-text) 90%, transparent);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 20%, transparent);
+    background: var(--color-surface);
     flex-shrink: 0;
 }
 
 .sceneLabel {
-    background: rgba(255, 255, 255, 0.95);
+    background: color-mix(in srgb, var(--color-surface) 95%, transparent);
     padding: 4px 8px;
     border-radius: 12px;
     font-size: 11px;
     font-weight: 600;
     color: var(--text-primary);
     white-space: nowrap;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--color-shadow) 15%, transparent);
     border: 1px solid var(--border-light);
     max-width: 120px;
     overflow: hidden;

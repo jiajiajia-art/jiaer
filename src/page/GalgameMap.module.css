@@ -3,7 +3,7 @@
 .page {
     width: 100%;
     height: 100vh;
-    background: #f7f9fc;
+    background: var(--color-bg);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -16,7 +16,7 @@
     height: 56rem; /* 896px - 基础尺寸（手机） */
     max-width: 100%;
     max-height: 100vh;
-    background-color: #ffffff;
+    background-color: var(--color-surface);
     background-size: cover;
     background-position: center;
     /* 只有在大屏时显示圆角 */
@@ -46,15 +46,15 @@
     flex-shrink: 0;
     width: 2.625rem; /* 42px */
     height: 2.625rem; /* 42px */
-    background: rgba(37, 37, 37, 0.341);
+    background: color-mix(in srgb, var(--color-surface) 34.1%, transparent);
     backdrop-filter: blur(0.625rem);
     -webkit-backdrop-filter: blur(0.625rem);
     border-radius: 0.75rem; /* 12px */
     transform: rotate(45deg);
     position: relative;
     overflow: hidden;
-    border: 0.0625rem solid rgba(255, 255, 255, 0.2); /* 1px */
-    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.1); /* 0 2px 8px */
+    border: 0.0625rem solid color-mix(in srgb, var(--color-text) 20%, transparent); /* 1px */
+    box-shadow: 0 0.125rem 0.5rem color-mix(in srgb, var(--color-shadow) 10%, transparent); /* 0 2px 8px */
     transition: all 0.3s ease;
 }
 
@@ -63,9 +63,9 @@
 }
 
 .buttonItemActive {
-    background: rgba(251, 70, 85, 0.3);
-    border-color: rgba(251, 70, 85, 0.5);
-    box-shadow: 0 0.125rem 0.75rem rgba(251, 70, 85, 0.3); /* 0 2px 12px */
+    background: color-mix(in srgb, var(--color-primary) 30%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 50%, transparent);
+    box-shadow: 0 0.125rem 0.75rem color-mix(in srgb, var(--color-primary) 30%, transparent); /* 0 2px 12px */
 }
 
 .buttonItem .buttonInner {
@@ -74,7 +74,7 @@
     padding: 0;
     border: none;
     border-radius: 0.75rem; /* 12px */
-    color: #fff;
+    color: var(--color-text);
     font-size: 0.75rem; /* 12px */
     cursor: pointer;
     transition: all 0.3s ease;
@@ -109,7 +109,7 @@
 
 .errorState {
     text-align: center;
-    color: #333;
+    color: var(--color-text);
 }
 
 .errorState h2 {
@@ -119,13 +119,13 @@
 
 .errorState p {
     margin-bottom: 1.25rem; /* 20px */
-    color: #666;
+    color: var(--color-text-secondary);
 }
 
 .errorState button {
     padding: 0.625rem 1.875rem; /* 10px 30px */
     background: var(--primary);
-    color: white;
+    color: var(--color-text);
     border: none;
     border-radius: 0.375rem; /* 6px */
     cursor: pointer;
@@ -134,15 +134,15 @@
 }
 
 .errorState button:hover {
-    background: #c9303e;
+    background: var(--color-primary);
 }
 
 @media (min-width: 1024px) {
     .mapContainer {
         /* 保持固定尺寸，使用 scale 来放大显示，确保 rem 和 px 协调 */
         border-radius: 1.25rem; /* 20px */
-        box-shadow: 0 1rem 2.25rem rgba(0, 0, 0, 0.18); /* 0 16px 36px */
-        border: 0.0625rem solid rgba(0, 0, 0, 0.06); /* 1px */
+        box-shadow: 0 1rem 2.25rem color-mix(in srgb, var(--color-shadow) 18%, transparent); /* 0 16px 36px */
+        border: 0.0625rem solid color-mix(in srgb, var(--color-text) 6%, transparent); /* 1px */
     }
 }
 
@@ -169,7 +169,7 @@
 .mapOverlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(0,0,0,0.05));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-text) 6%, transparent), color-mix(in srgb, var(--color-text) 5%, transparent));
     pointer-events: none;
     z-index: 1;
 }
@@ -195,7 +195,7 @@
 
 /* 悬停时只添加发光效果，放大效果移到内部元素 */
 .sceneNode:hover {
-    filter: drop-shadow(0 0 0.5rem rgba(255, 255, 255, 0.5)); /* 0 0 8px */
+    filter: drop-shadow(0 0 0.5rem color-mix(in srgb, var(--color-text) 50%, transparent)); /* 0 0 8px */
     z-index: 10;
 }
 
@@ -223,22 +223,22 @@
     z-index: 2;
     
     /* 边框样式 */
-    border: 0.125rem solid #e8eaef; /* 2px */
+    border: 0.125rem solid var(--color-border); /* 2px */
     box-shadow: 
-        0 0.25rem 0.625rem rgba(0, 0, 0, 0.18), /* 0 4px 10px */
-        inset 0 0 0.375rem rgba(0, 0, 0, 0.2); /* inset 0 0 6px */
+        0 0.25rem 0.625rem color-mix(in srgb, var(--color-shadow) 18%, transparent), /* 0 4px 10px */
+        inset 0 0 0.375rem color-mix(in srgb, var(--color-shadow) 20%, transparent); /* inset 0 0 6px */
     
-    background: #f4f6fa;
+    background: var(--color-bg);
     overflow: hidden;
     transition: border-color 0.3s, box-shadow 0.3s;
 }
 
 /* 选中/悬停状态 */
 .sceneNode:hover .sceneThumb {
-    border-color: #fff;
+    border-color: var(--color-text);
     box-shadow: 
-        0 0 0 0.125rem rgba(255, 255, 255, 0.5), /* 0 0 0 2px */
-        0 0.375rem 0.875rem rgba(0, 0, 0, 0.2); /* 0 6px 14px */
+        0 0 0 0.125rem color-mix(in srgb, var(--color-text) 50%, transparent), /* 0 0 0 2px */
+        0 0.375rem 0.875rem color-mix(in srgb, var(--color-shadow) 20%, transparent); /* 0 6px 14px */
 }
 
 .sceneThumb img {
@@ -251,13 +251,13 @@
 .sceneName {
     margin-top: 0.125rem; /* 2px */
     z-index: 3;
-    color: #fff;
+    color: var(--color-text);
     padding: 0.125rem 0.5rem; /* 2px 8px */
     border-radius: 0.625rem;
     font-size: 0.6875rem; /* 11px */
     font-weight: 600;
-    border: 0.0625rem solid rgba(0, 0, 0, 0.08); /* 1px */
-    box-shadow: 0 0.125rem 0.375rem rgba(0,0,0,0.12); /* 0 2px 6px */
+    border: 0.0625rem solid color-mix(in srgb, var(--color-text) 8%, transparent); /* 1px */
+    box-shadow: 0 0.125rem 0.375rem color-mix(in srgb, var(--color-shadow) 12%, transparent); /* 0 2px 6px */
     white-space: nowrap;
     text-align: center;
     max-width: 6.25rem; /* 100px */
@@ -267,8 +267,8 @@
 }
 
 .sceneNode:hover .sceneName {
-    background: #f0f4ff;
-    color: #111;
+    background: var(--color-bg);
+    color: var(--color-text);
 }
 
 @media (max-width: 768px) {

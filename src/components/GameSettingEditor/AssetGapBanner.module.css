@@ -1,10 +1,10 @@
 /* 功能注释：素材进度账本 — 墨黑底 + 竖脊，禁止浅绿/浅红糖纸卡和折行双列 */
 
 .banner {
-  --gap-surface: #1A1A1A;
-  --gap-input: #1C1C1E;
-  --gap-accent: #8E2135;
-  --gap-accent-hot: #A8283C;
+  --gap-surface: var(--color-surface);
+  --gap-input: var(--color-surface);
+  --gap-accent: var(--color-primary-bold);
+  --gap-accent-hot: var(--color-primary);
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -12,13 +12,13 @@
   padding: 12px 14px;
   border-radius: 16px;
   background: var(--gap-surface);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  color: var(--color-text);
 }
 
 .bannerGenerating {
   background: var(--gap-surface);
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: color-mix(in srgb, var(--color-text) 10%, transparent);
   box-shadow: none;
 }
 
@@ -29,7 +29,7 @@
   margin-top: 6px;
   border-radius: 2px;
   background: var(--gap-accent);
-  box-shadow: 0 0 0 4px rgba(142, 33, 53, 0.22);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 
 .bannerGenerating .icon {
@@ -54,7 +54,7 @@
   font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .percentBadge {
@@ -62,7 +62,7 @@
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.04em;
-  color: #ffffff;
+  color: var(--color-text);
   background: transparent;
   border: none;
   border-radius: 0;
@@ -73,7 +73,7 @@
 .message {
   margin: 0;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.52);
+  color: var(--color-text-secondary);
   line-height: 1.5;
 }
 
@@ -84,7 +84,7 @@
 .track {
   height: 2px;
   border-radius: 0;
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
   overflow: hidden;
 }
 
@@ -125,9 +125,9 @@
   justify-content: center;
   font-size: 11px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.42);
+  color: var(--color-text-muted);
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
   margin-bottom: 0;
   flex-shrink: 0;
 }
@@ -144,62 +144,62 @@
 .stepLabel {
   font-size: 13px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.78);
+  color: color-mix(in srgb, var(--color-text) 78%, transparent);
 }
 
 .stepMeta {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.42);
+  color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
 
 .stepDone .stepIndex {
   background: transparent;
-  border-color: rgba(255, 255, 255, 0.28);
-  color: rgba(255, 255, 255, 0.72);
+  border-color: color-mix(in srgb, var(--color-text) 28%, transparent);
+  color: var(--color-text-secondary);
 }
 
 .stepDone .stepLabel {
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--color-text-secondary);
 }
 
 .stepActive {
   background: var(--gap-input);
-  border-color: rgba(142, 33, 53, 0.55);
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
   box-shadow: inset 3px 0 0 var(--gap-accent);
 }
 
 .stepActive .stepIndex {
   background: var(--gap-accent);
   border-color: var(--gap-accent);
-  color: #fff;
+  color: var(--color-on-primary);
 }
 
 .stepActive .stepLabel {
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .stepActive .stepMeta {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-secondary);
 }
 
 .stepFailed {
   background: var(--gap-input);
-  border-color: rgba(168, 40, 60, 0.45);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 .stepFailed .stepIndex {
   background: var(--gap-accent-hot);
   border-color: var(--gap-accent-hot);
-  color: #fff;
+  color: var(--color-on-primary);
 }
 
 .nowLine {
   margin: 10px 0 0;
   font-size: 12px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.48);
+  color: var(--color-text-muted);
   letter-spacing: 0.02em;
 }
 
@@ -209,7 +209,7 @@
   gap: 8px 14px;
   margin-top: 8px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.48);
+  color: var(--color-text-muted);
 }
 
 .actions {
@@ -220,9 +220,9 @@
 }
 
 .linkBtn {
-  border: 1px solid rgba(168, 40, 60, 0.7);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 70%, transparent);
   background: transparent;
-  color: #ffb4bf;
+  color: var(--color-primary-fg);
   border-radius: 999px;
   padding: 6px 14px;
   font-size: 12px;
@@ -232,7 +232,7 @@
 
 .linkBtn:hover {
   background: var(--gap-accent);
-  color: #ffffff;
+  color: var(--color-on-primary);
   border-color: var(--gap-accent);
 }
 
@@ -240,12 +240,12 @@
   flex-shrink: 0;
   width: 32px;
   height: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
   border-radius: 999px;
   background: var(--gap-input);
   font-size: 20px;
   line-height: 1;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-secondary);
   cursor: pointer;
   padding: 0;
   display: inline-flex;
@@ -254,8 +254,8 @@
 }
 
 .close:hover {
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.28);
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-text) 28%, transparent);
 }
 
 @media (max-width: 640px) {

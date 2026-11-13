@@ -15,10 +15,10 @@
     border: none;
     cursor: pointer;
     background: var(--primary);
-    color: #fff;
+    color: var(--color-text);
     font-size: 14px;
     font-weight: 600;
-    box-shadow: 0 10px 20px rgba(224, 61, 75, 0.45);
+    box-shadow: 0 10px 20px color-mix(in srgb, var(--color-primary) 45%, transparent);
     transition: all 0.2s ease;
     min-width: 160px;
     display: flex;
@@ -27,9 +27,9 @@
 }
 
 .nextRoundButton:hover:not(:disabled) {
-    background: #c9303e;
+    background: var(--color-primary);
     transform: translateY(-1px);
-    box-shadow: 0 12px 24px rgba(224, 61, 75, 0.55);
+    box-shadow: 0 12px 24px color-mix(in srgb, var(--color-primary) 55%, transparent);
 }
 
 .nextRoundButton:disabled {

@@ -47,7 +47,8 @@ test('playModCatalog_每项须有作者下载量详细说明与预览图', async
     assert.ok(String(item.authorName || '').trim(), `${item.slug} 缺作者`);
     assert.ok(Number(item.downloadCount) >= 0, `${item.slug} 缺下载量`);
     assert.ok(String(item.detailDescription || '').trim().length >= 8, `${item.slug} 详细说明过短`);
-    assert.ok(Array.isArray(item.previewImages) && item.previewImages.length >= 1, `${item.slug} 缺预览图`);
+    // 预览图必须由作者上传，本地种子不得造 local: 占位图
+    assert.ok(Array.isArray(item.previewImages) && item.previewImages.every((u) => /^https?:\/\//.test(u)), `${item.slug} 不得用占位预览图`);
   }
   const cars = cat.catalogBySlug('pack-cars');
   assert.deepEqual(cat.missingPlayModDepNames(cars, []), ['出行与交通']);
@@ -55,7 +56,8 @@ test('playModCatalog_每项须有作者下载量详细说明与预览图', async
 
 test('Admin与API_上架契约含详细说明预览图与价格', () => {
   assert.match(admin, /玩法详细说明/);
-  assert.match(admin, /预览图 URL/);
+  assert.match(admin, /platformAppsApi\.upload/);
+  assert.doesNotMatch(admin, /local:slug/);
   assert.match(admin, /上架须至少 1 张预览图/);
   assert.match(admin, /0=免费/);
   assert.match(api, /detailMd/);
@@ -67,4 +69,13 @@ test('Admin与API_上架契约含详细说明预览图与价格', () => {
 test('玩法Mod边界_目录不得收录档案人脉设置登录', () => {
   assert.match(catalogSrc, /存档结构、登录、档案、人脉、设置/);
   assert.doesNotMatch(catalogSrc, /slug:\s*["'](archive|contacts|settings|login|save)["']/);
+});
+
+test('PlayModCreateShell_上传前作者须添加至少1张预览图并随包提交', () => {
+  const shell = readFileSync(join(romance, 'components/PlayModCreateShell.tsx'), 'utf8');
+  assert.match(shell, /PREVIEW_MIN = 1/);
+  assert.match(shell, /previews\.length < PREVIEW_MIN/);
+  assert.match(shell, /previewImages,/);
+  assert.doesNotMatch(shell, /void pushPlayModPackage\(savedMod\)/);
+  assert.doesNotMatch(modal, /local:/);
 });

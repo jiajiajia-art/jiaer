@@ -315,7 +315,7 @@
     "editorSubmit": {
       "missingData": "Missing required data, cannot submit",
       "themeTagRequired": "Game tags are required, select up to 2",
-    "themeTagDisabled": "This theme is disabled. Pick an enabled theme before submitting.",
+      "themeTagDisabled": "This theme is disabled. Pick an enabled theme before submitting.",
       "noChangesToSave": "No changes to save",
       "tagSaveFailed": "Failed to save game tags, please try again",
       "panelNotSupported": "Current panel does not support submission",
@@ -905,7 +905,7 @@
     "taskGoLike": "Go Like",
     "taskGoPlay": "Go Play",
     "taskInProgress": "In Progress",
-    "avatarUpdated": "Avatar Updated",
+    "avatarUpdated": "Avatar updated",
     "userNameDefault": "Not Set",
     "adFeatureDeveloping": "Watch ad feature is under development",
     "redeemFailed": "Redemption failed",
@@ -988,7 +988,6 @@
     },
     "editNickname": "Edit Nickname",
     "changeAvatar": "Change avatar",
-    "avatarUpdated": "Avatar updated",
     "enterNewNickname": "Enter new nickname",
     "nicknameTip": "Nickname should be 1-20 characters. Avoid sensitive or inappropriate content.",
     "cancel": "Cancel",
@@ -1718,7 +1717,7 @@
     "generateNowWithCost": "Generate Now · {{points}} pts",
     "generateTextOnlyWithCost": "Text only · {{points}} pts",
     "generateFullWorkCta": "Generate full work",
-    "documentImportWithCost": "Document Import · {{points}} beans",
+    "documentImportWithCost": "Document Import (pay by actual usage)",
     "documentUploadTip": "Supports PDF / Word (.pdf / .docx). Dream Beans are charged by actual AI token usage and platform pricing; failed parsing is not charged. On success, the editor opens World Settings",
     "ideaGenerateCostHint": "{{points}} points will be deducted after successful generation",
     "startGenerateWithCost": "Generate · {{points}} pts",
@@ -2134,7 +2133,6 @@
     "mine": "Mine",
     "steps": "steps",
     "copyLink": "Copy Link",
-    "delete": "Delete",
     "loadMore": "Load More",
     "deleteReplay": "Delete Replay",
     "confirmDeleteReplay": "Confirm delete this replay? This action cannot be undone.",
@@ -2172,7 +2170,6 @@
     "saving": "Saving...",
     "save": "Save",
     "editMessage": "Edit Message",
-    "edit": "Edit",
     "regenerate": "Regenerate",
     "myReplay": "My Replay",
     "close": "Close",
@@ -2233,6 +2230,11 @@
     "continueGame": "Continue",
     "selectStartMethod": "Please select start method",
     "newStart": "New Start",
+    "startGame": "Start Game",
+    "autoSaveSlot": "Auto Save",
+    "autoSaveSlotHint": "Cloud · Last session progress",
+    "restartConfirmTitle": "Start a new game?",
+    "restartConfirmMessage": "You have progress saved in the cloud. Starting a new game will overwrite your auto save (manual saves are kept). To continue, use \"Load Save\".",
     "continueExperience": "Continue Experience",
     "loadSave": "Load Save",
     "replay": "Replay",
@@ -2296,6 +2298,42 @@
       "other": "Other"
     },
     "favoriteFailed": "Failed to update favorite, please try again",
+    "notListed": "Not listed",
+    "notListedHint": "Please open a listed work from \"All Works\".",
+    "ivgAccessFailed": "Failed to load payment info, please try again",
+    "ivgNoPaymentMethod": "No payment method available",
+    "ivgAlreadyOwned": "Already purchased, ready to play",
+    "ivgUnlockSuccess": "Unlocked",
+    "shelfSaveLoadFailed": "This save could not be loaded (it may be corrupted or incompatible). Please choose another save.",
+    "ivgBuyoutTitle": "Confirm purchase",
+    "ivgBuyoutMessage": "Once unlocked, it is permanently tied to this account. Confirm payment to enter the game.",
+    "processing": "Processing...",
+    "ivgConfirmPay": "Pay {{label}}",
+    "ivgErrors": {
+      "insufficientPoints": "Not enough Dream Beans",
+      "insufficientDiamonds": "Not enough KK Coins",
+      "paymentUnavailable": "This payment method is unavailable",
+      "buyoutNotForSale": "This interactive video cannot be bought out",
+      "directoryNotForSale": "This paid content is not for sale",
+      "freeUnlockUnavailable": "Free unlock is not available for this content",
+      "invalidCurrency": "Invalid payment method",
+      "invalidPurchaseType": "Invalid purchase type",
+      "invalidParam": "Invalid payment parameters, please refresh and try again",
+      "authRequired": "Please log in to unlock",
+      "notFound": "Interactive video not found or unlisted",
+      "forbidden": "You do not have permission to unlock this",
+      "unlockFailed": "Unlock failed, please try again"
+    },
+    "listing": {
+      "unpublished": "Not listed",
+      "pending_review": "Under review",
+      "rejected": "Not approved",
+      "delisted": "Delisted",
+      "taken_down": "Taken down",
+      "deleted": "Removed"
+    },
+    "likeAdded": "Liked",
+    "likeRemoved": "Like removed",
     "likeFailed": "Failed to like, please try again",
     "ratingNone": "No ratings",
     "ratingCount": "{{count}} ratings",
@@ -3544,5 +3582,22 @@
       "paginationTotalOnly": "{{total}} total",
       "paginationHiddenHint": "Pagination appears when there are more than 20 rows"
     }
+  },
+  "settings": {
+    "title": "Appearance & Language",
+    "theme": "Theme",
+    "mode": "Appearance",
+    "themes": {
+      "default": "Crimson",
+      "ocean": "Ocean",
+      "amber": "Amber",
+      "crimson": "Crimson Night"
+    },
+    "modes": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "skin": "Skin"
   }
 }

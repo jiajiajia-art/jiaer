@@ -2,14 +2,14 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  color: #3b2a1d;
+  color: var(--color-highlight);
 }
 
 .header {
   padding: 18px 20px;
   border-radius: 16px;
-  border: 1px solid rgba(201, 139, 92, 0.22);
-  background: rgba(255, 251, 246, 0.96);
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 22%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
 }
 
 .title {
@@ -21,15 +21,15 @@
 .sub {
   margin: 6px 0 0;
   font-size: 13px;
-  color: #8a7463;
+  color: var(--color-text-muted);
   line-height: 1.5;
 }
 
 .card {
   padding: 16px 18px;
   border-radius: 16px;
-  border: 1px solid rgba(201, 139, 92, 0.22);
-  background: rgba(255, 251, 246, 0.96);
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 22%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
 }
 
 .cardHead {
@@ -56,19 +56,19 @@
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  color: #8a7463;
+  color: var(--color-text-muted);
 }
 
 .grid input,
 .grid textarea,
 .filters input,
 .filters select {
-  border: 1px solid rgba(201, 139, 92, 0.28);
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 28%, transparent);
   border-radius: 10px;
   padding: 8px 10px;
   font-size: 13px;
-  color: #3b2a1d;
-  background: #fff;
+  color: var(--color-highlight);
+  background: var(--color-surface);
 }
 
 .full {
@@ -100,20 +100,20 @@
 
 .primary {
   border: none;
-  background: #c9733f;
-  color: #fff;
+  background: color-mix(in srgb, var(--color-highlight) 68%, var(--color-shadow));
+  color: var(--color-on-primary);
 }
 
 .ghost {
-  border: 1px solid rgba(201, 139, 92, 0.35);
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 35%, transparent);
   background: transparent;
-  color: #3b2a1d;
+  color: var(--color-highlight);
 }
 
 .danger {
-  border: 1px solid rgba(180, 35, 44, 0.35);
-  background: rgba(180, 35, 44, 0.08);
-  color: #b4232c;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  color: var(--color-primary);
 }
 
 .filters {
@@ -137,8 +137,8 @@
   gap: 12px;
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid rgba(201, 139, 92, 0.18);
-  background: rgba(250, 242, 234, 0.55);
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 18%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 55%, transparent);
 }
 
 .rowMain {
@@ -151,11 +151,11 @@
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  border: 1px solid rgba(201, 139, 92, 0.22);
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 22%, transparent);
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  color: #aa5a2d;
+  color: var(--color-highlight);
   overflow: hidden;
 }
 
@@ -176,12 +176,12 @@
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 999px;
-  border: 1px solid rgba(201, 139, 92, 0.28);
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 28%, transparent);
 }
 
 .official {
-  background: rgba(201, 115, 63, 0.12);
-  color: #aa5a2d;
+  background: color-mix(in srgb, var(--color-highlight) 12%, transparent);
+  color: var(--color-highlight);
   border-color: transparent;
 }
 
@@ -190,7 +190,7 @@
 .muted {
   margin: 4px 0 0;
   font-size: 12px;
-  color: #8a7463;
+  color: var(--color-text-muted);
 }
 
 .desc {
@@ -233,24 +233,65 @@
   padding: 4px 12px;
   font-size: 12px;
   cursor: pointer;
-  border: 1px solid rgba(201, 139, 92, 0.35);
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 35%, transparent);
   background: transparent;
-  color: #3b2a1d;
+  color: var(--color-highlight);
 }
 
 .themeChipOn {
-  background: #c9733f;
-  border-color: #c9733f;
-  color: #fff;
+  background: color-mix(in srgb, var(--color-highlight) 68%, var(--color-shadow));
+  border-color: var(--color-highlight);
+  color: var(--color-on-primary);
 }
 
 .themeEditor {
   margin-top: 10px;
   padding: 10px 12px;
   border-radius: 10px;
-  border: 1px dashed rgba(201, 139, 92, 0.4);
-  background: #fff;
+  border: 1px dashed color-mix(in srgb, var(--color-highlight) 40%, transparent);
+  background: var(--color-surface);
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* 功能注释：后台预览图上传缩略图区 */
+.previewGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+.previewItem {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  border-radius: 8px;
+}
+.previewItem img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.previewItem button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-shadow) 60%, transparent);
+  color: var(--color-on-media);
+  cursor: pointer;
+}
+.previewAdd {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  border: 1px dashed color-mix(in srgb, var(--color-text) 24%, transparent);
+  border-radius: 8px;
+  font-size: 12px;
+  opacity: 0.8;
+  cursor: pointer;
 }

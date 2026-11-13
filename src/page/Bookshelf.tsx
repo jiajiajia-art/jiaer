@@ -5,6 +5,8 @@ import styles from '../components/Bookshelf/Bookshelf.module.css';
 import AppPageShell from '../components/Layout/AppPageShell';
 import ShelfSavePicker from '../components/Bookshelf/ShelfSavePicker';
 import ShelfSaveManager from '../components/Bookshelf/ShelfSaveManager';
+import ShelfMyMods from '../components/Bookshelf/ShelfMyMods';
+import { PHONE_APP_CREATE_PATH, PLAY_MOD_CREATE_PATH, readShelfModKind, type ShelfModKind } from '../lib/shelfMyMods';
 import bookshelfApi from '../api/bookshelf/bookshelfApi';
 import { authModalStore, useAuthStore } from '../store/useAuthStore';
 import { buildShelfResumeState } from '../utils/gameDetailNavigation';
@@ -62,6 +64,11 @@ const getScrollRoot = (): HTMLElement | null =>
 
 const TAB_LABEL: Record<ShelfTab, string> = { recent: '最近游玩', favorites: '我的收藏' };
 const BATCH_ACTION_LABEL: Record<ShelfTab, string> = { recent: '移出最近游玩', favorites: '取消收藏' };
+/** 功能注释：「我的 Mod」页签不走书架列表接口，单独记住是否停留在该页签（从编辑器返回时恢复） */
+const SHELF_MODS_VIEW_KEY = 'shelf-view-mods';
+const readModsView = () => {
+  try { return sessionStorage.getItem(SHELF_MODS_VIEW_KEY) === '1'; } catch { return false; }
+};
 
 /**
  * 书架 Tab（一级页）：最近游玩 / 我的收藏。
@@ -80,6 +87,8 @@ const Bookshelf: React.FC = () => {
   );
 
   const [tab, setTab] = useState<ShelfTab>(restoredView.tab);
+  const [modsView, setModsView] = useState<boolean>(readModsView);
+  const [modKind, setModKind] = useState<ShelfModKind>(readShelfModKind);
   const [keywordInput, setKeywordInput] = useState('');
   const [keyword, setKeyword] = useState('');
   const [lists, setLists] = useState<Record<ShelfTab, TabList>>({ recent: EMPTY_LIST, favorites: EMPTY_LIST });
@@ -198,13 +207,26 @@ const Bookshelf: React.FC = () => {
   }, [current.hasMore, current.loadMoreFailed, loadMore]);
 
   const switchTab = (next: ShelfTab) => {
-    if (next === tab) return;
+    if (next === tab && !modsView) return;
+    setModsView(false);
+    try { sessionStorage.removeItem(SHELF_MODS_VIEW_KEY); } catch { /* ignore */ }
     setManaging(false);
     setSelected([]);
     setKeywordInput('');
     setKeyword('');
     getScrollRoot()?.scrollTo({ top: 0, behavior: 'auto' });
     setTab(next);
+  };
+
+  const openModsView = () => {
+    if (modsView) return;
+    setModsView(true);
+    try { sessionStorage.setItem(SHELF_MODS_VIEW_KEY, '1'); } catch { /* ignore */ }
+    setManaging(false);
+    setSelected([]);
+    setKeywordInput('');
+    setKeyword('');
+    getScrollRoot()?.scrollTo({ top: 0, behavior: 'auto' });
   };
 
   const openDetail = (item: ShelfItem) => {
@@ -384,9 +406,20 @@ const Bookshelf: React.FC = () => {
     if (!isLoggedIn) {
       return (
         <div className={styles.stateBox}>
-          <span>登录后查看你的最近游玩与收藏</span>
+          <span>{modsView ? '登录后查看并编辑你创作的玩法 Mod 和手机应用' : '登录后查看你的最近游玩与收藏'}</span>
           <button type="button" className={styles.stateButton} onClick={() => setIsAuthModalOpen(true)}>登录 / 注册</button>
         </div>
+      );
+    }
+    if (modsView) {
+      return (
+        <ShelfMyMods
+          token={user!.token}
+          keyword={keyword}
+          kind={modKind}
+          onKindChange={(k) => { setModKind(k); setKeywordInput(''); setKeyword(''); }}
+          onBeforeLeave={persistView}
+        />
       );
     }
     if (current.status === 'loading') return renderSkeleton();
@@ -432,13 +465,22 @@ const Bookshelf: React.FC = () => {
                 key={key}
                 type="button"
                 role="tab"
-                aria-selected={tab === key}
-                className={`${styles.tab} ${tab === key ? styles.tabActive : ''}`}
+                aria-selected={!modsView && tab === key}
+                className={`${styles.tab} ${!modsView && tab === key ? styles.tabActive : ''}`}
                 onClick={() => switchTab(key)}
               >
                 {TAB_LABEL[key]}
               </button>
             ))}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={modsView}
+              className={`${styles.tab} ${modsView ? styles.tabActive : ''}`}
+              onClick={openModsView}
+            >
+              我的 Mod
+            </button>
           </div>
           {isLoggedIn && (
             <div className={styles.headerRight}>
@@ -446,14 +488,18 @@ const Bookshelf: React.FC = () => {
                 <input
                   value={keywordInput}
                   onChange={(e) => setKeywordInput(e.target.value)}
-                  placeholder="搜索剧本 / 作者"
+                  placeholder={modsView ? (modKind === 'app' ? '搜索我的手机应用' : '搜索我的玩法') : '搜索剧本 / 作者'}
                   maxLength={50}
-                  aria-label="按剧本名称或作者搜索"
+                  aria-label={modsView ? '按名称搜索我的 Mod' : '按剧本名称或作者搜索'}
                 />
                 {keywordInput && (
                   <button type="button" className={styles.searchClear} onClick={() => setKeywordInput('')} aria-label="清空搜索">×</button>
                 )}
               </label>
+              {modsView ? (
+                <button type="button" className={styles.headerButton} onClick={() => { persistView(); navigate(modKind === 'app' ? PHONE_APP_CREATE_PATH : PLAY_MOD_CREATE_PATH); }}>{modKind === 'app' ? '新建应用' : '新建玩法'}</button>
+              ) : (
+              <>
               <button
                 type="button"
                 className={`${styles.headerButton} ${managing ? styles.headerButtonActive : ''}`}
@@ -463,6 +509,8 @@ const Bookshelf: React.FC = () => {
                 {managing ? '完成' : '管理'}
               </button>
               <button type="button" className={styles.headerButton} onClick={() => setSaveManagerOpen(true)}>存档管理</button>
+              </>
+              )}
             </div>
           )}
         </div>

@@ -13,6 +13,7 @@ import specialThemeTagsApi from '../../api/specialThemeTags/specialThemeTagsApi'
 import { formatThemeTagLabels, validateThemeRebind } from '../../utils/applicableThemeTags';
 import ConfirmModal from '../CommonModal/ConfirmModal';
 import AdminPlatformAppsSection from './AdminPlatformAppsSection';
+import { platformAppsApi } from '../../api/platform/platformAppsApi';
 import ThemeTagPicker, { type ThemeTagOption } from './ThemeTagPicker';
 import styles from './AdminPlayModManager.module.css';
 
@@ -122,6 +123,31 @@ const AdminPlayModManager: React.FC = () => {
     toast.success('适用题材已更新');
     setThemeEditId(null);
     void load();
+  };
+
+  /** 功能注释：运营直接上传预览图（与作者上传同一图床接口），最多 6 张 */
+  const [previewUploading, setPreviewUploading] = useState(false);
+  const previewList: string[] = Array.isArray(form.previewImages) ? form.previewImages : [];
+  const uploadPreviews = async (files: FileList | null) => {
+    if (!token || !files?.length) return;
+    const room = 6 - previewList.length;
+    if (room <= 0) {
+      toast.error('预览图最多 6 张');
+      return;
+    }
+    setPreviewUploading(true);
+    const urls: string[] = [];
+    for (const file of Array.from(files).slice(0, room)) {
+      if (!file.type.startsWith('image/')) continue;
+      const res = await platformAppsApi.upload(token, file);
+      if (!res.success || !res.data?.imageUrl) {
+        toast.error(res.message || '预览图上传失败');
+        break;
+      }
+      urls.push(String(res.data.imageUrl));
+    }
+    setPreviewUploading(false);
+    if (urls.length) setForm((f) => ({ ...f, previewImages: [...(Array.isArray(f.previewImages) ? f.previewImages : []), ...urls].slice(0, 6) }));
   };
 
   const save = async () => {
@@ -244,17 +270,39 @@ const AdminPlayModManager: React.FC = () => {
           </label>
           <label className={styles.full}>列表短说明<textarea rows={2} value={form.description || ''} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} /></label>
           <label className={styles.full}>玩法详细说明（上架必填）<textarea rows={3} value={form.detailMd || ''} onChange={(e) => setForm((f) => ({ ...f, detailMd: e.target.value }))} placeholder="详情页完整说明，至少 8 字" /></label>
-          <label className={styles.full}>预览图 URL（每行一张，上架至少 1 张）
-            <textarea
-              rows={3}
-              value={Array.isArray(form.previewImages) ? form.previewImages.join('\n') : String(form.previewImages || '')}
-              onChange={(e) => setForm((f) => ({
-                ...f,
-                previewImages: e.target.value.split(/\n/).map((x) => x.trim()).filter(Boolean),
-              }))}
-              placeholder={'https://...\n或 local:slug-1'}
-            />
-          </label>
+          <div className={styles.full}>
+            <span>预览图（作者上传，运营也可补传 / 删除；上架至少 1 张，最多 6 张）</span>
+            <div className={styles.previewGrid}>
+              {previewList.map((url, i) => (
+                <div key={url} className={styles.previewItem}>
+                  <img src={url} alt={`预览图 ${i + 1}`} />
+                  <button
+                    type="button"
+                    aria-label={`删除预览图 ${i + 1}`}
+                    onClick={() => setForm((f) => ({ ...f, previewImages: previewList.filter((x) => x !== url) }))}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {previewList.length < 6 && (
+                <label className={styles.previewAdd}>
+                  {previewUploading ? '上传中…' : '+ 上传图片'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    hidden
+                    disabled={previewUploading}
+                    onChange={(e) => {
+                      void uploadPreviews(e.target.files);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+          </div>
           <label className={styles.full}>线性 SVG 图标<textarea rows={2} value={form.iconSvg || ''} onChange={(e) => setForm((f) => ({ ...f, iconSvg: e.target.value }))} placeholder="<svg>...</svg>" /></label>
           <label className={styles.full}>编辑器面板（逗号分隔）
             <input

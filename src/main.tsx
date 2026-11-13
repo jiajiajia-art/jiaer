@@ -1,6 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import './styles/themes/index.css'
 import './index.css'
+import { initTheme } from './lib/theme'
 import './i18n'
 import App from './App.tsx'
 import { onAuthStateChanged, getRedirectResult } from 'firebase/auth'
@@ -15,6 +17,9 @@ import {
     REGISTRATION_AGREEMENT_VERSION,
     REGISTRATION_PRIVACY_POLICY_VERSION,
 } from './lib/registrationAgreement'
+
+// 功能注释：渲染前写入 data-theme / data-mode（首屏已由 index.html 预置，这里接管切换与系统跟随）
+initTheme()
 
 const isDev = import.meta.env.DEV;
 const currentLoginAgreementPayload = () => ({

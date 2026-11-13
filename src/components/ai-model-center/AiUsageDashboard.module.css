@@ -1,8 +1,8 @@
 .root {
-  --usage-surface: #ffffff;
-  --usage-border: #e3e8f0;
-  --usage-text: #172033;
-  --usage-muted: #667085;
+  --usage-surface: var(--color-surface);
+  --usage-border: var(--color-border);
+  --usage-text: var(--color-primary);
+  --usage-muted: var(--color-text-muted);
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -18,7 +18,7 @@
 }
 
 .filterCard {
-  background: linear-gradient(135deg, #ffffff 0%, #faf9ff 100%);
+  background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-surface) 100%);
 }
 
 .aggregateFilterCard {
@@ -110,7 +110,7 @@
   min-width: 0;
   flex-direction: column;
   gap: 7px;
-  color: #475467;
+  color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 600;
 }
@@ -164,12 +164,12 @@
 
 .metric {
   height: 100%;
-  border-left: 4px solid #654bd6;
+  border-left: 4px solid var(--color-accent);
 }
 
 .warningMetric {
-  border-left-color: #e0783f;
-  background: #fffaf6;
+  border-left-color: var(--color-highlight);
+  background: var(--color-bg);
 }
 
 .chartGrid {
@@ -326,4 +326,148 @@
     transition-duration: .01ms !important;
     animation-duration: .01ms !important;
   }
+}
+
+/* 功能注释：未扣费原因拆分 + 下钻入口 */
+.reasonList {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+}
+
+.reasonList li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+  color: var(--color-text-secondary);
+}
+
+.metricLink {
+  margin-top: 6px;
+  padding: 0;
+}
+
+/* 功能注释：按用途拆分卡片 */
+.sceneGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.sceneCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-color, var(--color-border));
+  border-radius: 12px;
+  background: var(--card-bg, var(--color-surface));
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.sceneCard:hover,
+.sceneCard:focus-visible {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 14%, transparent);
+  outline: none;
+}
+
+.sceneName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.sceneCost {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sceneBar {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  overflow: hidden;
+}
+
+.sceneBar span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--color-primary);
+}
+
+.sceneMeta {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* 功能注释：明细下钻条 */
+.detailAnchor {
+  scroll-margin-top: 72px;
+}
+
+.drillBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.drillLabel {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.drillTag {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* 功能注释：明细展开行——溯源字段 */
+.traceGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px 20px;
+  padding: 4px 8px;
+}
+
+.traceField {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.traceLabel {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.traceValue,
+.traceMono {
+  font-size: 13px;
+  color: var(--color-text);
+  word-break: break-all;
+}
+
+.traceMono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+}
+
+.traceMissing {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+  opacity: 0.7;
 }

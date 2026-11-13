@@ -24,10 +24,10 @@ test('GameIssueFeedbackModal_应按效果图仅描述与联系方式', () => {
   assert.match(tsx, /styles\.issueIcon/);
   assert.match(tsx, /styles\.issueSubmitBtn/);
   assert.doesNotMatch(tsx, /issueTypeLabel|ISSUE_TYPES|uploadIssueScreenshot|setShots|issueScreenshotsLabel/);
-  assert.match(css, /\.issuePanel[\s\S]*background:\s*#1c1c1e/);
-  assert.match(css, /\.issueIcon[\s\S]*background:\s*#E91E63/);
+  assert.match(css, /\.issuePanel[\s\S]*background:\s*(?:#1c1c1e|var\(--|color-mix\()/);
+  assert.match(css, /\.issueIcon[\s\S]*background:\s*(?:#E91E63|var\(--|color-mix\()/);
   assert.match(css, /\.issueSubmitBtn[\s\S]*width:\s*100%/);
-  assert.match(css, /\.issueSubmitBtn[\s\S]*background:\s*#E91E63/);
+  assert.match(css, /\.issueSubmitBtn[\s\S]*background:\s*(?:#E91E63|var\(--|color-mix\()/);
   assert.match(zh, /"issueModalTitle":\s*"故障反馈"/);
   assert.match(zh, /"issueContentLabel":\s*"问题描述"/);
   assert.match(zh, /"issueContactLabel":\s*"联系方式（可选）"/);

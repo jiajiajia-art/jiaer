@@ -75,8 +75,10 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
         return 'home';
     }, [currentPath]);
 
+    // 功能注释：与 ProtectedRoute 一致按 token 判断；仅 isAuthenticated 残留为 true 时会被路由静默弹回首页
+    const hasToken = !!user?.token;
     const ensureAuthenticated = () => {
-        if (isAuthenticated) {
+        if (isAuthenticated && hasToken) {
             return true;
         }
 
@@ -92,7 +94,8 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
                 navigate('/home');
                 break;
             case 'bookshelf':
-                // 未登录也进入书架页，由页面展示登录入口
+                // 功能注释：/bookshelf 在 ProtectedRoute 内，未登录直接跳会被弹回首页像"没反应"；先弹登录
+                if (!ensureAuthenticated()) return;
                 navigate('/bookshelf');
                 break;
             case 'create':

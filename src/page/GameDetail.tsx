@@ -22,7 +22,7 @@ import {
 } from '../utils/constants';
 import { consumeShelfResumeOnce, readGameDetailPreview, readShelfResume } from '../utils/gameDetailNavigation';
 import { recordBrowsingHistory } from '../utils/browsingHistory';
-import { MdContentCopy } from 'react-icons/md';
+import { MdContentCopy, MdOutlineHistory } from 'react-icons/md';
 import AuthModal from '../components/AuthModal';
 import LoadSaveListModal from '../components/CreateGame/LoadSaveListModal';
 import SavePreviewModal from '../components/CreateGame/SavePreviewModal';
@@ -160,10 +160,12 @@ const clearPendingPromoCode = () => {
 };
 
 // 判断是否点赞的辅助函数
-const checkIsLiked = (reaction: string | number | null | undefined): boolean => {
+const checkIsLiked = (reaction: string | number | boolean | null | undefined): boolean => {
     if (reaction === null || reaction === undefined) return false;
+    if (typeof reaction === 'boolean') return reaction;
     if (typeof reaction === 'string') {
-        return reaction === 'like' || reaction === '1';
+        const normalized = reaction.trim().toLowerCase();
+        return normalized === 'like' || normalized === 'liked' || normalized === '1' || normalized === 'true';
     }
     if (typeof reaction === 'number') {
         return reaction === 1;
@@ -207,48 +209,54 @@ const normalizePlaybackOrientation = (value?: string | null) => {
     return normalized === 'landscape' || normalized === 'portrait' ? normalized : null;
 };
 
-const INTERACTIVE_VIDEO_UNLOCK_ERROR_MESSAGES: Record<string, string> = {
-    INSUFFICIENT_POINTS: '织梦豆不足',
-    'Insufficient points': '织梦豆不足',
-    INSUFFICIENT_DIAMONDS: 'KK币不足',
-    'Insufficient diamonds': 'KK币不足',
-    PAYMENT_METHOD_UNAVAILABLE: '当前支付方式不可用',
-    'Payment method is unavailable': '当前支付方式不可用',
-    BUYOUT_NOT_FOR_SALE: '该互动影游暂不支持买断',
-    'Buyout is not for sale': '该互动影游暂不支持买断',
-    DIRECTORY_NOT_FOR_SALE: '该付费内容暂不可购买',
-    'Directory is not for sale': '该付费内容暂不可购买',
-    FREE_UNLOCK_UNAVAILABLE: '当前内容暂不支持免费解锁',
-    'Free unlock is unavailable': '当前内容暂不支持免费解锁',
-    INVALID_CURRENCY: '支付方式无效',
-    'Invalid currency': '支付方式无效',
-    INVALID_PURCHASE_TYPE: '购买类型无效',
-    'Invalid purchase type': '购买类型无效',
-    INVALID_PARAM: '支付参数无效，请刷新后重试',
-    INVALID_PURCHASE_PARAM: '支付参数无效，请刷新后重试',
-    'Invalid purchase parameter': '支付参数无效，请刷新后重试',
-    AUTH_REQUIRED: '请先登录后再解锁',
-    'Authentication token required': '请先登录后再解锁',
-    NOT_FOUND: '互动影游不存在或已下架',
-    'Game not found': '互动影游不存在或已下架',
-    FORBIDDEN: '暂无权限解锁该互动影游',
-    Forbidden: '暂无权限解锁该互动影游',
-    MONETIZATION_ERROR: '解锁失败，请稍后重试',
-    'Interactive video monetization error': '解锁失败，请稍后重试',
+/** 功能注释：后端错误 code / 英文 message → i18n key（gameDetail.ivgErrors.*），文案见 locales */
+const INTERACTIVE_VIDEO_UNLOCK_ERROR_KEYS: Record<string, string> = {
+    INSUFFICIENT_POINTS: 'insufficientPoints',
+    'Insufficient points': 'insufficientPoints',
+    INSUFFICIENT_DIAMONDS: 'insufficientDiamonds',
+    'Insufficient diamonds': 'insufficientDiamonds',
+    PAYMENT_METHOD_UNAVAILABLE: 'paymentUnavailable',
+    'Payment method is unavailable': 'paymentUnavailable',
+    BUYOUT_NOT_FOR_SALE: 'buyoutNotForSale',
+    'Buyout is not for sale': 'buyoutNotForSale',
+    DIRECTORY_NOT_FOR_SALE: 'directoryNotForSale',
+    'Directory is not for sale': 'directoryNotForSale',
+    FREE_UNLOCK_UNAVAILABLE: 'freeUnlockUnavailable',
+    'Free unlock is unavailable': 'freeUnlockUnavailable',
+    INVALID_CURRENCY: 'invalidCurrency',
+    'Invalid currency': 'invalidCurrency',
+    INVALID_PURCHASE_TYPE: 'invalidPurchaseType',
+    'Invalid purchase type': 'invalidPurchaseType',
+    INVALID_PARAM: 'invalidParam',
+    INVALID_PURCHASE_PARAM: 'invalidParam',
+    'Invalid purchase parameter': 'invalidParam',
+    AUTH_REQUIRED: 'authRequired',
+    'Authentication token required': 'authRequired',
+    NOT_FOUND: 'notFound',
+    'Game not found': 'notFound',
+    FORBIDDEN: 'forbidden',
+    Forbidden: 'forbidden',
+    MONETIZATION_ERROR: 'unlockFailed',
+    'Interactive video monetization error': 'unlockFailed',
 };
 
-const getInteractiveVideoUnlockErrorMessage = (code?: string | null, message?: string | null) => {
+const getInteractiveVideoUnlockErrorMessage = (
+    t: (key: string) => string,
+    code?: string | null,
+    message?: string | null,
+) => {
     const normalizedCode = String(code || '').trim();
     const normalizedMessage = String(message || '').trim();
-    const mappedMessage = INTERACTIVE_VIDEO_UNLOCK_ERROR_MESSAGES[normalizedCode]
-        || INTERACTIVE_VIDEO_UNLOCK_ERROR_MESSAGES[normalizedMessage];
-    if (mappedMessage) return mappedMessage;
+    const key = INTERACTIVE_VIDEO_UNLOCK_ERROR_KEYS[normalizedCode]
+        || INTERACTIVE_VIDEO_UNLOCK_ERROR_KEYS[normalizedMessage];
+    if (key) return t(`gameDetail.ivgErrors.${key}`);
+    // 功能注释：后端已给出本地化（非英文）文案时直接展示
     if (normalizedMessage && !/[A-Za-z]/.test(normalizedMessage)) return normalizedMessage;
-    return '解锁失败，请稍后重试';
+    return t('gameDetail.ivgErrors.unlockFailed');
 };
 
 const GameDetail: React.FC = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { fileId: fileIdParam } = useParams<{ fileId: string }>();
     const navigate = useNavigate();
     const location = useLocation();
@@ -269,6 +277,8 @@ const GameDetail: React.FC = () => {
     const [isFavorited, setIsFavorited] = useState(() => Boolean(initialPreview?.isFavorited));
     const [likeCount, setLikeCount] = useState(() => initialPreview?.like_count || 0);
     const [isLikeLoading, setIsLikeLoading] = useState(false);
+    /** 功能注释：每次点亮点赞自增，用作 key 重播心形弹跳动画 */
+    const [likePopKey, setLikePopKey] = useState(0);
     const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
     const [isUpdateWarningModalOpen, setIsUpdateWarningModalOpen] = useState(false);
     const [isLoadSaveOpen, setIsLoadSaveOpen] = useState(false);
@@ -277,7 +287,11 @@ const GameDetail: React.FC = () => {
     const [isDerivedNovelDrawerOpen, setIsDerivedNovelDrawerOpen] = useState(false);
     const [isInteractiveVideoRestartConfirmOpen, setIsInteractiveVideoRestartConfirmOpen] = useState(false);
     const [isPlayStatusLoading, setIsPlayStatusLoading] = useState(false);
+    /** 功能注释：读档进行中；只做轻提示 + 防重复，不再用 isLoading 把整页换成转圈 */
+    const [isSaveLoading, setIsSaveLoading] = useState(false);
     const [playStatus, setPlayStatus] = useState(DEFAULT_PLAY_STATUS);
+    // 功能注释：已有云端进度时，「开始游戏」先确认会覆盖自动存档
+    const [isRestartConfirmOpen, setIsRestartConfirmOpen] = useState(false);
     const [derivedNovels, setDerivedNovels] = useState<DerivedNovelSummary[]>([]);
     const [derivedNovelsLoading, setDerivedNovelsLoading] = useState(false);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -308,11 +322,14 @@ const GameDetail: React.FC = () => {
     const [followBusy, setFollowBusy] = useState(false);
     /** 功能注释：列表预览无关注态，等详情接口落地后再展示按钮，避免先闪「关注」 */
     const [creatorRelationReady, setCreatorRelationReady] = useState(false);
+    /** 功能注释：已按哪个登录用户拿到点赞/收藏态；登录后续跑意图须等它就绪，否则会按游客态把状态切反 */
+    const [interactionStateUserId, setInteractionStateUserId] = useState<string | number | null>(null);
 
     // Refs
     const likeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const likeBaselineRef = useRef<{ liked: boolean; count: number } | null>(null);
     const favoriteDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const favoriteBaselineRef = useRef<{ favorited: boolean; count: number } | null>(null);
     const hasRecordedViewRef = useRef(false);
     
     const lastTrackedLocationKeyRef = useRef<string | null>(null);
@@ -329,9 +346,15 @@ const GameDetail: React.FC = () => {
         [game?.engine, game?.game_tags],
     );
     const listingState = useMemo(() => resolvePublicListingState(game), [game]);
+    /** 功能注释：门禁文案按 code 走 i18n，util 的中文 message 仅作兜底 */
+    const listingMessage = listingState.canEnter
+        ? ''
+        : t(`gameDetail.listing.${listingState.code}`, { defaultValue: listingState.message || t('gameDetail.notListed') });
     const isGalgame = normalizedGameMode === 'TXT';
     const isNovel = normalizedGameMode === 'NOVEL';
     const isInteractiveVideo = normalizedGameMode === 'interactive-video';
+    /** 功能注释：支持存档的作品拆成「开始游戏 / 读取存档」两个入口，自动存档放进存档列表 */
+    const useSaveSplitActions = isGalgame && !isNovel && !isInteractiveVideo;
     const isInteractiveVideoOwner = useMemo(
         () => isInteractiveVideoOwnerUser(game?.creator_user_id, user?.user),
         [game?.creator_user_id, user?.user],
@@ -437,7 +460,6 @@ const GameDetail: React.FC = () => {
     const likeCountDisplay = useMemo(() => formatDetailStatCount(likeCount), [likeCount]);
     const sourceAuthorName = game?.source_author_name || '';
     const sourceFileId = game?.source_file_id || '';
-    const canShowLoadSave = isGalgame && !isNovel && !isInteractiveVideo;
     const canShowStoryReplay = isGalgame && !isNovel;
 
     // 解析进入详情页的来源
@@ -535,6 +557,9 @@ const GameDetail: React.FC = () => {
             // 未登录时打开全局登录弹窗（微信小程序环境不打开）
             if (!isWebViewEnv()) {
                 setIsAuthModalOpen(true);
+            } else {
+                // 功能注释：小程序内不弹登录框，至少提示一下，避免点击毫无反应
+                toast(t('report.loginRequired'));
             }
             return false;
         }
@@ -636,6 +661,7 @@ const GameDetail: React.FC = () => {
                 if (!cancelled) {
                     setIsLoading(false);
                     setCreatorRelationReady(true);
+                    setInteractionStateUserId(prevDetailUserIdRef.current ?? null);
                 }
             }
         };
@@ -672,11 +698,15 @@ const GameDetail: React.FC = () => {
                             isCreatorBlockedBy: data.isCreatorBlockedBy,
                             isFavorited: data.isFavorited,
                             reaction: data.reaction,
+                            like_count: data.like_count,
+                            favorite_count: data.favorite_count,
                         }
                         : data
                 ));
                 setIsLiked(checkIsLiked(data.reaction));
                 setIsFavorited(Boolean(data.isFavorited));
+                setLikeCount(data.like_count || 0);
+                setInteractionStateUserId(userId);
             } catch (error) {
                 console.warn('[GameDetail] sync creator relation failed:', error);
             }
@@ -993,7 +1023,7 @@ const GameDetail: React.FC = () => {
     // 处理开始游戏（检查是否需要显示更新提示）
     const handleStartGame = async () => {
         if (!listingState.canEnter) {
-            toast.error(listingState.message || '作品未上架');
+            toast.error(listingMessage);
             return;
         }
         if (!checkAuth()) return;
@@ -1044,7 +1074,7 @@ const GameDetail: React.FC = () => {
         if (isInteractiveVideo) {
             const latestAccessInfo = interactiveVideoAccessInfo ?? await fetchInteractiveVideoAccessInfo();
             if (!latestAccessInfo && !isInteractiveVideoOwner) {
-                toast.error('获取付费信息失败，请稍后重试');
+                toast.error(t('gameDetail.ivgAccessFailed'));
                 return;
             }
 
@@ -1068,7 +1098,7 @@ const GameDetail: React.FC = () => {
                 !latestAccessInfo?.access?.hasBuyout &&
                 paymentOptions.length === 0
             ) {
-                toast.error('暂无可用支付方式');
+                toast.error(t('gameDetail.ivgNoPaymentMethod'));
                 return;
             }
         }
@@ -1178,18 +1208,19 @@ const GameDetail: React.FC = () => {
                 }
                 await fetchInteractiveVideoAccessInfo();
                 setIsInteractiveVideoBuyoutConfirmOpen(false);
-                toast.success(response.data.data?.alreadyOwned ? '已购买，可直接游玩' : '解锁成功');
+                toast.success(response.data.data?.alreadyOwned ? t('gameDetail.ivgAlreadyOwned') : t('gameDetail.ivgUnlockSuccess'));
                 await startInteractiveVideo(false);
                 return;
             }
 
             toast.error(getInteractiveVideoUnlockErrorMessage(
+                t,
                 (response.data as { code?: string })?.code,
                 response.data?.message,
             ));
         } catch (error) {
             const errorData = (error as { response?: { data?: { code?: string; message?: string } } }).response?.data;
-            toast.error(getInteractiveVideoUnlockErrorMessage(errorData?.code, errorData?.message));
+            toast.error(getInteractiveVideoUnlockErrorMessage(t, errorData?.code, errorData?.message));
         } finally {
             setIsInteractiveVideoBuyoutUnlocking(false);
         }
@@ -1217,6 +1248,7 @@ const GameDetail: React.FC = () => {
         const prevCount = baseline.count;
         const optimisticLiked = !isLiked;
         setIsLiked(optimisticLiked);
+        if (optimisticLiked) setLikePopKey((key) => key + 1);
         setLikeCount(Math.max(0, prevCount + (optimisticLiked === prevLiked ? 0 : optimisticLiked ? 1 : -1)));
         if (optimisticLiked === prevLiked) {
             likeBaselineRef.current = null;
@@ -1244,6 +1276,7 @@ const GameDetail: React.FC = () => {
                 setGame((current) => (current
                     ? { ...current, reaction: nextLiked ? 'like' : '0', like_count: nextCount }
                     : current));
+                toast.success(nextLiked ? t('gameDetail.likeAdded') : t('gameDetail.likeRemoved'));
             } catch (error) {
                 console.error('点赞失败:', error);
                 setIsLiked(prevLiked);
@@ -1265,36 +1298,47 @@ const GameDetail: React.FC = () => {
         }
         if (isFavoriteLoading) return;
 
+        // 功能注释：与点赞一致——乐观切换+计数，防抖内连点回到原状态则不发请求；失败回滚
         if (favoriteDebounceTimerRef.current) {
             clearTimeout(favoriteDebounceTimerRef.current);
+            favoriteDebounceTimerRef.current = null;
+        } else {
+            favoriteBaselineRef.current = { favorited: isFavorited, count: Number(game?.favorite_count) || 0 };
+        }
+        const baseline = favoriteBaselineRef.current ?? { favorited: isFavorited, count: Number(game?.favorite_count) || 0 };
+        const optimisticFavorited = !isFavorited;
+        const optimisticCount = Math.max(0, baseline.count + (optimisticFavorited === baseline.favorited ? 0 : optimisticFavorited ? 1 : -1));
+        setIsFavorited(optimisticFavorited);
+        setGame((current) => (current ? { ...current, isFavorited: optimisticFavorited, favorite_count: optimisticCount } : current));
+        if (optimisticFavorited === baseline.favorited) {
+            favoriteBaselineRef.current = null;
+            return;
         }
 
         favoriteDebounceTimerRef.current = setTimeout(async () => {
-            if (!fileId || !userId) return;
+            if (!fileId) return;
 
             setIsFavoriteLoading(true);
             try {
                 const response = await favoriteApi.toggle({ fileId });
-
-                if (response.data.success && response.data.data) {
-                    const nextFavorited = response.data.data.isFavorited;
-                    const nextCount = response.data.data.favoriteCount;
-                    setIsFavorited(nextFavorited);
-                    if (game) {
-                        setGame({
-                            ...game,
-                            isFavorited: nextFavorited,
-                            ...(typeof nextCount === 'number' ? { favorite_count: nextCount } : {}),
-                        });
-                    }
-                    toast.success(nextFavorited ? t('gameDetail.favoriteAdded') : t('gameDetail.favoriteRemoved'));
+                const data = response.data?.data;
+                if (!response.data?.success || !data) {
+                    throw new Error(response.data?.message || 'favorite failed');
                 }
+                const nextFavorited = typeof data.isFavorited === 'boolean' ? data.isFavorited : optimisticFavorited;
+                const nextCount = typeof data.favoriteCount === 'number' ? data.favoriteCount : optimisticCount;
+                setIsFavorited(nextFavorited);
+                setGame((current) => (current ? { ...current, isFavorited: nextFavorited, favorite_count: nextCount } : current));
+                toast.success(nextFavorited ? t('gameDetail.favoriteAdded') : t('gameDetail.favoriteRemoved'));
             } catch (error) {
                 console.error('收藏操作失败:', error);
+                setIsFavorited(baseline.favorited);
+                setGame((current) => (current ? { ...current, isFavorited: baseline.favorited, favorite_count: baseline.count } : current));
                 toast.error(t('gameDetail.favoriteFailed'));
             } finally {
                 setIsFavoriteLoading(false);
                 favoriteDebounceTimerRef.current = null;
+                favoriteBaselineRef.current = null;
             }
         }, FAVORITE_DEBOUNCE_DELAY);
     };
@@ -1350,13 +1394,14 @@ const GameDetail: React.FC = () => {
     // 功能注释：登录后回页续跑点赞/收藏/评分意图
     useEffect(() => {
         if (!userId || !fileIdParam || !game) return;
+        if (interactionStateUserId !== userId) return;
         const intent = consumePendingDetailIntent(String(fileIdParam));
         if (!intent) return;
         if (intent === 'like') handleLike();
         else if (intent === 'favorite') handleFavorite();
         else if (intent === 'rate') setIsRatingModalOpen(true);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [userId, fileIdParam, game?.file_id]);
+    }, [userId, fileIdParam, game?.file_id, interactionStateUserId]);
 
     // 清理定时器
     useEffect(() => {
@@ -1454,9 +1499,28 @@ const GameDetail: React.FC = () => {
     };
 
     // ===== 存档读取（列表 → 预览 → 加载） =====
-    const handleOpenLoadSave = () => {
+    const handleOpenLoadSave = async () => {
         if (!checkAuth()) return;
+        // 先拉游玩状态，决定是否置顶云端自动存档位
+        const status = await fetchPlayStatus();
+        setPlayStatus(status);
         setIsLoadSaveOpen(true);
+    };
+
+    /** 开始游戏：直接新开一局，不再弹「新的开始/继续/读档」三选一 */
+    const handleStartFreshGame = async () => {
+        if (!listingState.canEnter) {
+            toast.error(listingMessage);
+            return;
+        }
+        if (!checkAuth()) return;
+        const status = await fetchPlayStatus();
+        setPlayStatus(status);
+        if (status.hasContinueState) {
+            setIsRestartConfirmOpen(true);
+            return;
+        }
+        await handleStartNewGame();
     };
 
     const closeStartOptions = () => {
@@ -1508,9 +1572,10 @@ const GameDetail: React.FC = () => {
 
     /** 读档进入游戏；返回是否成功。silent 时失败不弹通用 toast，由调用方给出具体原因（书架续玩） */
     const handleLoadSave = async (saveId: string, opts: { silent?: boolean } = {}): Promise<boolean> => {
+        if (!fileId || isSaveLoading) return false;
+        const toastId = toast.loading(t('common.loading'));
         try {
-            if (!fileId) return false;
-            setIsLoading(true);
+            setIsSaveLoading(true);
             // 进入游戏前清理运行时（保留详情，便于分享/RouteReporter）
             useGameStore.getState().clearPlayRuntime();
             prefetchGalgameDocument(fileId);
@@ -1528,7 +1593,8 @@ const GameDetail: React.FC = () => {
             console.error('加载存档失败:', e);
             if (!opts.silent) toast.error(t('galgame.requestError'));
         } finally {
-            setIsLoading(false);
+            toast.dismiss(toastId);
+            setIsSaveLoading(false);
             setIsLoadSaveOpen(false);
             setPreviewItem(null);
         }
@@ -1546,7 +1612,7 @@ const GameDetail: React.FC = () => {
             if (intent.saveId) {
                 const ok = await handleLoadSave(intent.saveId, { silent: true });
                 if (!ok) {
-                    toast.error('该存档读取失败（可能已损坏或版本不兼容），请选择其他存档');
+                    toast.error(t('gameDetail.shelfSaveLoadFailed'));
                     setIsLoadSaveOpen(true);
                 }
                 return;
@@ -1598,9 +1664,9 @@ const GameDetail: React.FC = () => {
                     </div>
                 </div>
                 <div className={styles.errorContainer}>
-                    <p style={{ fontSize: '1.25rem', fontWeight: 700 }}>{listingState.message || '未上架'}</p>
+                    <p style={{ fontSize: '1.25rem', fontWeight: 700 }}>{listingMessage}</p>
                     <p style={{ opacity: 0.75, marginTop: 8 }}>
-                        {game.title ? `「${game.title}」` : ''}请从「全部作品」进入已上架作品。
+                        {game.title ? `「${game.title}」` : ''}{t('gameDetail.notListedHint')}
                     </p>
                     <button onClick={() => navigate('/home')} className={styles.backButton}>
                         {t('gameDetail.backToHome')}
@@ -1618,7 +1684,7 @@ const GameDetail: React.FC = () => {
     const latestNote = latestUpdateLog?.note || fallbackUpdateNote;
     const latestNoteAt = latestUpdateLog?.createdAt || game.updated_at;
     const latestNoteDateLabel = latestNoteAt
-        ? new Date(latestNoteAt).toLocaleDateString('zh-CN')
+        ? new Date(latestNoteAt).toLocaleDateString(i18n.language || undefined)
         : '';
 
     const rawDescription = game.description || t('gameDetail.noDescription');
@@ -1741,11 +1807,14 @@ const GameDetail: React.FC = () => {
                             type="button"
                             className={`${styles.statsItem} ${isLiked ? styles.statsItemActive : ''}`}
                             onClick={handleLike}
-                            disabled={isLikeLoading}
+                            aria-busy={isLikeLoading}
                             aria-label={t('gameDetail.like')}
                             aria-pressed={isLiked}
                         >
-                            <DetailHeartIcon className={styles.statsIcon} />
+                            <DetailHeartIcon
+                                key={likePopKey}
+                                className={`${styles.statsIcon} ${likePopKey > 0 && isLiked ? styles.statsIconPop : ''}`}
+                            />
                             <span className={styles.statsText}>
                                 <span className={styles.statsLabel}>{t('gameDetail.like')}</span>
                                 <span className={styles.statsValue}>{likeCountDisplay}</span>
@@ -1755,7 +1824,7 @@ const GameDetail: React.FC = () => {
                             type="button"
                             className={`${styles.statsItem} ${isFavorited ? styles.statsItemActive : ''}`}
                             onClick={handleFavorite}
-                            disabled={isFavoriteLoading}
+                            aria-busy={isFavoriteLoading}
                             aria-label={t('gameDetail.favorite')}
                             aria-pressed={isFavorited}
                         >
@@ -1785,11 +1854,6 @@ const GameDetail: React.FC = () => {
                     <section className={styles.sectionBlock} aria-label={t('gameDetail.plotSynopsis')}>
                         <div className={styles.synopsisHeader}>
                             <h3 className={styles.synopsisTitle}>{t('gameDetail.plotSynopsis')}</h3>
-                            {canShowLoadSave ? (
-                                <button type="button" className={styles.loadSaveBadge} onClick={handleOpenLoadSave}>
-                                    {t('gameDetail.loadSave')}
-                                </button>
-                            ) : null}
                         </div>
                         <div className={styles.descriptionSection}>
                             {isHtmlDescription ? (
@@ -1849,7 +1913,7 @@ const GameDetail: React.FC = () => {
                     <div className={`${styles.bottomActionRow} ${styles.inlineActionRow}`}>
                         <button
                             className={styles.startButton}
-                            onClick={handleOpenStartOptions}
+                            onClick={useSaveSplitActions ? handleStartFreshGame : handleOpenStartOptions}
                             disabled={isStartButtonLoading}
                         >
                             {isStartButtonLoading ? (
@@ -1861,10 +1925,20 @@ const GameDetail: React.FC = () => {
                             ) : (
                                 <>
                                     <img src={ICON_GAMEPAD} alt="" className={styles.startButtonIcon} />
-                                    <span>{startButtonText}</span>
+                                    <span>{useSaveSplitActions ? t('gameDetail.startGame') : startButtonText}</span>
                                 </>
                             )}
                         </button>
+                        {useSaveSplitActions ? (
+                            <button
+                                type="button"
+                                className={styles.replayButton}
+                                onClick={() => { void handleOpenLoadSave(); }}
+                            >
+                                <MdOutlineHistory className={styles.replayButtonIcon} aria-hidden="true" />
+                                <span>{t('gameDetail.loadSave')}</span>
+                            </button>
+                        ) : null}
                         {canShowStoryReplay ? (
                             <button
                                 type="button"
@@ -1986,6 +2060,18 @@ const GameDetail: React.FC = () => {
 
             {/* 模态框 */}
             <ConfirmModal
+                isOpen={isRestartConfirmOpen}
+                title={t('gameDetail.restartConfirmTitle')}
+                message={t('gameDetail.restartConfirmMessage')}
+                confirmButtonText={t('gameDetail.startGame')}
+                cancelButtonText={t('common.cancel')}
+                onConfirm={() => {
+                    setIsRestartConfirmOpen(false);
+                    void handleStartNewGame();
+                }}
+                onCancel={() => setIsRestartConfirmOpen(false)}
+            />
+            <ConfirmModal
                 isOpen={isUpdateWarningModalOpen}
                 onConfirm={async () => {
                     setIsUpdateWarningModalOpen(false);
@@ -2020,11 +2106,11 @@ const GameDetail: React.FC = () => {
                         onClick={(e) => e.stopPropagation()}
                         role="dialog"
                         aria-modal="true"
-                        aria-label="确认买断游玩"
+                        aria-label={t('gameDetail.ivgBuyoutTitle')}
                     >
                         <div className={styles.startOptionsHeader}>
                             <div className={styles.startOptionsHeaderMain}>
-                                <h2 className={styles.startOptionsTitle}>确认买断游玩</h2>
+                                <h2 className={styles.startOptionsTitle}>{t('gameDetail.ivgBuyoutTitle')}</h2>
                             </div>
                             <button
                                 type="button"
@@ -2037,7 +2123,7 @@ const GameDetail: React.FC = () => {
                             </button>
                         </div>
                         <p className={styles.interactiveVideoBuyoutMessage}>
-                            解锁后将永久绑定当前账号，请确认支付后进入游戏。
+                            {t('gameDetail.ivgBuyoutMessage')}
                         </p>
                         <div className={styles.startOptionsButtons}>
                             {interactiveVideoBuyoutPaymentOptions.length > 0 ? (
@@ -2049,11 +2135,11 @@ const GameDetail: React.FC = () => {
                                         disabled={isInteractiveVideoBuyoutUnlocking}
                                         onClick={() => handleConfirmInteractiveVideoBuyout(option)}
                                     >
-                                        {isInteractiveVideoBuyoutUnlocking ? '处理中...' : `确认支付${option.label}`}
+                                        {isInteractiveVideoBuyoutUnlocking ? t('gameDetail.processing') : t('gameDetail.ivgConfirmPay', { label: option.label })}
                                     </button>
                                 ))
                             ) : (
-                                <p className={styles.interactiveVideoBuyoutMessage}>暂无可用支付方式</p>
+                                <p className={styles.interactiveVideoBuyoutMessage}>{t('gameDetail.ivgNoPaymentMethod')}</p>
                             )}
                             <button
                                 type="button"
@@ -2061,7 +2147,7 @@ const GameDetail: React.FC = () => {
                                 disabled={isInteractiveVideoBuyoutUnlocking}
                                 onClick={() => setIsInteractiveVideoBuyoutConfirmOpen(false)}
                             >
-                                取消
+                                {t('common.cancel')}
                             </button>
                         </div>
                     </div>
@@ -2082,6 +2168,15 @@ const GameDetail: React.FC = () => {
                 fileId={fileId || null}
                 onPreview={handlePreviewSave}
                 allowCreateSlot={false}
+                autoSlot={useSaveSplitActions && playStatus.hasContinueState ? {
+                    title: t('gameDetail.autoSaveSlot'),
+                    hint: t('gameDetail.autoSaveSlotHint'),
+                    actionText: t('createGame.loadSaveList.load'),
+                    onSelect: () => {
+                        setIsLoadSaveOpen(false);
+                        void handleStartGame();
+                    },
+                } : null}
             />
             <SavePreviewModal
                 isOpen={!!previewItem}

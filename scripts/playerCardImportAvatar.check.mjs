@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readBackend, skipNoBackend } from './_backendRepo.mjs';
 import {
   applyPlayerCardImport,
   mergeProfileAfterPlayerCardImport,
@@ -22,10 +23,7 @@ const archive = readFileSync(
   join(root, 'src/components/Galgame/panels/PlayerArchiveSection.tsx'),
   'utf8',
 );
-const beImport = readFileSync(
-  join(root, '../Interactive-fiction-backend/interface/handlers/playerCharacterCards.js'),
-  'utf8',
-);
+const beImport = readBackend('interface/handlers/playerCharacterCards.js');
 
 const CARD_AVATAR = '/public/visual/player-cards/u1/avatars/cixi.webp';
 const OLD_THUMB = '/public/visual/sessions/s1/avatars/old_player_150.webp';
@@ -261,7 +259,7 @@ test('mergeProfileAfterPlayerCardImport_同图可保留thumb', () => {
   assert.equal(merged.avatarThumbUrl, OLD_THUMB);
 });
 
-test('backend_import保留卡库立绘', () => {
+test('backend_import保留卡库立绘', { skip: skipNoBackend }, () => {
   assert.match(beImport, /preserveIncomingAvatar/);
   assert.match(beImport, /imported\.profile\?\.avatarUrl/);
 });

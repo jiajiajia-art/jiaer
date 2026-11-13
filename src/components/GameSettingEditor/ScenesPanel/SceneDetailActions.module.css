@@ -8,14 +8,14 @@
 
 .ghostSmall {
     border-radius: 999px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     padding: 6px 14px;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
     transition: 0.25s ease;
-    color: #1a1a1a;
-    background: #fff;
+    color: var(--color-text);
+    background: var(--color-surface);
 }
 
 .ghostSmall:hover {

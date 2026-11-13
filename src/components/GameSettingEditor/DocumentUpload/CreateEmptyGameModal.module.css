@@ -3,7 +3,7 @@
 .modalOverlay {
     position: fixed;
     inset: 0;
-    background-color: rgba(0, 0, 0, 0.72);
+    background-color: color-mix(in srgb, var(--color-shadow) 72%, transparent);
     backdrop-filter: blur(6px);
     display: flex;
     align-items: center;
@@ -22,14 +22,14 @@
 }
 
 .modal {
-    --primary: #A8283C;
-    --primary-dark: #8E2135;
-    background: #1A1A1A;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    --primary: var(--color-primary);
+    --primary-dark: var(--color-primary-bold);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     border-radius: 16px;
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 18px 48px color-mix(in srgb, var(--color-shadow) 55%, transparent);
     overflow: hidden;
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .modalHeader {
@@ -37,22 +37,22 @@
     justify-content: space-between;
     align-items: center;
     padding: 18px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .title {
     margin: 0;
     font-size: 1.2rem;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .closeButton {
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     font-size: 22px;
     line-height: 1;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     cursor: pointer;
     padding: 0;
     width: 32px;
@@ -65,9 +65,9 @@
 }
 
 .closeButton:hover:not(:disabled) {
-    background-color: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
-    border-color: rgba(255, 255, 255, 0.22);
+    background-color: color-mix(in srgb, var(--color-text) 8%, transparent);
+    color: var(--color-text);
+    border-color: color-mix(in srgb, var(--color-text) 22%, transparent);
 }
 
 .closeButton:disabled {
@@ -88,7 +88,7 @@
     margin-bottom: 8px;
     font-size: 0.875rem;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.75);
+    color: color-mix(in srgb, var(--color-text) 75%, transparent);
 }
 
 .labelWithAi {
@@ -109,9 +109,9 @@
     min-height: 28px;
     padding: 4px 12px;
     border-radius: 999px;
-    border: 1px solid rgba(142, 33, 53, 0.55);
-    background: rgba(142, 33, 53, 0.18);
-    color: #FF8A9A;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+    color: var(--color-primary-fg);
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
@@ -119,7 +119,7 @@
 }
 
 .fieldAiBtn:hover:not(:disabled) {
-    background: rgba(142, 33, 53, 0.28);
+    background: color-mix(in srgb, var(--color-primary) 28%, transparent);
 }
 
 .fieldAiBtn:disabled {
@@ -130,39 +130,39 @@
 .input {
     width: 100%;
     padding: 12px 14px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     border-radius: 10px;
     font-size: 1rem;
-    background: #1C1C1E;
-    color: #ffffff;
+    background: var(--color-surface);
+    color: var(--color-text);
     transition: border-color 0.2s, box-shadow 0.2s;
     box-sizing: border-box;
 }
 
 .input::placeholder {
-    color: rgba(255, 255, 255, 0.35);
+    color: var(--color-text-muted);
 }
 
 .input:focus {
     outline: none;
-    border-color: #8E2135;
-    box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.25);
+    border-color: var(--color-primary-bold);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 25%, transparent);
 }
 
 .input:disabled {
-    background-color: rgba(255, 255, 255, 0.04);
-    color: rgba(255, 255, 255, 0.45);
+    background-color: color-mix(in srgb, var(--color-text) 4%, transparent);
+    color: var(--color-text-muted);
     cursor: not-allowed;
 }
 
 .textarea {
     width: 100%;
     padding: 12px 14px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     border-radius: 10px;
     font-size: 1rem;
-    background: #1C1C1E;
-    color: #ffffff;
+    background: var(--color-surface);
+    color: var(--color-text);
     transition: border-color 0.2s, box-shadow 0.2s;
     box-sizing: border-box;
     resize: vertical;
@@ -171,30 +171,30 @@
 }
 
 .textarea::placeholder {
-    color: rgba(255, 255, 255, 0.35);
+    color: var(--color-text-muted);
 }
 
 .textarea:focus {
     outline: none;
-    border-color: #8E2135;
-    box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.25);
+    border-color: var(--color-primary-bold);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 25%, transparent);
 }
 
 .textarea:disabled {
-    background-color: rgba(255, 255, 255, 0.04);
-    color: rgba(255, 255, 255, 0.45);
+    background-color: color-mix(in srgb, var(--color-text) 4%, transparent);
+    color: var(--color-text-muted);
     cursor: not-allowed;
 }
 
 .errorText {
     margin: 8px 0 0 0;
-    color: #C23A50;
+    color: var(--color-primary);
     font-size: 0.875rem;
 }
 
 .hintText {
     margin: 8px 0 0 0;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--color-text-muted);
     font-size: 0.75rem;
     line-height: 1.4;
 }
@@ -217,24 +217,24 @@
 }
 
 .cancelButton {
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    background-color: #1C1C1E;
-    color: #ffffff;
+    border: 1px solid color-mix(in srgb, var(--color-text) 18%, transparent);
+    background-color: var(--color-surface);
+    color: var(--color-text);
 }
 
 .cancelButton:hover:not(:disabled) {
-    border-color: rgba(255, 255, 255, 0.35);
-    background-color: #242426;
+    border-color: color-mix(in srgb, var(--color-text) 35%, transparent);
+    background-color: var(--color-surface-2);
 }
 
 .submitButton {
     border: none;
-    background-color: #8E2135;
-    color: #ffffff;
+    background-color: var(--color-primary-bold);
+    color: var(--color-on-primary);
 }
 
 .submitButton:hover:not(:disabled) {
-    background-color: #A8283C;
+    background-color: var(--color-primary);
 }
 
 .submitButton:disabled,
@@ -252,7 +252,7 @@
     right: 12px;
     bottom: 10px;
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.35);
+    color: var(--color-text-muted);
     pointer-events: none;
 }
 
@@ -260,7 +260,7 @@
     margin: 0 0 10px 0;
     font-size: 0.875rem;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.75);
+    color: color-mix(in srgb, var(--color-text) 75%, transparent);
 }
 
 .scopeOption {
@@ -271,21 +271,21 @@
     text-align: left;
     padding: 14px 16px;
     margin-bottom: 10px;
-    border: 1.5px solid rgba(255, 255, 255, 0.12);
+    border: 1.5px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     border-radius: 12px;
-    background: #1C1C1E;
+    background: var(--color-surface);
     cursor: pointer;
     transition: border-color 0.15s ease, background 0.15s ease;
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .scopeOption:hover:not(:disabled) {
-    border-color: rgba(142, 33, 53, 0.55);
+    border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
 }
 
 .scopeOptionActive {
-    border-color: #8E2135;
-    background: rgba(142, 33, 53, 0.14);
+    border-color: var(--color-primary-bold);
+    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
 }
 
 .scopeOption:disabled {
@@ -299,13 +299,13 @@
     height: 18px;
     margin-top: 2px;
     border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.28);
+    border: 2px solid color-mix(in srgb, var(--color-text) 28%, transparent);
     box-sizing: border-box;
     position: relative;
 }
 
 .scopeOptionActive .scopeRadio {
-    border-color: #8E2135;
+    border-color: var(--color-primary-bold);
 }
 
 .scopeOptionActive .scopeRadio::after {
@@ -313,7 +313,7 @@
     position: absolute;
     inset: 3px;
     border-radius: 50%;
-    background: #8E2135;
+    background: var(--color-primary-bold);
 }
 
 .scopeBody {
@@ -327,12 +327,12 @@
 .scopeTitle {
     font-size: 0.95rem;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .scopeDesc {
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--color-text-secondary);
     line-height: 1.4;
 }
 
@@ -340,8 +340,8 @@
     flex-shrink: 0;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #FF8A9A;
-    background: rgba(142, 33, 53, 0.22);
+    color: var(--color-primary-fg);
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
     padding: 4px 10px;
     border-radius: 999px;
     white-space: nowrap;
@@ -351,15 +351,15 @@
     margin: 4px 0 8px 0;
     padding: 12px;
     border-radius: 10px;
-    background: rgba(142, 33, 53, 0.1);
-    border: 1px dashed rgba(142, 33, 53, 0.35);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    border: 1px dashed color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 .assetPickLabel {
     margin: 0 0 10px 0;
     font-size: 0.8rem;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
 }
 
 .assetPickRow {
@@ -374,25 +374,25 @@
     gap: 6px;
     padding: 8px 12px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: #1C1C1E;
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    background: var(--color-surface);
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.85);
+    color: color-mix(in srgb, var(--color-text) 85%, transparent);
     cursor: pointer;
     user-select: none;
 }
 
 .assetChip input {
-    accent-color: #8E2135;
+    accent-color: var(--color-primary-bold);
 }
 
 .assetChipOn {
-    border-color: rgba(142, 33, 53, 0.55);
-    background: rgba(142, 33, 53, 0.18);
+    border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
 .assetCount {
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--color-text-muted);
     font-size: 0.75rem;
 }
 

@@ -9,8 +9,8 @@
     margin-top: var(--home-filter-gap-above, 16px);
     padding: 10px 16px;
     border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: #1A1A1A;
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    background: var(--color-surface);
     box-shadow: none;
     overflow: visible;
 }
@@ -29,7 +29,7 @@
     width: 1px;
     height: 24px;
     margin: 0 6px;
-    background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.16) 24%, rgba(255, 255, 255, 0.16) 76%, transparent 100%);
+    background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-text) 16%, transparent) 24%, color-mix(in srgb, var(--color-text) 16%, transparent) 76%, transparent 100%);
     flex: 0 0 auto;
 }
 
@@ -43,7 +43,7 @@
     align-items: center;
     gap: 8px;
     background: transparent;
-    color: #FFFFFF;
+    color: var(--color-text);
     font-size: 16px;
     font-weight: 700;
     line-height: 1;
@@ -53,17 +53,17 @@
 }
 
 .trigger:hover {
-    color: #FFFFFF;
-    background: rgba(255, 255, 255, 0.06);
+    color: var(--color-text);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .triggerOpen,
 .triggerChanged {
-    color: #FFFFFF;
+    color: var(--color-text);
 }
 
 .triggerChanged {
-    background: rgba(142, 33, 53, 0.35);
+    background: color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 .triggerOpen {
@@ -111,11 +111,11 @@
     max-height: min(55vh, 420px);
     padding: 10px;
     border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     display: grid;
     gap: 6px;
-    background: #1C1C1E;
-    box-shadow: 0 20px 44px rgba(0, 0, 0, 0.45);
+    background: var(--color-surface);
+    box-shadow: 0 20px 44px color-mix(in srgb, var(--color-shadow) 45%, transparent);
     overflow-y: auto;
 }
 
@@ -140,20 +140,20 @@
     justify-content: space-between;
     gap: 12px;
     background: transparent;
-    color: #C7C7CC;
+    color: var(--color-text-secondary);
     cursor: pointer;
     text-align: left;
     transition: background-color 0.18s ease, color 0.18s ease;
 }
 
 .menuItem:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #FFFFFF;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--color-text);
 }
 
 .menuItemActive {
-    background: rgba(142, 33, 53, 0.4);
-    color: #FFFFFF;
+    background: color-mix(in srgb, var(--color-primary) 40%, transparent);
+    color: var(--color-primary-fg);
 }
 
 .menuItemLabel {
@@ -169,7 +169,7 @@
 
 .menuItemCheck {
     flex: 0 0 auto;
-    color: #FF8A9A;
+    color: var(--color-primary-fg);
     font-size: 15px;
     font-weight: 700;
 }
@@ -182,7 +182,7 @@
     display: inline-flex;
     align-items: center;
     background: transparent;
-    color: #FFFFFF;
+    color: var(--color-text);
     font-size: 16px;
     font-weight: 700;
     line-height: 1;
@@ -192,18 +192,18 @@
 }
 
 .quickFilter:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .quickFilterActive {
-    color: #FFFFFF;
-    background: #8E2135;
+    color: var(--color-on-primary);
+    background: var(--color-primary-bold);
 }
 
 .trigger:focus-visible,
 .menuItem:focus-visible,
 .quickFilter:focus-visible {
-    outline: 2px solid rgba(168, 40, 60, 0.7);
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 70%, transparent);
     outline-offset: 2px;
 }
 
@@ -212,9 +212,9 @@
         margin-top: var(--home-filter-gap-above, 16px);
         padding: 6px 10px;
         border-radius: 14px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
         flex-wrap: nowrap;
-        background: #1A1A1A;
+        background: var(--color-surface);
         box-shadow: none;
         overflow: visible;
     }
@@ -237,34 +237,34 @@
         height: 20px;
         margin: 0 4px;
         flex: 0 0 auto;
-        background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.14) 18%, rgba(255, 255, 255, 0.14) 82%, transparent 100%);
+        background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-text) 14%, transparent) 18%, color-mix(in srgb, var(--color-text) 14%, transparent) 82%, transparent 100%);
     }
 
     .trigger {
         min-height: 38px;
         max-width: 100%;
         padding: 0 8px;
-        color: #FFFFFF;
+        color: var(--color-text);
         font-size: 14px;
         background: transparent;
     }
 
     .trigger:hover {
-        color: #FFFFFF;
-        background: rgba(255, 255, 255, 0.06);
+        color: var(--color-text);
+        background: color-mix(in srgb, var(--color-text) 6%, transparent);
     }
 
     .triggerChanged {
-        color: #FFFFFF;
-        background: rgba(142, 33, 53, 0.4);
+        color: var(--color-primary-fg);
+        background: color-mix(in srgb, var(--color-primary) 40%, transparent);
     }
 
     .menu {
         top: calc(100% + 10px);
         min-width: 168px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        background: #1C1C1E;
-        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
+        border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+        background: var(--color-surface);
+        box-shadow: 0 16px 32px color-mix(in srgb, var(--color-shadow) 50%, transparent);
     }
 
     .menuWide {
@@ -284,26 +284,26 @@
     }
 
     .menuItem {
-        color: #C7C7CC;
+        color: var(--color-text-secondary);
     }
 
     .menuItem:hover {
-        background: rgba(255, 255, 255, 0.06);
-        color: #FFFFFF;
+        background: color-mix(in srgb, var(--color-text) 6%, transparent);
+        color: var(--color-text);
     }
 
     .menuItemActive {
-        background: rgba(142, 33, 53, 0.45);
-        color: #FFFFFF;
+        background: color-mix(in srgb, var(--color-primary) 45%, transparent);
+        color: var(--color-primary-fg);
     }
 
     .menuItemCheck {
-        color: #FF8A9A;
+        color: var(--color-primary-fg);
     }
 
     .trigger:focus-visible,
     .menuItem:focus-visible,
     .quickFilter:focus-visible {
-        outline: 2px solid rgba(168, 40, 60, 0.7);
+        outline: 2px solid color-mix(in srgb, var(--color-primary) 70%, transparent);
     }
 }

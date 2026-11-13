@@ -1,14 +1,14 @@
 /* 共享按钮样式 */
 .ghostSmall {
     border-radius: 999px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     padding: 6px 14px;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
     transition: 0.25s ease;
-    color: #1a1a1a;
-    background: #fff;
+    color: var(--color-text);
+    background: var(--color-surface);
     flex-shrink: 0;
 }
 
@@ -20,12 +20,12 @@
 .ghostSmall:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    background: rgba(0, 0, 0, 0.02);
+    background: color-mix(in srgb, var(--color-text) 2%, transparent);
 }
 
 .ghostSmall:disabled:hover {
-    border-color: rgba(0, 0, 0, 0.12);
-    color: #1a1a1a;
+    border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: var(--color-text);
 }
 
 .primary {
@@ -35,12 +35,12 @@
     font-weight: 600;
     cursor: pointer;
     transition: 0.25s ease;
-    color: #fff;
+    color: var(--color-text);
     background: var(--primary);
 }
 
 .primary:hover {
-    background: #c93545;
+    background: var(--color-primary);
 }
 
 .primary:disabled {

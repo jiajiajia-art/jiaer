@@ -66,8 +66,8 @@ test('PlayerArchiveSection_确认弹窗有风格选择与外貌补充_无英文�
   assert.match(archiveSrc, /avatarStyle/);
   assert.match(archiveSrc, /promptSupplement/);
   assert.match(archiveSrc, /确认生成头像/);
-  // 功能注释：头像扣费改为对局实时价，不再写死 CHARACTER_GENERATION_COST
-  assert.match(archiveSrc, /将扣除 \$\{sessionAvatarPrice == null \? '—' : avatarChargeText\} 生成 AI 头像/);
+  // 扣费改为按后端实时价格展示（avatarChargeText），不再写死常量
+  assert.match(archiveSrc, /将扣除 \$\{[^}]*avatarChargeText\} 生成 AI 头像/);
   assert.doesNotMatch(archiveSrc, /当前提示词/);
   assert.doesNotMatch(archiveSrc, /补充描述/);
   assert.doesNotMatch(archiveSrc, /promptCueReadonly/);

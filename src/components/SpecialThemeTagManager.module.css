@@ -4,9 +4,9 @@
     gap: 18px;
     padding: 22px;
     border-radius: 22px;
-    background: #fff;
-    border: 1px solid rgba(205, 157, 120, 0.16);
-    box-shadow: 0 18px 44px rgba(117, 72, 39, 0.08);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 16%, transparent);
+    box-shadow: 0 18px 44px color-mix(in srgb, var(--color-highlight) 8%, transparent);
 }
 
 .sectionBadge {
@@ -14,8 +14,8 @@
     width: fit-content;
     padding: 6px 12px;
     border-radius: 999px;
-    background: #e6f4ff;
-    color: #9b4c21;
+    background: var(--color-bg);
+    color: var(--color-highlight);
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -30,14 +30,14 @@
 
 .title {
     margin: 0;
-    color: #2b2119;
+    color: var(--color-text);
     font-size: 24px;
     font-weight: 800;
 }
 
 .description {
     margin: 8px 0 0;
-    color: #7a6a59;
+    color: var(--color-text-secondary);
     font-size: 14px;
     line-height: 1.6;
 }
@@ -47,8 +47,8 @@
 .editorCard {
     padding: 20px;
     border-radius: 16px;
-    background: #fff;
-    border: 1px solid rgba(205, 157, 120, 0.18);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 18%, transparent);
 }
 
 .createCard {
@@ -73,14 +73,14 @@
 }
 
 .cardTitle {
-    color: #2b2119;
+    color: var(--color-text);
     font-size: 18px;
     font-weight: 700;
 }
 
 .cardMeta {
     margin-top: 6px;
-    color: #8a7b6a;
+    color: var(--color-text-muted);
     font-size: 13px;
     line-height: 1.5;
 }
@@ -89,7 +89,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    color: #584637;
+    color: var(--color-text-secondary);
     font-size: 13px;
     font-weight: 600;
 }
@@ -100,17 +100,17 @@
     min-height: 44px;
     padding: 10px 12px;
     border-radius: 14px;
-    border: 1px solid rgba(205, 157, 120, 0.28);
-    background: #fff;
-    color: #2b2119;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 28%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text);
     font-size: 14px;
     outline: none;
 }
 
 .input:focus,
 .select:focus {
-    border-color: rgba(201, 115, 63, 0.56);
-    box-shadow: 0 0 0 3px rgba(201, 115, 63, 0.12);
+    border-color: color-mix(in srgb, var(--color-highlight) 56%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-highlight) 12%, transparent);
 }
 
 .primaryButton,
@@ -127,21 +127,21 @@
 }
 
 .primaryButton {
-    background: #1677ff;
-    color: #fff;
-    box-shadow: 0 12px 24px rgba(184, 84, 43, 0.2);
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    box-shadow: 0 12px 24px color-mix(in srgb, var(--color-highlight) 20%, transparent);
 }
 
 .secondaryButton {
-    background: #fff;
-    border-color: rgba(205, 157, 120, 0.28);
-    color: #5f4c3b;
+    background: var(--color-surface);
+    border-color: color-mix(in srgb, var(--color-highlight) 28%, transparent);
+    color: var(--color-text-secondary);
 }
 
 .dangerButton {
-    background: rgba(198, 67, 73, 0.08);
-    border-color: rgba(198, 67, 73, 0.2);
-    color: #b73d45;
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+    color: var(--color-primary);
 }
 
 .primaryButton:disabled,
@@ -166,15 +166,15 @@
     width: 100%;
     padding: 14px;
     border-radius: 18px;
-    border: 1px solid rgba(205, 157, 120, 0.18);
-    background: #fff;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 18%, transparent);
+    background: var(--color-surface);
     text-align: left;
     cursor: pointer;
 }
 
 .tagItemActive {
-    border-color: rgba(201, 115, 63, 0.42);
-    box-shadow: 0 10px 24px rgba(201, 115, 63, 0.12);
+    border-color: color-mix(in srgb, var(--color-highlight) 42%, transparent);
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--color-highlight) 12%, transparent);
 }
 
 .tagOrder {
@@ -184,8 +184,8 @@
     align-items: center;
     justify-content: center;
     border-radius: 12px;
-    background: #e6f4ff;
-    color: #b45a31;
+    background: var(--color-bg);
+    color: var(--color-highlight);
     font-size: 14px;
     font-weight: 800;
 }
@@ -198,13 +198,13 @@
 }
 
 .tagName {
-    color: #2b2119;
+    color: var(--color-text);
     font-size: 15px;
     font-weight: 700;
 }
 
 .tagMode {
-    color: #8a7b6a;
+    color: var(--color-text-muted);
     font-size: 12px;
     line-height: 1.5;
 }
@@ -235,8 +235,8 @@
     gap: 8px;
     padding: 4px;
     border-radius: 16px;
-    border: 1px solid rgba(205, 157, 120, 0.18);
-    background: #fff;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 18%, transparent);
+    background: var(--color-surface);
 }
 
 .genderTab {
@@ -244,7 +244,7 @@
     border: 1px solid transparent;
     border-radius: 12px;
     background: transparent;
-    color: #7a6a59;
+    color: var(--color-text-secondary);
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
@@ -252,25 +252,25 @@
 }
 
 .genderTab:hover {
-    color: #9b4c21;
-    background: #f5faff;
+    color: var(--color-highlight);
+    background: var(--color-bg);
 }
 
 .genderTab:focus-visible {
     outline: none;
-    border-color: rgba(201, 115, 63, 0.46);
-    box-shadow: 0 0 0 3px rgba(201, 115, 63, 0.12);
+    border-color: color-mix(in srgb, var(--color-highlight) 46%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-highlight) 12%, transparent);
 }
 
 .genderTabActive {
-    border-color: #91caff;
-    background: #e6f4ff;
-    color: #0958d9;
+    border-color: var(--color-primary);
+    background: var(--color-bg);
+    color: var(--color-primary-fg);
     box-shadow: none;
 }
 
 .limitText {
-    color: #b45a31;
+    color: var(--color-highlight);
     font-size: 14px;
     font-weight: 700;
 }
@@ -291,20 +291,20 @@
     width: 100%;
     padding: 12px 14px;
     border-radius: 16px;
-    border: 1px solid rgba(205, 157, 120, 0.18);
-    background: #fff;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 18%, transparent);
+    background: var(--color-surface);
     text-align: left;
     cursor: pointer;
 }
 
 .searchItemTitle {
-    color: #2b2119;
+    color: var(--color-text);
     font-size: 14px;
     font-weight: 700;
 }
 
 .searchItemMeta {
-    color: #8a7b6a;
+    color: var(--color-text-muted);
     font-size: 12px;
 }
 
@@ -312,8 +312,8 @@
 .emptyState {
     padding: 16px;
     border-radius: 16px;
-    background: #fff;
-    color: #8a7b6a;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
     font-size: 14px;
     line-height: 1.6;
 }
@@ -331,8 +331,8 @@
     gap: 12px;
     padding: 14px;
     border-radius: 18px;
-    border: 1px solid rgba(205, 157, 120, 0.18);
-    background: #fff;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 18%, transparent);
+    background: var(--color-surface);
 }
 
 .selectedGameOrder {
@@ -342,8 +342,8 @@
     align-items: center;
     justify-content: center;
     border-radius: 10px;
-    background: #e6f4ff;
-    color: #b45a31;
+    background: var(--color-bg);
+    color: var(--color-highlight);
     font-size: 13px;
     font-weight: 800;
 }
@@ -353,7 +353,7 @@
 }
 
 .selectedGameTitle {
-    color: #2b2119;
+    color: var(--color-text);
     font-size: 14px;
     font-weight: 700;
     white-space: nowrap;
@@ -363,7 +363,7 @@
 
 .selectedGameMeta {
     margin-top: 4px;
-    color: #8a7b6a;
+    color: var(--color-text-muted);
     font-size: 12px;
     white-space: nowrap;
     overflow: hidden;

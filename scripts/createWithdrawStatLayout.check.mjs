@@ -1,5 +1,5 @@
 /**
- * 提现入口：从 Create 页 KK 币统计行迁移到独立创作者中心（CreatorEarnings 提现弹窗）。
+ * 提现入口：从 Create 页 KK 币统计行迁移到独立创作激励页面。
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,10 +14,17 @@ test('Create_KK币统计行不再展示提现且新页面复用提现流程', ()
   const createCss = read('src/page/Create.module.css');
   const create = read('src/page/Create.tsx');
   const incentive = read('src/page/CreatorIncentive.tsx');
+  const incentiveCss = read('src/page/CreatorIncentive.module.css');
 
   assert.doesNotMatch(create, /primaryStatWithdrawLink|primaryStatLabelSep/);
   assert.doesNotMatch(createCss, /\.primaryStatWithdrawLink\s*\{|\.primaryStatLabelSep\s*\{/);
-  // 功能注释：创作者中心用 CreatorEarningsWithdrawalModal，不再用旧 WithdrawFlowModal
-  assert.match(incentive, /CreatorEarningsWithdrawalModal/);
-  assert.match(incentive, /onWithdraw=\{\(\) => setWithdrawOpen\(true\)\}|setWithdrawOpen\(true\)/);
+  // 提现改由创作者中心的收益总览发起：CreatorEarningsOverview.onWithdraw → CreatorEarningsWithdrawalModal
+  assert.match(incentive, /<CreatorEarningsWithdrawalModal/);
+  assert.match(incentive, /onWithdraw=\{\(\) => setWithdrawOpen\(true\)\}/);
+  assert.match(incentiveCss, /\.withdrawButton\s*\{[\s\S]*?min-height:\s*44px/);
+  assert.match(incentiveCss, /\.settlementGrid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4,/);
+  assert.doesNotMatch(
+    incentiveCss,
+    /@media \(max-width: 640px\)[\s\S]*?\.withdrawButton\s*\{[^}]*width:\s*100%/,
+  );
 });

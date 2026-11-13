@@ -4,6 +4,7 @@ import { jwtDecode } from 'jwt-decode';
 import { HOST_ADDRESS } from '../config';
 import { useAuthStore } from '../store/useAuthStore';
 import { decryptProfilePayload, encryptProfilePayload } from '../utils/profileCrypto';
+import { getSelectedAiRouteId, isAiRoutedUrl, withAiRouteParam } from '../lib/aiRouteSelection';
 
 const BASE_URL = HOST_ADDRESS + '/api';
 
@@ -128,6 +129,11 @@ export const createApi = (config?: ApiConfig): AxiosInstance => {
      *  - 刷新完成后给请求加上最新的 Authorization
      */
     async (config: InternalAxiosRequestConfig) => {
+      // 功能注释：玩家选了 AI 线路时，AI 接口追加 aiRouteId 查询参数（见 lib/aiRouteSelection.ts）
+      const aiRouteId = getSelectedAiRouteId();
+      if (aiRouteId && config.url && isAiRoutedUrl(config.url)) {
+        config.params = { ...(config.params || {}), aiRouteId };
+      }
       const { user } = useAuthStore.getState();
       let token = user?.token;
 
@@ -324,7 +330,7 @@ export const authFetch = async (url: string | URL, init?: RequestInit): Promise<
   };
 
   try {
-    const response = await fetch(url, requestInit);
+    const response = await fetch(typeof url === 'string' ? withAiRouteParam(url) : url, requestInit);
 
     if (response.status === 401) {
       console.warn('[Fetch] Received 401, token invalid, logging out.');

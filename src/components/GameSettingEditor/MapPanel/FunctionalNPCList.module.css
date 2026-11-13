@@ -1,5 +1,5 @@
 .functionalNPCList {
-    background: #fff;
+    background: var(--color-surface);
     border-radius: 14px;
     border: 1px solid var(--border-light);
     padding: 18px;
@@ -30,7 +30,7 @@
     grid-template-columns: 90px 1fr;
     gap: 10px;
     padding: 10px;
-    background: #f9fafb;
+    background: var(--color-bg);
     border-radius: 12px;
     border: 1px solid var(--border-light);
     transition: all 0.15s ease;
@@ -45,9 +45,9 @@
 }
 
 .functionalNPCItem[draggable="true"]:hover {
-    border-color: rgba(224, 61, 75, 0.35);
-    background: #fff;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+    background: var(--color-surface);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 8%, transparent);
 }
 
 .functionalNPCItemNoImage {
@@ -55,8 +55,8 @@
 }
 
 .functionalNPCItem:hover {
-    border-color: rgba(224, 61, 75, 0.35);
-    background: #fff;
+    border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+    background: var(--color-surface);
 }
 
 .statusDot {
@@ -66,17 +66,17 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 1);
+    box-shadow: 0 0 0 2px var(--color-shadow);
     z-index: 10;
     flex-shrink: 0;
 }
 
 .statusDotUsed {
-    background-color: #16a34a; /* green */
+    background-color: var(--color-success); /* green */
 }
 
 .statusDotUnused {
-    background-color: #e03d4b; /* red */
+    background-color: var(--color-primary); /* red */
 }
 
 .functionalNPCThumbWrapper {

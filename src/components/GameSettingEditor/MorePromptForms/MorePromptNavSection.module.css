@@ -73,16 +73,16 @@
 }
 
 .iconBtn:hover {
-  background: rgba(142, 33, 53, 0.28);
+  background: color-mix(in srgb, var(--color-primary) 28%, transparent);
 }
 
 /* 功能注释：暗色轨上的虚线补录入口，禁止白底粉渐变 */
 .addBtn {
   margin-top: 4px;
   border-radius: 14px;
-  border: 1px dashed rgba(168, 40, 60, 0.45);
+  border: 1px dashed color-mix(in srgb, var(--color-primary) 45%, transparent);
   background: transparent;
-  color: #ffffff;
+  color: var(--color-text);
   padding: 14px 16px;
   display: flex;
   align-items: center;
@@ -96,15 +96,15 @@
 }
 
 .addBtn:hover:not(:disabled) {
-  background: rgba(142, 33, 53, 0.22);
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
   border-style: solid;
-  border-color: rgba(168, 40, 60, 0.7);
+  border-color: color-mix(in srgb, var(--color-primary) 70%, transparent);
 }
 
 .addBtnActive {
   border-style: solid;
-  border-color: rgba(168, 40, 60, 0.55);
-  background: rgba(142, 33, 53, 0.28);
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 28%, transparent);
   box-shadow: none;
 }
 

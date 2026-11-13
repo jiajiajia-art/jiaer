@@ -18,16 +18,16 @@ const homeCss = readFileSync(
 test('立即加入_使用酒红竖向渐变与内高光', () => {
   assert.match(
     homeCss,
-    /\.mobileJoinGroupAction\s*\{[\s\S]*?background:\s*linear-gradient\(180deg,\s*#B83248\s*0%,\s*#8E2135\s*100%\)/i
+    /\.mobileJoinGroupAction\s*\{[\s\S]*?background:\s*linear-gradient\(180deg,\s*(?:#b83248|var\(--color-primary\))\s*0%,\s*(?:#8e2135|var\(--color-primary-bold\))\s*100%\)/i
   );
 });
 
 test('navbar登录_应复用立即加入同款酒红渐变', () => {
   assert.match(
     navbarCss,
-    /--navbar-login-bg:\s*linear-gradient\(180deg,\s*#b83248\s*0%,\s*#8e2135\s*100%\)/i
+    /--navbar-login-bg:\s*linear-gradient\(180deg,\s*(?:#b83248|var\(--color-primary\))\s*0%,\s*(?:#8e2135|var\(--color-primary-bold\))\s*100%\)/i
   );
-  assert.match(navbarCss, /--navbar-login-shadow:\s*inset 0 1px 0 rgba\(255,\s*255,\s*255,\s*0\.12\)/);
+  assert.match(navbarCss, /--navbar-login-shadow:\s*inset 0 1px 0 (?:rgba\(255,\s*255,\s*255,\s*0\.12\)|var\(--|color-mix\()/);
   assert.match(navbarCss, /\.loginBtn\s*\{[\s\S]*?border-radius:\s*999px/);
 });
 

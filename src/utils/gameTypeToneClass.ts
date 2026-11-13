@@ -11,28 +11,28 @@ type GameTypeTonePalette = {
  */
 export const GAME_TYPE_TONE_PALETTE: Record<GameTypeTone, GameTypeTonePalette> = {
   aiWenyou: {
-    backgroundColor: '#e8455a',
-    borderColor: 'rgba(255, 210, 216, 0.55)',
+    backgroundColor: 'var(--color-primary)',
+    borderColor: 'color-mix(in srgb, var(--color-primary-lighter) 55%, transparent)',
   },
   tavern: {
-    backgroundColor: '#c9822a',
-    borderColor: 'rgba(255, 228, 180, 0.5)',
+    backgroundColor: 'color-mix(in srgb, var(--color-highlight) 68%, var(--color-shadow))',
+    borderColor: 'color-mix(in srgb, var(--color-highlight) 50%, transparent)',
   },
   custom: {
-    backgroundColor: '#2c9b84',
-    borderColor: 'rgba(190, 245, 230, 0.5)',
+    backgroundColor: 'color-mix(in srgb, var(--color-success) 68%, var(--color-shadow))',
+    borderColor: 'color-mix(in srgb, var(--color-success) 50%, transparent)',
   },
   visualNovel: {
-    backgroundColor: '#3f6ad8',
-    borderColor: 'rgba(198, 214, 255, 0.5)',
+    backgroundColor: 'color-mix(in srgb, var(--color-info) 68%, var(--color-shadow))',
+    borderColor: 'color-mix(in srgb, var(--color-info) 50%, transparent)',
   },
   ivg: {
-    backgroundColor: '#9b4f8a',
-    borderColor: 'rgba(240, 198, 228, 0.45)',
+    backgroundColor: 'color-mix(in srgb, var(--color-accent) 68%, var(--color-shadow))',
+    borderColor: 'color-mix(in srgb, var(--color-accent) 45%, transparent)',
   },
   default: {
-    backgroundColor: '#4a5564',
-    borderColor: 'rgba(255, 255, 255, 0.28)',
+    backgroundColor: 'color-mix(in srgb, var(--color-text-muted) 68%, var(--color-shadow))',
+    borderColor: 'color-mix(in srgb, var(--color-text) 28%, transparent)',
   },
 };
 
@@ -42,6 +42,6 @@ export const resolveGameTypeToneStyle = (tone: GameTypeTone): CSSProperties => {
   return {
     backgroundColor: palette.backgroundColor,
     borderColor: palette.borderColor,
-    color: '#fff',
+    color: 'var(--color-on-primary)',
   };
 };

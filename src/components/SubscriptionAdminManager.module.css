@@ -7,10 +7,10 @@
 
 .heroCard,
 .card {
-    background: #fff;
-    border: 1px solid rgba(222, 191, 166, 0.45);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 45%, transparent);
     border-radius: 22px;
-    box-shadow: 0 18px 40px rgba(181, 135, 92, 0.14);
+    box-shadow: 0 18px 40px color-mix(in srgb, var(--color-highlight) 14%, transparent);
 }
 
 .heroCard {
@@ -26,8 +26,8 @@
     align-items: center;
     padding: 8px 16px;
     border-radius: 999px;
-    background: #e6f4ff;
-    color: #a5602f;
+    background: var(--color-bg);
+    color: var(--color-highlight);
     font-size: 14px;
     font-weight: 700;
 }
@@ -35,7 +35,7 @@
 .heroTitle {
     margin: 14px 0 8px;
     font-size: 24px;
-    color: #2e241d;
+    color: var(--color-text);
 }
 
 .adminTabs {
@@ -43,10 +43,10 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
     padding: 7px;
-    border: 1px solid rgba(222, 191, 166, 0.48);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 48%, transparent);
     border-radius: 18px;
-    background: #fff;
-    box-shadow: 0 12px 28px rgba(181, 135, 92, 0.1);
+    background: var(--color-surface);
+    box-shadow: 0 12px 28px color-mix(in srgb, var(--color-highlight) 10%, transparent);
 }
 
 .adminTab,
@@ -56,7 +56,7 @@
     border: 1px solid transparent;
     border-radius: 13px;
     background: transparent;
-    color: #725a48;
+    color: var(--color-text-secondary);
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
@@ -64,14 +64,14 @@
 }
 
 .adminTab:hover {
-    background: #e6f4ff;
-    color: #8b4f28;
+    background: var(--color-bg);
+    color: var(--color-highlight);
 }
 
 .adminTabActive {
-    border-color: #91caff;
-    background: #e6f4ff;
-    color: #0958d9;
+    border-color: var(--color-primary);
+    background: var(--color-bg);
+    color: var(--color-primary-fg);
     box-shadow: none;
 }
 
@@ -79,14 +79,14 @@
 .adminTabActive:focus-visible,
 .iconButton:focus-visible,
 .ghostButton:focus-visible {
-    outline: 3px solid rgba(201, 115, 63, 0.24);
+    outline: 3px solid color-mix(in srgb, var(--color-highlight) 24%, transparent);
     outline-offset: 2px;
 }
 
 .heroDesc,
 .cardDesc,
 .emptyState {
-    color: #705b4b;
+    color: var(--color-text-secondary);
     line-height: 1.7;
 }
 
@@ -101,7 +101,7 @@
 .cardTitle {
     margin: 0 0 8px;
     font-size: 18px;
-    color: #2e241d;
+    color: var(--color-text);
 }
 
 .recordCount {
@@ -110,8 +110,8 @@
     min-height: 32px;
     padding: 0 12px;
     border-radius: 999px;
-    background: #e6f4ff;
-    color: #8d6245;
+    background: var(--color-bg);
+    color: var(--color-highlight);
     font-size: 12px;
     font-weight: 700;
     white-space: nowrap;
@@ -129,7 +129,7 @@
     gap: 8px;
     font-size: 14px;
     font-weight: 700;
-    color: #4c3d31;
+    color: var(--color-text-secondary);
 }
 
 .textInput,
@@ -138,9 +138,9 @@
     min-height: 46px;
     padding: 0 14px;
     border-radius: 14px;
-    border: 1px solid rgba(220, 195, 175, 0.88);
-    background: #fff;
-    color: #34281f;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 88%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text);
     font-size: 14px;
     box-sizing: border-box;
     outline: none;
@@ -149,17 +149,17 @@
 
 .textInput:focus,
 .select:focus {
-    border-color: rgba(201, 115, 63, 0.74);
-    box-shadow: 0 0 0 4px rgba(201, 115, 63, 0.12);
-    background: #fff;
-    color: #34281f;
+    border-color: color-mix(in srgb, var(--color-highlight) 74%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-highlight) 12%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text);
 }
 
 .textInput:-webkit-autofill,
 .textInput:-webkit-autofill:hover,
 .textInput:-webkit-autofill:focus {
-    -webkit-text-fill-color: #34281f;
-    box-shadow: 0 0 0 1000px rgba(255, 253, 250, 0.96) inset;
+    -webkit-text-fill-color: var(--color-text);
+    box-shadow: 0 0 0 1000px color-mix(in srgb, var(--color-text) 96%, transparent) inset;
     transition: background-color 9999s ease-in-out 0s;
 }
 
@@ -192,7 +192,7 @@
     gap: 6px;
     font-size: 14px;
     font-weight: 700;
-    color: #4c3d31;
+    color: var(--color-text-secondary);
 }
 
 /* 可选标签样式 */
@@ -201,8 +201,8 @@
     align-items: center;
     padding: 2px 8px;
     border-radius: 999px;
-    background: #e6f4ff;
-    color: #9e7455;
+    background: var(--color-bg);
+    color: var(--color-highlight);
     font-size: 11px;
     font-weight: 600;
 }
@@ -305,7 +305,7 @@
     font-size: 12px;
     line-height: 1.5;
     font-weight: 500;
-    color: #7a6758;
+    color: var(--color-text-secondary);
 }
 
 .actionRow {
@@ -327,31 +327,31 @@
 
 .primaryButton {
     border: none;
-    background: #1677ff;
-    color: #fffaf4;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
 }
 
 .secondaryButton {
-    border: 1px solid rgba(220, 195, 175, 0.88);
-    background: #fff;
-    color: #4c3d31;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 88%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
 }
 
 .dangerButton {
-    border: 1px solid rgba(187, 53, 53, 0.2);
-    background: rgba(187, 53, 53, 0.08);
-    color: #b73a3a;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    color: var(--color-primary);
 }
 
 .ghostButton {
-    border: 1px solid rgba(220, 195, 175, 0.78);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 78%, transparent);
     background: transparent;
-    color: #725b4a;
+    color: var(--color-text-secondary);
 }
 
 .ghostButton:hover {
-    border-color: rgba(201, 115, 63, 0.5);
-    background: #e6f4ff;
+    border-color: color-mix(in srgb, var(--color-highlight) 50%, transparent);
+    background: var(--color-bg);
 }
 
 .primaryButton:disabled,
@@ -367,9 +367,9 @@
     flex-direction: column;
     gap: 12px;
     padding: 16px;
-    border: 1px solid rgba(220, 195, 175, 0.7);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 70%, transparent);
     border-radius: 16px;
-    background: #fff;
+    background: var(--color-surface);
 }
 
 .generatedPanelHeader {
@@ -378,14 +378,14 @@
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 12px;
-    color: #47372c;
+    color: var(--color-text-secondary);
 }
 
 .generatedMeta {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    color: #705b4b;
+    color: var(--color-text-secondary);
     font-size: 13px;
 }
 
@@ -405,8 +405,8 @@
     gap: 10px;
     padding: 10px;
     border-radius: 14px;
-    border: 1px solid rgba(220, 195, 175, 0.6);
-    background: #fff;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 60%, transparent);
+    background: var(--color-surface);
 }
 
 .keyCode {
@@ -414,8 +414,8 @@
     max-width: 100%;
     padding: 3px 7px;
     border-radius: 8px;
-    background: #e6f4ff;
-    color: #5f3c26;
+    background: var(--color-bg);
+    color: var(--color-highlight);
     font-size: 12px;
     word-break: break-all;
 }
@@ -434,10 +434,10 @@
     width: 36px;
     height: 36px;
     padding: 0;
-    border: 1px solid rgba(220, 195, 175, 0.82);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 82%, transparent);
     border-radius: 10px;
-    background: #fff;
-    color: #6d513d;
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
     cursor: pointer;
     transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
@@ -448,9 +448,9 @@
 }
 
 .iconButton:hover {
-    border-color: rgba(201, 115, 63, 0.55);
-    background: #e6f4ff;
-    color: #9a5529;
+    border-color: color-mix(in srgb, var(--color-highlight) 55%, transparent);
+    background: var(--color-bg);
+    color: var(--color-highlight);
 }
 
 .iconButton:disabled {
@@ -459,9 +459,9 @@
 }
 
 .dangerIconButton {
-    border-color: rgba(187, 53, 53, 0.2);
-    background: rgba(187, 53, 53, 0.06);
-    color: #b73a3a;
+    border-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+    color: var(--color-primary);
 }
 
 .statusPill {
@@ -470,8 +470,8 @@
     min-height: 26px;
     padding: 2px 9px;
     border-radius: 999px;
-    background: rgba(112, 91, 75, 0.1);
-    color: #695447;
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
+    color: var(--color-text-secondary);
     font-size: 12px;
     font-weight: 700;
     white-space: nowrap;
@@ -479,26 +479,26 @@
 
 .status_active,
 .keyStatus_used {
-    background: rgba(53, 145, 91, 0.12);
-    color: #2f8051;
+    background: color-mix(in srgb, var(--color-success) 12%, transparent);
+    color: var(--color-success);
 }
 
 .status_pending,
 .keyStatus_unused {
-    background: rgba(204, 137, 50, 0.14);
-    color: #95621f;
+    background: color-mix(in srgb, var(--color-highlight) 14%, transparent);
+    color: var(--color-highlight);
 }
 
 .status_expired,
 .keyStatus_expired,
 .keyStatus_archived {
-    background: rgba(112, 103, 96, 0.12);
-    color: #6f665f;
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: var(--color-text-secondary);
 }
 
 .statusFrozen {
-    background: rgba(187, 53, 53, 0.1);
-    color: #ab3434;
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    color: var(--color-primary);
 }
 
 .userCode,
@@ -507,13 +507,13 @@
 }
 
 .userCode {
-    color: #3c2f25;
+    color: var(--color-text);
     font-size: 13px;
 }
 
 .userNickname {
     margin-top: 3px;
-    color: #8a7565;
+    color: var(--color-text-muted);
     font-size: 11px;
 }
 
@@ -521,7 +521,7 @@
     display: inline-block;
     max-width: 210px;
     overflow: hidden;
-    color: #6a4b37;
+    color: var(--color-highlight);
     font-size: 11px;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -530,8 +530,8 @@
 .tableWrapper {
     overflow-x: auto;
     border-radius: 16px;
-    border: 1px solid rgba(228, 205, 187, 0.72);
-    background: #fff;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 72%, transparent);
+    background: var(--color-surface);
 }
 
 .table {
@@ -548,17 +548,17 @@
 .table th,
 .table td {
     padding: 10px 10px;
-    border-bottom: 1px solid rgba(205, 157, 120, 0.16);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-highlight) 16%, transparent);
     text-align: left;
-    color: #3c2f25;
+    color: var(--color-text);
     font-size: 13px;
     vertical-align: middle;
 }
 
 .table th {
     font-size: 12px;
-    color: #6f5a49;
-    background: #fff;
+    color: var(--color-text-secondary);
+    background: var(--color-surface);
     white-space: nowrap;
 }
 
@@ -567,7 +567,7 @@
 }
 
 .table tbody tr:hover {
-    background: #f5faff;
+    background: var(--color-bg);
 }
 
 .paginationBar {
@@ -577,7 +577,7 @@
 .emptyState {
     padding: 16px;
     border-radius: 16px;
-    background: #fff;
+    background: var(--color-surface);
 }
 
 @media (max-width: 1200px) {
@@ -669,9 +669,9 @@
     .responsiveTable tr {
         display: block;
         overflow: hidden;
-        border: 1px solid rgba(220, 195, 175, 0.72);
+        border: 1px solid color-mix(in srgb, var(--color-highlight) 72%, transparent);
         border-radius: 14px;
-        background: #fff;
+        background: var(--color-surface);
     }
 
     .responsiveTable td {
@@ -686,7 +686,7 @@
 
     .responsiveTable td::before {
         content: attr(data-label);
-        color: #7a6555;
+        color: var(--color-text-secondary);
         font-size: 12px;
         font-weight: 700;
         text-align: left;

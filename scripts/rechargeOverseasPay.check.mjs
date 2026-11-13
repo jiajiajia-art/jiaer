@@ -63,7 +63,10 @@ test('RechargeModal_PC默认微信并允许手动切换三种支付方式', () =
   assert.match(modal, /setSelectedPayMethod\('wechat'\)/);
   assert.match(modal, /region\.payRegion/);
   assert.match(modal, /\['wechat', 'alipay', 'overseas'\]/);
-  assert.match(modal, /isMiniProgramEnv\(\) \? \['wechat'\]/);
+  assert.match(modal, /isMiniProgramEnv\(\) \? \(\['wechat'\]/);
+  // 海外支付由开关控制，后端美元下单就绪前隐藏
+  assert.match(modal, /const OVERSEAS_PAY_ENABLED = (true|false);/);
+  assert.match(modal, /OVERSEAS_PAY_ENABLED \? \['wechat', 'alipay', 'overseas'\] : \['wechat', 'alipay'\]/);
   assert.match(modal, /payMethodToggle/);
   const css = readFileSync(join(root, 'src/components/Purchase/RechargeModal.module.css'), 'utf8');
   assert.match(css, /\.payMethodToggle\s*\{/);

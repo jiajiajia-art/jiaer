@@ -25,13 +25,13 @@
 .panelHeader h2 {
     margin: 4px 0 0;
     font-size: 1.6rem;
-    color: #1a1a1a;
+    color: var(--color-text);
     font-weight: 700;
 }
 
 .subtitle {
     margin: 4px 0 0;
-    color: rgba(0, 0, 0, 0.55);
+    color: var(--color-text-secondary);
     font-size: 0.9rem;
 }
 
@@ -45,13 +45,13 @@
 /* 按钮样式 */
 .ghost {
     border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     padding: 10px 20px;
     font-weight: 600;
     cursor: pointer;
     transition: 0.25s ease;
-    color: #1a1a1a;
-    background: #fff;
+    color: var(--color-text);
+    background: var(--color-surface);
 }
 
 .ghost:hover {
@@ -60,15 +60,15 @@
 }
 
 .ghost:disabled {
-    background: #f0f0f0;
-    color: #666;
-    border-color: #f0f0f0;
+    background: var(--color-bg);
+    color: var(--color-text-secondary);
+    border-color: var(--color-border);
     cursor: not-allowed;
 }
 
 .ghost:disabled:hover {
-    border-color: #f0f0f0;
-    color: #666;
+    border-color: var(--color-border);
+    color: var(--color-text-secondary);
 }
 
 /* AI生成按钮样式 */
@@ -100,7 +100,7 @@
 
 .buttonSubText {
     font-size: 0.7rem;
-    color: rgba(0, 0, 0, 0.5);
+    color: var(--color-text-secondary);
     line-height: 1;
     font-weight: 400;
 }
@@ -112,7 +112,7 @@
     left: 280px;
     right: 0;
     bottom: 0;
-    background: rgba(255, 255, 255, 0.92);
+    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
     backdrop-filter: blur(4px);
     display: flex;
     flex-direction: column;
@@ -137,7 +137,7 @@
 .plusLoadingSpinner {
     width: 40px;
     height: 40px;
-    border: 3px solid #f3f3f3;
+    border: 3px solid var(--color-text);
     border-top: 3px solid var(--primary);
     border-radius: 50%;
     animation: plusSpin 1s linear infinite;
@@ -146,7 +146,7 @@
 }
 
 .plusLoadingText {
-    color: #1a1a1a;
+    color: var(--color-text);
     font-size: 14px;
     font-weight: 500;
     flex-shrink: 0;

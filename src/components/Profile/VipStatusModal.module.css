@@ -1,36 +1,67 @@
+/* 功能注释：「我的会员」风格化 —— 暗夜绯红丝绒 + 会员卡质感（光泽扫过、细金描边），桌面与手机均为居中卡片 */
 .overlay {
+    --vip-red: #e2455f;
+    --vip-red-deep: #9e1f37;
+    --vip-gold: #f3c98b;
+    --vip-ink: #141217;
     position: fixed;
     inset: 0;
     z-index: 2050;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 24px;
     box-sizing: border-box;
-    background: rgba(0, 0, 0, 0.74);
-    backdrop-filter: blur(5px);
+    background:
+        radial-gradient(60% 40% at 50% 30%, rgba(226, 69, 95, 0.16), transparent 70%),
+        rgba(6, 5, 8, 0.72);
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.22s ease;
 }
 
 .modal {
     position: relative;
-    width: min(600px, calc(100vw - 40px));
-    max-height: calc(100dvh - 40px);
+    width: min(400px, 100%);
+    max-height: calc(100dvh - 64px);
     overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
     box-sizing: border-box;
-    padding: 22px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 14px;
-    background: linear-gradient(180deg, #2f2f31 0%, #202022 100%);
-    color: #fff;
-    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+    padding: 18px 18px 16px;
+    border-radius: 22px;
+    background:
+        radial-gradient(120% 60% at 50% -10%, rgba(226, 69, 95, 0.22), transparent 55%),
+        linear-gradient(180deg, #1d1a20 0%, var(--vip-ink) 100%);
+    color: #f4f1f3;
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.06),
+        0 1px 0 rgba(255, 255, 255, 0.08) inset,
+        0 30px 80px rgba(0, 0, 0, 0.6),
+        0 0 60px rgba(226, 69, 95, 0.12);
+    animation: rise 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+.modal::-webkit-scrollbar { display: none; }
+
+/* 顶部一道绯红光边 */
+.modal::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 18%;
+    right: 18%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--vip-red), var(--vip-gold), var(--vip-red), transparent);
+    opacity: 0.9;
+}
+
+/* —— 头部 —— */
 .header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 18px;
+    gap: 12px;
+    margin-bottom: 14px;
 }
 
 .header > div {
@@ -41,243 +72,395 @@
 
 .header h2 {
     margin: 0;
-    font-size: 19px;
-    line-height: 1.3;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
 }
 
 .vipMark {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    min-height: 28px;
-    padding: 0 10px;
-    border-radius: 7px;
-    background: #a8283c;
-    color: #fff;
-    font-size: 12px;
-    font-weight: 800;
+    height: 20px;
+    padding: 0 7px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, var(--vip-gold), #d99a55);
+    color: #3a1f0c;
+    font-size: 10.5px;
+    font-weight: 900;
+    font-style: italic;
     letter-spacing: 0.08em;
+    box-shadow: 0 2px 10px rgba(243, 201, 139, 0.3);
 }
 
 .closeButton {
     position: relative;
-    width: 40px;
-    height: 40px;
+    width: 30px;
+    height: 30px;
     flex-shrink: 0;
-    border: none;
-    border-radius: 8px;
-    background: transparent;
-    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(244, 241, 243, 0.6);
     cursor: pointer;
+    transition: background 0.15s, color 0.15s, transform 0.2s;
 }
 
 .closeButton span::before,
 .closeButton span::after {
     content: '';
     position: absolute;
-    top: 19px;
-    left: 12px;
-    width: 16px;
+    top: 50%;
+    left: 50%;
+    width: 11px;
     height: 1.5px;
+    margin: -0.75px 0 0 -5.5px;
     border-radius: 2px;
     background: currentColor;
 }
 
-.closeButton span::before {
-    transform: rotate(45deg);
-}
-
-.closeButton span::after {
-    transform: rotate(-45deg);
-}
+.closeButton span::before { transform: rotate(45deg); }
+.closeButton span::after { transform: rotate(-45deg); }
 
 .closeButton:hover,
 .closeButton:focus-visible {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    transform: rotate(90deg);
+    outline: none;
 }
 
+/* —— 周卡 / 月卡切换 —— */
 .planTabs {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin-bottom: 14px;
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.78);
-    border-radius: 9px;
+    gap: 4px;
+    margin-bottom: 12px;
+    padding: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.3);
 }
 
 .planTab {
     min-width: 0;
-    min-height: 42px;
+    height: 32px;
     border: 0;
+    border-radius: 999px;
     background: transparent;
-    color: #ffffff;
-    font-size: 14px;
+    color: rgba(244, 241, 243, 0.55);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
     cursor: pointer;
+    transition: background 0.25s, color 0.2s, box-shadow 0.25s;
 }
 
-.planTab + .planTab {
-    border-left: 1px solid rgba(255, 255, 255, 0.78);
-}
+.planTab:hover { color: #fff; }
 
 .planTabSelected {
-    background: #a8283c;
-    color: #ffffff;
-}
-
-.planTabSelected:hover {
-    background: #c23a50;
+    background: linear-gradient(135deg, var(--vip-red), var(--vip-red-deep));
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(226, 69, 95, 0.35), 0 1px 0 rgba(255, 255, 255, 0.2) inset;
 }
 
 .planTab:focus-visible {
+    outline: 2px solid var(--vip-gold);
+    outline-offset: -2px;
+}
+
+/* —— 会员卡 —— */
+.hero {
     position: relative;
-    z-index: 1;
-    outline: 2px solid #ff6f8a;
-    outline-offset: -3px;
+    overflow: hidden;
+    isolation: isolate;
+    padding: 16px;
+    border-radius: 16px;
+    background:
+        radial-gradient(90% 120% at 100% 0%, rgba(243, 201, 139, 0.16), transparent 50%),
+        linear-gradient(140deg, #3a1520 0%, #24121a 45%, #17121a 100%);
+    box-shadow:
+        0 0 0 1px rgba(243, 201, 139, 0.16) inset,
+        0 12px 30px rgba(0, 0, 0, 0.35);
 }
 
-.planCard {
+/* 卡面细纹 */
+.hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 7px);
+}
+
+/* 光泽扫过 */
+.hero::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -60%;
+    z-index: -1;
+    width: 40%;
+    height: 200%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+    transform: rotate(18deg);
+    animation: sheen 5.5s ease-in-out infinite;
+}
+
+.heroActive {
+    box-shadow:
+        0 0 0 1px rgba(243, 201, 139, 0.45) inset,
+        0 12px 30px rgba(0, 0, 0, 0.35),
+        0 0 28px rgba(226, 69, 95, 0.25);
+}
+
+.heroTop {
     display: flex;
-    min-width: 0;
-    flex-direction: column;
-    gap: 16px;
-    padding: 18px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.035);
-}
-
-.planCardActive {
-    border-color: rgba(255, 59, 97, 0.72);
-    background: rgba(168, 40, 60, 0.14);
-}
-
-.planHeader {
-    display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
+    gap: 10px;
 }
 
-.planHeader h3 {
+.heroEyebrow {
+    margin: 0 0 3px;
+    color: var(--vip-gold);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    opacity: 0.85;
+}
+
+.heroTop h3 {
     margin: 0;
-    font-size: 17px;
+    font-size: 19px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    background: linear-gradient(180deg, #fff 30%, #f6d7dc);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.heroValue {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin: 10px 0 12px;
+    color: rgba(244, 241, 243, 0.62);
+    font-size: 12px;
+}
+
+.heroValue strong {
+    margin: 0 2px;
+    background: linear-gradient(180deg, #ffe3b3, var(--vip-gold) 55%, #d9924b);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-size: 26px;
+    font-weight: 900;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
 }
 
 .statusBadge {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    min-height: 26px;
+    gap: 5px;
+    height: 22px;
     padding: 0 9px;
     border-radius: 999px;
-    font-size: 11px;
+    font-size: 10.5px;
+    font-weight: 700;
     white-space: nowrap;
+    backdrop-filter: blur(4px);
+}
+
+.statusBadge i {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
 }
 
 .status_active {
-    background: rgba(52, 199, 89, 0.18);
-    color: #8ce8a2;
+    background: rgba(243, 201, 139, 0.14);
+    box-shadow: 0 0 0 1px rgba(243, 201, 139, 0.35) inset;
+    color: var(--vip-gold);
 }
+
+.status_active i { box-shadow: 0 0 6px currentColor; }
 
 .status_expired,
 .status_inactive {
-    background: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.56);
+    background: rgba(0, 0, 0, 0.35);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+    color: rgba(244, 241, 243, 0.6);
 }
 
-.timeList {
+.timeGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     margin: 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.09);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.28);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
 }
 
-.timeList > div {
+.timeGrid > div {
+    min-width: 0;
+    padding: 8px 10px;
+}
+
+.timeGrid > div + div {
+    border-left: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.timeGrid dt {
+    margin-bottom: 3px;
+    color: rgba(244, 241, 243, 0.42);
+    font-size: 10.5px;
+}
+
+.timeGrid dd {
+    margin: 0;
+    color: rgba(244, 241, 243, 0.92);
+    font-size: 11.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    word-break: break-all;
+}
+
+/* —— 福利 —— */
+.benefits {
+    margin-top: 14px;
+    padding: 12px 12px 10px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.025);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+}
+
+.benefits h4 {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    min-height: 46px;
-}
-
-.timeList > div + div {
-    border-top: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.timeList dt {
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 13px;
-}
-
-.timeList dd {
-    margin: 0;
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 13px;
-    font-variant-numeric: tabular-nums;
-    text-align: right;
-}
-
-.benefits {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
     gap: 8px;
+    margin: 0 0 10px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
 }
 
-.benefits > strong {
-    font-size: 15px;
+.benefits h4::before {
+    content: '';
+    width: 3px;
+    height: 12px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, var(--vip-gold), var(--vip-red));
 }
 
 .benefits ul {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     margin: 0;
-    padding-left: 18px;
-    color: rgba(255, 255, 255, 0.62);
-    font-size: 13px;
-    line-height: 1.5;
+    padding: 0;
+    list-style: none;
 }
 
+.benefits li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    color: rgba(244, 241, 243, 0.72);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.check {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-top: 1px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--vip-red), var(--vip-red-deep));
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(226, 69, 95, 0.35);
+}
+
+.check svg { width: 10px; height: 10px; }
+
 .sharedNote {
-    margin: 14px 0 0;
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 11px;
+    margin: 12px 4px 0;
+    color: rgba(244, 241, 243, 0.38);
+    font-size: 10.5px;
     line-height: 1.6;
     text-align: center;
 }
 
+/* —— 开通按钮 —— */
 .purchaseButton {
+    position: relative;
+    overflow: hidden;
     width: 100%;
-    min-height: 48px;
-    margin-top: 14px;
+    height: 44px;
+    margin-top: 10px;
     border: none;
-    border-radius: 10px;
-    background: #a8283c;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #f0607a 0%, var(--vip-red) 45%, var(--vip-red-deep) 100%);
     color: #fff;
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 800;
+    letter-spacing: 0.1em;
     cursor: pointer;
+    box-shadow: 0 8px 22px rgba(226, 69, 95, 0.38), 0 1px 0 rgba(255, 255, 255, 0.25) inset;
+    transition: transform 0.15s, filter 0.15s, box-shadow 0.2s;
+}
+
+.purchaseButton::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -40%;
+    width: 30%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+    transform: skewX(-20deg);
+    animation: btnSheen 3.2s ease-in-out infinite;
 }
 
 .purchaseButton:hover,
 .purchaseButton:focus-visible {
-    background: #c23a50;
+    filter: brightness(1.08);
+    box-shadow: 0 10px 28px rgba(226, 69, 95, 0.5), 0 1px 0 rgba(255, 255, 255, 0.25) inset;
+    outline: none;
 }
 
+.purchaseButton:active { transform: scale(0.98); }
+
+@keyframes fadeIn { from { opacity: 0; } }
+@keyframes rise { from { opacity: 0; transform: translateY(14px) scale(0.98); } }
+@keyframes sheen { 0%, 60% { left: -60%; } 100% { left: 130%; } }
+@keyframes btnSheen { 0%, 55% { left: -40%; } 100% { left: 120%; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .hero::after, .purchaseButton::after { animation: none; display: none; }
+}
+
+/* 功能注释：手机端仍居中，左右留边，整体再收一点 */
 @media (max-width: 640px) {
-    .overlay {
-        align-items: flex-end;
-        padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
-    }
+    .overlay { padding: 20px; }
 
     .modal {
-        width: 100%;
-        max-height: calc(100dvh - 20px - env(safe-area-inset-bottom));
-        padding: 18px 16px;
-        border-radius: 14px;
+        width: min(360px, 100%);
+        max-height: calc(100dvh - 96px);
+        padding: 16px 14px 14px;
+        border-radius: 20px;
     }
 
-    .planCard {
-        padding: 16px;
-    }
+    .hero { padding: 14px; }
+    .heroTop h3 { font-size: 17px; }
+    .heroValue strong { font-size: 23px; }
+    .purchaseButton { height: 42px; }
 }

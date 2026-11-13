@@ -8,15 +8,15 @@
   gap: 4px;
   padding: 4px;
   margin-bottom: 14px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--color-border);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.88);
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
 }
 
 .dataSourceButton {
   border: 0;
   background: transparent;
-  color: #595959;
+  color: var(--color-text-secondary);
   border-radius: 9px;
   padding: 8px 14px;
   cursor: pointer;
@@ -25,8 +25,8 @@
 }
 
 .dataSourceButtonActive {
-  background: #1677ff;
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .sectionError {
@@ -36,18 +36,18 @@
   gap: 12px;
   margin: 10px 0 12px;
   padding: 10px 12px;
-  border: 1px solid rgba(190, 83, 47, 0.22);
+  border: 1px solid color-mix(in srgb, var(--color-text) 22%, transparent);
   border-radius: 8px;
-  background: rgba(255, 244, 238, 0.86);
-  color: #8a3b23;
+  background: color-mix(in srgb, var(--color-surface) 86%, transparent);
+  color: var(--color-primary-bold);
   font-size: 13px;
 }
 
 .sectionError button {
-  border: 1px solid rgba(138, 59, 35, 0.28);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 28%, transparent);
   border-radius: 7px;
-  background: #fff;
-  color: #8a3b23;
+  background: var(--color-surface);
+  color: var(--color-primary-bold);
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
@@ -58,23 +58,23 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #666;
+  color: var(--color-text-secondary);
   font-size: 14px;
 }
 
 .select,
 .dateInput {
   padding: 8px 10px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
   border-radius: 10px;
-  background: #fff;
+  background: var(--color-surface);
   font-size: 14px;
 }
 
 .presetButton {
-  border: 1px solid rgba(22, 119, 255, 0.28);
-  background: #fff;
-  color: var(--admin-accent-strong, #0958d9);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 28%, transparent);
+  background: var(--color-surface);
+  color: var(--admin-accent-strong, var(--color-primary));
   border-radius: 10px;
   padding: 8px 12px;
   cursor: pointer;
@@ -82,24 +82,24 @@
 }
 
 .presetButtonActive {
-  background: #1677ff;
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
   border-color: transparent;
 }
 
 .section {
-  background: #fff;
+  background: var(--color-surface);
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 20px;
-  box-shadow: 0 4px 16px rgba(31, 56, 88, 0.06);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary) 6%, transparent);
 }
 
 .sectionTitle {
   margin: 0 0 8px;
   font-size: 18px;
   font-weight: 700;
-  color: #262626;
+  color: var(--color-text);
 }
 
 .sectionToolbar {
@@ -125,7 +125,7 @@
 
 .sectionHint {
   margin: 0 0 16px;
-  color: #888;
+  color: var(--color-text-muted);
   font-size: 13px;
 }
 
@@ -148,30 +148,30 @@
 .table th,
 .table td {
   padding: 12px 10px;
-  border-bottom: 1px solid rgba(47, 36, 29, 0.08);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
   text-align: left;
   font-size: 13px;
 }
 
 .table th {
-  color: #7a6a61;
+  color: var(--color-text-muted);
   font-weight: 600;
-  background: rgba(255, 248, 240, 0.72);
+  background: color-mix(in srgb, var(--color-surface) 72%, transparent);
 }
 
 .table td {
-  color: #3f352e;
+  color: var(--color-text);
 }
 
 .deviceSplit {
   margin-top: 16px;
   padding-top: 14px;
-  border-top: 1px solid rgba(47, 36, 29, 0.08);
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .deviceSplitTitle {
   margin-bottom: 12px;
-  color: #7a6a61;
+  color: var(--color-text-muted);
   font-size: 13px;
   font-weight: 700;
 }
@@ -186,7 +186,7 @@
   grid-template-columns: minmax(72px, 96px) minmax(120px, 1fr) minmax(92px, auto);
   gap: 10px;
   align-items: center;
-  color: #3f352e;
+  color: var(--color-text);
   font-size: 13px;
 }
 
@@ -196,7 +196,7 @@
 }
 
 .deviceSplitValue {
-  color: #7a6a61;
+  color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
@@ -205,13 +205,13 @@
   height: 8px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(47, 36, 29, 0.08);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .deviceSplitBarFill {
   height: 100%;
   border-radius: inherit;
-  background: #2f81f7;
+  background: var(--color-primary);
 }
 
 .legend {
@@ -226,7 +226,7 @@
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .legendDot {
@@ -238,16 +238,16 @@
 .emptyState {
   padding: 24px;
   text-align: center;
-  color: #777;
+  color: var(--color-text-muted);
 }
 
 .tooltipCard {
   min-width: 156px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: rgba(47, 36, 29, 0.94);
-  color: #fff;
-  box-shadow: 0 10px 24px rgba(47, 36, 29, 0.18);
+  background: color-mix(in srgb, var(--color-bg) 94%, transparent);
+  color: var(--color-text);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--color-shadow) 18%, transparent);
 }
 
 .tooltipTitle {

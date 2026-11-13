@@ -75,12 +75,45 @@ export interface AiBillingUsageOverview {
   unbilledPlatformCostMicroYuan: number;
   billedPoints: number;
   billedKkMinor: number;
+  /** 功能注释：以下为交接文档 5.5 新增，后端返回后前端自动展示 */
+  refundedPoints?: number;
+  refundedKkMinor?: number;
+  userOperationCount?: number;
+  walletDiffMicroUnits?: number;
+}
+
+export type AiUsageScene = 'create_text' | 'create_image' | 'play_text' | 'play_image' | 'review_text' | 'review_image' | 'txt_doc_parse' | 'unknown' | string;
+
+export interface AiBillingSceneRow {
+  scene: AiUsageScene;
+  callCount: number;
+  platformCostMicroYuan: number;
+  billedPoints: number;
+  billedKkMinor: number;
+}
+
+export interface AiBillingUnbilledReasonRow {
+  reason: string;
+  callCount: number;
+  platformCostMicroYuan: number;
+}
+
+export interface AiBillingUserRankingRow {
+  userId: string;
+  userNickname: string | null;
+  userCode: string | null;
+  callCount: number;
+  platformCostMicroYuan: number;
+  billedPoints: number;
+  billedKkMinor: number;
 }
 
 export interface AiBillingUsageTrendRow {
   date: string;
   callCount: number;
   platformCostMicroYuan: number;
+  /** 功能注释：可选——当日用户扣费折算人民币（微元），有值时画毛利曲线 */
+  userChargeMicroYuan?: number;
 }
 
 export interface AiBillingModelRankingRow {
@@ -97,6 +130,10 @@ export interface AiBillingUsageSummary {
   modelRanking: AiBillingModelRankingRow[];
   items: AiBillingUsageRow[];
   aggregatePagination: AiBillingAggregatePagination;
+  /** 功能注释：交接文档 5.5 可选拆分，后端返回后前端自动展示 */
+  sceneBreakdown?: AiBillingSceneRow[];
+  unbilledByReason?: AiBillingUnbilledReasonRow[];
+  userRanking?: AiBillingUserRankingRow[];
 }
 
 export interface AiBillingAggregatePagination {
@@ -143,6 +180,25 @@ export interface AiBillingUsageAttempt {
   startedAt: string;
   finishedAt: string | null;
   createdAt: string;
+  /** 功能注释：交接文档 5.4 溯源字段（可选，后端返回后在明细展开行显示） */
+  scene?: AiUsageScene | null;
+  sceneClient?: string | null;
+  feature?: string | null;
+  endpoint?: string | null;
+  clientRequestId?: string | null;
+  traceGroupId?: string | null;
+  fileIdSource?: string | null;
+  fileIdVerified?: boolean | null;
+  routeId?: string | null;
+  upstreamRequestId?: string | null;
+  usageSource?: string | null;
+  costFormula?: string | null;
+  ledgerTxnIds?: string[] | null;
+  notBilledReason?: string | null;
+  refundTxnId?: string | null;
+  refundReason?: string | null;
+  memberDiscountPercent?: number | null;
+  migratedFrom?: string | null;
 }
 
 export interface AiBillingUsagePagination {
@@ -167,6 +223,9 @@ export type AiBillingUsageFilters = {
   gameKeyword?: string;
   billedToUser?: 'true' | 'false';
   currencyType?: 'kk' | 'points';
+  /** 功能注释：交接文档 5.5——按用途 / 请求编号 / 任务分组筛选明细 */
+  scene?: string;
+  traceKeyword?: string;
   aggregateFrom?: string;
   aggregateTo?: string;
   aggregateGameKeyword?: string;

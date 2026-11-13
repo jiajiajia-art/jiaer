@@ -7,8 +7,8 @@
     gap: 10px;
     padding: 0 14px 12px;
     border-radius: 10px;
-    background: var(--creator-card, #1C1C1E);
-    border: 1px solid rgba(255, 59, 97, 0.22);
+    background: var(--creator-card, var(--color-surface));
+    border: 1px solid color-mix(in srgb, var(--color-primary) 22%, transparent);
     overflow: hidden;
 }
 
@@ -18,8 +18,8 @@
     gap: 8px;
     margin: 0 -14px;
     padding: 12px 14px 10px;
-    background: #241719;
-    border-bottom: 1px solid rgba(255, 59, 97, 0.12);
+    background: var(--color-surface);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
 .inviteCampaignGiftIcon {
@@ -29,7 +29,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: #FF6B7A;
+    color: var(--color-primary-fg);
     font-size: 22px;
     line-height: 1;
 }
@@ -43,7 +43,7 @@
     margin: 0;
     flex: 1 1 auto;
     min-width: 0;
-    color: #ffffff;
+    color: var(--color-text);
     font-size: 14px;
     font-weight: 700;
     line-height: 1.3;
@@ -57,7 +57,7 @@
     padding: 0;
     border: none;
     background: transparent;
-    color: #ff5274;
+    color: var(--color-primary-fg);
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -73,7 +73,7 @@
 .inviteCampaignCopyBtn:focus-visible,
 .inviteCampaignRedeemSubmit:focus-visible,
 .inviteCampaignRedeemInput:focus-visible {
-    outline: 2px solid #ff6684;
+    outline: 2px solid var(--color-primary-light);
     outline-offset: -2px;
 }
 
@@ -93,7 +93,7 @@
     min-height: 54px;
     padding: 0 0 0 12px;
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.06);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
     box-sizing: border-box;
     overflow: hidden;
 }
@@ -111,7 +111,7 @@
 }
 
 .inviteCampaignFieldLabel {
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--color-text-secondary);
     font-size: 10px;
     font-weight: 500;
     line-height: 1.2;
@@ -120,7 +120,7 @@
 .inviteCampaignCode {
     display: block;
     width: 100%;
-    color: #ffffff;
+    color: var(--color-text);
     font-size: 18px;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -139,8 +139,8 @@
     min-width: 72px;
     padding: 0 14px;
     border-radius: 0 10px 10px 0;
-    background: rgba(255, 255, 255, 0.12);
-    color: rgba(255, 255, 255, 0.92);
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: color-mix(in srgb, var(--color-text) 92%, transparent);
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
@@ -150,7 +150,7 @@
 
 .inviteCampaignCopyBtn:hover,
 .inviteCampaignRedeemSubmit:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.2);
+    background: color-mix(in srgb, var(--color-text) 20%, transparent);
 }
 
 .inviteCampaignRedeemSubmit:disabled {
@@ -167,14 +167,14 @@
     border-radius: 0;
     padding: 0;
     background: transparent;
-    color: #ffffff;
+    color: var(--color-text);
     font-size: 13px;
     outline: none;
     box-sizing: border-box;
 }
 
 .inviteCampaignRedeemInput::placeholder {
-    color: rgba(255, 255, 255, 0.38);
+    color: var(--color-text-muted);
 }
 
 .inviteCampaignStats {
@@ -183,13 +183,13 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 4px;
-    color: rgba(255, 255, 255, 0.62);
+    color: var(--color-text-secondary);
     font-size: 12px;
     line-height: 1.5;
 }
 
 .inviteCampaignStats strong {
-    color: #ff5274;
+    color: var(--color-primary-fg);
     font-size: 16px;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
@@ -197,7 +197,7 @@
 
 .inviteCampaignStatsDivider {
     margin: 0 4px;
-    color: rgba(255, 255, 255, 0.34);
+    color: var(--color-text-muted);
 }
 
 @media (min-width: 769px) {

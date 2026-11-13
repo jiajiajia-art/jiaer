@@ -1,7 +1,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.45);
+  background: color-mix(in srgb, var(--color-shadow) 45%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -11,16 +11,16 @@
 .modal {
   width: min(720px, 92vw);
   max-height: 86vh;
-  background: #fff;
+  background: var(--color-surface);
   border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--color-shadow) 20%, transparent);
   display: flex;
   flex-direction: column;
 }
 
 .header {
   padding: 16px 20px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -47,7 +47,7 @@
   width: 100%;
   min-height: 180px;
   resize: vertical;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 12px 14px;
   line-height: 1.6;
@@ -59,7 +59,7 @@
   align-items: center;
   justify-content: space-between;
   margin-top: 8px;
-  color: #888;
+  color: var(--color-text-muted);
   font-size: 12px;
 }
 
@@ -83,7 +83,7 @@
 }
 
 .radioGroup input[type="radio"] {
-  accent-color: #E03D4B;
+  accent-color: var(--color-primary);
 }
 
 .overwriteSelect {
@@ -93,10 +93,10 @@
 .overwriteSelect select {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   font-size: 14px;
-  background: #fff;
+  background: var(--color-surface);
   cursor: pointer;
 }
 
@@ -110,21 +110,21 @@
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--color-border);
 }
 
 .btn {
   padding: 10px 14px;
   border-radius: 8px;
-  border: 1px solid #ddd;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   cursor: pointer;
 }
 
 .btnPrimary {
-  background: #E03D4B;
-  border-color: #E03D4B;
-  color: #fff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .btn:disabled {
@@ -136,7 +136,7 @@
 .confirmOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: color-mix(in srgb, var(--color-shadow) 50%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -144,7 +144,7 @@
 }
 
 .confirmModal {
-  background: #fff;
+  background: var(--color-surface);
   border-radius: 12px;
   width: min(400px, 90vw);
   overflow: hidden;
@@ -155,7 +155,7 @@
   font-size: 16px;
   font-weight: 600;
   text-align: center;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .confirmBody {
@@ -169,16 +169,16 @@
   width: 100%;
   padding: 16px;
   border-radius: 10px;
-  border: 2px solid #e5e5e5;
-  background: #fff;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
   cursor: pointer;
   text-align: left;
   transition: all 0.2s;
 }
 
 .confirmBtn:hover {
-  border-color: #E03D4B;
-  background: #fef6f6;
+  border-color: var(--color-primary);
+  background: var(--color-bg);
 }
 
 .confirmBtn:disabled {
@@ -187,21 +187,21 @@
 }
 
 .confirmBtnCreate {
-  border-color: #4CAF50;
+  border-color: var(--color-success);
 }
 
 .confirmBtnCreate:hover {
-  border-color: #45a049;
-  background: #f0faf0;
+  border-color: var(--color-success);
+  background: var(--color-bg);
 }
 
 .confirmBtnOverwrite {
-  border-color: #FF9800;
+  border-color: var(--color-highlight);
 }
 
 .confirmBtnOverwrite:hover {
-  border-color: #f57c00;
-  background: #fff8f0;
+  border-color: var(--color-highlight);
+  background: var(--color-bg);
 }
 
 .confirmBtnTitle {
@@ -214,7 +214,7 @@
 .confirmBtnDesc {
   display: block;
   font-size: 12px;
-  color: #888;
+  color: var(--color-text-muted);
 }
 
 .confirmFooter {
@@ -226,14 +226,14 @@
 .confirmCancelBtn {
   padding: 10px 32px;
   border-radius: 8px;
-  border: 1px solid #ddd;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   cursor: pointer;
   font-size: 14px;
 }
 
 .confirmCancelBtn:hover {
-  background: #f5f5f5;
+  background: var(--color-bg);
 }
 
 .confirmCancelBtn:disabled {
@@ -244,7 +244,7 @@
 .blockingMask {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: color-mix(in srgb, var(--color-shadow) 40%, transparent);
   z-index: 1100;
   display: flex;
   align-items: center;
@@ -255,8 +255,8 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 4px solid rgba(255, 255, 255, 0.4);
-  border-top-color: #fff;
+  border: 4px solid color-mix(in srgb, var(--color-text) 40%, transparent);
+  border-top-color: var(--color-text);
   animation: spin 0.9s linear infinite;
 }
 

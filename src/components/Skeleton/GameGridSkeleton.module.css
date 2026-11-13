@@ -16,7 +16,7 @@
     width: 100%;
     border-radius: 16px;
     overflow: hidden;
-    background: #1C1C1E;
+    background: var(--color-surface);
     display: flex;
     flex-direction: column;
     gap: 0;
@@ -26,7 +26,7 @@
     width: 100%;
     aspect-ratio: 3 / 4;
     border-radius: 0;
-    background: linear-gradient(90deg, #141414 20%, #2C2C2E 50%, #141414 80%);
+    background: linear-gradient(90deg, var(--color-surface) 20%, var(--color-surface-2) 50%, var(--color-surface) 80%);
     background-size: 400% 100%;
     animation: skeleton-loading 1.5s ease-in-out infinite;
     position: relative;
@@ -36,7 +36,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+    background: linear-gradient(180deg, transparent 55%, color-mix(in srgb, var(--color-shadow) 55%, transparent) 100%);
     pointer-events: none;
 }
 
@@ -49,7 +49,7 @@
     margin-top: 0;
     padding: 10px 12px 12px;
     box-sizing: border-box;
-    background: #1C1C1E;
+    background: var(--color-surface);
 }
 
 .titleWrap {
@@ -66,7 +66,7 @@
 .tagSkeleton {
     height: 14px;
     border-radius: 6px;
-    background: linear-gradient(90deg, #2A2A2C 20%, #3A3A3C 50%, #2A2A2C 80%);
+    background: linear-gradient(90deg, var(--color-surface-2) 20%, var(--color-surface-2) 50%, var(--color-surface-2) 80%);
     background-size: 400% 100%;
     animation: skeleton-loading 1.5s ease-in-out infinite;
 }
@@ -94,7 +94,7 @@
     border-radius: 999px;
     flex-shrink: 0;
     align-self: flex-start;
-    background: linear-gradient(90deg, #6E1A2A 20%, #A8283C 50%, #6E1A2A 80%);
+    background: linear-gradient(90deg, var(--color-primary-bold) 20%, var(--color-primary) 50%, var(--color-primary-bold) 80%);
     background-size: 400% 100%;
     animation: skeleton-loading 1.5s ease-in-out infinite;
 }
@@ -190,3 +190,20 @@
         height: 24px;
     }
 }
+
+/* 功能注释：与真实卡片同结构的正文骨架 */
+.body { flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 8px; }
+.cardTitleLine, .cardAvatar, .cardAuthorName, .cardTag {
+    display: block;
+    background: linear-gradient(90deg, var(--color-surface-2) 20%, color-mix(in srgb, var(--color-text) 10%, var(--color-surface-2)) 50%, var(--color-surface-2) 80%);
+    background-size: 400% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+    border-radius: 6px;
+}
+.cardTitleLine { height: 16px; width: 92%; }
+.cardTitleLineShort { width: 60%; margin-top: -2px; }
+.cardAuthorRow { display: flex; align-items: center; gap: 8px; height: 22px; }
+.cardAvatar { width: 20px; height: 20px; border-radius: 50%; }
+.cardAuthorName { width: 40%; height: 12px; }
+.cardTagRow { display: flex; gap: 6px; height: 22px; }
+.cardTag { width: 56px; height: 22px; }

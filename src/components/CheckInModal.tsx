@@ -317,6 +317,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                 disabled={!day.canMakeup || isMakeupSubmitting}
                 onClick={(event) => openMakeupConfirm(day.date, event.currentTarget)}
             >
+                {day.state === 'today' && <span className={styles.todayTag}>今天</span>}
                 <span className={styles.weekday}>{t(`checkIn.weekdays.${weekdayKey}`)}</span>
                 <span className={styles.weekDate}>{formatUtcMonthDay(day.date)}</span>
                 <span className={styles.coinWrap} aria-hidden="true">
@@ -405,6 +406,25 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                         </div>
                     ) : status ? (
                         <>
+                            {!isEmbedded && (
+                                <section className={styles.monthReward} aria-label={t('checkIn.monthRewardTitle')}>
+                                    <div className={styles.rewardProgress}>
+                                        <div className={styles.rewardProgressTop}>
+                                            <strong>{t('checkIn.monthRewardTitle')}</strong>
+                                            <span><b>{monthProgress}</b>/{status.month.targetDays}</span>
+                                        </div>
+                                        <div className={styles.progressTrack}>
+                                            <span style={{ width: `${monthProgressPercent}%` }} />
+                                        </div>
+                                    </div>
+                                    <div className={styles.rewardBadge} aria-label={status.month.bonusRewarded
+                                        ? t('checkIn.monthRewarded', { points: status.month.bonusPoints })
+                                        : t('checkIn.monthRewardRule', { days: status.month.targetDays, points: status.month.bonusPoints })}>
+                                        <span className={styles.coinMark} aria-hidden="true" />
+                                        <strong>+{status.month.bonusPoints}</strong>
+                                    </div>
+                                </section>
+                            )}
                             <section
                                 className={isEmbedded ? styles.embeddedCalendarSection : styles.weekSection}
                                 aria-labelledby={isEmbedded ? undefined : 'check-in-week-title'}
@@ -422,7 +442,6 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                                             </span>
                                         </div>
                                         <div className={styles.weekGrid}>{status.week.days.map(renderWeekDay)}</div>
-                                        <p className={styles.weekRule}>{t('checkIn.weekRule')}</p>
 
                                         {mode === 'profile' && (
                                             <button
@@ -474,26 +493,6 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                                             ) : (
                                                 <span key={`empty-${index}`} className={styles.monthEmpty} aria-hidden="true" />
                                             ))}
-                                        </div>
-                                    </section>
-                                )}
-
-                                {!isEmbedded && (
-                                    <section className={styles.monthReward} aria-label={t('checkIn.monthRewardTitle')}>
-                                        <div className={styles.rewardProgress}>
-                                            <div className={styles.rewardProgressTop}>
-                                                <strong>{t('checkIn.monthRewardTitle')}</strong>
-                                                <span><b>{monthProgress}</b>/{status.month.targetDays}</span>
-                                            </div>
-                                            <div className={styles.progressTrack}>
-                                                <span style={{ width: `${monthProgressPercent}%` }} />
-                                            </div>
-                                        </div>
-                                        <div className={styles.rewardBadge} aria-label={status.month.bonusRewarded
-                                            ? t('checkIn.monthRewarded', { points: status.month.bonusPoints })
-                                            : t('checkIn.monthRewardRule', { days: status.month.targetDays, points: status.month.bonusPoints })}>
-                                            <span className={styles.coinMark} aria-hidden="true" />
-                                            <strong>+{status.month.bonusPoints}</strong>
                                         </div>
                                     </section>
                                 )}

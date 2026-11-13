@@ -5,7 +5,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { isAdminRole } from '../../utils/userRoles';
 import { getImageUrl } from '../../utils/constants';
-import { adminTheme } from './adminTheme';
+import { useAdminTheme } from './adminTheme';
+import AdminSkinSwitcher from './AdminSkinSwitcher';
 import { flattenNavigationItems, getAdminNavigation, resolveNavigationSelection, toMenuItems, type AdminShellMode } from './adminNavigation';
 import styles from './AdminShell.module.css';
 
@@ -54,6 +55,8 @@ const AdminShell: React.FC<AdminShellProps> = ({ mode, activeKey, children, user
     },
   };
 
+  const adminTheme = useAdminTheme();
+
   return (
     <ConfigProvider theme={adminTheme}>
       <div className={styles.shell}>
@@ -64,6 +67,7 @@ const AdminShell: React.FC<AdminShellProps> = ({ mode, activeKey, children, user
               <span className={styles.brandName}>{mode === 'admin' ? '管理面板' : '运营中心'}</span>
             </div>
             <div className={styles.headerActions}>
+              <AdminSkinSwitcher />
               <Button
                 type="text"
                 icon={<HomeOutlined />}

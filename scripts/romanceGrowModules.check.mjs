@@ -70,7 +70,8 @@ test('编辑器_总养成开关合并三块_无经济与收官', () => {
   assert.match(panel, /isGrowModuleOn\(c, "gameRules"\)/);
   assert.doesNotMatch(panel, /isGrowModuleOn\(c, "growRules"\)/);
   assert.doesNotMatch(panel, /title="养成模块"/);
-  assert.doesNotMatch(panel, /title="玩法规则"/);
+  // 功能注释：玩法规则独立成块，仅在勾选 gameRules 子项后出现
+  assert.match(panel, /isGrowModuleOn\(c, "gameRules"\) && \(\s*<Section g="grow" title="玩法规则"/);
   assert.doesNotMatch(panel, /title="引擎规则"/);
   assert.doesNotMatch(panel, /title="经济与收官"/);
   assert.doesNotMatch(panel, /title="养成规则"/);
@@ -78,7 +79,7 @@ test('编辑器_总养成开关合并三块_无经济与收官', () => {
   assert.doesNotMatch(panel, /ModBalancePanel/);
   assert.match(panel, /showModulePicker=\{false\}/);
   assert.match(panel, /showCareer=\{false\}/);
-  assert.match(panel, /规则列表/);
+  assert.ok(panel.indexOf('title="日程分类"') < panel.indexOf('title="培训课程"'), '日程分类须排在养成子项之前');
   const create = panel.slice(panel.indexOf('title="建角"'), panel.indexOf('title="地点"'));
   assert.match(create, /startMoney=\{c\.startMoney\}/);
   assert.match(create, /onStartMoney=/);

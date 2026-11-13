@@ -436,7 +436,7 @@ const WarehouseAvatarLibrary: React.FC = () => {
               <p className={panel.sub} style={{ margin: '8px 0 0', fontSize: 12 }}>
                 {avatarGenderLabel(item.gender)} · {avatarAgeLabel(item.ageGroup, tagOptions)} · {avatarBackgroundLabel(item.backgroundType, tagOptions)}
               </p>
-              {item.title ? <p style={{ margin: '2px 0 0', fontSize: 13, color: '#fff' }}>{item.title}</p> : null}
+              {item.title ? <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--color-text)' }}>{item.title}</p> : null}
               {scope === 'mine' && (
                 <button type="button" className={panel.dangerBtn} style={{ marginTop: 8, width: '100%' }} onClick={() => setDeleteId(item.id)}>
                   删除

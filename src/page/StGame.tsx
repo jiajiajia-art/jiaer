@@ -4,6 +4,7 @@ import FooterArea from '../components/Layout/FooterArea';
 import styles from './StGame.module.css';
 import { stApi, type StChatMessage, type StRenderRule } from '../api/stGame';
 import StShowdownText from '../components/StGame/StShowdownText';
+import AiRouteFab from '../components/AiRoute/AiRouteFab';
 import { HOST_ADDRESS } from '../config';
 import { authFetch } from '../api/base';
 import { buildStSceneSrcDoc } from '../utils/stSceneHtml';
@@ -624,12 +625,12 @@ const StGame: React.FC = () => {
 
   if (isSceneMode) {
     return (
-      <div style={{ position: 'fixed', inset: 0, background: '#000' }}>
+      <div style={{ position: 'fixed', inset: 0, background: 'var(--color-bg)' }}>
         <iframe
           ref={sceneIframeRef}
           title="STScene"
           srcDoc={openingSrcDoc}
-          style={{ display: 'block', width: '100%', height: '100%', border: 'none', background: '#000' }}
+          style={{ display: 'block', width: '100%', height: '100%', border: 'none', background: 'var(--color-bg)' }}
           sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
         />
       </div>
@@ -638,6 +639,8 @@ const StGame: React.FC = () => {
 
   return (
     <div className={styles.pageRoot}>
+      {/* 功能注释：AI 线路悬浮球 */}
+      <AiRouteFab />
       <div className={styles.main}>
         <div className={styles.chat} ref={listRef}>
           {messages.map((m, idx) => (

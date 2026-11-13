@@ -22,13 +22,13 @@
 .title {
     margin: 0;
     font-size: 1.6rem;
-    color: #1a1a1a;
+    color: var(--color-text);
     font-weight: 700;
 }
 
 .subtitle {
     margin: 2px 0 0;
-    color: rgba(0, 0, 0, 0.55);
+    color: var(--color-text-secondary);
     font-size: 0.9rem;
 }
 
@@ -40,7 +40,7 @@
 }
 
 .card {
-    background: #fff;
+    background: var(--color-surface);
     border-radius: 20px;
     border: 1px solid var(--border-light);
     box-shadow: var(--shadow-md);
@@ -84,7 +84,7 @@
     padding: 2px;
     gap: 4px;
     border-radius: 999px;
-    background: #f9fafb;
+    background: var(--color-bg);
     border: 1px solid var(--border-light);
 }
 
@@ -101,8 +101,8 @@
 
 .leftTabActive {
     background: linear-gradient(135deg, var(--primary), var(--primary-light));
-    color: #fff;
-    box-shadow: 0 8px 20px rgba(224, 61, 75, 0.45);
+    color: var(--color-text);
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 
@@ -110,7 +110,7 @@
     padding: 6px 12px;
     border-radius: 999px;
     border: 1px solid var(--border-medium);
-    background: #fff;
+    background: var(--color-surface);
     color: var(--text-primary);
     font-size: 12px;
     cursor: pointer;
@@ -124,7 +124,7 @@
     border-style: solid;
     border-color: var(--primary);
     color: var(--primary);
-    background: rgba(224, 61, 75, 0.05);
+    background: color-mix(in srgb, var(--color-primary) 5%, transparent);
 }
 
 

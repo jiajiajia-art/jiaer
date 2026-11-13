@@ -27,27 +27,27 @@
 .panelHeader h2 {
     margin: 4px 0 0;
     font-size: 1.6rem;
-    color: #ffffff;
+    color: var(--color-text);
     font-weight: 700;
 }
 
 .subtitle {
     margin: 4px 0 0;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     font-size: 0.9rem;
 }
 
 /* 功能注释：与 GenerationActionBar 积分胶囊统一为全圆角胶囊 */
 .ghost {
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     min-height: 44px;
     padding: 9px 18px;
     font-weight: 600;
     cursor: pointer;
     transition: 0.25s ease;
-    color: #ffffff;
-    background: #1C1C1E;
+    color: var(--color-text);
+    background: var(--color-surface);
 }
 
 .ghost:hover {
@@ -84,7 +84,7 @@
 
 .buttonSubText {
     font-size: 0.7rem;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     line-height: 1;
     font-weight: 400;
 }
@@ -94,19 +94,19 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--color-text-secondary);
     font-size: 12px;
     margin-left: 4px;
     margin-right: 4px;
 }
 
 .discountPriceBlack {
-    color: rgba(255, 255, 255, 0.85);
+    color: color-mix(in srgb, var(--color-text) 85%, transparent);
 }
 
 .originalPrice {
     text-decoration: line-through;
-    color: rgba(255, 255, 255, 0.35);
+    color: var(--color-text-muted);
     font-size: 0.85em;
     font-weight: 400;
 }
@@ -126,15 +126,15 @@
 
 /* 卡片样式（主组件右侧详情卡片） */
 .card {
-    background: #1A1A1A;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     padding: 16px 16px 20px;
     border-radius: 16px;
     display: flex;
     flex-direction: column;
     /* 功能注释：确认修改与场景大图贴紧，避免 16px×2 的空洞 */
     gap: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 25%, transparent);
     max-height: 80vh;
     overflow-y: auto;
 }
@@ -146,7 +146,7 @@
     left: 280px;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.75);
+    background: color-mix(in srgb, var(--color-shadow) 75%, transparent);
     backdrop-filter: blur(4px);
     display: flex;
     flex-direction: column;
@@ -180,7 +180,7 @@
 .plusLoadingSpinner {
     width: 40px;
     height: 40px;
-    border: 3px solid rgba(255, 255, 255, 0.12);
+    border: 3px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     border-top: 3px solid var(--primary);
     border-radius: 50%;
     animation: plusSpin 1s linear infinite;
@@ -189,7 +189,7 @@
 }
 
 .plusLoadingText {
-    color: #ffffff;
+    color: var(--color-text);
     font-size: 14px;
     font-weight: 500;
     flex-shrink: 0;
@@ -199,7 +199,7 @@
 .plusLoadingHint {
     font-size: 12px;
     line-height: 1.6;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     text-align: center;
 }
 
@@ -211,15 +211,15 @@
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    border: 1px solid rgba(142, 33, 53, 0.35);
-    background: #1A1A1A;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+    background: var(--color-surface);
     color: var(--primary);
     transition: all 0.2s ease;
 }
 
 .plusLoadingCancelBtn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(142, 33, 53, 0.12);
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
 /* 响应式布局 */
@@ -245,9 +245,9 @@
         min-height: min(52vh, 360px);
         padding: 28px 24px;
         border-radius: 28px;
-        background: #1A1A1A;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+        background: var(--color-surface);
+        border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+        box-shadow: 0 18px 48px color-mix(in srgb, var(--color-shadow) 12%, transparent);
         gap: 14px;
     }
 
@@ -288,21 +288,21 @@
 
 /* === batch board (aligned with CharactersPanel) === */
 .plusLoadingOverlay{
-    --atelier-ink: #ffffff;
-    --atelier-mute: rgba(255, 255, 255, 0.55);
-    --atelier-soft: rgba(255, 255, 255, 0.38);
-    --atelier-paper: #1A1A1A;
-    --atelier-card: #1C1C1E;
-    --atelier-line: rgba(142, 33, 53, 0.25);
-    --atelier-glow: rgba(142, 33, 53, 0.22);
+    --atelier-ink: var(--color-on-media);
+    --atelier-mute: color-mix(in srgb, var(--color-surface) 55%, transparent);
+    --atelier-soft: var(--color-text-muted);
+    --atelier-paper: var(--color-surface);
+    --atelier-card: var(--color-surface);
+    --atelier-line: color-mix(in srgb, var(--color-primary) 25%, transparent);
+    --atelier-glow: color-mix(in srgb, var(--color-primary) 22%, transparent);
     position: fixed;
     top: 0;
     left: 280px;
     right: 0;
     bottom: 0;
     background:
-        radial-gradient(ellipse 70% 50% at 50% 42%, rgba(142, 33, 53, 0.18), transparent 62%),
-        linear-gradient(165deg, rgba(0, 0, 0, 0.85), rgba(26, 26, 26, 0.92));
+        radial-gradient(ellipse 70% 50% at 50% 42%, color-mix(in srgb, var(--color-primary) 18%, transparent), transparent 62%),
+        linear-gradient(165deg, color-mix(in srgb, var(--color-shadow) 85%, transparent), color-mix(in srgb, var(--color-surface) 92%, transparent));
     backdrop-filter: blur(8px);
     display: flex;
     flex-direction: column;
@@ -327,13 +327,13 @@
     padding: 20px 20px 16px;
     border-radius: 22px;
     background:
-        linear-gradient(180deg, #1A1A1A, var(--atelier-card)),
+        linear-gradient(180deg, var(--color-surface), var(--atelier-card)),
         var(--atelier-paper);
     border: 1px solid var(--atelier-line);
     box-shadow:
-        0 1px 0 rgba(255, 255, 255, 0.06) inset,
-        0 24px 60px rgba(0, 0, 0, 0.45),
-        0 0 0 1px rgba(255, 255, 255, 0.08);
+        0 1px 0 color-mix(in srgb, var(--color-text) 6%, transparent) inset,
+        0 24px 60px color-mix(in srgb, var(--color-shadow) 45%, transparent),
+        0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
     animation: plusDialogIn 0.38s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -390,11 +390,11 @@
         conic-gradient(
             from -90deg,
             var(--primary) calc(var(--batch-progress) * 1turn),
-            rgba(142, 33, 53, 0.12) 0
+            color-mix(in srgb, var(--color-primary) 12%, transparent) 0
         );
     display: grid;
     place-items: center;
-    box-shadow: 0 0 0 4px rgba(142, 33, 53, 0.06), 0 10px 24px var(--atelier-glow);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 6%, transparent), 0 10px 24px var(--atelier-glow);
     position: relative;
 }
 
@@ -403,7 +403,7 @@
     position: absolute;
     inset: -3px;
     border-radius: 50%;
-    border: 1px dashed rgba(142, 33, 53, 0.28);
+    border: 1px dashed color-mix(in srgb, var(--color-primary) 28%, transparent);
     animation: plusSpin 12s linear infinite;
 }
 
@@ -411,12 +411,12 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: #1A1A1A;
+    background: var(--color-surface);
     display: flex;
     align-items: baseline;
     justify-content: center;
     gap: 1px;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+    box-shadow: inset 0 1px 2px color-mix(in srgb, var(--color-shadow) 4%, transparent);
 }
 
 .plusLoadingRingValue {
@@ -454,16 +454,16 @@
 .plusLoadingStatCard {
     border-radius: 14px;
     padding: 12px 12px 10px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: #1C1C1E;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    background: var(--color-surface);
 }
 
 .plusLoadingStatGen {
-    box-shadow: inset 3px 0 0 #c62839;
+    box-shadow: inset 3px 0 0 var(--color-primary);
 }
 
 .plusLoadingStatCut {
-    box-shadow: inset 3px 0 0 #2a6280;
+    box-shadow: inset 3px 0 0 var(--color-info);
 }
 
 .plusLoadingStatTitle {
@@ -494,38 +494,38 @@
     margin-top: 8px;
     height: 4px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
     overflow: hidden;
 }
 
 .plusLoadingStatTrackFill {
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, #ff6b78, var(--primary));
+    background: linear-gradient(90deg, var(--color-primary-light), var(--primary));
     transition: width 0.35s ease;
 }
 
 .plusLoadingStatTrackFillCut {
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, #5aa7c7, #2a6280);
+    background: linear-gradient(90deg, var(--color-info), var(--color-info));
     transition: width 0.35s ease;
 }
 
 .plusLoadingStuck {
     font-size: 11px;
     line-height: 1.5;
-    color: #8f1f1f;
-    background: rgba(160, 40, 40, 0.08);
-    border: 1px solid rgba(160, 40, 40, 0.16);
+    color: var(--color-primary-bold);
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 16%, transparent);
     border-radius: 10px;
     padding: 8px 10px;
 }
 
 .plusLoadingBoardShell {
     border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: #121212;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    background: var(--color-surface);
     overflow: hidden;
 }
 
@@ -541,8 +541,8 @@
 .plusLoadingBoardItem {
     border-radius: 10px;
     padding: 8px 10px;
-    background: rgba(26, 26, 26, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .plusLoadingBoardTop {
@@ -568,7 +568,7 @@
     font-weight: 700;
     padding: 2px 7px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.06);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
     color: var(--atelier-mute);
 }
 
@@ -579,36 +579,36 @@
 }
 
 .plusLoadingItemGen .plusLoadingBoardStage {
-    background: rgba(142, 33, 53, 0.12);
-    color: #c62839;
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-primary);
 }
 
 .plusLoadingItemCut .plusLoadingBoardStage {
-    background: rgba(46, 110, 140, 0.12);
-    color: #2a6280;
+    background: color-mix(in srgb, var(--color-info) 12%, transparent);
+    color: var(--color-info);
 }
 
 .plusLoadingItemDone .plusLoadingBoardStage {
-    background: rgba(46, 125, 90, 0.12);
-    color: #2d6b4f;
+    background: color-mix(in srgb, var(--color-success) 12%, transparent);
+    color: var(--color-success);
 }
 
 .plusLoadingItemFail .plusLoadingBoardStage {
-    background: rgba(160, 40, 40, 0.12);
-    color: #8f1f1f;
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-primary-bold);
 }
 
 .plusLoadingItemPending .plusLoadingBoardStage {
-    background: rgba(255, 255, 255, 0.05);
+    background: color-mix(in srgb, var(--color-text) 5%, transparent);
     color: var(--atelier-soft);
 }
 
 .plusLoadingItemGen.plusLoadingBoardItem {
-    border-color: rgba(142, 33, 53, 0.18);
+    border-color: color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
 .plusLoadingItemCut.plusLoadingBoardItem {
-    border-color: rgba(42, 98, 128, 0.2);
+    border-color: color-mix(in srgb, var(--color-info) 20%, transparent);
 }
 
 .plusLoadingText {
@@ -630,24 +630,24 @@
 .plusLoadingTrack {
     height: 4px;
     border-radius: 999px;
-    background: rgba(142, 33, 53, 0.1);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
     overflow: hidden;
 }
 
 .plusLoadingTrackFill {
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, #ff6b78, var(--primary));
+    background: linear-gradient(90deg, var(--color-primary-light), var(--primary));
     transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
-    box-shadow: 0 0 12px rgba(142, 33, 53, 0.35);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 .plusLoadingLogShell {
     border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.2)),
-        #121212;
+        linear-gradient(180deg, color-mix(in srgb, var(--color-text) 4%, transparent), color-mix(in srgb, var(--color-text) 20%, transparent)),
+        var(--color-surface);
     overflow: hidden;
 }
 
@@ -656,7 +656,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 10px 12px 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .plusLoadingLogEyebrow {
@@ -699,9 +699,9 @@
 }
 
 .plusLoadingLogRowActive {
-    background: #1C1C1E;
+    background: var(--color-surface);
     color: var(--atelier-ink);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--color-text) 6%, transparent) inset;
 }
 
 .plusLoadingLogBadge {
@@ -714,29 +714,29 @@
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.02em;
-    background: rgba(255, 255, 255, 0.06);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
     color: var(--atelier-mute);
     white-space: nowrap;
 }
 
 .plusLoadingLogRowGen .plusLoadingLogBadge {
-    background: rgba(142, 33, 53, 0.12);
-    color: #c62839;
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-primary);
 }
 
 .plusLoadingLogRowCut .plusLoadingLogBadge {
-    background: rgba(46, 110, 140, 0.12);
-    color: #2a6280;
+    background: color-mix(in srgb, var(--color-info) 12%, transparent);
+    color: var(--color-info);
 }
 
 .plusLoadingLogRowDone .plusLoadingLogBadge {
-    background: rgba(46, 125, 90, 0.12);
-    color: #2d6b4f;
+    background: color-mix(in srgb, var(--color-success) 12%, transparent);
+    color: var(--color-success);
 }
 
 .plusLoadingLogRowFail .plusLoadingLogBadge {
-    background: rgba(160, 40, 40, 0.12);
-    color: #8f1f1f;
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    color: var(--color-primary-bold);
 }
 
 .plusLoadingLogMessage {
@@ -792,13 +792,13 @@
     font-weight: 700;
     letter-spacing: 0.03em;
     cursor: pointer;
-    border: 1px solid rgba(142, 33, 53, 0.45);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
     background:
-        linear-gradient(135deg, #1C1C1E 0%, rgba(142, 33, 53, 0.15) 100%);
-    color: #ffffff;
+        linear-gradient(135deg, var(--color-surface) 0%, color-mix(in srgb, var(--color-primary) 15%, transparent) 100%);
+    color: var(--color-text);
     box-shadow:
-        inset 0 0 0 1px rgba(255, 255, 255, 0.6),
-        0 1px 0 rgba(42, 98, 128, 0.06);
+        inset 0 0 0 1px color-mix(in srgb, var(--color-text) 60%, transparent),
+        0 1px 0 color-mix(in srgb, var(--color-info) 6%, transparent);
     transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
     animation: plusContinueIn 0.45s ease both;
 }
@@ -812,15 +812,15 @@
     height: 58%;
     transform: translateY(-50%);
     border-radius: 99px;
-    background: linear-gradient(180deg, #A8283C, #8E2135);
+    background: linear-gradient(180deg, var(--color-primary), var(--color-primary-bold));
     opacity: 0.85;
 }
 
 .plusLoadingContinueBtn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 8px 20px rgba(42, 98, 128, 0.16);
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--color-info) 16%, transparent);
     background:
-        linear-gradient(135deg, #ffffff 0%, rgba(220, 238, 246, 0.98) 100%);
+        linear-gradient(135deg, var(--color-surface) 0%, color-mix(in srgb, var(--color-info) 98%, transparent) 100%);
 }
 
 .plusLoadingContinueBtn:active {
@@ -846,16 +846,16 @@
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    border: 1px solid rgba(142, 33, 53, 0.35);
-    background: #1A1A1A;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+    background: var(--color-surface);
     color: var(--primary);
     transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .plusLoadingCancelBtn:hover {
     transform: translateY(-1px);
-    background: rgba(142, 33, 53, 0.1);
-    box-shadow: 0 8px 20px rgba(142, 33, 53, 0.14);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--color-primary) 14%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -875,7 +875,7 @@
 .plusLoadingSpinner {
     width: 40px;
     height: 40px;
-    border: 3px solid rgba(255, 255, 255, 0.12);
+    border: 3px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     border-top: 3px solid var(--primary);
     border-radius: 50%;
     animation: plusSpin 1s linear infinite;
@@ -887,11 +887,11 @@
 .plusLoadingLogItemActive {
     font-size: 12px;
     line-height: 1.55;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--color-text-muted);
 }
 
 .plusLoadingLogItemActive {
-    color: rgba(255, 255, 255, 0.88);
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
     font-weight: 500;
 }
 
@@ -902,7 +902,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(26, 26, 26, 0.92);
+    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
     backdrop-filter: blur(2px);
     display: flex;
     flex-direction: column;
@@ -924,22 +924,22 @@
 .loadingSpinner {
     width: 24px;
     height: 24px;
-    border: 2px solid rgba(255, 255, 255, 0.12);
-    border-top: 2px solid #FB4655;
+    border: 2px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-top: 2px solid var(--color-primary-light);
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin-bottom: 8px;
 }
 
 .loadingText {
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     font-size: 12px;
     font-weight: 500;
 }
 
 .loadingHint {
     margin-top: 6px;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     font-size: 11px;
     line-height: 1.5;
     text-align: center;

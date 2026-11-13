@@ -2,7 +2,7 @@
   position: fixed;
   inset: 0;
   z-index: 1210;
-  background: rgba(42, 11, 92, 0.78);
+  background: color-mix(in srgb, var(--color-accent) 78%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -12,19 +12,19 @@
 
 .card {
   width: min(400px, 100%);
-  background: linear-gradient(165deg, #5c2cff 0%, #8e24aa 100%);
+  background: linear-gradient(165deg, var(--color-accent) 0%, var(--color-accent) 100%);
   border-radius: 16px;
-  border: 2px solid rgba(255, 213, 79, 0.55);
+  border: 2px solid color-mix(in srgb, var(--color-highlight) 55%, transparent);
   padding: 20px;
-  color: #fff;
-  box-shadow: 0 16px 36px rgba(40, 10, 90, 0.4);
+  color: var(--color-text);
+  box-shadow: 0 16px 36px color-mix(in srgb, var(--color-accent) 40%, transparent);
 }
 
 .title {
   margin: 0 0 16px;
   font-size: 18px;
   font-weight: 800;
-  color: #ffd54f;
+  color: var(--color-highlight);
 }
 
 .label {
@@ -33,15 +33,15 @@
   gap: 6px;
   margin-bottom: 12px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.9);
+  color: color-mix(in srgb, var(--color-text) 90%, transparent);
 }
 
 .input,
 .textarea {
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  border: 1px solid color-mix(in srgb, var(--color-text) 28%, transparent);
+  background: color-mix(in srgb, var(--color-text) 12%, transparent);
+  color: var(--color-text);
   padding: 10px 12px;
   font-size: 14px;
   font-family: inherit;
@@ -49,7 +49,7 @@
 
 .input::placeholder,
 .textarea::placeholder {
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--color-text-muted);
 }
 
 .actions {
@@ -69,13 +69,13 @@
 }
 
 .primary {
-  background: linear-gradient(180deg, #ffe082, #ffb300);
-  color: #4a2a00;
+  background: linear-gradient(180deg, var(--color-highlight), var(--color-highlight));
+  color: var(--color-highlight);
 }
 
 .secondary {
-  background: rgba(255, 255, 255, 0.16);
-  color: #fff;
+  background: color-mix(in srgb, var(--color-text) 16%, transparent);
+  color: var(--color-text);
 }
 
 .primary:disabled,

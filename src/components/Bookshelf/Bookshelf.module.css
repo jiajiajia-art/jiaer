@@ -1,14 +1,14 @@
 /* 功能注释：书架 Tab —— 与收藏夹同一墨黑壳；两列封面卡统一 3:4、统一文字行高，底部给导航与管理栏留位 */
 .pageRoot {
-  --shelf-accent: #ff3b61;
-  --shelf-accent-dark: #a8283c;
-  --shelf-muted: #8e8e93;
-  --shelf-card: #141416;
-  --shelf-line: rgba(255, 255, 255, 0.08);
+  --shelf-accent: var(--color-primary);
+  --shelf-accent-dark: var(--color-primary);
+  --shelf-muted: var(--color-text-muted);
+  --shelf-card: var(--color-surface);
+  --shelf-line: color-mix(in srgb, var(--color-text) 8%, transparent);
   width: 100%;
   /* 功能注释：高度交给 AppPageShell；勿再垫满屏最小高度，避免中间区被撑出多余滚动条 */
-  background: #000000;
-  color: #ffffff;
+  background: var(--color-bg);
+  color: var(--color-text);
   overflow-x: hidden;
 }
 
@@ -31,7 +31,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 0;
-  background: #000000;
+  background: var(--color-bg);
 }
 
 .tabs {
@@ -52,7 +52,7 @@
 }
 
 .tabActive {
-  color: #ffffff;
+  color: var(--color-text);
   font-size: 18px;
 }
 
@@ -85,7 +85,7 @@
   height: 32px;
   padding: 0 10px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
   box-sizing: border-box;
 }
 
@@ -95,7 +95,7 @@
   border: none;
   outline: none;
   background: transparent;
-  color: #ffffff;
+  color: var(--color-text);
   font-size: 13px;
 }
 
@@ -119,7 +119,7 @@
   border: 1px solid var(--shelf-line);
   border-radius: 16px;
   background: transparent;
-  color: #ffffff;
+  color: var(--color-text);
   font-size: 13px;
   cursor: pointer;
   white-space: nowrap;
@@ -157,7 +157,7 @@
   aspect-ratio: 3 / 4;
   padding: 0;
   border: none;
-  background: #1c1c1f;
+  background: var(--color-surface);
   cursor: pointer;
   overflow: hidden;
 }
@@ -179,8 +179,8 @@
   left: 6px;
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.72);
-  color: #ffd2d9;
+  background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
+  color: var(--color-primary-lighter);
   font-size: 11px;
   line-height: 16px;
 }
@@ -191,8 +191,8 @@
   right: 6px;
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(168, 40, 60, 0.85);
-  color: #ffffff;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
   font-size: 11px;
   line-height: 16px;
 }
@@ -203,9 +203,9 @@
   bottom: 6px;
   width: 22px;
   height: 22px;
-  border: 2px solid rgba(255, 255, 255, 0.85);
+  border: 2px solid color-mix(in srgb, var(--color-text) 85%, transparent);
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.45);
+  background: color-mix(in srgb, var(--color-shadow) 45%, transparent);
   box-sizing: border-box;
 }
 
@@ -221,7 +221,7 @@
   top: 2px;
   width: 6px;
   height: 10px;
-  border: solid #ffffff;
+  border: solid var(--color-text);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
@@ -238,7 +238,7 @@
   padding: 0;
   border: none;
   background: transparent;
-  color: #ffffff;
+  color: var(--color-text);
   font-size: 14px;
   font-weight: 600;
   line-height: 20px;
@@ -261,7 +261,7 @@
 }
 
 .cardProgress {
-  color: #c9c9ce;
+  color: var(--color-text-secondary);
 }
 
 .cardActions {
@@ -284,11 +284,11 @@
 .primaryButton {
   border: none;
   background: var(--shelf-accent);
-  color: #ffffff;
+  color: var(--color-on-primary);
 }
 
 .primaryButton:disabled {
-  background: #3a3a3e;
+  background: var(--color-surface-2);
   color: var(--shelf-muted);
   cursor: not-allowed;
 }
@@ -296,7 +296,7 @@
 .ghostButton {
   border: 1px solid var(--shelf-line);
   background: transparent;
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .stateBox {
@@ -317,7 +317,7 @@
   border: none;
   border-radius: 18px;
   background: var(--shelf-accent);
-  color: #ffffff;
+  color: var(--color-on-primary);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -346,7 +346,7 @@
 
 .skeletonCover {
   aspect-ratio: 3 / 4;
-  background: linear-gradient(90deg, #1a1a1d 0%, #242428 50%, #1a1a1d 100%);
+  background: linear-gradient(90deg, var(--color-surface) 0%, var(--color-surface-2) 50%, var(--color-surface) 100%);
   background-size: 200% 100%;
   animation: shelfShimmer 1.4s ease-in-out infinite;
 }
@@ -355,7 +355,7 @@
   height: 12px;
   margin: 8px;
   border-radius: 6px;
-  background: #222225;
+  background: var(--color-surface-2);
 }
 
 .skeletonLineShort {
@@ -378,7 +378,7 @@
   align-items: center;
   gap: 10px;
   padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
-  background: rgba(20, 20, 22, 0.96);
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
   border-top: 1px solid var(--shelf-line);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -388,12 +388,12 @@
   flex: 1;
   min-width: 0;
   font-size: 13px;
-  color: #c9c9ce;
+  color: var(--color-text-secondary);
 }
 
 .manageInfo strong {
   display: block;
-  color: #ffffff;
+  color: var(--color-text);
   font-size: 14px;
 }
 
@@ -404,7 +404,7 @@
   border: 1px solid var(--shelf-line);
   border-radius: 17px;
   background: transparent;
-  color: #ffffff;
+  color: var(--color-text);
   font-size: 13px;
   cursor: pointer;
 }
@@ -415,14 +415,14 @@
   border: none;
   border-radius: 17px;
   background: var(--shelf-accent);
-  color: #ffffff;
+  color: var(--color-on-primary);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
 }
 
 .manageAction:disabled {
-  background: #3a3a3e;
+  background: var(--color-surface-2);
   color: var(--shelf-muted);
   cursor: not-allowed;
 }
@@ -435,7 +435,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
+  background: color-mix(in srgb, var(--color-shadow) 60%, transparent);
 }
 
 .sheet {
@@ -444,8 +444,8 @@
   display: flex;
   flex-direction: column;
   border-radius: 16px 16px 0 0;
-  background: #17171a;
-  color: #ffffff;
+  background: var(--color-surface);
+  color: var(--color-text);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -510,7 +510,7 @@
 
 .saveRowActive {
   border-color: var(--shelf-accent);
-  background: rgba(255, 59, 97, 0.08);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
 }
 
 .saveRowInvalid {
@@ -548,7 +548,7 @@
 .saveRowSummary {
   margin-top: 4px;
   font-size: 12px;
-  color: #b9b9be;
+  color: var(--color-text-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -558,14 +558,14 @@
 .saveRowReason {
   margin-top: 4px;
   font-size: 12px;
-  color: #ff8a9d;
+  color: var(--color-primary-fg);
 }
 
 .saveRowDelete {
   flex-shrink: 0;
   height: 28px;
   padding: 0 12px;
-  border: 1px solid rgba(255, 59, 97, 0.5);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 50%, transparent);
   border-radius: 14px;
   background: transparent;
   color: var(--shelf-accent);
@@ -578,7 +578,7 @@
   width: 18px;
   height: 18px;
   margin-top: 1px;
-  border: 2px solid #6b6b70;
+  border: 2px solid var(--color-border);
   border-radius: 50%;
   box-sizing: border-box;
 }

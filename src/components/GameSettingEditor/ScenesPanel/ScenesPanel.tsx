@@ -1713,7 +1713,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                                     sceneType="scenes"
                                 />
                             ) : (
-                                <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+                                <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
                                     <p>{t('createGame.noSceneData')}</p>
                                 </div>
                             )}

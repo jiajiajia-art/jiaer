@@ -6,7 +6,7 @@
     bottom: 0;
     z-index: 1000;
     pointer-events: auto;
-    background: rgba(0, 0, 0, 0.4);
+    background: color-mix(in srgb, var(--color-shadow) 40%, transparent);
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
 }
@@ -21,15 +21,15 @@
 
 .panel {
     background: linear-gradient(to bottom, 
-        rgba(50, 50, 50, 0.2) 0%, 
-        rgba(30, 30, 30, 0.2) 10%, 
-        rgba(20, 20, 20, 0.2) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+        color-mix(in srgb, var(--color-text) 20%, transparent) 0%, 
+        color-mix(in srgb, var(--color-text) 20%, transparent) 10%, 
+        color-mix(in srgb, var(--color-text) 20%, transparent) 100%);
+    border: 1px solid color-mix(in srgb, var(--color-text) 30%, transparent);
     border-radius: 8px;
     padding: 32px 28px 24px;
     width: 90vw;
     max-width: 360px;
-    box-shadow: 0 1px 12px rgba(0, 0, 0, 0.436);
+    box-shadow: 0 1px 12px color-mix(in srgb, var(--color-shadow) 43.6%, transparent);
     position: relative;
 }
 
@@ -43,8 +43,8 @@
     width: 60%;
     height: 40px;
     background: radial-gradient(ellipse at center top, 
-        rgba(255, 255, 255, 0.15) 0%, 
-        rgba(255, 255, 255, 0.05) 50%, 
+        color-mix(in srgb, var(--color-text) 15%, transparent) 0%, 
+        color-mix(in srgb, var(--color-text) 5%, transparent) 50%, 
         transparent 100%);
     border-radius: 8px 8px 0 0;
     pointer-events: none;
@@ -54,8 +54,8 @@
     position: absolute;
     top: -12px;
     right: -12px;
-    background: rgba(114, 114, 114, 0.371);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: color-mix(in srgb, var(--color-shadow) 37.1%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 30%, transparent);
     border-radius: 50%;
     width: 36px;
     height: 36px;
@@ -63,31 +63,31 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    color: rgba(255, 255, 255, 0.9);
+    color: color-mix(in srgb, var(--color-on-media) 90%, transparent);
     font-size: 22px;
     transition: all 0.2s;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-shadow) 10%, transparent);
     z-index: 10;
 }
 
 .closeButton:hover {
-    background: rgba(60, 60, 60, 0.95);
-    color: #fff;
+    background: color-mix(in srgb, var(--color-bg) 95%, transparent);
+    color: var(--color-text);
     transform: scale(1.05);
 }
 
 .content {
-    color: #fff;
+    color: var(--color-text);
 }
 
 .title {
     font-size: 16px;
     font-weight: 400;
     margin-bottom: 20px;
-    color: rgba(255, 255, 255, 0.95);
+    color: color-mix(in srgb, var(--color-text) 95%, transparent);
     text-align: left;
     padding-bottom: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 15%, transparent);
 }
 
 .attributeList {
@@ -101,17 +101,17 @@
     justify-content: space-between;
     align-items: center;
     padding: 0;
-    color: rgba(255, 255, 255, 0.9);
+    color: color-mix(in srgb, var(--color-text) 90%, transparent);
 }
 
 .attrName {
-    color: rgba(255, 255, 255, 0.85);
+    color: color-mix(in srgb, var(--color-text) 85%, transparent);
     font-size: 15px;
     font-weight: 400;
 }
 
 .attrValue {
-    color: rgba(255, 255, 255, 0.95);
+    color: color-mix(in srgb, var(--color-text) 95%, transparent);
     font-size: 15px;
     font-weight: 400;
     margin-left: auto;
@@ -120,7 +120,7 @@
 
 .noAttributes {
     text-align: center;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--color-text-secondary);
     padding: 20px;
     font-size: 14px;
 }

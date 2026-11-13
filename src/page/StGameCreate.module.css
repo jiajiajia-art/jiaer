@@ -1,14 +1,14 @@
 /* 功能注释：酒馆卡创建对齐图1「世界观设定」暗色卡——墨黑底 + #1A1A1A 面 + #1C1C1E 输入 + 酒红选中 */
 
 .pageRoot {
-  --st-ink: #000000;
-  --st-surface: #1A1A1A;
-  --st-input: #1C1C1E;
-  --st-border: rgba(255, 255, 255, 0.12);
-  --st-muted: rgba(255, 255, 255, 0.55);
-  --st-text: #ffffff;
-  --st-accent: #A8283C;
-  --st-accent-deep: #8E2135;
+  --st-ink: var(--color-text);
+  --st-surface: var(--color-surface);
+  --st-input: var(--color-surface);
+  --st-border: color-mix(in srgb, var(--color-text) 12%, transparent);
+  --st-muted: var(--color-text-secondary);
+  --st-text: var(--color-text);
+  --st-accent: var(--color-primary);
+  --st-accent-deep: var(--color-primary-bold);
   min-height: 100vh;
   width: 100%;
   max-width: none;
@@ -54,7 +54,7 @@
   padding: 16px;
   border-radius: 16px;
   background: var(--st-surface);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
   box-sizing: border-box;
 }
 
@@ -96,17 +96,17 @@
 }
 
 .text:focus {
-  border-color: rgba(168, 40, 60, 0.55);
-  box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.2);
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .text::placeholder {
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--color-text-muted);
 }
 
 .inputHighlight {
-  border-color: #C23A50 !important;
-  box-shadow: 0 0 0 3px rgba(194, 58, 80, 0.22);
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 
 .area {
@@ -126,16 +126,16 @@
 
 .area:focus {
   outline: none;
-  border-color: rgba(168, 40, 60, 0.55);
-  box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.2);
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .area::placeholder {
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--color-text-muted);
 }
 
 .group {
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
   border-radius: 16px;
   padding: 18px 16px;
   background: var(--st-surface);
@@ -145,7 +145,7 @@
 .groupTitle {
   font-weight: 700;
   margin-bottom: 6px;
-  color: #ffffff;
+  color: var(--color-text);
   font-size: 16px;
 }
 
@@ -166,8 +166,8 @@
 
 .ruleItem .text,
 .group .row2 .text {
-  background: #121212;
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--color-surface);
+  border-color: color-mix(in srgb, var(--color-text) 10%, transparent);
 }
 
 .actionsLegacy {
@@ -238,7 +238,7 @@
   border: none;
   border-radius: 999px;
   background: var(--st-accent-deep);
-  color: #ffffff;
+  color: var(--color-on-primary);
   font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
@@ -249,7 +249,7 @@
 
 .clearFieldButton:hover:not(:disabled) {
   background: var(--st-accent);
-  color: #ffffff;
+  color: var(--color-on-primary);
 }
 
 .clearFieldButton:disabled {
@@ -267,7 +267,7 @@
   padding: 12px 20px;
   min-height: 44px;
   background: var(--st-accent-deep);
-  color: #ffffff;
+  color: var(--color-on-primary);
   border: none;
   border-radius: 999px;
   font-weight: 600;
@@ -289,9 +289,9 @@
   padding: 10px 16px;
   min-height: 44px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid color-mix(in srgb, var(--color-text) 18%, transparent);
   background: var(--st-input);
-  color: #ffffff;
+  color: var(--color-text);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -300,7 +300,7 @@
 
 .secondary:hover:not(:disabled) {
   border-color: var(--st-accent-deep);
-  background: #242426;
+  background: var(--color-surface-2);
 }
 
 .secondary:disabled {
@@ -309,23 +309,23 @@
 }
 
 .group .secondary {
-  border-color: rgba(255, 255, 255, 0.18);
-  color: #ffffff;
-  background: #121212;
+  border-color: color-mix(in srgb, var(--color-text) 18%, transparent);
+  color: var(--color-text);
+  background: var(--color-surface);
 }
 
 .group .secondary:hover:not(:disabled) {
   border-color: var(--st-accent-deep);
-  background: rgba(142, 33, 53, 0.18);
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
 .error {
-  color: #ff8a9a;
+  color: var(--color-primary-fg);
   margin: 10px 0;
   padding: 10px 14px;
   border-radius: 12px;
-  background: rgba(168, 40, 60, 0.15);
-  border: 1px solid rgba(168, 40, 60, 0.35);
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
   font-size: 13px;
 }
 
@@ -342,7 +342,7 @@
   margin: 0;
   font-size: 22px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text);
   letter-spacing: -0.02em;
 }
 
@@ -361,7 +361,7 @@
 }
 
 .stepper::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: color-mix(in srgb, var(--color-text) 20%, transparent);
   border-radius: 999px;
 }
 
@@ -381,24 +381,24 @@
 
 .stepLink:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.35);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 /* 功能注释：步骤条对齐创作圈导航——未选暗面，当前酒红底 */
 .step {
   border: 1px solid transparent;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--color-text-secondary);
   background: var(--st-surface);
 }
 
 .step:hover {
-  color: #ffffff;
-  background: #222226;
+  color: var(--color-text);
+  background: var(--color-surface-2);
 }
 
 .stepActive {
   border: 1px solid transparent;
-  color: #ffffff;
+  color: var(--color-on-primary);
   background: var(--st-accent-deep);
 }
 
@@ -422,13 +422,13 @@
   flex: 0 0 16px;
   width: 16px;
   height: 1px;
-  background: rgba(255, 255, 255, 0.16);
+  background: color-mix(in srgb, var(--color-text) 16%, transparent);
 }
 
 .themeTagsPanel {
   margin: 0 0 14px;
   padding: 18px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
   border-radius: 16px;
   background: var(--st-surface);
   color: var(--st-text);
@@ -445,7 +445,7 @@
 
 .themeTagsLabel {
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text);
   font-size: 15px;
 }
 
@@ -475,9 +475,9 @@
   padding: 12px 8px;
   min-height: 48px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: 1px solid color-mix(in srgb, var(--color-text) 22%, transparent);
   background: var(--st-input);
-  color: rgba(255, 255, 255, 0.92);
+  color: color-mix(in srgb, var(--color-text) 92%, transparent);
   font-size: 13px;
   line-height: 1.2;
   cursor: pointer;
@@ -491,26 +491,26 @@
 }
 
 .themeTagChip:hover {
-  border-color: rgba(168, 40, 60, 0.55);
-  color: #ffffff;
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+  color: var(--color-text);
 }
 
 /* 功能注释：选中标签实心酒红，对齐图1作品标签 */
 .themeTagChipActive {
   border-color: var(--st-accent-deep);
   background: var(--st-accent-deep);
-  color: #ffffff;
+  color: var(--color-on-primary);
   font-weight: 600;
 }
 
 .themeTagError {
   margin-top: 10px;
-  color: #ff8a9a;
+  color: var(--color-primary-fg);
   font-size: 13px;
 }
 
 .requiredHighlight {
-  box-shadow: 0 0 0 2px rgba(194, 58, 80, 0.45);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 @media (max-width: 1080px) {

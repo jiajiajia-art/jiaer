@@ -42,22 +42,22 @@ import {
 } from '../../utils/operatorReportChart';
 
 const ACTIVITY_COLORS: Record<string, string> = {
-  submission: '#c9733f',
-  pv: '#2f81f7',
-  comment: '#23d18b',
-  share: '#b15cff',
-  interaction: '#d05f2d',
+  submission: 'var(--color-highlight)',
+  pv: 'var(--color-info)',
+  comment: 'var(--color-success)',
+  share: 'var(--color-accent)',
+  interaction: 'var(--color-highlight)',
 };
 
 const RECHARGE_COLORS: Record<string, string> = {
-  recharge: '#2f81f7',
-  orders: '#d29922',
-  users: '#23a26d',
+  recharge: 'var(--color-info)',
+  orders: 'var(--color-highlight)',
+  users: 'var(--color-success)',
 };
 
 const FHL_RETENTION_COLORS: Record<string, string> = {
-  nextDayRetentionPct: '#2f81f7',
-  thirdDayRetentionPct: '#d05f2d',
+  nextDayRetentionPct: 'var(--color-info)',
+  thirdDayRetentionPct: 'var(--color-highlight)',
 };
 
 const RETENTION_DAY_OPTIONS = [1, 7] as const;
@@ -1101,7 +1101,7 @@ const OperatorReports: React.FC = () => {
                         type="monotone"
                         dataKey={series.key}
                         name={t(`operator.reports.metrics.${series.key}`, { defaultValue: series.label })}
-                        stroke={ACTIVITY_COLORS[series.key] || '#888'}
+                        stroke={ACTIVITY_COLORS[series.key] || 'var(--color-text-muted)'}
                         strokeWidth={2}
                         dot={false}
                       />
@@ -1130,7 +1130,7 @@ const OperatorReports: React.FC = () => {
                     <XAxis dataKey="bucket" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 12 }} />
                     <Tooltip />
-                    <Bar dataKey="registration" name={t('operator.reports.registrationLabel')} fill="#d29922" />
+                    <Bar dataKey="registration" name={t('operator.reports.registrationLabel')} fill="var(--color-highlight)" />
                   </BarChart>
                 </ResponsiveContainer>,
               )}
@@ -1284,7 +1284,7 @@ const OperatorReports: React.FC = () => {
                       <XAxis type="number" tick={{ fontSize: 12 }} />
                       <YAxis dataKey="stepLabel" type="category" tick={{ fontSize: 12 }} width={118} />
                       <Tooltip />
-                      <Bar dataKey="users" name={t('operator.reports.fhlUsersLabel')} fill="#23a26d" radius={[0, 6, 6, 0]} />
+                      <Bar dataKey="users" name={t('operator.reports.fhlUsersLabel')} fill="var(--color-success)" radius={[0, 6, 6, 0]} />
                     </BarChart>
                   </ResponsiveContainer>,
                 )}
@@ -1427,7 +1427,7 @@ const OperatorReports: React.FC = () => {
                     <XAxis dataKey="bucket" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 12 }} />
                     <Tooltip />
-                    <Bar dataKey="value" name={t('operator.reports.consumptionLabel')} fill="#e8940f" />
+                    <Bar dataKey="value" name={t('operator.reports.consumptionLabel')} fill="var(--color-highlight)" />
                   </BarChart>
                 </ResponsiveContainer>,
               )}
@@ -1461,7 +1461,7 @@ const OperatorReports: React.FC = () => {
                       type="monotone"
                       dataKey="retentionRatePct"
                       name={t('operator.reports.retentionRateLabel')}
-                      stroke="#d05f2d"
+                      stroke="var(--color-highlight)"
                       strokeWidth={2}
                       dot={{ r: 3 }}
                     />
@@ -1498,7 +1498,7 @@ const OperatorReports: React.FC = () => {
                       type="monotone"
                       dataKey="retentionRatePct"
                       name={t('operator.reports.retentionRateLabel')}
-                      stroke="#c9733f"
+                      stroke="var(--color-highlight)"
                       strokeWidth={2}
                       dot={{ r: 3 }}
                     />
@@ -1578,7 +1578,7 @@ const OperatorReports: React.FC = () => {
                     <Bar
                       dataKey="totalAmount"
                       name={t('operator.reports.rechargePlanAmountLabel')}
-                      fill="#d07a30"
+                      fill="var(--color-highlight)"
                       radius={[0, 6, 6, 0]}
                     />
                   </BarChart>
@@ -1633,7 +1633,7 @@ const OperatorReports: React.FC = () => {
                     <Bar
                       dataKey="totalAmount"
                       name={t('operator.reports.rechargeTypeAmountLabel')}
-                      fill="#2f81f7"
+                      fill="var(--color-info)"
                       radius={[0, 6, 6, 0]}
                     />
                   </BarChart>

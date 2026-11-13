@@ -561,15 +561,15 @@ export default function DeveloperExternalGames() {
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 10, right: 18, bottom: 0, left: 0 }}>
-                <CartesianGrid stroke="#e7edf5" strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#69778c' }} tickMargin={8} />
-                <YAxis tick={{ fontSize: 12, fill: '#69778c' }} tickFormatter={formatCurrencyChartValue} width={56} />
+                <CartesianGrid stroke="var(--color-text)" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="date" tick={{ fontSize: 12, fill: 'var(--color-text-muted)' }} tickMargin={8} />
+                <YAxis tick={{ fontSize: 12, fill: 'var(--color-text-muted)' }} tickFormatter={formatCurrencyChartValue} width={56} />
                 <Tooltip formatter={formatRechargeTooltip} labelFormatter={(label) => `日期 ${label}`} />
                 <Line
                   type="monotone"
                   dataKey="amount"
                   name="充值金额"
-                  stroke="#2f81f7"
+                  stroke="var(--color-info)"
                   strokeWidth={2.5}
                   dot={{ r: 3 }}
                   activeDot={{ r: 5 }}
@@ -605,15 +605,15 @@ export default function DeveloperExternalGames() {
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 10, right: 18, bottom: 0, left: 0 }}>
-                <CartesianGrid stroke="#e7edf5" strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#69778c' }} tickMargin={8} />
-                <YAxis tick={{ fontSize: 12, fill: '#69778c' }} tickFormatter={formatDiamondChartValue} width={70} />
+                <CartesianGrid stroke="var(--color-text)" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="date" tick={{ fontSize: 12, fill: 'var(--color-text-muted)' }} tickMargin={8} />
+                <YAxis tick={{ fontSize: 12, fill: 'var(--color-text-muted)' }} tickFormatter={formatDiamondChartValue} width={70} />
                 <Tooltip formatter={formatDiamondTooltip} labelFormatter={(label) => `日期 ${label}`} />
                 <Line
                   type="monotone"
                   dataKey="diamonds"
                   name="消耗 KK币"
-                  stroke="#d29922"
+                  stroke="var(--color-highlight)"
                   strokeWidth={2.5}
                   dot={{ r: 3 }}
                   activeDot={{ r: 5 }}

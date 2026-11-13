@@ -29,7 +29,7 @@
     right: 8px;
     width: 24px;
     height: 24px;
-    background: rgba(0, 0, 0, 0.4);
+    background: color-mix(in srgb, var(--color-shadow) 40%, transparent);
     border-radius: 50%;
     opacity: 0;
     transition: opacity 0.2s ease;

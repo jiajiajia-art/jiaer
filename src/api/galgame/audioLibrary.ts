@@ -1,5 +1,6 @@
 /**
- * 运营平台音频库 API：BGM / 音效 / 环境音；下架不删文件，已引用作品仍可播。
+ * 运营音频库 API：平台公共曲库（背景音乐 / 短音效 / 环境氛围音）。
+ * 上架曲目出现在 Romance 编辑器「音乐 → 平台音乐素材库」，下架后不再可选；已引用的作品照常播放到后端删除文件为止。
  */
 import { HOST_ADDRESS } from '../../config';
 
@@ -8,17 +9,30 @@ export type AudioLibraryKind = 'bgm' | 'sfx' | 'amb';
 export type AudioLibraryItem = {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   audioUrl: string;
   kind: AudioLibraryKind;
   loop?: boolean;
-  durationSec?: number | null;
+  durationSec?: number;
   tags?: string[];
   authorKul?: string;
   status: 'active' | 'disabled';
   sortOrder?: number;
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type AudioLibraryInput = {
+  name: string;
+  description?: string;
+  audioUrl: string;
+  kind: AudioLibraryKind;
+  loop?: boolean;
+  durationSec?: number;
+  tags?: string[];
+  authorKul?: string;
+  sortOrder?: number;
+  status?: string;
 };
 
 async function parseJson(res: Response) {
@@ -38,88 +52,35 @@ function authHeaders(token?: string | null, json = true): HeadersInit {
 }
 
 export const audioLibraryApi = {
-  list: async (
-    token: string | null | undefined,
-    opts: { q?: string; kind?: string; status?: string; includeDisabled?: boolean } = {},
-  ) => {
+  list: async (token: string, opts: { q?: string; kind?: string; includeDisabled?: boolean } = {}) => {
     const params = new URLSearchParams();
     if (opts.q) params.set('q', opts.q);
     if (opts.kind) params.set('kind', opts.kind);
-    if (opts.status) params.set('status', opts.status);
     if (opts.includeDisabled) params.set('includeDisabled', '1');
     const qs = params.toString();
-    const res = await fetch(`${HOST_ADDRESS}/api/audio-library${qs ? `?${qs}` : ''}`, {
-      headers: authHeaders(token, false),
-    });
+    const res = await fetch(`${HOST_ADDRESS}/api/audio-library${qs ? `?${qs}` : ''}`, { headers: authHeaders(token, false) });
     return parseJson(res);
   },
-  create: async (
-    token: string,
-    body: {
-      name: string;
-      description?: string;
-      audioUrl: string;
-      kind: AudioLibraryKind;
-      loop?: boolean;
-      durationSec?: number | null;
-      tags?: string[];
-      authorKul?: string;
-      sortOrder?: number;
-      status?: string;
-    },
-  ) => {
-    const res = await fetch(`${HOST_ADDRESS}/api/audio-library`, {
-      method: 'POST',
-      headers: authHeaders(token),
-      body: JSON.stringify(body),
-    });
+  create: async (token: string, body: AudioLibraryInput) => {
+    const res = await fetch(`${HOST_ADDRESS}/api/audio-library`, { method: 'POST', headers: authHeaders(token), body: JSON.stringify(body) });
     return parseJson(res);
   },
-  update: async (
-    token: string,
-    id: string,
-    body: Partial<{
-      name: string;
-      description: string;
-      audioUrl: string;
-      kind: AudioLibraryKind;
-      loop: boolean;
-      durationSec: number | null;
-      tags: string[];
-      authorKul: string;
-      sortOrder: number;
-      status: string;
-    }>,
-  ) => {
-    const res = await fetch(`${HOST_ADDRESS}/api/audio-library/${encodeURIComponent(id)}`, {
-      method: 'PUT',
-      headers: authHeaders(token),
-      body: JSON.stringify(body),
-    });
+  update: async (token: string, id: string, body: Partial<AudioLibraryInput>) => {
+    const res = await fetch(`${HOST_ADDRESS}/api/audio-library/${encodeURIComponent(id)}`, { method: 'PUT', headers: authHeaders(token), body: JSON.stringify(body) });
     return parseJson(res);
   },
   disable: async (token: string, id: string) => {
-    const res = await fetch(`${HOST_ADDRESS}/api/audio-library/${encodeURIComponent(id)}/disable`, {
-      method: 'POST',
-      headers: authHeaders(token, false),
-    });
+    const res = await fetch(`${HOST_ADDRESS}/api/audio-library/${encodeURIComponent(id)}/disable`, { method: 'POST', headers: authHeaders(token, false) });
     return parseJson(res);
   },
   enable: async (token: string, id: string) => {
-    const res = await fetch(`${HOST_ADDRESS}/api/audio-library/${encodeURIComponent(id)}/enable`, {
-      method: 'POST',
-      headers: authHeaders(token, false),
-    });
+    const res = await fetch(`${HOST_ADDRESS}/api/audio-library/${encodeURIComponent(id)}/enable`, { method: 'POST', headers: authHeaders(token, false) });
     return parseJson(res);
   },
   upload: async (token: string, file: File) => {
     const form = new FormData();
     form.append('file', file);
-    const res = await fetch(`${HOST_ADDRESS}/api/audio-library/upload`, {
-      method: 'POST',
-      headers: authHeaders(token, false),
-      body: form,
-    });
+    const res = await fetch(`${HOST_ADDRESS}/api/audio-library/upload`, { method: 'POST', headers: authHeaders(token, false), body: form });
     return parseJson(res);
   },
 };

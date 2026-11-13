@@ -1,27 +1,27 @@
 /* 功能注释：提示词编辑表单对齐墨黑账本输入井，主按钮为酒红胶囊 */
 
 .panel {
-  --prompt-surface: #1A1A1A;
-  --prompt-input: #1C1C1E;
-  --prompt-accent: #8E2135;
-  --prompt-accent-hot: #A8283C;
+  --prompt-surface: var(--color-surface);
+  --prompt-input: var(--color-surface);
+  --prompt-accent: var(--color-primary-bold);
+  --prompt-accent-hot: var(--color-primary);
   display: flex;
   flex-direction: column;
   gap: 24px;
   max-width: 760px;
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .header h2 {
   margin: 0 0 4px;
   font-size: 1.6rem;
-  color: #ffffff;
+  color: var(--color-text);
   font-weight: 700;
 }
 
 .subtitle {
   margin: 0;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--color-text-secondary);
   font-size: 0.9rem;
 }
 
@@ -40,7 +40,7 @@
 .field > span {
   font-size: 0.92rem;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .fieldLabelRow {
@@ -49,7 +49,7 @@
   gap: 4px;
   font-size: 0.92rem;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .required {
@@ -59,23 +59,23 @@
 
 .field input[type='text'] {
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
   padding: 12px 14px;
   font-size: 0.95rem;
   font-family: inherit;
   background: var(--prompt-input);
-  color: #ffffff;
+  color: var(--color-text);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .field input[type='text']::placeholder {
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--color-text-muted);
 }
 
 .field input[type='text']:focus {
   outline: none;
   border-color: var(--prompt-accent);
-  box-shadow: 0 0 0 3px rgba(142, 33, 53, 0.2);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .field input[type='text']:disabled {
@@ -88,7 +88,7 @@
   align-items: center;
   gap: 8px;
   font-size: 0.92rem;
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .constantRow {
@@ -120,7 +120,7 @@
   border: none;
   border-radius: 50%;
   background: transparent;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--color-text-muted);
   cursor: help;
   transition: color 0.2s ease, background 0.2s ease;
 }
@@ -128,7 +128,7 @@
 .tipBtn:hover:not(:disabled),
 .tipBtn:focus-visible {
   color: var(--prompt-accent-hot);
-  background: rgba(142, 33, 53, 0.22);
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
   outline: none;
 }
 
@@ -147,11 +147,11 @@
   max-width: 280px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(0, 0, 0, 0.92);
-  color: #fff;
+  background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+  color: var(--color-text);
   font-size: 0.8rem;
   line-height: 1.5;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-shadow) 45%, transparent);
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
@@ -174,7 +174,7 @@
 }
 
 .descHint {
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--color-text-muted);
   font-size: 0.8rem;
 }
 
@@ -204,15 +204,15 @@
 
 .confirmBtn {
   background: var(--prompt-accent);
-  color: #ffffff;
+  color: var(--color-on-primary);
   border-color: transparent;
   min-width: 108px;
 }
 
 .cancelBtn {
   background: var(--prompt-input);
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.16);
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-text) 16%, transparent);
   min-width: 108px;
 }
 
@@ -222,7 +222,7 @@
 
 .cancelBtn:hover:not(:disabled) {
   border-color: var(--prompt-accent-hot);
-  background: rgba(142, 33, 53, 0.22);
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 
 .confirmBtn:active:not(:disabled),

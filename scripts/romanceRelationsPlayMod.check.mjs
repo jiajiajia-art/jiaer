@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
+import { readBackend, skipNoBackend } from './_backendRepo.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const romance = join(root, 'Romance/src');
@@ -78,11 +79,8 @@ test('生成提示_勿让AI预置牵线方式', () => {
   assert.doesNotMatch(gen, /id:\s*"characters"[\s\S]{0,120}"relations"/);
 });
 
-test('后端官方种子_含pack-relations', () => {
-  const seed = readFileSync(
-    join(root, '../Interactive-fiction-backend/services/playMod/officialPlayModSeed.js'),
-    'utf8',
-  );
+test('后端官方种子_含pack-relations', { skip: skipNoBackend }, () => {
+  const seed = readBackend('services/playMod/officialPlayModSeed.js');
   assert.match(seed, /slug:\s*'pack-relations'/);
   assert.match(seed, /editor_panels:\s*\[['"]relations['"]\]/);
   assert.match(seed, /romanceAddonId:\s*'pack-relations'/);

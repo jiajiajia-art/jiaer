@@ -20,18 +20,18 @@
   min-width: 34px;
   height: 32px;
   padding: 0 10px;
-  border: 1px solid rgba(224, 61, 75, 0.18);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, transparent);
   border-radius: 8px;
-  background: #fff;
-  color: #333;
+  background: var(--color-surface);
+  color: var(--color-text);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
 }
 
 .toolBtn:hover:not(:disabled) {
-  border-color: var(--primary, #e03d4b);
-  color: var(--primary, #e03d4b);
+  border-color: var(--primary, var(--color-primary));
+  color: var(--primary, var(--color-primary));
 }
 
 .toolBtn:disabled {
@@ -40,13 +40,13 @@
 }
 
 .toolBtnPrimary {
-  border-color: var(--primary, #e03d4b);
-  background: color-mix(in srgb, var(--primary, #e03d4b) 12%, #fff);
-  color: var(--primary, #e03d4b);
+  border-color: var(--primary, var(--color-primary));
+  background: color-mix(in srgb, var(--primary, var(--color-primary)) 12%, var(--color-surface));
+  color: var(--primary, var(--color-primary));
 }
 
 .toolBtnPrimary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--primary, #e03d4b) 18%, #fff);
+  background: color-mix(in srgb, var(--primary, var(--color-primary)) 18%, var(--color-surface));
 }
 
 .sourceEditor {
@@ -56,13 +56,13 @@
   white-space: pre-wrap;
   word-break: break-word;
   resize: none;
-  background: #f7f7f8;
+  background: var(--color-bg);
 }
 
 .sourceHint {
   margin-right: auto;
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-muted);
 }
 
 .editorWrap {
@@ -83,7 +83,7 @@
   top: 14px;
   left: 16px;
   right: 16px;
-  color: rgba(0, 0, 0, 0.38);
+  color: var(--color-text-muted);
   font-size: 15px;
   line-height: 1.5;
   pointer-events: none;
@@ -99,12 +99,12 @@
   overflow-y: auto;
   resize: none;
   padding: 14px 16px;
-  border: 1px solid rgba(224, 61, 75, 0.16);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 16%, transparent);
   border-radius: 12px;
   font-size: 15px;
   line-height: 1.65;
-  background: #fafafa;
-  color: #333;
+  background: var(--color-bg);
+  color: var(--color-text);
   outline: none;
   box-sizing: border-box;
   transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
@@ -112,9 +112,9 @@
 }
 
 .editor:focus {
-  border-color: var(--primary, #e03d4b);
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+  border-color: var(--primary, var(--color-primary));
+  background: var(--color-surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
 .resizeHandle {
@@ -131,7 +131,7 @@
   align-items: center;
   justify-content: center;
   background: transparent;
-  color: rgba(224, 61, 75, 0.72);
+  color: color-mix(in srgb, var(--color-primary) 72%, transparent);
   cursor: ns-resize;
   z-index: 3;
   touch-action: none;
@@ -146,8 +146,8 @@
 
 .resizeHandle:hover,
 .resizeHandle:focus-visible {
-  background: rgba(224, 61, 75, 0.1);
-  color: rgba(224, 61, 75, 0.95);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  color: color-mix(in srgb, var(--color-primary) 95%, transparent);
   outline: none;
 }
 
@@ -211,5 +211,5 @@
 
 .count {
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-muted);
 }

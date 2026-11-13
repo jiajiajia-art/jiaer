@@ -35,7 +35,8 @@ export interface UserGameData {
     favorite_count?: number;
     /** 分享数（服务端可选，缺省时详情页展示 0） */
     share_count?: number;
-    reaction: string;
+    /** 当前用户对作品的点赞态：推荐 'like' / '0'；前端也兼容 1 / true / 'liked' */
+    reaction: string | number | boolean | null;
     avatarUrl: string;
     total_uv_count?: number;
     total_pv_count?: number;

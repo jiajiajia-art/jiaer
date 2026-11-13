@@ -7,8 +7,8 @@
   justify-content: center;
   padding: 24px 16px;
   background:
-    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(120, 40, 200, 0.35), transparent 70%),
-    rgba(18, 4, 42, 0.86);
+    radial-gradient(ellipse 80% 60% at 50% 40%, color-mix(in srgb, var(--color-accent) 35%, transparent), transparent 70%),
+    color-mix(in srgb, var(--color-surface) 86%, transparent);
   backdrop-filter: blur(6px);
   animation: previewOverlayIn 0.2s ease-out;
 }
@@ -19,12 +19,12 @@
   padding: 28px 22px 20px;
   text-align: center;
   border-radius: 22px;
-  border: 2px solid rgba(126, 182, 255, 0.75);
-  background: linear-gradient(165deg, #5b2ad4 0%, #8a1fc4 52%, #d43a9a 100%);
+  border: 2px solid color-mix(in srgb, var(--color-info) 75%, transparent);
+  background: linear-gradient(165deg, var(--color-accent) 0%, var(--color-accent) 52%, var(--color-accent) 100%);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.1) inset,
-    0 22px 56px rgba(12, 0, 40, 0.65),
-    0 0 48px rgba(126, 182, 255, 0.22);
+    0 0 0 1px color-mix(in srgb, var(--color-text) 10%, transparent) inset,
+    0 22px 56px color-mix(in srgb, var(--color-shadow) 65%, transparent),
+    0 0 48px color-mix(in srgb, var(--color-info) 22%, transparent);
   animation: previewStageIn 0.32s cubic-bezier(0.18, 0.92, 0.28, 1);
 }
 
@@ -42,14 +42,14 @@
   top: 10px;
   left: 10px;
   border-width: 2.5px 0 0 2.5px;
-  border-color: #7eb6ff;
+  border-color: var(--color-info);
 }
 
 .stage::after {
   right: 10px;
   bottom: 10px;
   border-width: 0 2.5px 2.5px 0;
-  border-color: #e070ff;
+  border-color: var(--color-accent);
 }
 
 .close {
@@ -59,10 +59,10 @@
   z-index: 2;
   width: 36px;
   height: 36px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: 1px solid color-mix(in srgb, var(--color-text) 28%, transparent);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.16);
-  color: #fff;
+  background: color-mix(in srgb, var(--color-text) 16%, transparent);
+  color: var(--color-text);
   font-size: 22px;
   line-height: 1;
   cursor: pointer;
@@ -70,8 +70,8 @@
 
 .close:hover,
 .close:focus-visible {
-  background: rgba(255, 255, 255, 0.28);
-  outline: 2px solid #ffd54f;
+  background: color-mix(in srgb, var(--color-text) 28%, transparent);
+  outline: 2px solid var(--color-highlight);
   outline-offset: 2px;
 }
 
@@ -83,10 +83,10 @@
   align-items: center;
   justify-content: center;
   border-radius: 18px;
-  background: #fff;
+  background: var(--color-surface);
   box-shadow:
-    0 12px 28px rgba(20, 0, 50, 0.35),
-    0 0 0 3px rgba(255, 213, 79, 0.35);
+    0 12px 28px color-mix(in srgb, var(--color-shadow) 35%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--color-highlight) 35%, transparent);
   animation: previewImgPop 0.38s cubic-bezier(0.2, 0.95, 0.25, 1);
 }
 
@@ -102,8 +102,8 @@
   font-size: clamp(18px, 5vw, 22px);
   font-weight: 900;
   letter-spacing: 0.04em;
-  color: #fff;
-  text-shadow: 0 2px 10px rgba(20, 0, 60, 0.4);
+  color: var(--color-on-media);
+  text-shadow: 0 2px 10px color-mix(in srgb, var(--color-shadow) 40%, transparent);
 }
 
 .claimBox {
@@ -111,8 +111,8 @@
   padding: 12px 14px;
   text-align: left;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: color-mix(in srgb, var(--color-text) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-text) 22%, transparent);
 }
 
 .claimLabel {
@@ -120,7 +120,7 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
-  color: #ffd54f;
+  color: var(--color-highlight);
   text-transform: none;
 }
 
@@ -128,21 +128,21 @@
   margin: 0 0 6px;
   font-size: 15px;
   font-weight: 800;
-  color: #fff;
+  color: var(--color-text);
 }
 
 .claimDetail {
   margin: 0;
   font-size: 13px;
   line-height: 1.55;
-  color: rgba(255, 255, 255, 0.92);
+  color: color-mix(in srgb, var(--color-text) 92%, transparent);
 }
 
 .claimLinkNote {
   margin: 8px 0 0;
   font-size: 12px;
   line-height: 1.45;
-  color: #ffe082;
+  color: var(--color-highlight);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -150,7 +150,7 @@
 .hint {
   margin: 0;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--color-text-secondary);
 }
 
 @keyframes previewOverlayIn {

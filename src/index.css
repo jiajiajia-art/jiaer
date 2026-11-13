@@ -11,25 +11,26 @@
   --mobile-content-image-guard-shift-y: -2.5%;
   --mobile-content-image-guard-height: clamp(38px, 11vw, 84px);
   --mobile-content-image-guard-height-sm: clamp(28px, 9vw, 56px);
-  --mobile-content-image-guard-dark-gradient: linear-gradient(180deg, rgba(7, 10, 15, 0) 0%, rgba(7, 10, 15, 0.18) 44%, rgba(7, 10, 15, 0.94) 100%);
-  --mobile-content-image-guard-light-gradient: linear-gradient(180deg, rgba(255, 248, 249, 0) 0%, rgba(255, 248, 249, 0.76) 48%, rgba(255, 248, 249, 0.99) 100%);
+  --mobile-content-image-guard-dark-gradient: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-text) 18%, transparent) 44%, color-mix(in srgb, var(--color-surface) 94%, transparent) 100%);
+  --mobile-content-image-guard-light-gradient: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-surface) 76%, transparent) 48%, color-mix(in srgb, var(--color-surface) 99%, transparent) 100%);
   /* 主题色 */
-  --primary: #E03D4B;
-  --primary-light: #FF5A67;
-  --primary-dark: #C42D3A;
-  --primary-glow: rgba(224, 61, 75, 0.35);
+  /* 旧变量名指向主题令牌：沿用 var(--primary) 的组件随主题切换，无需改动 */
+  --primary: var(--color-primary);
+  --primary-light: var(--color-primary-light);
+  --primary-dark: var(--color-primary-bold);
+  --primary-glow: color-mix(in srgb, var(--color-primary) 35%, transparent);
 
   /* 文字色 */
-  --text-primary: #1A1D21;
-  --text-secondary: rgba(26, 29, 33, 0.65);
-  --text-muted: rgba(26, 29, 33, 0.45);
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-muted);
 
   /* 边框与阴影 */
-  --border-light: rgba(26, 29, 33, 0.08);
-  --border-medium: rgba(26, 29, 33, 0.12);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.04);
-  --shadow-primary: 0 4px 20px rgba(224, 61, 75, 0.25);
+  --border-light: color-mix(in srgb, var(--color-text) 8%, transparent);
+  --border-medium: color-mix(in srgb, var(--color-text) 12%, transparent);
+  --shadow-sm: 0 1px 3px color-mix(in srgb, var(--color-shadow) 4%, transparent), 0 1px 2px color-mix(in srgb, var(--color-shadow) 6%, transparent);
+  --shadow-md: 0 4px 12px color-mix(in srgb, var(--color-shadow) 5%, transparent), 0 2px 4px color-mix(in srgb, var(--color-shadow) 4%, transparent);
+  --shadow-primary: 0 4px 20px color-mix(in srgb, var(--color-primary) 25%, transparent);
 
   /* 过渡 */
   --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
@@ -61,14 +62,14 @@ html,
 
 html, body { height: 100%; }
 /* 功能注释：全站壳底改为黑，避免暗色页内容不足时底部露出白底 */
-body { background: #000000; color: #ffffff; overflow: hidden; }
+body { background: var(--color-bg); color: var(--color-text); overflow: hidden; }
 
 #root {
   min-height: 100vh;
   max-height: 100vh;
   overflow-x: hidden;
   overflow-y: auto;
-  background: #000000;
+  background: var(--color-bg);
 }
 
 /* 与 Navbar.module.css 手机高度 60px 对齐；底栏 72px + Home Indicator */
@@ -89,12 +90,12 @@ body { background: #000000; color: #ffffff; overflow: hidden; }
 }
 
 ::-webkit-scrollbar-thumb {
-  scrollbar-color: rgba(139, 121, 94, 0.5) #E8DBB7;
+  scrollbar-color: color-mix(in srgb, var(--color-surface) 50%, transparent) var(--color-highlight);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  scrollbar-color: rgba(139, 121, 94, 0.5) #E8DBB7;
+  scrollbar-color: color-mix(in srgb, var(--color-surface) 50%, transparent) var(--color-highlight);
 }
 
 /* 动画 */
@@ -146,7 +147,7 @@ body { background: #000000; color: #ffffff; overflow: hidden; }
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.85);
+  background: color-mix(in srgb, var(--color-surface) 85%, transparent);
   backdrop-filter: blur(4px);
   display: flex;
   flex-direction: column;
@@ -159,7 +160,7 @@ body { background: #000000; color: #ffffff; overflow: hidden; }
 .loadingSpinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #f3f3f3;
+  border: 3px solid var(--color-text);
   border-top: 3px solid var(--primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -179,7 +180,7 @@ body { background: #000000; color: #ffffff; overflow: hidden; }
 
 .loadingHint {
   margin-top: 6px;
-  color: rgba(0, 0, 0, 0.58);
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.5;
   text-align: center;
@@ -227,3 +228,13 @@ body { background: #000000; color: #ffffff; overflow: hidden; }
     transform-origin: center center;
   }
 }
+
+/* ================= 全站细节统一 ================= */
+::selection { background: color-mix(in srgb, var(--color-primary) 35%, transparent); color: var(--color-on-primary); }
+* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--color-text) 18%, transparent) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--color-text) 16%, transparent); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--color-text) 28%, transparent); }
+button { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline-color: color-mix(in srgb, var(--color-primary) 60%, transparent); }

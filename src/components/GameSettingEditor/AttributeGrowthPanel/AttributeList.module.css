@@ -13,7 +13,7 @@
     position: relative;
     padding: 14px 14px;
     border-radius: 14px;
-    background: #f9fafb;
+    background: var(--color-bg);
     border: 1px solid var(--border-light);
     transition: all 0.15s ease;
     cursor: pointer;
@@ -27,8 +27,8 @@
 
 .attrItemActive {
     border-color: var(--primary);
-    background: rgba(224, 61, 75, 0.03);
-    box-shadow: 0 0 0 1px rgba(224, 61, 75, 0.15);
+    background: color-mix(in srgb, var(--color-primary) 3%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 15%, transparent);
 }
 
 .attrMain {
@@ -80,9 +80,9 @@
     right: 12px;
     padding: 4px 10px;
     border-radius: 999px;
-    border: 1px solid rgba(220, 53, 69, 0.3);
-    background: #fff;
-    color: #dc3545;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
+    background: var(--color-surface);
+    color: var(--color-primary);
     font-size: 11px;
     cursor: pointer;
     transition: all var(--transition-fast, 0.15s ease-out);
@@ -90,9 +90,9 @@
 }
 
 .dangerGhost:hover {
-    background: rgba(220, 53, 69, 0.08);
-    border-color: rgba(220, 53, 69, 0.5);
-    color: #c82333;
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 50%, transparent);
+    color: var(--color-primary);
 }
 
 .emptyState {

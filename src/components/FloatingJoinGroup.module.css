@@ -11,8 +11,8 @@
     padding: 18px 12px 16px;
     border: none;
     border-radius: 24px;
-    background: linear-gradient(180deg, #ffffff 0%, #f3f4f6 100%);
-    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+    background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg) 100%);
+    box-shadow: 0 12px 32px color-mix(in srgb, var(--color-shadow) 14%, transparent);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -34,7 +34,7 @@
 
 .floatingButton:hover {
     transform: translateX(-2px);
-    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+    box-shadow: 0 16px 40px color-mix(in srgb, var(--color-shadow) 18%, transparent);
 }
 
 .floatingButton:focus {
@@ -42,7 +42,7 @@
 }
 
 .floatingButton:focus-visible {
-    outline: 2px solid rgba(18, 183, 245, 0.8);
+    outline: 2px solid color-mix(in srgb, var(--color-info) 80%, transparent);
     outline-offset: 3px;
 }
 
@@ -51,11 +51,11 @@
 }
 
 .floatingButtonDragging {
-    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.22);
+    box-shadow: 0 18px 42px color-mix(in srgb, var(--color-shadow) 22%, transparent);
 }
 
 .label {
-    color: #333333;
+    color: var(--color-text);
     font-size: 18px;
     font-weight: 600;
     line-height: 1.1;
@@ -95,7 +95,7 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: rgba(7, 193, 96, 0.12);
+    background: color-mix(in srgb, var(--color-success) 12%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -109,13 +109,13 @@
 }
 
 .qqIconWrap {
-    background: rgba(18, 183, 245, 0.14);
+    background: color-mix(in srgb, var(--color-info) 14%, transparent);
 }
 
 .wechatIcon {
     width: 26px;
     height: 26px;
-    fill: #07c160;
+    fill: var(--color-success);
     display: block;
 }
 
@@ -147,7 +147,7 @@
     position: fixed;
     inset: 0;
     z-index: 1300;
-    background: rgba(17, 24, 39, 0.48);
+    background: color-mix(in srgb, var(--color-surface) 48%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -159,8 +159,8 @@
     width: min(92vw, 560px);
     padding: 28px 24px 24px;
     border-radius: 24px;
-    background: #ffffff;
-    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+    background: var(--color-surface);
+    box-shadow: 0 24px 60px color-mix(in srgb, var(--color-shadow) 22%, transparent);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -172,7 +172,7 @@
     font-size: 22px;
     line-height: 1.4;
     font-weight: 600;
-    color: #333333;
+    color: var(--color-text);
     text-align: center;
 }
 
@@ -187,7 +187,7 @@
     width: 100%;
     padding: 14px;
     border-radius: 20px;
-    background: linear-gradient(180deg, #fafafa 0%, #f3f4f6 100%);
+    background: linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg) 100%);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -202,13 +202,13 @@
     object-fit: contain;
     display: block;
     border-radius: 14px;
-    background: #ffffff;
+    background: var(--color-surface);
 }
 
 .qrLabel {
     font-size: 15px;
     font-weight: 600;
-    color: #4b5563;
+    color: var(--color-text-secondary);
 }
 
 .promotionHintButton {
@@ -216,7 +216,7 @@
     padding: 0;
     border: none;
     background: none;
-    color: #2563eb;
+    color: var(--color-info);
     font-size: 15px;
     font-weight: 600;
     line-height: 1.6;
@@ -226,7 +226,7 @@
 }
 
 .promotionHintButton:hover {
-    color: #1d4ed8;
+    color: var(--color-info);
     opacity: 0.92;
 }
 
@@ -239,8 +239,8 @@
     padding: 12px 20px;
     border: none;
     border-radius: 999px;
-    background: #ffffff;
-    color: #000000;
+    background: var(--color-surface);
+    color: var(--color-text);
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
@@ -270,7 +270,7 @@
         min-height: 88px;
         padding: 10px 8px 12px;
         border-radius: 22px;
-        background: rgba(255, 255, 255, 0.6);
+        background: color-mix(in srgb, var(--color-surface) 60%, transparent);
         backdrop-filter: blur(5px);
         -webkit-backdrop-filter: blur(10px);
         gap: 8px;

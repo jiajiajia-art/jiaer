@@ -1717,7 +1717,7 @@
     "generateNowWithCost": "立即生成 · {{points}} 织梦豆",
     "generateTextOnlyWithCost": "只生成文本 · {{points}}织梦豆",
     "generateFullWorkCta": "一键生成完整作品",
-    "documentImportWithCost": "文档导入 · {{points}}织梦豆",
+    "documentImportWithCost": "文档导入（按实际用量计费）",
     "documentUploadTip": "支持 PDF / Word（.pdf / .docx），按实际消耗的 AI token 和平台定价结算织梦豆；解析失败不扣费。解析完成后自动跳转到「世界观表单」",
     "ideaGenerateCostHint": "生成成功后将扣除 {{points}} 织梦豆",
     "startGenerateWithCost": "开始生成 · {{points}} 织梦豆",
@@ -2230,6 +2230,11 @@
     "continueGame": "继续游戏",
     "selectStartMethod": "请选择开始方式",
     "newStart": "新的开始",
+    "startGame": "开始游戏",
+    "autoSaveSlot": "自动存档",
+    "autoSaveSlotHint": "云端 · 上次游玩进度",
+    "restartConfirmTitle": "开始新游戏？",
+    "restartConfirmMessage": "你在云端有上次的游玩进度，开始新游戏将覆盖自动存档（手动存档不受影响）。如需继续上次进度，请点「读取存档」。",
     "continueExperience": "继续体验",
     "loadSave": "读取存档",
     "replay": "回放",
@@ -2293,6 +2298,42 @@
       "other": "其他"
     },
     "favoriteFailed": "收藏操作失败，请稍后重试",
+    "notListed": "作品未上架",
+    "notListedHint": "请从「全部作品」进入已上架作品。",
+    "ivgAccessFailed": "获取付费信息失败，请稍后重试",
+    "ivgNoPaymentMethod": "暂无可用支付方式",
+    "ivgAlreadyOwned": "已购买，可直接游玩",
+    "ivgUnlockSuccess": "解锁成功",
+    "shelfSaveLoadFailed": "该存档读取失败（可能已损坏或版本不兼容），请选择其他存档",
+    "ivgBuyoutTitle": "确认买断游玩",
+    "ivgBuyoutMessage": "解锁后将永久绑定当前账号，请确认支付后进入游戏。",
+    "processing": "处理中...",
+    "ivgConfirmPay": "确认支付{{label}}",
+    "ivgErrors": {
+      "insufficientPoints": "织梦豆不足",
+      "insufficientDiamonds": "KK币不足",
+      "paymentUnavailable": "当前支付方式不可用",
+      "buyoutNotForSale": "该互动影游暂不支持买断",
+      "directoryNotForSale": "该付费内容暂不可购买",
+      "freeUnlockUnavailable": "当前内容暂不支持免费解锁",
+      "invalidCurrency": "支付方式无效",
+      "invalidPurchaseType": "购买类型无效",
+      "invalidParam": "支付参数无效，请刷新后重试",
+      "authRequired": "请先登录后再解锁",
+      "notFound": "互动影游不存在或已下架",
+      "forbidden": "暂无权限解锁该互动影游",
+      "unlockFailed": "解锁失败，请稍后重试"
+    },
+    "listing": {
+      "unpublished": "未上架",
+      "pending_review": "审核中",
+      "rejected": "未通过",
+      "delisted": "已下架",
+      "taken_down": "已下架",
+      "deleted": "已下架"
+    },
+    "likeAdded": "已点赞",
+    "likeRemoved": "已取消点赞",
     "likeFailed": "点赞失败，请稍后重试",
     "ratingNone": "暂无评分",
     "ratingCount": "{{count}}人评",
@@ -3033,7 +3074,7 @@
   },
   "creatorBenefits": {
     "title": "创作者等级与权益",
-    "subtitle": "等级按季度评定，AI 文游统计游玩轮次，其他模式统计浏览量。",
+    "subtitle": "等级按季度评定，AI 文游统计游玩轮次，其他模式统计访问量。",
     "back": "返回个人中心",
     "loading": "正在加载创作者权益...",
     "loadFailed": "创作者权益加载失败",
@@ -3050,9 +3091,9 @@
     "effectiveCount": "本季度有效量",
     "growthValue": "成长值",
     "quarterTitle": "{{quarter}} 等级统计",
-    "quarterHint": "AI 文游按成功生成轮次统计，其他公开玩法按浏览量统计；失败、超时、违规拦截和重复回调不计入。",
+    "quarterHint": "AI 文游按成功生成轮次统计，其他公开玩法按访问量统计；失败、超时、违规拦截和重复回调不计入。",
     "txtPlayRounds": "AI 文游轮次",
-    "otherModePv": "其他模式浏览量",
+    "otherModePv": "其他模式访问量",
     "ratioTitle": "当前权益",
     "ratioHint": "每笔收益按消费发生时的分成比例快照计算，后续比例变更不追溯历史流水。",
     "guideOpen": "查看创作者等级与权益",
@@ -3555,5 +3596,22 @@
       "paginationTotalOnly": "共 {{total}} 条",
       "paginationHiddenHint": "超过 20 条后显示翻页"
     }
+  },
+  "settings": {
+    "title": "外观与语言",
+    "theme": "主题色",
+    "mode": "深浅模式",
+    "themes": {
+      "default": "酒红",
+      "ocean": "海蓝",
+      "amber": "琥珀",
+      "crimson": "绯夜"
+    },
+    "modes": {
+      "light": "浅色",
+      "dark": "深色",
+      "system": "跟随系统"
+    },
+    "skin": "皮肤"
   }
 }

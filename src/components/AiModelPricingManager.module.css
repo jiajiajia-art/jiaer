@@ -1,10 +1,10 @@
 .root {
-  --pricing-ink: #2f241d;
-  --pricing-muted: #7c6655;
-  --pricing-accent: #b96234;
-  --pricing-accent-dark: #91451f;
-  --pricing-line: rgba(164, 103, 63, 0.2);
-  --pricing-paper: rgba(255, 252, 248, 0.96);
+  --pricing-ink: var(--color-text);
+  --pricing-muted: var(--color-text-secondary);
+  --pricing-accent: var(--color-highlight);
+  --pricing-accent-dark: var(--color-highlight);
+  --pricing-line: color-mix(in srgb, var(--color-highlight) 20%, transparent);
+  --pricing-paper: color-mix(in srgb, var(--color-surface) 96%, transparent);
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -25,10 +25,10 @@
   justify-content: space-between;
   gap: 24px;
   padding: 28px 30px;
-  border: 1px solid rgba(201, 139, 92, 0.24);
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 24%, transparent);
   border-radius: 24px;
-  background: #fff;
-  box-shadow: 0 20px 56px rgba(98, 59, 33, 0.1);
+  background: var(--color-surface);
+  box-shadow: 0 20px 56px color-mix(in srgb, var(--color-highlight) 10%, transparent);
 }
 
 .hero::after {
@@ -36,7 +36,7 @@
   position: absolute;
   right: 24px;
   top: -22px;
-  color: rgba(121, 67, 35, 0.05);
+  color: color-mix(in srgb, var(--color-highlight) 5%, transparent);
   font-family: Georgia, 'Times New Roman', serif;
   font-size: clamp(72px, 10vw, 118px);
   font-weight: 700;
@@ -83,10 +83,10 @@
   display: inline-flex;
   margin-top: 14px;
   padding: 7px 10px;
-  border: 1px solid rgba(185, 98, 52, 0.18);
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 18%, transparent);
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.48);
-  color: #795239;
+  background: color-mix(in srgb, var(--color-text) 48%, transparent);
+  color: var(--color-highlight);
   font-size: 12px;
   font-weight: 600;
 }
@@ -118,34 +118,34 @@
 
 .primaryButton {
   border: 1px solid var(--pricing-accent);
-  background: var(--pricing-accent);
-  color: #fff;
-  box-shadow: 0 10px 22px rgba(169, 77, 35, 0.2);
+  background: color-mix(in srgb, var(--pricing-accent) 68%, var(--color-shadow));
+  color: var(--color-on-primary);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--color-highlight) 20%, transparent);
 }
 
 .primaryButton:hover:not(:disabled),
 .dangerButton:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 13px 26px rgba(169, 77, 35, 0.26);
+  box-shadow: 0 13px 26px color-mix(in srgb, var(--color-highlight) 26%, transparent);
 }
 
 .secondaryButton {
   border: 1px solid var(--pricing-line);
-  background: rgba(255, 255, 255, 0.68);
+  background: color-mix(in srgb, var(--color-surface) 68%, transparent);
   color: var(--pricing-ink);
 }
 
 .secondaryButton:hover:not(:disabled),
 .rowActions button:hover:not(:disabled),
 .errorBanner button:hover:not(:disabled) {
-  border-color: rgba(185, 98, 52, 0.46);
-  background: #fff;
+  border-color: color-mix(in srgb, var(--color-highlight) 46%, transparent);
+  background: var(--color-surface);
 }
 
 .dangerButton {
-  border: 1px solid #ad4e3d;
-  background: #ad4e3d;
-  color: #fff;
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .primaryButton:disabled,
@@ -172,7 +172,7 @@
 .filters select:focus-visible,
 .statusOption:focus-within,
 .statusOptionActive:focus-within {
-  outline: 2px solid rgba(185, 98, 52, 0.54);
+  outline: 2px solid color-mix(in srgb, var(--color-highlight) 54%, transparent);
   outline-offset: 2px;
 }
 
@@ -191,8 +191,8 @@
   padding: 16px 19px;
   border: 1px solid var(--pricing-line);
   border-radius: 16px;
-  background: rgba(255, 252, 248, 0.82);
-  box-shadow: 0 10px 28px rgba(98, 59, 33, 0.06);
+  background: color-mix(in srgb, var(--color-surface) 82%, transparent);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--color-highlight) 6%, transparent);
 }
 
 .summaryCard span {
@@ -213,7 +213,7 @@
   border: 1px solid var(--pricing-line);
   border-radius: 22px;
   background: var(--pricing-paper);
-  box-shadow: 0 18px 46px rgba(98, 59, 33, 0.08);
+  box-shadow: 0 18px 46px color-mix(in srgb, var(--color-highlight) 8%, transparent);
 }
 
 .toolbar {
@@ -247,7 +247,7 @@
   height: 42px;
   border: 1px solid var(--pricing-line);
   border-radius: 11px;
-  background: rgba(255, 255, 255, 0.82);
+  background: color-mix(in srgb, var(--color-surface) 82%, transparent);
   color: var(--pricing-ink);
   font: inherit;
   font-size: 13px;
@@ -275,14 +275,14 @@
 .tableWrap th,
 .tableWrap td {
   padding: 15px 14px;
-  border-bottom: 1px solid rgba(164, 103, 63, 0.13);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-highlight) 13%, transparent);
   text-align: left;
   vertical-align: middle;
 }
 
 .tableWrap th {
-  background: rgba(246, 234, 222, 0.6);
-  color: #806651;
+  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+  color: var(--color-text-secondary);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.05em;
@@ -292,7 +292,7 @@
 .columnUnit {
   display: block;
   margin-top: 3px;
-  color: #a08773;
+  color: var(--color-text-muted);
   font-size: 9px;
   font-weight: 650;
   letter-spacing: 0;
@@ -310,7 +310,7 @@
 }
 
 .tableWrap tbody tr:hover {
-  background: rgba(251, 242, 233, 0.54);
+  background: color-mix(in srgb, var(--color-surface) 54%, transparent);
 }
 
 .modelName,
@@ -330,7 +330,7 @@
 
 .modelCode {
   margin-top: 5px;
-  color: #8b5b3d;
+  color: var(--color-highlight);
   font-size: 11px;
   overflow-wrap: anywhere;
 }
@@ -349,25 +349,25 @@
   align-items: center;
   min-height: 28px;
   padding: 0 10px;
-  border: 1px solid rgba(185, 98, 52, 0.2);
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 20%, transparent);
   border-radius: 999px;
-  background: rgba(249, 233, 220, 0.7);
-  color: #7e4a2d;
+  background: color-mix(in srgb, var(--color-highlight) 70%, transparent);
+  color: var(--color-highlight);
   font-size: 11px;
   font-weight: 800;
   white-space: nowrap;
 }
 
 .billingTypeBadge[data-type='image'] {
-  border-color: rgba(77, 115, 163, 0.22);
-  background: rgba(226, 237, 249, 0.72);
-  color: #3d628f;
+  border-color: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 72%, transparent);
+  color: var(--color-primary-fg);
 }
 
 .billingTypeBadge[data-type='video'] {
-  border-color: rgba(112, 83, 151, 0.22);
-  background: rgba(238, 230, 248, 0.75);
-  color: #684f87;
+  border-color: color-mix(in srgb, var(--color-text) 22%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 75%, transparent);
+  color: var(--color-text-secondary);
 }
 
 .priceSummaryCell {
@@ -381,8 +381,8 @@
   margin: 3px 0;
   padding: 4px 7px;
   border-radius: 7px;
-  background: rgba(248, 238, 229, 0.72);
-  color: #705a49;
+  background: color-mix(in srgb, var(--color-surface) 72%, transparent);
+  color: var(--color-text-secondary);
   font-size: 10px;
   font-variant-numeric: tabular-nums;
   line-height: 1.35;
@@ -401,13 +401,13 @@
 }
 
 .statusEnabled {
-  background: rgba(47, 145, 93, 0.12);
-  color: #247348;
+  background: color-mix(in srgb, var(--color-success) 12%, transparent);
+  color: var(--color-success);
 }
 
 .statusDisabled {
-  background: rgba(117, 101, 89, 0.11);
-  color: #6e6259;
+  background: color-mix(in srgb, var(--color-text) 11%, transparent);
+  color: var(--color-text-secondary);
 }
 
 .auditCell {
@@ -431,19 +431,19 @@
   min-height: 34px;
   padding: 0 10px;
   border: 1px solid var(--pricing-line);
-  background: rgba(255, 255, 255, 0.7);
+  background: color-mix(in srgb, var(--color-surface) 70%, transparent);
   color: var(--pricing-ink);
   font-size: 12px;
 }
 
 .rowActions .enableButton {
-  border-color: rgba(47, 145, 93, 0.26);
-  color: #247348;
+  border-color: color-mix(in srgb, var(--color-success) 26%, transparent);
+  color: var(--color-success);
 }
 
 .rowActions .stopButton {
-  border-color: rgba(173, 78, 61, 0.22);
-  color: #943f31;
+  border-color: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  color: var(--color-primary-bold);
 }
 
 .stateBox {
@@ -470,7 +470,7 @@
 .spinner {
   width: 26px;
   height: 26px;
-  border: 3px solid rgba(185, 98, 52, 0.18);
+  border: 3px solid color-mix(in srgb, var(--color-highlight) 18%, transparent);
   border-top-color: var(--pricing-accent);
   border-radius: 50%;
   animation: pricingSpin 0.8s linear infinite;
@@ -482,9 +482,9 @@
 
 .errorBanner,
 .formError {
-  border: 1px solid rgba(173, 78, 61, 0.22);
-  background: rgba(255, 240, 237, 0.9);
-  color: #943f31;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 22%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  color: var(--color-primary-bold);
 }
 
 .errorBanner {
@@ -501,9 +501,9 @@
 .errorBanner button {
   min-height: 32px;
   padding: 0 10px;
-  border: 1px solid rgba(173, 78, 61, 0.24);
-  background: #fff;
-  color: #943f31;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 24%, transparent);
+  background: var(--color-surface);
+  color: var(--color-primary-bold);
 }
 
 .modalBackdrop,
@@ -512,7 +512,7 @@
   inset: 0;
   display: flex;
   justify-content: flex-end;
-  background: rgba(38, 27, 20, 0.42);
+  background: color-mix(in srgb, var(--color-surface) 42%, transparent);
   backdrop-filter: blur(4px);
 }
 
@@ -526,8 +526,8 @@
   overflow-y: auto;
   padding: 27px 28px;
   box-sizing: border-box;
-  background: #fffaf4;
-  box-shadow: -24px 0 64px rgba(38, 27, 20, 0.2);
+  background: var(--color-bg);
+  box-shadow: -24px 0 64px color-mix(in srgb, var(--color-shadow) 20%, transparent);
   animation: editorEnter 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -586,14 +586,14 @@
 
 .field > span,
 .statusField legend {
-  color: #594538;
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 800;
 }
 
 .field > span b {
   margin-left: 7px;
-  color: #9a806d;
+  color: var(--color-text-muted);
   font-size: 10px;
   font-weight: 650;
 }
@@ -604,7 +604,7 @@
   width: 100%;
   border: 1px solid var(--pricing-line);
   border-radius: 11px;
-  background: rgba(255, 255, 255, 0.82);
+  background: color-mix(in srgb, var(--color-surface) 82%, transparent);
   color: var(--pricing-ink);
   box-sizing: border-box;
   font: inherit;
@@ -632,19 +632,19 @@
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
-  border-color: rgba(185, 98, 52, 0.52);
-  box-shadow: 0 0 0 3px rgba(185, 98, 52, 0.08);
+  border-color: color-mix(in srgb, var(--color-highlight) 52%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-highlight) 8%, transparent);
 }
 
 .field em {
-  color: #907765;
+  color: var(--color-text-muted);
   font-size: 10px;
   font-style: normal;
   line-height: 1.5;
 }
 
 .field small {
-  color: #a64235;
+  color: var(--color-primary);
   font-size: 11px;
   font-weight: 650;
 }
@@ -670,13 +670,13 @@
   padding: 11px;
   border: 1px solid var(--pricing-line);
   border-radius: 11px;
-  background: rgba(255, 255, 255, 0.62);
+  background: color-mix(in srgb, var(--color-surface) 62%, transparent);
   cursor: pointer;
 }
 
 .statusOptionActive {
-  border-color: rgba(185, 98, 52, 0.52);
-  background: rgba(249, 233, 220, 0.74);
+  border-color: color-mix(in srgb, var(--color-highlight) 52%, transparent);
+  background: color-mix(in srgb, var(--color-highlight) 74%, transparent);
 }
 
 .statusOption input,
@@ -715,7 +715,7 @@
   padding: 16px;
   border: 1px solid var(--pricing-line);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.46);
+  background: color-mix(in srgb, var(--color-text) 46%, transparent);
 }
 
 .priceFieldsHeading {
@@ -727,12 +727,12 @@
 }
 
 .priceFieldsHeading strong {
-  color: #594538;
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
 .priceFieldsHeading span {
-  color: #907765;
+  color: var(--color-text-muted);
   font-size: 11px;
   font-weight: 700;
 }
@@ -776,8 +776,8 @@
 
 .videoMatrixCorner,
 .videoMatrixHeader {
-  background: rgba(246, 234, 222, 0.68);
-  color: #806651;
+  background: color-mix(in srgb, var(--color-surface) 68%, transparent);
+  color: var(--color-text-secondary);
   font-size: 10px;
   font-weight: 800;
   text-align: center;
@@ -786,8 +786,8 @@
 .videoMatrixScope {
   display: flex;
   align-items: center;
-  background: rgba(250, 243, 236, 0.78);
-  color: #594538;
+  background: color-mix(in srgb, var(--color-surface) 78%, transparent);
+  color: var(--color-text-secondary);
   font-size: 11px;
   font-weight: 750;
 }
@@ -796,7 +796,7 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
-  background: rgba(255, 255, 255, 0.66);
+  background: color-mix(in srgb, var(--color-surface) 66%, transparent);
 }
 
 .videoMatrixCell input {
@@ -805,7 +805,7 @@
   padding: 0 9px;
   border: 1px solid var(--pricing-line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--color-surface);
   box-sizing: border-box;
   color: var(--pricing-ink);
   font: inherit;
@@ -813,12 +813,12 @@
 }
 
 .videoMatrixCell input[aria-invalid='true'] {
-  border-color: rgba(166, 66, 53, 0.58);
+  border-color: color-mix(in srgb, var(--color-primary) 58%, transparent);
 }
 
 .videoMatrixCell small,
 .tierError {
-  color: #a64235;
+  color: var(--color-primary);
   font-size: 10px;
   font-weight: 650;
   line-height: 1.35;
@@ -860,10 +860,10 @@
 .confirmDialog {
   width: min(460px, 100%);
   padding: 27px;
-  border: 1px solid rgba(173, 78, 61, 0.2);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
   border-radius: 20px;
-  background: #fff;
-  box-shadow: 0 28px 80px rgba(38, 27, 20, 0.3);
+  background: var(--color-surface);
+  box-shadow: 0 28px 80px color-mix(in srgb, var(--color-shadow) 30%, transparent);
   box-sizing: border-box;
   text-align: center;
   animation: confirmEnter 0.2s ease both;
@@ -881,8 +881,8 @@
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: rgba(173, 78, 61, 0.12);
-  color: #a64235;
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 24px;
   font-weight: 800;
@@ -915,17 +915,17 @@
   padding: 12px;
   border: 1px solid var(--pricing-line);
   border-radius: 11px;
-  background: rgba(249, 237, 226, 0.6);
+  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
 }
 
 .codeChange code {
   overflow-wrap: anywhere;
-  color: #714a32;
+  color: var(--color-highlight);
   font-size: 11px;
 }
 
 .codeChange span {
-  color: #a7856f;
+  color: var(--color-text-muted);
 }
 
 .typeChange {
@@ -937,14 +937,14 @@
   padding: 12px;
   border: 1px solid var(--pricing-line);
   border-radius: 11px;
-  background: rgba(249, 237, 226, 0.6);
-  color: #714a32;
+  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+  color: var(--color-highlight);
   font-size: 12px;
   font-weight: 750;
 }
 
 .typeChange b {
-  color: #a7856f;
+  color: var(--color-text-muted);
 }
 
 .confirmActions {
@@ -1008,7 +1008,7 @@
     padding: 8px 12px;
     border: 1px solid var(--pricing-line);
     border-radius: 14px;
-    background: rgba(255, 255, 255, 0.68);
+    background: color-mix(in srgb, var(--color-surface) 68%, transparent);
   }
 
   .tableWrap tr:last-child {
@@ -1024,7 +1024,7 @@
 
   .tableWrap td::before {
     content: attr(data-label);
-    color: #8a705d;
+    color: var(--color-text-muted);
     font-size: 11px;
     font-weight: 800;
   }

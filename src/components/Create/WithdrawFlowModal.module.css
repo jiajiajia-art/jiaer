@@ -6,19 +6,19 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgba(0, 0, 0, 0.7);
+  background: color-mix(in srgb, var(--color-shadow) 70%, transparent);
   backdrop-filter: blur(5px);
 }
 
 .modal {
-  --withdraw-accent: #A8283C;
-  --withdraw-accent-deep: #8E2135;
+  --withdraw-accent: var(--color-primary);
+  --withdraw-accent-deep: var(--color-primary-bold);
   --withdraw-surface: transparent;
-  --withdraw-card: rgba(255, 255, 255, 0.06);
-  --withdraw-elevated: rgba(255, 255, 255, 0.08);
-  --withdraw-border: rgba(255, 255, 255, 0.08);
-  --withdraw-muted: rgba(255, 255, 255, 0.55);
-  --withdraw-faint: rgba(255, 255, 255, 0.35);
+  --withdraw-card: color-mix(in srgb, var(--color-text) 6%, transparent);
+  --withdraw-elevated: color-mix(in srgb, var(--color-text) 8%, transparent);
+  --withdraw-border: color-mix(in srgb, var(--color-text) 8%, transparent);
+  --withdraw-muted: var(--color-text-secondary);
+  --withdraw-faint: var(--color-text-muted);
   position: relative;
   width: min(520px, 100%);
   max-height: min(86vh, 720px);
@@ -26,14 +26,14 @@
   border-radius: 10px;
   /* 上深下浅，底部保留灰，避免通透成黑 */
   background:
-    linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
-    linear-gradient(180deg, #343434 0%, rgba(52, 52, 52, 0.72) 100%);
+    linear-gradient(0deg, color-mix(in srgb, var(--color-text) 15%, transparent), color-mix(in srgb, var(--color-text) 15%, transparent)),
+    linear-gradient(180deg, var(--color-surface-2) 0%, color-mix(in srgb, var(--color-surface) 72%, transparent) 100%);
   border: 0.68px solid transparent;
   backdrop-filter: blur(47px);
   -webkit-backdrop-filter: blur(47px);
   box-shadow: none;
   padding: 20px 22px 22px;
-  color: #ffffff;
+  color: var(--color-text);
   box-sizing: border-box;
 }
 
@@ -46,13 +46,13 @@
   padding: 0.68px;
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.55) 0%,
-    rgba(255, 255, 255, 0.18) 60%,
-    rgba(255, 255, 255, 0) 90%
+    color-mix(in srgb, var(--color-surface) 55%, transparent) 0%,
+    color-mix(in srgb, var(--color-text) 18%, transparent) 60%,
+    transparent 90%
   );
   -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
+    linear-gradient(var(--color-surface) 0 0) content-box,
+    linear-gradient(var(--color-surface) 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
@@ -72,7 +72,7 @@
   margin: 0;
   font-size: 18px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text);
   letter-spacing: -0.02em;
 }
 
@@ -86,7 +86,7 @@
 }
 
 .close:hover {
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .body {
@@ -109,22 +109,22 @@
 .rejectBox {
   padding: 12px 14px;
   border-radius: 12px;
-  background: rgba(168, 40, 60, 0.16);
-  border: 1px solid rgba(168, 40, 60, 0.35);
-  color: #ffd6dc;
+  background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+  color: var(--color-primary-lighter);
   font-size: 14px;
   line-height: 1.6;
 }
 
 .rejectBox {
-  background: rgba(183, 58, 58, 0.18);
-  border-color: rgba(183, 58, 58, 0.4);
-  color: #ffb3b3;
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+  color: var(--color-primary-fg);
 }
 
 .rejectRemark {
   margin-top: 6px;
-  color: #ffc9c9;
+  color: var(--color-primary-fg);
   font-size: 13px;
 }
 
@@ -139,7 +139,7 @@
 /* 可提上限数字加粗，方便用户一眼看到能提多少 */
 .maxHighlight {
   font-weight: 800;
-  color: #ffffff;
+  color: var(--color-text);
   margin-left: 2px;
 }
 
@@ -155,7 +155,7 @@
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 /* 标题与最低提现 tip 同一行：tip 靠右 */
@@ -184,7 +184,7 @@
   font-size: 14px;
   font-family: inherit;
   background: var(--withdraw-elevated);
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .input::placeholder,
@@ -195,7 +195,7 @@
 .input:focus,
 .textarea:focus {
   outline: none;
-  border-color: rgba(168, 40, 60, 0.55);
+  border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
 }
 
 .primaryButton {
@@ -204,7 +204,7 @@
   min-height: 42px;
   padding: 0 18px;
   background: var(--withdraw-accent);
-  color: #fff;
+  color: var(--color-on-primary);
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
@@ -239,13 +239,13 @@
   margin: 0;
   font-size: 14px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .viewAllButton {
   border: none;
   background: transparent;
-  color: #f5d0a9;
+  color: var(--color-highlight);
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
@@ -254,7 +254,7 @@
 }
 
 .viewAllButton:hover {
-  color: #ffd6dc;
+  color: var(--color-primary-lighter);
 }
 
 .recordList {
@@ -270,11 +270,11 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.78);
+  color: color-mix(in srgb, var(--color-text) 78%, transparent);
   padding: 8px 10px;
   border-radius: 10px;
   background: var(--withdraw-elevated);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .recordTime {
@@ -286,15 +286,15 @@
 }
 
 .statusPending {
-  color: #f5d0a9;
+  color: var(--color-highlight);
 }
 
 .statusApproved {
-  color: #6fcf97;
+  color: var(--color-success);
 }
 
 .statusRejected {
-  color: #ff8a8a;
+  color: var(--color-primary-fg);
 }
 
 /* 列表内驳回说明独占一行；备注文字紧跟「备注：」左对齐 */
@@ -307,7 +307,7 @@
   gap: 4px;
   font-size: 12px;
   line-height: 1.5;
-  color: #ff8a8a;
+  color: var(--color-primary-fg);
   text-align: left;
 }
 
@@ -322,3 +322,15 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ================= 统一弹窗风格 ================= */
+.modal {
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 18px;
+    background: var(--color-surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 24px 64px color-mix(in srgb, var(--color-shadow) 50%, transparent);
+    color: var(--color-text);
+}
+.modal::before { display: none; }

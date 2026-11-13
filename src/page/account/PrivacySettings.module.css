@@ -1,11 +1,11 @@
 .pageRoot {
-    --priv-bg: #000000;
-    --priv-surface: #1c1c1e;
-    --priv-label: #8e8e93;
-    --priv-value: #ffffff;
-    --priv-edge: rgba(255, 255, 255, 0.08);
-    --priv-focus: rgba(168, 40, 60, 0.55);
-    --priv-accent: #a8283c;
+    --priv-bg: var(--color-bg);
+    --priv-surface: var(--color-surface);
+    --priv-label: var(--color-text-muted);
+    --priv-value: var(--color-text);
+    --priv-edge: color-mix(in srgb, var(--color-text) 8%, transparent);
+    --priv-focus: color-mix(in srgb, var(--color-primary) 55%, transparent);
+    --priv-accent: var(--color-primary);
     width: 100%;
     min-height: 100vh;
     max-width: 720px;
@@ -38,7 +38,7 @@
     background: transparent;
     cursor: pointer;
     padding: 0;
-    color: #ffffff;
+    color: var(--color-text);
     border-radius: 10px;
 }
 
@@ -55,8 +55,8 @@
     display: block;
     width: 10px;
     height: 10px;
-    border-left: 2px solid #ffffff;
-    border-bottom: 2px solid #ffffff;
+    border-left: 2px solid var(--color-text);
+    border-bottom: 2px solid var(--color-text);
     transform: rotate(45deg);
     margin-left: 4px;
 }
@@ -124,7 +124,7 @@
 }
 
 .row:active {
-    background: rgba(255, 255, 255, 0.04);
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
 .row:focus-visible {
@@ -177,8 +177,8 @@
     display: block;
     width: 8px;
     height: 8px;
-    border-right: 2px solid #636366;
-    border-bottom: 2px solid #636366;
+    border-right: 2px solid var(--color-border);
+    border-bottom: 2px solid var(--color-border);
     transform: rotate(-45deg);
     flex-shrink: 0;
 }
@@ -222,7 +222,7 @@
     width: 46px;
     height: 28px;
     border-radius: 999px;
-    background: #3a3a3c;
+    background: var(--color-surface-2);
     position: relative;
     pointer-events: none;
 }
@@ -235,7 +235,7 @@
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    background: #ffffff;
+    background: var(--color-surface);
     transition: transform 0.18s ease;
 }
 
@@ -302,7 +302,7 @@
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
-    background: #2c2c2e;
+    background: var(--color-surface-2);
 }
 
 .userCopy {
@@ -334,17 +334,17 @@
     appearance: none;
     height: 32px;
     padding: 0 12px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
     border-radius: 999px;
     background: transparent;
-    color: #ffffff;
+    color: var(--color-text);
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
 }
 
 .unblockBtn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.06);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .unblockBtn:disabled {

@@ -36,11 +36,11 @@
   margin: 0;
   font-size: 14px;
   line-height: 1.6;
-  color: #6b7280;
+  color: var(--color-text-muted);
 }
 
 .heroMetaDot {
-  color: #d1d5db;
+  color: var(--color-text-secondary);
 }
 
 .backToCreateButton {
@@ -58,16 +58,16 @@
   margin: 0 auto 10px;
   padding: 8px 28px 24px;
   border-radius: 18px;
-  background: #fff;
-  border: 1px solid rgba(17, 24, 39, 0.06);
-  box-shadow: 0 16px 40px rgba(17, 24, 39, 0.05);
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--color-shadow) 5%, transparent);
   box-sizing: border-box;
 }
 
 .panelState {
   padding: 48px 16px;
   text-align: center;
-  color: #9ca3af;
+  color: var(--color-text-secondary);
   font-size: 15px;
 }
 
@@ -86,8 +86,8 @@
   padding: 18px 8px 14px;
   font-size: 13px;
   font-weight: 600;
-  color: #9ca3af;
-  border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 /* 备注列表头居中；单元格内容仍右对齐 */
@@ -109,7 +109,7 @@
 
 .item {
   padding: 18px 8px;
-  border-bottom: 1px solid rgba(17, 24, 39, 0.06);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .item:last-child {
@@ -118,21 +118,21 @@
 
 .itemRow {
   font-size: 15px;
-  color: #374151;
+  color: var(--color-text-secondary);
 }
 
 .amount {
   font-weight: 700;
-  color: #111827;
+  color: var(--color-text);
 }
 
 .cny {
   font-weight: 600;
-  color: #4b5563;
+  color: var(--color-text-secondary);
 }
 
 .time {
-  color: #6b7280;
+  color: var(--color-text-muted);
   font-size: 14px;
 }
 
@@ -141,15 +141,15 @@
 }
 
 .statusPending {
-  color: #c9782a;
+  color: var(--color-highlight);
 }
 
 .statusApproved {
-  color: #2d8c58;
+  color: var(--color-success);
 }
 
 .statusRejected {
-  color: #b73a3a;
+  color: var(--color-primary);
 }
 
 .remark {
@@ -171,13 +171,13 @@
 .remarkText {
   flex: 1;
   min-width: 0;
-  color: #b73a3a;
+  color: var(--color-primary);
   text-align: right;
 }
 
 .remarkEmpty {
   font-size: 13px;
-  color: #d1d5db;
+  color: var(--color-text-secondary);
   text-align: right;
 }
 
@@ -188,7 +188,7 @@
   gap: 18px;
   margin-top: 8px;
   padding-top: 20px;
-  border-top: 1px solid rgba(17, 24, 39, 0.06);
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .pagerButton {
@@ -196,9 +196,9 @@
   min-width: 108px;
   height: 42px;
   border-radius: 999px;
-  border: 1px solid rgba(17, 24, 39, 0.1);
-  background: #fff;
-  color: #374151;
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -207,7 +207,7 @@
 
 .pagerButton:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(17, 24, 39, 0.08);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--color-shadow) 8%, transparent);
 }
 
 .pagerButton:disabled {
@@ -219,7 +219,7 @@
   min-width: 72px;
   text-align: center;
   font-size: 14px;
-  color: #6b7280;
+  color: var(--color-text-muted);
   font-weight: 600;
 }
 
@@ -258,7 +258,7 @@
   .remarkLabel {
     display: inline;
     flex-shrink: 0;
-    color: #9ca3af;
+    color: var(--color-text-secondary);
     font-weight: 600;
   }
 

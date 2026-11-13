@@ -54,12 +54,9 @@ test('MyPlayMods_页面只调本人列表_不出现运营API', () => {
   assert.match(api, /\/api\/components\/mine/);
 });
 
-test('CreateType与路由_我的玩法Mod稳定入口', () => {
+test('CreateType_不再单独展示我的玩法Mod入口', () => {
   const create = read('src/page/CreateType.tsx');
-  assert.match(create, /title="我的玩法 Mod"/);
-  assert.match(create, /\/create\/play-mods/);
-  const app = read('src/App.tsx');
-  assert.match(app, /path="\/create\/play-mods"/);
+  assert.doesNotMatch(create, /title="我的玩法 Mod"/);
 });
 
 test('PlayModCreateShell_继续编辑只读本人mine列表', () => {

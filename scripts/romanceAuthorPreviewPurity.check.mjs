@@ -38,9 +38,10 @@ test('个人能力_非娱乐圈没写stats_order不补八维', () => {
   const data = read('game/data.ts');
   const at = data.indexOf('export const dossierStatKeys');
   const body = data.slice(at, data.indexOf('export const ALL_STAT_KEYS', at));
-  assert.match(body, /currentWorldId\(\) !== "ent"\) return \[\]/);
-  // 功能注释：娱乐圈仍回落八维，只是不再对所有作品都回落
-  assert.match(body, /RAW_STAT_ORDER\.filter/);
+  // 功能注释：没写 stats.order 一律不补内置八维（娱乐圈原版自身也是 order: [] 且隐藏八维）
+  assert.match(body, /if \(ordered\.length\) return ordered;/);
+  assert.match(body, /return \[\];/);
+  assert.doesNotMatch(body, /RAW_STAT_ORDER/);
   const fields = read('components/personFields.tsx');
   assert.match(fields, /本作品尚未配置个人能力/);
 });

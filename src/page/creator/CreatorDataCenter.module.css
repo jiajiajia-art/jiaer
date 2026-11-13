@@ -6,13 +6,13 @@
   margin: 24px 0 32px;
   padding: 24px 28px;
   border-radius: 16px;
-  background: #1A1A1A;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .heroEyebrow {
   margin: 0 0 8px;
-  color: #8E8E93;
+  color: var(--color-text-muted);
   font-size: 14px;
 }
 
@@ -21,20 +21,20 @@
   display: flex;
   align-items: center;
   font-size: 28px;
-  color: #FFFFFF;
+  color: var(--color-text);
 }
 
 .heroDesc {
   margin: 8px 0 0;
-  color: #999999;
+  color: var(--color-text-muted);
 }
 
 .linkButton {
   border: none;
   border-radius: 999px;
   padding: 10px 18px;
-  background: #8E2135;
-  color: #fff;
+  background: var(--color-primary-bold);
+  color: var(--color-on-primary);
   cursor: pointer;
 }
 
@@ -42,8 +42,8 @@
 .emptyState {
   padding: 32px;
   text-align: center;
-  color: #8E8E93;
-  background: #1C1C1E;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
   border-radius: 12px;
 }
 
@@ -54,7 +54,7 @@
 .sectionTitle {
   margin: 0;
   font-size: 20px;
-  color: #FFFFFF;
+  color: var(--color-text);
 }
 
 .workList {
@@ -65,23 +65,23 @@
 
 .workCard {
   text-align: left;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
   border-radius: 12px;
   padding: 16px 18px;
-  background: #1A1A1A;
+  background: var(--color-surface);
   cursor: pointer;
   transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
 .workCard:hover {
   transform: translateY(-2px);
-  border-color: rgba(168, 40, 60, 0.4);
+  border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
 }
 
 .workTitle {
   font-size: 16px;
   font-weight: 600;
-  color: #FFFFFF;
+  color: var(--color-text);
 }
 
 .workMeta {
@@ -89,7 +89,7 @@
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 8px;
-  color: #8E8E93;
+  color: var(--color-text-muted);
   font-size: 13px;
 }
 
@@ -106,15 +106,15 @@
 .commentItem {
   padding: 14px 16px;
   border-radius: 10px;
-  background: #1C1C1E;
-  color: #C7C7CC;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
 }
 
 .commentMeta {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  color: #8E8E93;
+  color: var(--color-text-muted);
   font-size: 12px;
   margin-bottom: 8px;
 }
@@ -129,10 +129,10 @@
 .hourCell {
   padding: 10px 8px;
   border-radius: 8px;
-  background: #1C1C1E;
+  background: var(--color-surface);
   text-align: center;
   font-size: 12px;
-  color: #C7C7CC;
+  color: var(--color-text-secondary);
 }
 
 @media (max-width: 768px) {

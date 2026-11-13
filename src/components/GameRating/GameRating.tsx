@@ -286,7 +286,7 @@ const CommentCard: React.FC<{
                       {reply.parent_nickname && !reply.parent_rating_id?.startsWith('rating') && (
                         <>
                           <svg className={styles.replyArrowIcon} viewBox="0 0 1024 1024" width="16" height="16">
-                            <path d="M384 768l256-256-256-256v512z" fill="rgba(0,0,0,0.42)" />
+                            <path d="M384 768l256-256-256-256v512z" fill="color-mix(in srgb, var(--color-text) 42%, transparent)" />
                           </svg>
                           <span className={styles.replyToInfo} title={reply.parent_nickname}>
                             {reply.parent_nickname}

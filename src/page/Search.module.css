@@ -1,11 +1,11 @@
 /* 功能注释：搜索结果页沿用首页暗色壳与酒红强调，不用金色页签 */
 .pageRoot {
-  --search-accent: #a8283c;
-  --search-label: #8e8e93;
-  --search-text: #ffffff;
+  --search-accent: var(--color-primary);
+  --search-label: var(--color-text-muted);
+  --search-text: var(--color-text);
   width: 100%;
   min-height: 100vh;
-  background: #000000;
+  background: var(--color-bg);
   color: var(--search-text);
 }
 
@@ -33,7 +33,7 @@
 .tabs {
   display: flex;
   gap: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
   margin-bottom: 20px;
 }
 
@@ -104,7 +104,7 @@
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: #c7c7cc;
+  color: var(--color-text-secondary);
 }
 
 .emptyLine2 {

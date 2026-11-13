@@ -1,10 +1,10 @@
 .panel {
     min-width: 0;
     padding: 24px;
-    border: 1px solid rgba(255, 255, 255, 0.11);
+    border: 1px solid color-mix(in srgb, var(--color-text) 11%, transparent);
     border-radius: 16px;
-    background: #1d1d1f;
-    color: #f7f7f8;
+    background: var(--color-surface);
+    color: var(--color-text);
     box-sizing: border-box;
 }
 
@@ -32,7 +32,7 @@
     min-height: 44px;
     border: 0;
     background: transparent;
-    color: #d7d7da;
+    color: var(--color-text-secondary);
     cursor: pointer;
 }
 
@@ -46,20 +46,20 @@
 }
 
 .rulesButton i {
-    color: #77777d;
+    color: var(--color-text-muted);
     font-style: normal;
 }
 
 .rulesButton svg {
     width: 19px;
     height: 19px;
-    color: #8b8b90;
+    color: var(--color-text-muted);
 }
 
 .textButton {
     display: block;
     margin: -12px 0 8px auto;
-    color: #ef6b85;
+    color: var(--color-primary-fg);
 }
 
 .overviewHero {
@@ -69,9 +69,9 @@
     justify-content: space-between;
     gap: 18px;
     padding: 22px;
-    border: 2px solid #55c98f;
+    border: 2px solid var(--color-success);
     border-radius: 15px;
-    background: #030604;
+    background: var(--color-bg);
     box-sizing: border-box;
 }
 
@@ -83,17 +83,17 @@
 }
 
 .heroMeta span {
-    color: #99999f;
+    color: var(--color-text-secondary);
     font-size: 13px;
 }
 
 .heroMeta strong {
-    color: #55d89b;
+    color: var(--color-success);
     font-size: 13px;
 }
 
 .overviewHero b {
-    color: #62dba0;
+    color: var(--color-success);
     font-size: clamp(40px, 6vw, 56px);
     line-height: 1;
     font-variant-numeric: tabular-nums;
@@ -113,13 +113,13 @@
 }
 
 .overviewMetrics span {
-    color: #929297;
+    color: var(--color-text-muted);
     font-size: 13px;
     line-height: 1.35;
 }
 
 .overviewMetrics strong {
-    color: #f4f4f5;
+    color: var(--color-text);
     font-size: clamp(20px, 2.5vw, 26px);
     line-height: 1.15;
     font-variant-numeric: tabular-nums;
@@ -136,26 +136,26 @@
 .withdrawAction {
     min-height: 58px;
     border-radius: 999px;
-    color: #ffffff;
+    color: var(--color-text);
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
 }
 
 .profileAction {
-    border: 1px solid rgba(255, 255, 255, 0.13);
+    border: 1px solid color-mix(in srgb, var(--color-text) 13%, transparent);
     background: transparent;
 }
 
 .profileAction span {
     margin-left: 7px;
-    color: #ef8ea1;
+    color: var(--color-primary-fg);
     font-size: 11px;
 }
 
 .withdrawAction {
     border: 0;
-    background: #bb2947;
+    background: var(--color-primary);
 }
 
 .recordsLink {
@@ -171,7 +171,7 @@
 
 .trendHeading > span {
     margin-left: auto;
-    color: #89898e;
+    color: var(--color-text-muted);
     font-size: 13px;
 }
 
@@ -185,14 +185,14 @@
     padding: 0 16px;
     border: 0;
     border-radius: 12px;
-    background: #030303;
-    color: #f7f7f8;
+    background: var(--color-bg);
+    color: var(--color-text);
     box-sizing: border-box;
     cursor: pointer;
 }
 
 .workFilter > span {
-    color: #8f8f94;
+    color: var(--color-text-muted);
     font-size: 14px;
 }
 
@@ -217,7 +217,7 @@
     min-height: 44px;
     border: 0;
     background: transparent;
-    color: #f7f7f8;
+    color: var(--color-text);
     font-size: 14px;
     font-weight: 700;
     text-align: right;
@@ -226,7 +226,7 @@
 
 .workFilter select option,
 .recordFilter option {
-    background: #202023;
+    background: var(--color-surface-2);
 }
 
 .trendControls {
@@ -242,7 +242,7 @@
     gap: 4px;
     padding: 4px;
     border-radius: 11px;
-    background: #050506;
+    background: var(--color-bg);
 }
 
 .segmented button,
@@ -252,15 +252,15 @@
     border: 0;
     border-radius: 9px;
     background: transparent;
-    color: #96969b;
+    color: var(--color-text-muted);
     font-size: 13px;
     cursor: pointer;
 }
 
 .segmented button.active,
 .recordTabs button.active {
-    background: #bb2947;
-    color: #ffffff;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
 }
 
 .periodControl {
@@ -281,8 +281,8 @@
     display: grid;
     place-items: center;
     border-radius: 12px;
-    background: rgba(25, 25, 27, 0.78);
-    color: #c9c9cd;
+    background: color-mix(in srgb, var(--color-surface) 78%, transparent);
+    color: var(--color-text-secondary);
 }
 
 .chartEmptyCompact {
@@ -293,10 +293,10 @@
     justify-content: center;
     gap: 7px;
     margin-top: 8px;
-    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border: 1px dashed color-mix(in srgb, var(--color-text) 10%, transparent);
     border-radius: 12px;
-    background: rgba(0, 0, 0, 0.12);
-    color: #88888e;
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: var(--color-text-muted);
     text-align: center;
 }
 
@@ -304,11 +304,11 @@
     width: 28px;
     height: 28px;
     margin-bottom: 2px;
-    color: #6f6f76;
+    color: var(--color-text-muted);
 }
 
 .chartEmptyCompact strong {
-    color: #c5c5c9;
+    color: var(--color-text-secondary);
     font-size: 14px;
 }
 
@@ -322,8 +322,8 @@
     gap: 2px;
     padding: 8px 12px;
     border-radius: 999px;
-    background: #050506;
-    color: #a2a2a7;
+    background: var(--color-bg);
+    color: var(--color-text-secondary);
     font-size: 13px;
 }
 
@@ -341,7 +341,7 @@
 
 .workColumns {
     padding: 0 0 11px;
-    color: #88888e;
+    color: var(--color-text-muted);
     font-size: 12px;
 }
 
@@ -352,7 +352,7 @@
 .workItem {
     min-height: 88px;
     padding: 14px 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.09);
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
 }
 
 .workTitle {
@@ -369,7 +369,7 @@
 }
 
 .workTitle span {
-    color: #89898e;
+    color: var(--color-text-muted);
     font-size: 12px;
 }
 
@@ -393,13 +393,13 @@
 }
 
 .workRevenueMetric span {
-    color: #89898e;
+    color: var(--color-text-muted);
     font-size: 11px;
     line-height: 1.35;
 }
 
 .workRevenueMetric strong {
-    color: #f5f5f6;
+    color: var(--color-text);
     font-size: 14px;
     line-height: 1.25;
     font-variant-numeric: tabular-nums;
@@ -418,8 +418,8 @@
     padding: 0 14px;
     border: 0;
     border-radius: 999px;
-    background: #050506;
-    color: #c7c7ca;
+    background: var(--color-bg);
+    color: var(--color-text-secondary);
     cursor: pointer;
     white-space: nowrap;
 }
@@ -431,16 +431,16 @@
     align-items: center;
     justify-content: center;
     gap: 10px;
-    color: #a9a9ae;
+    color: var(--color-text-secondary);
 }
 
 .state button {
     min-height: 44px;
     padding: 0 14px;
-    border: 1px solid #55555b;
+    border: 1px solid var(--color-border);
     border-radius: 9px;
-    background: #2c2c30;
-    color: #ffffff;
+    background: var(--color-surface-2);
+    color: var(--color-text);
     cursor: pointer;
 }
 
@@ -451,7 +451,7 @@
     display: grid;
     place-items: center;
     padding: 24px;
-    background: rgba(8, 6, 10, 0.76);
+    background: color-mix(in srgb, var(--color-surface) 76%, transparent);
     backdrop-filter: blur(8px);
 }
 
@@ -461,11 +461,11 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     border-radius: 20px;
-    background: #211d26;
-    color: #f7f3f8;
-    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+    background: var(--color-surface-2);
+    color: var(--color-text);
+    box-shadow: 0 30px 90px color-mix(in srgb, var(--color-shadow) 55%, transparent);
 }
 
 .modalWide {
@@ -478,7 +478,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 18px 22px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .modalHeader h2 {
@@ -492,7 +492,7 @@
     border: 0;
     border-radius: 50%;
     background: transparent;
-    color: #d7d0da;
+    color: var(--color-text-secondary);
     cursor: pointer;
     font-size: 24px;
 }
@@ -517,8 +517,8 @@
     justify-content: flex-end;
     gap: 10px;
     padding: 15px 22px calc(15px + env(safe-area-inset-bottom));
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    background: #211d26;
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    background: var(--color-surface-2);
 }
 
 .selectorActions,
@@ -544,7 +544,7 @@
 
 .selectorCurrent {
     margin: 0 0 16px;
-    color: #df6079;
+    color: var(--color-primary-fg);
     font-size: 13px;
     font-weight: 700;
 }
@@ -565,7 +565,7 @@
     border: 1px solid transparent;
     border-radius: 11px;
     background: transparent;
-    color: #d9d5dc;
+    color: var(--color-text-secondary);
     cursor: pointer;
     font-size: 15px;
     text-align: left;
@@ -575,18 +575,18 @@
     flex: 0 0 auto;
     width: 23px;
     height: 23px;
-    color: #8c8890;
+    color: var(--color-text-muted);
 }
 
 .workSelectorOptionActive {
-    border-color: #dc5d77;
-    background: rgba(187, 41, 71, 0.13);
-    color: #ffffff;
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 13%, transparent);
+    color: var(--color-on-primary);
     font-weight: 700;
 }
 
 .workSelectorOptionActive svg {
-    color: #ef6684;
+    color: var(--color-primary-fg);
 }
 
 .primaryButton,
@@ -600,14 +600,14 @@
 
 .primaryButton {
     border: 0;
-    background: linear-gradient(135deg, #ef6684, #b34c92);
-    color: #ffffff;
+    background: linear-gradient(135deg, var(--color-primary-light), var(--color-accent));
+    color: var(--color-on-primary);
 }
 
 .secondaryButton {
-    border: 1px solid #5b5261;
+    border: 1px solid var(--color-border);
     background: transparent;
-    color: #ded8e1;
+    color: var(--color-text);
 }
 
 .primaryButton:disabled,
@@ -625,7 +625,7 @@
 
 .modalMessage > svg,
 .successState > svg {
-    color: #ff8da5;
+    color: var(--color-primary-fg);
     font-size: 54px;
 }
 
@@ -637,7 +637,7 @@
 .modalMessage p,
 .successState p {
     margin: 0;
-    color: #aaa4b1;
+    color: var(--color-text-secondary);
     line-height: 1.7;
 }
 
@@ -648,7 +648,7 @@
 
 .modalIntro {
     margin: -10px 0 4px;
-    color: #8f8992;
+    color: var(--color-text-muted);
     font-size: 13px;
 }
 
@@ -657,14 +657,14 @@
     align-items: center;
     gap: 13px;
     padding: 18px;
-    border: 1px solid rgba(239, 102, 132, 0.14);
+    border: 1px solid color-mix(in srgb, var(--color-primary-light) 14%, transparent);
     border-radius: 13px;
-    background: rgba(111, 37, 55, 0.24);
+    background: color-mix(in srgb, var(--color-primary) 24%, transparent);
 }
 
 .statusHero > svg {
     flex: 0 0 auto;
-    color: #ff94aa;
+    color: var(--color-primary-fg);
     font-size: 28px;
 }
 
@@ -674,7 +674,7 @@
 
 .statusHero p {
     margin: 0;
-    color: #aca5b0;
+    color: var(--color-text-secondary);
     line-height: 1.55;
 }
 
@@ -683,7 +683,7 @@
     gap: 0;
     padding: 12px 18px;
     border-radius: 13px;
-    background: #171719;
+    background: var(--color-surface);
 }
 
 .amountSummary > div {
@@ -697,15 +697,15 @@
 .amountSummary > div:last-child {
     margin-top: 2px;
     padding-top: 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
 }
 
 .amountSummary span {
-    color: #a9a2ae;
+    color: var(--color-text-secondary);
 }
 
 .amountSummary > div:last-child strong {
-    color: #ffffff;
+    color: var(--color-text);
     font-size: 20px;
 }
 
@@ -716,7 +716,7 @@
 
 .sourceList h3 {
     margin: 0 0 2px;
-    color: #8f8992;
+    color: var(--color-text-muted);
     font-size: 13px;
     font-weight: 500;
 }
@@ -725,7 +725,7 @@
     display: flex;
     justify-content: space-between;
     gap: 18px;
-    color: #ddd8e0;
+    color: var(--color-text);
 }
 
 .sourceList span {
@@ -737,7 +737,7 @@
 
 .notice {
     margin: 0;
-    color: #a9a2ae;
+    color: var(--color-text-secondary);
     font-size: 12px;
     line-height: 1.55;
 }
@@ -747,23 +747,23 @@
     gap: 8px;
     padding: 16px 18px;
     border-radius: 12px;
-    background: #171719;
+    background: var(--color-surface);
 }
 
 .bankCard span {
-    color: #a9a2ae;
+    color: var(--color-text-secondary);
     font-size: 12px;
 }
 
 .bankCard strong {
-    color: #f4f1f5;
+    color: var(--color-text);
     font-size: 15px;
 }
 
 .bankLine,
 .statusHint {
     margin: 0;
-    color: #a9a2ae;
+    color: var(--color-text-secondary);
     font-size: 13px;
     line-height: 1.55;
 }
@@ -773,18 +773,18 @@
     gap: 14px;
     padding: 18px;
     border-radius: 13px;
-    background: #171719;
+    background: var(--color-surface);
 }
 
 .balanceHero p {
     margin: 0;
-    color: #a9a2ae;
+    color: var(--color-text-secondary);
     font-size: 13px;
     line-height: 1.65;
 }
 
 .balanceHero strong {
-    color: #f7f3f8;
+    color: var(--color-text);
     font-size: 18px;
 }
 
@@ -794,12 +794,12 @@
     justify-content: space-between;
     gap: 14px;
     margin-top: 8px;
-    color: #a9a2ae;
+    color: var(--color-text-secondary);
     font-size: 13px;
 }
 
 .progressHeading b {
-    color: #c72f4f;
+    color: var(--color-primary);
     font-variant-numeric: tabular-nums;
 }
 
@@ -807,19 +807,19 @@
     height: 8px;
     overflow: hidden;
     border-radius: 999px;
-    background: #3b3440;
+    background: var(--color-surface-2);
 }
 
 .progressTrack span {
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: #bd2948;
+    background: var(--color-primary);
 }
 
 .progressText {
     margin: -8px 0 0;
-    color: #9d96a2;
+    color: var(--color-text-secondary);
     font-size: 12px;
     text-align: left;
 }
@@ -833,9 +833,9 @@
     min-width: 180px;
     margin-bottom: 14px;
     padding: 0 12px;
-    border: 1px solid #514a57;
+    border: 1px solid var(--color-border);
     border-radius: 10px;
-    background: #29242e;
+    background: var(--color-surface-2);
     text-align: left;
 }
 
@@ -846,9 +846,9 @@
 
 .ledgerCard {
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.09);
+    border: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
     border-radius: 14px;
-    background: #242126;
+    background: var(--color-surface-2);
 }
 
 .ledgerSummary {
@@ -861,19 +861,19 @@
 }
 
 .ledgerSummary span {
-    color: #969099;
+    color: var(--color-text-muted);
     font-size: 12px;
 }
 
 .ledgerSummary strong {
-    color: #f5f1f6;
+    color: var(--color-text);
     font-size: 15px;
 }
 
 .ledgerAmounts {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .ledgerAmounts > div {
@@ -883,23 +883,23 @@
 }
 
 .ledgerAmounts > div + div {
-    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .ledgerAmounts span {
-    color: #99929d;
+    color: var(--color-text-muted);
     font-size: 12px;
 }
 
 .ledgerAmounts strong {
-    color: #ff8ca5;
+    color: var(--color-primary-fg);
     font-size: 17px;
     font-variant-numeric: tabular-nums;
 }
 
 .tableWrap {
     overflow-x: auto;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     border-radius: 12px;
 }
 
@@ -912,28 +912,28 @@
 .tableWrap th,
 .tableWrap td {
     padding: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.065);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 6.5%, transparent);
     font-size: 12px;
     text-align: left;
     white-space: nowrap;
 }
 
 .tableWrap th {
-    color: #938b99;
+    color: var(--color-text-muted);
     font-size: 11px;
     font-weight: 600;
 }
 
 .tableWrap td {
-    color: #ddd7e0;
+    color: var(--color-text);
 }
 
 .statusBadge {
     display: inline-flex;
     padding: 4px 8px;
     border-radius: 999px;
-    background: rgba(255, 133, 158, 0.13);
-    color: #ff9caf;
+    background: color-mix(in srgb, var(--color-primary-light) 13%, transparent);
+    color: var(--color-primary-fg);
 }
 
 .pagination {
@@ -947,10 +947,10 @@
 .pagination button {
     min-height: 44px;
     padding: 0 14px;
-    border: 1px solid #574f5d;
+    border: 1px solid var(--color-border);
     border-radius: 9px;
     background: transparent;
-    color: #eee8f0;
+    color: var(--color-text);
 }
 
 .rulesButton:hover,
@@ -972,7 +972,7 @@
 .workFilter:focus-visible,
 .modalCard button:focus-visible,
 .modalCard select:focus-visible {
-    outline: 3px solid rgba(255, 123, 153, 0.65);
+    outline: 3px solid color-mix(in srgb, var(--color-primary-light) 65%, transparent);
     outline-offset: 2px;
 }
 

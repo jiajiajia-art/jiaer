@@ -122,16 +122,16 @@ function App() {
             duration: 2600,
             className: 'funloom-toast funloom-toast-success',
             iconTheme: {
-              primary: '#2f9d6a',
-              secondary: '#ffffff',
+              primary: 'var(--color-success)',
+              secondary: 'var(--color-on-primary)',
             },
           },
           error: {
             duration: 6500,
             className: 'funloom-toast funloom-toast-error',
             iconTheme: {
-              primary: '#fb4655',
-              secondary: '#fff5f5',
+              primary: 'var(--color-primary-light)',
+              secondary: 'var(--color-on-primary)',
             },
           },
           blank: {
@@ -140,8 +140,8 @@ function App() {
           loading: {
             className: 'funloom-toast funloom-toast-loading',
             iconTheme: {
-              primary: '#c9a27a',
-              secondary: '#fff8f0',
+              primary: 'var(--color-highlight)',
+              secondary: 'var(--color-on-primary)',
             },
           },
           style: {
@@ -175,7 +175,7 @@ function App() {
         <Route
           path="/activity/funloom-lottery-20260731"
           element={(
-            <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#fff' }}>加载中…</div>}>
+            <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text)' }}>加载中…</div>}>
               <FunloomLotteryPage />
             </Suspense>
           )}
@@ -184,7 +184,7 @@ function App() {
         <Route
           path="/romance/*"
           element={(
-            <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#fff' }}>加载中…</div>}>
+            <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text)' }}>加载中…</div>}>
               <RomanceHost />
             </Suspense>
           )}
@@ -309,7 +309,6 @@ function App() {
           <Route path="/admin/themes/featured" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/lottery" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/avatars" element={<AdminRoute><AdminPanel /></AdminRoute>} />
-          <Route path="/admin/audio-library" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/art-styles" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/components" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/play-mods" element={<AdminRoute><AdminPanel /></AdminRoute>} />

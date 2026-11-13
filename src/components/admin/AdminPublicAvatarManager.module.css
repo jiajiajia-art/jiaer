@@ -1,19 +1,19 @@
 /* 管理/运营「公共头像」：对齐 AdminPanel 暖色浅底，避免暗色胶囊碎片感 */
 
 .root {
-  --av-ink: #3b2a1d;
-  --av-muted: #8a7463;
-  --av-line: rgba(201, 139, 92, 0.22);
-  --av-line-strong: rgba(205, 157, 120, 0.42);
-  --av-surface: rgba(255, 251, 246, 0.96);
-  --av-surface-soft: rgba(250, 242, 234, 0.92);
-  --av-accent: #c9733f;
-  --av-accent-strong: #aa5a2d;
-  --av-accent-soft: rgba(201, 115, 63, 0.12);
-  --av-danger: #b4232c;
-  --av-danger-soft: rgba(180, 35, 44, 0.1);
-  --av-warn: #9a6700;
-  --av-warn-soft: rgba(154, 103, 0, 0.12);
+  --av-ink: var(--color-highlight);
+  --av-muted: var(--color-text-muted);
+  --av-line: color-mix(in srgb, var(--color-highlight) 22%, transparent);
+  --av-line-strong: color-mix(in srgb, var(--color-highlight) 42%, transparent);
+  --av-surface: color-mix(in srgb, var(--color-surface) 96%, transparent);
+  --av-surface-soft: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  --av-accent: var(--color-highlight);
+  --av-accent-strong: var(--color-highlight);
+  --av-accent-soft: color-mix(in srgb, var(--color-highlight) 12%, transparent);
+  --av-danger: var(--color-primary);
+  --av-danger-soft: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  --av-warn: var(--color-highlight);
+  --av-warn-soft: color-mix(in srgb, var(--color-highlight) 12%, transparent);
 
   display: flex;
   flex-direction: column;
@@ -95,8 +95,8 @@
   padding: 16px 18px;
   border-radius: 16px;
   border: 1px solid var(--av-line);
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(59, 42, 29, 0.04);
+  background: var(--color-surface);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-highlight) 4%, transparent);
 }
 
 .filterTop {
@@ -114,7 +114,7 @@
   padding: 0 12px;
   border: 1px solid var(--av-line-strong);
   border-radius: 8px;
-  background: #fff;
+  background: var(--color-surface);
   color: var(--av-ink);
   font-size: 14px;
   font-family: inherit;
@@ -127,7 +127,7 @@
 }
 
 .searchInput::placeholder {
-  color: #b5a395;
+  color: var(--color-text-secondary);
 }
 
 .listSection {
@@ -156,38 +156,20 @@
   display: flex;
   align-items: stretch;
   justify-content: flex-end;
-  background: rgba(28, 20, 14, 0.45);
+  background: color-mix(in srgb, var(--color-surface) 45%, transparent);
   backdrop-filter: blur(4px);
 }
 
-/*
- * 上传 / 编辑标签抽屉：portal 挂 body，必须自带 --av-*（禁止依赖 .root），
- * 关键字色带 fallback，避免浅米色底上发白不可读。
- */
 .uploadDrawer {
-  --av-ink: #3b2a1d;
-  --av-muted: #8a7463;
-  --av-line: rgba(201, 139, 92, 0.22);
-  --av-line-strong: rgba(205, 157, 120, 0.42);
-  --av-surface: rgba(255, 251, 246, 0.96);
-  --av-surface-soft: rgba(250, 242, 234, 0.92);
-  --av-accent: #c9733f;
-  --av-accent-strong: #aa5a2d;
-  --av-accent-soft: rgba(201, 115, 63, 0.12);
-  --av-danger: #b4232c;
-  --av-danger-soft: rgba(180, 35, 44, 0.1);
-  --av-warn: #9a6700;
-  --av-warn-soft: rgba(154, 103, 0, 0.12);
-
   width: min(440px, 100%);
   height: 100%;
   overflow: auto;
-  background: #fffaf5;
-  border-left: 1px solid var(--av-line, rgba(201, 139, 92, 0.22));
-  box-shadow: -12px 0 40px rgba(28, 20, 14, 0.18);
+  background: var(--color-bg);
+  border-left: 1px solid var(--av-line);
+  box-shadow: -12px 0 40px color-mix(in srgb, var(--color-shadow) 18%, transparent);
   padding: 20px 20px 28px;
   box-sizing: border-box;
-  color: var(--av-ink, #3b2a1d);
+  color: var(--av-ink);
 }
 
 .uploadDrawerHeader {
@@ -202,14 +184,13 @@
   margin: 0;
   font-size: 20px;
   font-weight: 700;
-  color: var(--av-ink, #3b2a1d);
 }
 
 .uploadDrawerHint {
   margin: 8px 0 0;
   font-size: 12px;
   line-height: 1.5;
-  color: var(--av-muted, #8a7463);
+  color: var(--av-muted);
 }
 
 .uploadClose {
@@ -219,15 +200,15 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: var(--av-muted, #8a7463);
+  color: var(--av-muted);
   font-size: 24px;
   line-height: 1;
   cursor: pointer;
 }
 
 .uploadClose:hover {
-  background: var(--av-accent-soft, rgba(201, 115, 63, 0.12));
-  color: var(--av-ink, #3b2a1d);
+  background: var(--av-accent-soft);
+  color: var(--av-ink);
 }
 
 .uploadPickBox {
@@ -236,27 +217,26 @@
   gap: 8px;
   padding: 14px;
   border-radius: 12px;
-  border: 1px dashed var(--av-line-strong, rgba(205, 157, 120, 0.42));
-  background: rgba(255, 255, 255, 0.7);
+  border: 1px dashed var(--av-line-strong);
+  background: color-mix(in srgb, var(--color-surface) 70%, transparent);
 }
 
 .uploadPickTitle {
   margin: 0;
   font-size: 14px;
   font-weight: 650;
-  color: var(--av-ink, #3b2a1d);
 }
 
 .uploadPickSub {
   margin: 0;
   font-size: 12px;
-  color: var(--av-muted, #8a7463);
+  color: var(--av-muted);
 }
 
 .editMeta {
   margin: 0;
   font-size: 12px;
-  color: var(--av-muted, #8a7463);
+  color: var(--av-muted);
 }
 
 .cardSummary {
@@ -349,14 +329,14 @@
 
 .tab:hover {
   color: var(--av-ink);
-  background: rgba(255, 255, 255, 0.7);
+  background: color-mix(in srgb, var(--color-surface) 70%, transparent);
 }
 
 .tabActive {
-  background: #fff;
+  background: var(--color-surface);
   color: var(--av-accent-strong);
   border-color: var(--av-line-strong);
-  box-shadow: 0 1px 2px rgba(59, 42, 29, 0.06);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-highlight) 6%, transparent);
 }
 
 .input {
@@ -368,7 +348,7 @@
   padding: 0 12px;
   border: 1px solid var(--av-line-strong);
   border-radius: 8px;
-  background: #fff;
+  background: var(--color-surface);
   color: var(--av-ink);
   font-size: 14px;
   font-family: inherit;
@@ -381,7 +361,7 @@
 }
 
 .input::placeholder {
-  color: #b5a395;
+  color: var(--color-text-secondary);
 }
 
 /* 上传表单：竖排字段，禁止标题输入在横向 flex 里被撑成超高框 */
@@ -411,22 +391,22 @@
   width: 100%;
   height: 40px;
   padding: 0 12px;
-  border: 1px solid var(--av-line-strong, rgba(205, 157, 120, 0.42));
+  border: 1px solid var(--av-line-strong);
   border-radius: 8px;
-  background: #fff;
-  color: var(--av-ink, #3b2a1d);
+  background: var(--color-surface);
+  color: var(--av-ink);
   font-size: 14px;
   font-family: inherit;
 }
 
 .titleInput:focus {
   outline: none;
-  border-color: var(--av-accent, #c9733f);
-  box-shadow: 0 0 0 3px var(--av-accent-soft, rgba(201, 115, 63, 0.12));
+  border-color: var(--av-accent);
+  box-shadow: 0 0 0 3px var(--av-accent-soft);
 }
 
 .titleInput::placeholder {
-  color: #b5a395;
+  color: var(--color-text-secondary);
 }
 
 .filters {
@@ -446,7 +426,7 @@
 .segLabel {
   font-size: 11px;
   font-weight: 700;
-  color: var(--av-muted, #8a7463);
+  color: var(--av-muted);
   letter-spacing: 0.06em;
 }
 
@@ -456,8 +436,8 @@
   gap: 2px;
   padding: 3px;
   border-radius: 9px;
-  background: #fff;
-  border: 1px solid var(--av-line-strong, rgba(205, 157, 120, 0.42));
+  background: var(--color-surface);
+  border: 1px solid var(--av-line-strong);
 }
 
 .seg,
@@ -471,25 +451,25 @@
   cursor: pointer;
   font-family: inherit;
   background: transparent;
-  color: var(--av-muted, #8a7463);
+  color: var(--av-muted);
   line-height: 1.2;
   white-space: nowrap;
 }
 
 .seg:hover {
-  color: var(--av-ink, #3b2a1d);
-  background: var(--av-accent-soft, rgba(201, 115, 63, 0.12));
+  color: var(--av-ink);
+  background: var(--av-accent-soft);
 }
 
 .segActive {
-  background: var(--av-accent-soft, rgba(201, 115, 63, 0.12));
-  color: var(--av-accent-strong, #aa5a2d);
+  background: var(--av-accent-soft);
+  color: var(--av-accent-strong);
 }
 
 .fieldLabel {
   font-size: 11px;
   font-weight: 700;
-  color: var(--av-muted, #8a7463);
+  color: var(--av-muted);
   letter-spacing: 0.06em;
 }
 
@@ -517,13 +497,13 @@
 }
 
 .primaryBtn {
-  background: var(--av-accent, #c9733f);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(201, 115, 63, 0.28);
+  background: color-mix(in srgb, var(--av-accent) 68%, var(--color-shadow));
+  color: var(--color-on-primary);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-highlight) 28%, transparent);
 }
 
 .primaryBtn:hover {
-  background: var(--av-accent-strong, #aa5a2d);
+  background: var(--av-accent-strong);
 }
 
 .primaryBtn:disabled {
@@ -533,15 +513,15 @@
 }
 
 .secondaryBtn {
-  background: #fff;
-  color: var(--av-ink, #3b2a1d);
-  border: 1px solid var(--av-line-strong, rgba(205, 157, 120, 0.42));
+  background: var(--color-surface);
+  color: var(--av-ink);
+  border: 1px solid var(--av-line-strong);
 }
 
 .secondaryBtn:hover {
-  border-color: var(--av-accent, #c9733f);
-  color: var(--av-accent-strong, #aa5a2d);
-  background: var(--av-accent-soft, rgba(201, 115, 63, 0.12));
+  border-color: var(--av-accent);
+  color: var(--av-accent-strong);
+  background: var(--av-accent-soft);
 }
 
 /*
@@ -549,14 +529,14 @@
  * portal 挂 body，必须自带色板（禁止依赖 .root 的 --av-*，否则白字叠白底）
  */
 .batchOverlay {
-  --bb-ink: #3b2a1d;
-  --bb-muted: #8a7463;
-  --bb-line: rgba(201, 139, 92, 0.28);
-  --bb-line-strong: rgba(205, 157, 120, 0.5);
-  --bb-paper: #fffaf5;
-  --bb-paper-deep: #f7eee4;
-  --bb-accent: #c9733f;
-  --bb-accent-strong: #aa5a2d;
+  --bb-ink: var(--color-highlight);
+  --bb-muted: var(--color-text-muted);
+  --bb-line: color-mix(in srgb, var(--color-highlight) 28%, transparent);
+  --bb-line-strong: color-mix(in srgb, var(--color-highlight) 50%, transparent);
+  --bb-paper: var(--color-bg);
+  --bb-paper-deep: var(--color-surface-2);
+  --bb-accent: var(--color-highlight);
+  --bb-accent-strong: var(--color-highlight);
   --bb-display: 'Songti SC', 'STSong', 'Noto Serif SC', 'Source Han Serif SC', serif;
 
   position: fixed;
@@ -567,7 +547,7 @@
   justify-content: center;
   padding: 24px 16px;
   box-sizing: border-box;
-  background: rgba(28, 20, 14, 0.62);
+  background: color-mix(in srgb, var(--color-surface) 62%, transparent);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   animation: bbFadeIn 0.28s ease-out;
@@ -585,10 +565,10 @@
   border-radius: 18px;
   border: 1px solid var(--bb-line);
   background:
-    linear-gradient(180deg, rgba(255, 252, 248, 0.98) 0%, rgba(250, 241, 232, 0.96) 100%);
+    linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 98%, transparent) 0%, color-mix(in srgb, var(--color-surface) 96%, transparent) 100%);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.7) inset,
-    0 28px 64px rgba(28, 20, 14, 0.35);
+    0 1px 0 color-mix(in srgb, var(--color-text) 70%, transparent) inset,
+    0 28px 64px color-mix(in srgb, var(--color-shadow) 35%, transparent);
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -608,7 +588,7 @@
   gap: 16px;
   padding: 18px 20px 14px;
   border-bottom: 1px solid var(--bb-line);
-  background: linear-gradient(90deg, rgba(201, 115, 63, 0.1) 0%, transparent 42%);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-highlight) 10%, transparent) 0%, transparent 42%);
   position: sticky;
   top: 0;
   z-index: 2;
@@ -662,8 +642,8 @@
   white-space: nowrap;
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(201, 115, 63, 0.12);
-  border: 1px solid rgba(201, 115, 63, 0.28);
+  background: color-mix(in srgb, var(--color-highlight) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 28%, transparent);
 }
 
 .batchGhostBtn {
@@ -672,7 +652,7 @@
   padding: 0 14px;
   border-radius: 8px;
   border: 1px solid var(--bb-line-strong);
-  background: #fff;
+  background: var(--color-surface);
   color: var(--bb-ink);
   font-size: 13px;
   font-weight: 600;
@@ -684,7 +664,7 @@
 .batchGhostBtn:hover:not(:disabled) {
   border-color: var(--bb-accent);
   color: var(--bb-accent-strong);
-  background: rgba(201, 115, 63, 0.1);
+  background: color-mix(in srgb, var(--color-highlight) 10%, transparent);
 }
 
 .batchGhostBtn:disabled {
@@ -709,7 +689,7 @@
   border: 1px solid var(--bb-line);
   border-radius: 14px;
   overflow: hidden;
-  background: #1c1410;
+  background: var(--color-surface);
   cursor: pointer;
   text-align: left;
   font-family: inherit;
@@ -718,8 +698,8 @@
 
 .batchCard:hover:not(:disabled) {
   transform: translateY(-2px);
-  border-color: rgba(201, 115, 63, 0.55);
-  box-shadow: 0 12px 28px rgba(59, 42, 29, 0.18);
+  border-color: color-mix(in srgb, var(--color-highlight) 55%, transparent);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--color-highlight) 18%, transparent);
 }
 
 .batchCard:focus-visible {
@@ -729,7 +709,7 @@
 
 .batchCardActive {
   border-color: var(--bb-accent);
-  box-shadow: 0 0 0 3px rgba(201, 115, 63, 0.28);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-highlight) 28%, transparent);
 }
 
 .batchCardDone {
@@ -747,7 +727,7 @@
   /* 待处理保留竖图比例；裁切完成后见 .batchCardDone */
   aspect-ratio: 3 / 4;
   width: 100%;
-  background: #2a2018;
+  background: var(--color-surface);
 }
 
 .batchThumb {
@@ -774,7 +754,7 @@
   justify-content: center;
   height: 100%;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--color-text-muted);
 }
 
 .batchBadgePass,
@@ -789,12 +769,12 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  color: var(--color-text);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 25%, transparent);
 }
 
 .batchBadgePass {
-  background: #2f6b3c;
+  background: var(--color-success);
 }
 
 .batchBadgeCrop {
@@ -802,7 +782,7 @@
 }
 
 .batchBadgeBad {
-  background: #b4232c;
+  background: var(--color-primary);
 }
 
 .batchCardShade {
@@ -812,9 +792,9 @@
   z-index: 1;
   background: linear-gradient(
     180deg,
-    rgba(20, 12, 8, 0) 0%,
-    rgba(20, 12, 8, 0.55) 42%,
-    rgba(20, 12, 8, 0.92) 100%
+    transparent 0%,
+    color-mix(in srgb, var(--color-surface) 55%, transparent) 42%,
+    color-mix(in srgb, var(--color-surface) 92%, transparent) 100%
   );
   pointer-events: none;
 }
@@ -829,7 +809,7 @@
   flex-direction: column;
   gap: 3px;
   padding: 10px 10px 11px;
-  color: #fff;
+  color: var(--color-text);
 }
 
 .batchName {
@@ -840,14 +820,14 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #fff;
+  color: var(--color-text);
 }
 
 .batchMeta {
   margin: 0;
   font-size: 10px;
   line-height: 1.35;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -860,17 +840,17 @@
   border-radius: 999px;
   font-size: 11px;
   font-weight: 700;
-  color: #fff;
-  background: rgba(201, 115, 63, 0.95);
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-highlight) 95%, transparent);
 }
 
 .batchCardDone .batchCardCta {
-  background: rgba(47, 107, 60, 0.95);
+  background: color-mix(in srgb, var(--color-success) 95%, transparent);
 }
 
 .batchCardLocked:not(.batchCardDone) .batchCardCta {
-  background: rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.7);
+  background: color-mix(in srgb, var(--color-text) 18%, transparent);
+  color: var(--color-text-secondary);
 }
 
 .batchBoardFooter {
@@ -880,7 +860,7 @@
   gap: 12px;
   padding: 12px 18px 16px;
   border-top: 1px solid var(--bb-line);
-  background: rgba(255, 250, 245, 0.9);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
   position: sticky;
   bottom: 0;
 }
@@ -904,13 +884,13 @@
   font-size: 13px;
   font-weight: 600;
   font-family: inherit;
-  background: var(--av-accent, #c9733f);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(201, 115, 63, 0.28);
+  background: var(--av-accent, var(--color-highlight));
+  color: var(--color-text);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-highlight) 28%, transparent);
 }
 
 .batchSaveBtn:hover:not(:disabled) {
-  background: var(--av-accent-strong, #aa5a2d);
+  background: var(--av-accent-strong, var(--color-highlight));
 }
 
 .batchSaveBtn:disabled {
@@ -934,7 +914,7 @@
   color: var(--av-muted);
   border-radius: 12px;
   border: 1px dashed var(--av-line-strong);
-  background: rgba(255, 255, 255, 0.55);
+  background: color-mix(in srgb, var(--color-surface) 55%, transparent);
 }
 
 .grid {
@@ -956,9 +936,9 @@
   gap: 0;
   padding: 12px;
   border-radius: 14px;
-  background: #fff;
+  background: var(--color-surface);
   border: 1px solid var(--av-line);
-  box-shadow: 0 1px 3px rgba(59, 42, 29, 0.04);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-highlight) 4%, transparent);
 }
 
 .thumbBtn {

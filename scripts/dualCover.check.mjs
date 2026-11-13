@@ -66,8 +66,9 @@ test('CoverUpload_AI生成按钮红底白字对齐更换按钮', () => {
   const css = read('src/components/GameSettingEditor/WorldPanel/WorldPanel.module.css');
   // 功能注释：行首 .coverAiBtn，避开 .uploadCoverCompact .coverAiBtn
   const ai = css.match(/(?:^|\n)\.coverAiBtn\s*\{[^}]*\}/)?.[0] || '';
-  assert.match(ai, /background:\s*#A8283C/);
-  assert.match(ai, /color:\s*#fff(?:fff)?/);
+  // 颜色改走主题变量：主色底 + 主色上文字
+  assert.match(ai, /background:\s*var\(--color-primary\)/);
+  assert.match(ai, /color:\s*var\(--color-on-primary\)/);
   assert.doesNotMatch(ai, /rgba\(142,\s*33,\s*53,\s*0\.12\)/);
 });
 

@@ -213,23 +213,23 @@ export function validateShippingForm(input: {
 export const PRIZE_DISPLAY: Record<PrizeKey, { label: string; color: string }> = {
   console: {
     label: 'Switch2游戏机',
-    color: '#5c6bc0',
+    color: 'var(--color-info)',
   },
   mini_handheld: {
     label: '迷你掌机',
-    color: '#ec407a',
+    color: 'var(--color-primary)',
   },
   badge: {
     label: '吧唧',
-    color: '#42a5f5',
+    color: 'var(--color-info)',
   },
   poke_ball: {
     label: '精灵球',
-    color: '#ab47bc',
+    color: 'var(--color-accent)',
   },
   points_300: {
     label: '300织梦豆券',
-    color: '#7e57c2',
+    color: 'var(--color-accent)',
   },
 };
 

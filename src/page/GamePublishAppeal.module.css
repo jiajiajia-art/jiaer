@@ -1,14 +1,14 @@
 .pageRoot {
-  --appeal-accent: #d44362;
-  --appeal-accent-soft: rgba(212, 67, 98, 0.14);
-  --appeal-border: rgba(255, 255, 255, 0.11);
-  --appeal-surface: #171719;
-  --appeal-muted: #a9a9af;
+  --appeal-accent: var(--color-primary);
+  --appeal-accent-soft: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  --appeal-border: color-mix(in srgb, var(--color-text) 11%, transparent);
+  --appeal-surface: var(--color-surface);
+  --appeal-muted: var(--color-text-secondary);
   min-height: 100vh;
   min-height: 100dvh;
   overflow-x: clip;
-  background: #080809;
-  color: #f8f8fa;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .mainContent {
@@ -44,7 +44,7 @@
 }
 
 .pageHeader > div > span {
-  color: #ff9eb2;
+  color: var(--color-primary-fg);
   font-size: 12px;
   font-weight: 700;
 }
@@ -72,8 +72,8 @@
   padding: 0;
   border: 1px solid var(--appeal-border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  color: #ffffff;
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+  color: var(--color-text);
   cursor: pointer;
 }
 
@@ -107,7 +107,7 @@
   flex: 0 0 auto;
   border-radius: 6px;
   object-fit: cover;
-  background: #202023;
+  background: var(--color-surface-2);
 }
 
 .workInfo {
@@ -115,7 +115,7 @@
 }
 
 .workInfo > span {
-  color: #ff9eb2;
+  color: var(--color-primary-fg);
   font-size: 12px;
 }
 
@@ -157,7 +157,7 @@
 
 .sectionHeading > span {
   flex: 0 0 auto;
-  color: #ff9eb2;
+  color: var(--color-primary-fg);
   font-size: 12px;
   font-weight: 800;
   line-height: 22px;
@@ -184,7 +184,7 @@
   padding: 15px 16px;
   border-left: 3px solid var(--appeal-accent);
   background: var(--appeal-accent-soft);
-  color: #f0dfe3;
+  color: var(--color-text);
   font-size: 14px;
   line-height: 1.65;
   overflow-wrap: anywhere;
@@ -205,7 +205,7 @@
   border-radius: 8px;
   outline: none;
   background: var(--appeal-surface);
-  color: #ffffff;
+  color: var(--color-text);
   font: inherit;
   font-size: 14px;
   line-height: 1.6;
@@ -213,7 +213,7 @@
 }
 
 .textareaField textarea:focus {
-  border-color: rgba(255, 128, 154, 0.65);
+  border-color: color-mix(in srgb, var(--color-primary-light) 65%, transparent);
 }
 
 .textareaField > span {
@@ -226,7 +226,7 @@
 }
 
 .textareaField > .countError {
-  color: #ff6d79;
+  color: var(--color-primary-fg);
 }
 
 .submitButton {
@@ -240,7 +240,7 @@
   border: 0;
   border-radius: 7px;
   background: var(--appeal-accent);
-  color: #ffffff;
+  color: var(--color-on-primary);
   font-weight: 700;
   cursor: pointer;
 }
@@ -255,7 +255,7 @@
   padding: 20px;
   border: 1px solid var(--appeal-border);
   border-radius: 8px;
-  background: #111113;
+  background: var(--color-surface);
 }
 
 .historyItem {
@@ -281,7 +281,7 @@
 }
 
 .historyItem strong {
-  color: #d7d7db;
+  color: var(--color-text);
   font-size: 12px;
 }
 
@@ -295,7 +295,7 @@
 
 .reviewResult {
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.035);
+  background: color-mix(in srgb, var(--color-text) 3.5%, transparent);
 }
 
 .statusTag {
@@ -308,18 +308,18 @@
 }
 
 .status_pending {
-  color: #ffd28e;
-  border-color: rgba(255, 197, 109, 0.35);
+  color: var(--color-highlight);
+  border-color: color-mix(in srgb, var(--color-highlight) 35%, transparent);
 }
 
 .status_approved {
-  color: #89e2b2;
-  border-color: rgba(105, 210, 151, 0.35);
+  color: var(--color-success);
+  border-color: color-mix(in srgb, var(--color-success) 35%, transparent);
 }
 
 .status_rejected {
-  color: #ff9dad;
-  border-color: rgba(255, 109, 121, 0.35);
+  color: var(--color-primary-fg);
+  border-color: color-mix(in srgb, var(--color-primary-light) 35%, transparent);
 }
 
 .resultSection {
@@ -336,7 +336,7 @@
   flex: 0 0 auto;
   width: 23px;
   height: 23px;
-  color: #ff9eb2;
+  color: var(--color-primary-fg);
 }
 
 .resultSection h2 {
@@ -377,8 +377,8 @@
   padding: 0 14px;
   border: 1px solid var(--appeal-border);
   border-radius: 7px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  color: var(--color-text);
   cursor: pointer;
 }
 

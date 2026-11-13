@@ -2,12 +2,12 @@
     position: relative;
     --creator-radius: 16px;
     --creator-gap: 18px;
-    --creator-label: #8E8E93;
-    --creator-value: #FFFFFF;
-    --creator-divider: rgba(255, 255, 255, 0.12);
-    --creator-card: #1C1C1E;
-    background: #000000;
-    color: #ffffff;
+    --creator-label: var(--color-text-muted);
+    --creator-value: var(--color-text);
+    --creator-divider: color-mix(in srgb, var(--color-text) 12%, transparent);
+    --creator-card: var(--color-surface);
+    background: var(--color-bg);
+    color: var(--color-text);
     min-height: 100vh;
 }
 
@@ -23,7 +23,7 @@
     cursor: pointer;
     z-index: 20;
     transition: opacity 0.2s ease;
-    color: #ffffff;
+    color: var(--color-text);
     background: transparent;
     border: none;
     padding: 0;
@@ -37,8 +37,8 @@
     display: block;
     width: 10px;
     height: 10px;
-    border-left: 2px solid #ffffff;
-    border-bottom: 2px solid #ffffff;
+    border-left: 2px solid var(--color-text);
+    border-bottom: 2px solid var(--color-text);
     transform: rotate(45deg);
     margin-left: 4px;
 }
@@ -63,9 +63,9 @@
     font-size: 13px;
     font-weight: 600;
     letter-spacing: 0.02em;
-    color: #fff4e8;
-    background: rgba(120, 72, 28, 0.92);
-    border-bottom: 1px solid rgba(255, 210, 150, 0.28);
+    color: var(--color-on-media);
+    background: color-mix(in srgb, var(--color-highlight) 92%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-highlight) 28%, transparent);
 }
 
 .unavailableState {
@@ -80,7 +80,7 @@
     margin: 0;
     font-size: 15px;
     line-height: 1.5;
-    color: rgba(255, 255, 255, 0.78);
+    color: color-mix(in srgb, var(--color-text) 78%, transparent);
 }
 
 .banner {
@@ -88,7 +88,7 @@
     width: 100%;
     height: 220px;
     margin: 0;
-    background: #8E8E93;
+    background: var(--color-text-muted);
     background-size: cover;
     background-position: center;
     border-radius: 0;
@@ -106,8 +106,8 @@
     gap: 6px;
     border: none;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.28);
-    color: #ffffff;
+    background: color-mix(in srgb, var(--color-text) 28%, transparent);
+    color: var(--color-text);
     font-size: 13px;
     font-weight: 500;
     line-height: 1;
@@ -123,7 +123,7 @@
 }
 
 .settingsBtn:hover {
-    background: rgba(255, 255, 255, 0.38);
+    background: color-mix(in srgb, var(--color-text) 38%, transparent);
 }
 
 .moreWrap {
@@ -142,10 +142,10 @@
     border: none;
     border-radius: 0;
     background: transparent;
-    color: #ffffff;
+    color: var(--color-text);
     cursor: pointer;
     padding: 0;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+    filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--color-shadow) 70%, transparent));
 }
 
 .moreBtn:hover {
@@ -158,11 +158,11 @@
     top: calc(100% + 6px);
     right: 0;
     min-width: 120px;
-    background: #1c1c1e;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--color-shadow) 35%, transparent);
 }
 
 .moreMenuItem {
@@ -173,7 +173,7 @@
     width: 100%;
     border: none;
     background: transparent;
-    color: #ffffff;
+    color: var(--color-text);
     text-align: center;
     padding: 12px 18px 12px 10px;
     font-size: 14px;
@@ -188,7 +188,7 @@
 }
 
 .moreMenuItem:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .visitorActions {
@@ -214,24 +214,24 @@
 }
 
 .followBtnActive {
-    background: #2c2c2e;
-    color: #ffffff;
-    border-color: rgba(255, 255, 255, 0.16);
+    background: var(--color-surface-2);
+    color: var(--color-text);
+    border-color: color-mix(in srgb, var(--color-text) 16%, transparent);
 }
 
 .followBtnIdle {
-    background: rgba(168, 40, 60, 0.85);
-    color: #ffffff;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
 }
 
 .blockBtn {
     background: transparent;
-    color: #ffffff;
-    border-color: rgba(255, 255, 255, 0.28);
+    color: var(--color-text);
+    border-color: color-mix(in srgb, var(--color-text) 28%, transparent);
 }
 
 .blockBtn:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .followBtn:disabled,
@@ -260,8 +260,8 @@
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
-    border: 2px solid rgba(255, 255, 255, 0.12);
-    background: #2c2c2e;
+    border: 2px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    background: var(--color-surface-2);
 }
 
 .identityInfo {
@@ -314,7 +314,7 @@
 }
 
 .socialItem:hover .socialValue {
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .socialLabel {

@@ -1,10 +1,10 @@
 .root {
-  --cb-border: var(--admin-border, rgba(76, 54, 38, 0.16));
-  --cb-surface: var(--admin-surface, #ffffff);
-  --cb-soft: var(--admin-surface-soft, #f7f3ef);
-  --cb-text: var(--admin-text, #2f241d);
-  --cb-muted: var(--admin-text-soft, #6f5a49);
-  --cb-accent: var(--admin-accent, #c9733f);
+  --cb-border: var(--admin-border, color-mix(in srgb, var(--color-highlight) 16%, transparent));
+  --cb-surface: var(--admin-surface, var(--color-surface));
+  --cb-soft: var(--admin-surface-soft, var(--color-bg));
+  --cb-text: var(--admin-text, var(--color-text));
+  --cb-muted: var(--admin-text-soft, var(--color-text-secondary));
+  --cb-accent: var(--admin-accent, var(--color-highlight));
   display: grid;
   gap: 18px;
   color: var(--cb-text);
@@ -62,7 +62,7 @@
 .segmented button.active {
   background: var(--cb-surface);
   color: var(--cb-text);
-  box-shadow: 0 2px 8px rgba(54, 35, 20, 0.1);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-highlight) 10%, transparent);
 }
 
 .section {
@@ -121,8 +121,8 @@
   justify-content: center;
   padding: 0 5px;
   border-radius: 10px;
-  background: #c83243;
-  color: #ffffff;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   line-height: 20px;
@@ -195,7 +195,7 @@
 .primaryButton {
   border: 1px solid var(--cb-accent);
   background: var(--cb-accent);
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .secondaryButton,
@@ -206,9 +206,9 @@
 }
 
 .dangerButton {
-  border: 1px solid #b93a3a;
-  background: #b93a3a;
-  color: #ffffff;
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .primaryButton:disabled,
@@ -285,10 +285,10 @@
   width: fit-content;
   max-width: 100%;
   padding: 4px 8px;
-  border: 1px solid rgba(47, 133, 98, 0.3);
+  border: 1px solid color-mix(in srgb, var(--color-success) 30%, transparent);
   border-radius: 5px;
-  background: rgba(47, 133, 98, 0.08);
-  color: #26754f;
+  background: color-mix(in srgb, var(--color-success) 8%, transparent);
+  color: var(--color-success);
   font-size: 11px;
   font-weight: 700;
   overflow-wrap: anywhere;
@@ -432,7 +432,7 @@
   display: grid;
   place-items: center;
   padding: 20px;
-  background: rgba(0, 0, 0, 0.55);
+  background: color-mix(in srgb, var(--color-shadow) 55%, transparent);
 }
 
 .modal {
@@ -442,7 +442,7 @@
   border: 1px solid var(--cb-border);
   border-radius: 8px;
   background: var(--cb-surface);
-  box-shadow: 0 24px 64px rgba(31, 20, 12, 0.3);
+  box-shadow: 0 24px 64px color-mix(in srgb, var(--color-shadow) 30%, transparent);
 }
 
 .modal header,
@@ -615,21 +615,21 @@
 }
 
 .appealStatus_pending {
-  border-color: rgba(194, 128, 30, 0.35);
-  background: rgba(221, 153, 51, 0.1);
-  color: #9b620e;
+  border-color: color-mix(in srgb, var(--color-highlight) 35%, transparent);
+  background: color-mix(in srgb, var(--color-highlight) 10%, transparent);
+  color: var(--color-highlight);
 }
 
 .appealStatus_approved {
-  border-color: rgba(44, 139, 90, 0.3);
-  background: rgba(44, 139, 90, 0.09);
-  color: #277a50;
+  border-color: color-mix(in srgb, var(--color-success) 30%, transparent);
+  background: color-mix(in srgb, var(--color-success) 9%, transparent);
+  color: var(--color-success);
 }
 
 .appealStatus_rejected {
-  border-color: rgba(185, 58, 58, 0.3);
-  background: rgba(185, 58, 58, 0.09);
-  color: #a42f2f;
+  border-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 9%, transparent);
+  color: var(--color-primary);
 }
 
 .appealDetails {

@@ -127,7 +127,7 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
                         type: abilityNode.type || 'illustration',
                         name: abilityNode.name,
                         authorNote: abilityNode.authorNote || '',
-                        backgroundColor: abilityNode.color || (abilityNode.type === 'button' ? '#37333480' : undefined),
+                        backgroundColor: abilityNode.color || (abilityNode.type === 'button' ? 'color-mix(in srgb, var(--color-shadow) 50.2%, transparent)' : undefined),
                     };
                 })
                 .filter((npc): npc is PlacedNPC => npc !== null);
@@ -350,7 +350,7 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
                     type: functionalNPCData.type || 'illustration',
                     name: functionalNPCData.name,
                     authorNote: functionalNPCData.authorNote || '',
-                    backgroundColor: functionalNPCData.type === 'button' ? '#37333480' : undefined,
+                    backgroundColor: functionalNPCData.type === 'button' ? 'color-mix(in srgb, var(--color-shadow) 50.2%, transparent)' : undefined,
                 };
                 setPlacedFunctionalNPCs(prev => [...prev, newNPC]);
             } else {

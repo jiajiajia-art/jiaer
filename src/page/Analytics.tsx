@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
+import { readThemeColor, useThemeSettings } from '../lib/theme';
 
 // Simple analytics dashboard page ported from provided static HTML.
 // Notes:
@@ -43,7 +44,7 @@ function drawLineChart(
   opts?: { padding?: number; colors?: string[] }
 ) {
   if (!canvas) return;
-  const { padding = 24, colors = ['#2f81f7', '#23d18b', '#d29922', '#ff6b6b', '#b15cff'] } = opts || {};
+  const { padding = 24, colors = ['var(--color-info)', 'var(--color-success)', 'var(--color-highlight)', 'var(--color-primary-light)', 'var(--color-accent)'] } = opts || {};
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   const W = canvas.width, H = canvas.height;
@@ -57,7 +58,7 @@ function drawLineChart(
   for (const ln of lines) ymax = Math.max(ymax, maxOf(series, ln.key));
   if (ymax <= 0) ymax = 1;
   // grid lines
-  ctx.strokeStyle = '#1f2633';
+  ctx.strokeStyle = readThemeColor('var(--color-border)');
   ctx.lineWidth = 1;
   ctx.beginPath();
   for (const t of [0.5, 1.0]) {
@@ -67,12 +68,12 @@ function drawLineChart(
   }
   ctx.stroke();
   // max label
-  ctx.fillStyle = '#9da3ae';
+  ctx.fillStyle = readThemeColor('var(--color-text-muted)');
   ctx.font = '12px system-ui';
   ctx.fillText(String(Math.round(ymax)), 4, top + 8);
   // lines
   lines.forEach((ln, idx) => {
-    ctx.strokeStyle = colors[idx % colors.length];
+    ctx.strokeStyle = readThemeColor(colors[idx % colors.length]);
     ctx.lineWidth = 2;
     ctx.beginPath();
     series.forEach((pt, i) => {
@@ -86,6 +87,7 @@ function drawLineChart(
 }
 
 export default function Analytics() {
+  const { theme: activeTheme, mode: activeMode } = useThemeSettings();
   // inputs
   const [apiBase, setApiBase] = useState<string>('');
   const [start, setStart] = useState<string>(daysAgo(6));
@@ -168,19 +170,19 @@ export default function Analytics() {
       { key: 'wau', label: 'WAU' },
       { key: 'mau', label: 'MAU' },
     ]);
-  }, [activeSeriesRows]);
+  }, [activeSeriesRows, activeTheme, activeMode]);
 
   useEffect(() => {
     drawLineChart(chartRetentionWRef.current, retentionWeekPct as any[], [
       { key: 'ratePct', label: '周留存(%)' },
     ]);
-  }, [retentionWeekPct]);
+  }, [retentionWeekPct, activeTheme, activeMode]);
 
   useEffect(() => {
     drawLineChart(chartRetentionMRef.current, retentionMonthPct as any[], [
       { key: 'ratePct', label: '月留存(%)' },
     ]);
-  }, [retentionMonthPct]);
+  }, [retentionMonthPct, activeTheme, activeMode]);
 
   useEffect(() => {
     // init inputs from storage
@@ -196,28 +198,28 @@ export default function Analytics() {
     <div>
       {/* Scoped styles: keep them self-contained for this page */}
       <style>{`
-        :root { --bg: #0f1115; --panel: #151923; --text: #e6edf3; --muted:#9da3ae; --accent:#2f81f7; --warn:#d29922; }
+        .ana-root { --bg: var(--color-surface); --panel: var(--color-surface); --text: var(--color-text); --muted:var(--color-text-secondary); --accent:var(--color-info); --warn:var(--color-highlight); }
         .ana-root { background: var(--bg); color: var(--text); min-height: calc(100vh - 1px); }
-        .ana-header { position: sticky; top:0; background: rgba(15,17,21,0.9); backdrop-filter: blur(6px); border-bottom:1px solid #232a36; padding: 12px 16px; z-index: 10; }
+        .ana-header { position: sticky; top:0; background: color-mix(in srgb, var(--color-surface) 90%, transparent); backdrop-filter: blur(6px); border-bottom:1px solid var(--color-border); padding: 12px 16px; z-index: 10; }
         .ana-h1 { margin:0; font-size: 16px; }
         .controls { display:flex; gap:12px; flex-wrap: wrap; margin-top:8px; }
-        .card { background: var(--panel); border:1px solid #232a36; border-radius:8px; padding: 12px; }
+        .card { background: var(--panel); border:1px solid var(--color-border); border-radius:8px; padding: 12px; }
         .ana-main { padding: 16px; display: grid; grid-template-columns: 1fr; gap: 12px; }
         .ana-label { display:flex; align-items:center; gap:6px; color: var(--muted); }
-        .ana-input, .ana-select, .ana-button { background:#0f1320; color:var(--text); border:1px solid #232a36; border-radius:6px; padding:6px 8px; }
+        .ana-input, .ana-select, .ana-button { background:var(--color-surface); color:var(--text); border:1px solid var(--color-border); border-radius:6px; padding:6px 8px; }
         input[type="date"].ana-input { padding:4px 8px; }
-        .ana-button.primary { background: var(--accent); border-color: #2b6cdf; color:#fff; }
+        .ana-button.primary { background: var(--accent); border-color: var(--color-info); color:var(--color-text); }
         .grid { overflow:auto; }
         table { width:100%; border-collapse: collapse; min-width: 420px; }
-        th, td { padding:8px 10px; border-bottom:1px solid #232a36; }
+        th, td { padding:8px 10px; border-bottom:1px solid var(--color-border); }
         th { text-align:left; color: var(--muted); font-weight: 600; user-select: none; }
-        tr:hover td { background: #121724; }
+        tr:hover td { background: var(--color-surface); }
         .muted { color: var(--muted); }
         .row { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
-        .pill { display:inline-block; padding:2px 6px; border-radius:100px; border:1px solid #2a3344; color:#cbd5e1; font-size: 12px; }
-        .help { color:#9aa4b2; font-size:12px; }
-        .error { color:#ff6b6b; }
-        .ok { color:#52c41a; }
+        .pill { display:inline-block; padding:2px 6px; border-radius:100px; border:1px solid var(--color-border); color:var(--color-text-secondary); font-size: 12px; }
+        .help { color:var(--color-text-secondary); font-size:12px; }
+        .error { color:var(--color-primary-light); }
+        .ok { color:var(--color-success); }
       `}</style>
 
       <div className="ana-root">

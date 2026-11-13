@@ -6,16 +6,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readBackend, skipNoBackend } from './_backendRepo.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const src = readFileSync(
   join(root, 'src/components/Galgame/panels/PlayerArchiveSection.tsx'),
   'utf8',
 );
-const beHandler = readFileSync(
-  join(root, '../Interactive-fiction-backend/interface/handlers/visual/sessionPlayerProfiles.js'),
-  'utf8',
-);
+const beHandler = readBackend('interface/handlers/visual/sessionPlayerProfiles.js');
 
 test('PlayerArchive_总览档案卡是CrimsonDossier布局', () => {
   assert.match(src, /dossierHero/);
@@ -90,7 +88,7 @@ test('PlayerArchive_编辑页始终有AI生成', () => {
   );
 });
 
-test('player-avatar_手动生图不再AB_DISABLED', () => {
+test('player-avatar_手动生图不再AB_DISABLED', { skip: skipNoBackend }, () => {
   const fnStart = beHandler.indexOf('export async function postSessionPlayerAvatarHandler');
   assert.ok(fnStart >= 0);
   const slice = beHandler.slice(fnStart, fnStart + 1200);

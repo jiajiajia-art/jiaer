@@ -21,9 +21,9 @@
   min-height: 2.2rem;
   padding: 0;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  border: 1px solid color-mix(in srgb, var(--color-text) 22%, transparent);
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  color: var(--color-text);
   font-size: 1.45rem;
   line-height: 1;
   font-weight: 400;
@@ -31,8 +31,8 @@
 }
 
 .back:hover:not(:disabled) {
-  border-color: rgba(255, 90, 103, 0.5);
-  color: #ffb3ba;
+  border-color: color-mix(in srgb, var(--color-primary-light) 50%, transparent);
+  color: var(--color-primary-fg);
 }
 
 .headAvatar,
@@ -43,15 +43,15 @@
   border-radius: 999px;
   object-fit: cover;
   object-position: top center;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid color-mix(in srgb, var(--color-text) 18%, transparent);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .headAvatarPoster,
 .bubbleAvatarPoster {
   object-fit: contain;
   object-position: center center;
-  background: #12080c;
+  background: var(--color-surface);
 }
 
 .headAvatarEmpty {
@@ -75,15 +75,15 @@
   align-items: center;
   gap: 0.35rem;
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-secondary);
 }
 
 .onlineDot {
   width: 0.45rem;
   height: 0.45rem;
   border-radius: 999px;
-  background: #3dd68c;
-  box-shadow: 0 0 8px rgba(61, 214, 140, 0.55);
+  background: var(--color-success);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-success) 55%, transparent);
 }
 
 .clearBtn {
@@ -95,22 +95,22 @@
   min-height: 2rem;
   padding: 0.35rem 0.65rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 180, 188, 0.28);
+  border: 1px solid color-mix(in srgb, var(--color-primary-light) 28%, transparent);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 55%),
-    rgba(224, 61, 75, 0.12);
-  color: #ffb3ba;
+    linear-gradient(180deg, color-mix(in srgb, var(--color-text) 6%, transparent) 0%, transparent 55%),
+    color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary-fg);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .clearBtn:hover:not(:disabled) {
-  border-color: rgba(255, 90, 103, 0.55);
-  background: rgba(224, 61, 75, 0.22);
-  color: #fff;
+  border-color: color-mix(in srgb, var(--color-primary-light) 55%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  color: var(--color-on-primary);
 }
 
 .clearBtn:disabled {
@@ -119,7 +119,7 @@
 }
 
 .clearBtn:focus-visible {
-  outline: 2px solid var(--primary-light, #ff5a67);
+  outline: 2px solid var(--primary-light, var(--color-primary-light));
   outline-offset: 2px;
 }
 
@@ -145,10 +145,10 @@
 .empty,
 .typing {
   margin: 1.5rem auto;
-  color: rgba(255, 236, 238, 0.72);
+  color: color-mix(in srgb, var(--color-on-media) 78%, transparent);
   font-size: 0.9rem;
   font-weight: 550;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 1px 8px color-mix(in srgb, var(--color-shadow) 55%, transparent);
 }
 
 .typing {
@@ -182,8 +182,8 @@
   border-radius: 999px;
   object-fit: cover;
   object-position: top center;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
   display: block;
 }
 
@@ -200,12 +200,12 @@
 
 .avatarHit:hover .headAvatar,
 .avatarHit:hover .bubbleAvatar {
-  border-color: rgba(224, 61, 75, 0.65);
-  box-shadow: 0 0 0 2px rgba(224, 61, 75, 0.25);
+  border-color: color-mix(in srgb, var(--color-primary) 65%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 25%, transparent);
 }
 
 .avatarHit:focus-visible {
-  outline: 2px solid var(--primary-light, #ff5a67);
+  outline: 2px solid var(--primary-light, var(--color-primary-light));
   outline-offset: 2px;
 }
 
@@ -239,26 +239,26 @@
 
 .user {
   background: linear-gradient(165deg, var(--primary-light) 0%, var(--primary) 55%, var(--primary-dark) 100%);
-  color: #fff;
+  color: var(--color-text);
   border-bottom-right-radius: 0.25rem;
-  box-shadow: 0 6px 16px rgba(224, 61, 75, 0.28);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary) 28%, transparent);
 }
 
 .assistant {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(232, 238, 248, 0.95);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  color: color-mix(in srgb, var(--color-text) 95%, transparent);
   border-bottom-left-radius: 0.25rem;
 }
 
 .streaming {
-  border-color: rgba(224, 61, 75, 0.35);
+  border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 .menu {
-  --menu-ink: #140a0e;
-  --menu-accent: #ffb3ba;
-  --menu-line: rgba(255, 180, 188, 0.28);
+  --menu-ink: var(--color-text);
+  --menu-accent: var(--color-primary-light);
+  --menu-line: color-mix(in srgb, var(--color-primary-light) 28%, transparent);
   position: absolute;
   left: 0;
   bottom: calc(100% + 0.5rem);
@@ -270,11 +270,11 @@
   border-radius: 999px;
   border: 1px solid var(--menu-line);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, transparent 55%),
+    linear-gradient(180deg, color-mix(in srgb, var(--color-text) 7%, transparent) 0%, transparent 55%),
     var(--menu-ink);
   box-shadow:
-    0 12px 28px rgba(0, 0, 0, 0.48),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    0 12px 28px color-mix(in srgb, var(--color-shadow) 48%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 6%, transparent);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   animation: menuRise 0.22s ease-out;
@@ -312,12 +312,12 @@
 }
 
 .menuBtn:hover:not(:disabled) {
-  background: rgba(224, 61, 75, 0.22);
-  color: #fff;
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  color: var(--color-on-primary);
 }
 
 .menuBtn:focus-visible {
-  outline: 2px solid var(--primary-light, #ff5a67);
+  outline: 2px solid var(--primary-light, var(--color-primary-light));
   outline-offset: 1px;
 }
 
@@ -327,24 +327,24 @@
 }
 
 .menuBtnMuted {
-  color: rgba(255, 245, 242, 0.55);
+  color: var(--color-text-secondary);
   font-weight: 600;
   letter-spacing: 0.04em;
 }
 
 .menuBtnMuted:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 245, 242, 0.92);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  color: color-mix(in srgb, var(--color-text) 92%, transparent);
 }
 
 .menuBtnDanger {
-  color: #ff8a93;
+  color: var(--color-primary-fg);
   font-weight: 750;
 }
 
 .menuBtnDanger:hover:not(:disabled) {
-  background: rgba(224, 61, 75, 0.28);
-  color: #fff;
+  background: color-mix(in srgb, var(--color-primary) 28%, transparent);
+  color: var(--color-on-primary);
 }
 
 .menuDivider {
@@ -379,8 +379,8 @@
 
 /* 墨色坞：不透明底 + 主题红顶边，避免溶进场景底图 */
 .composer {
-  --composer-ink: #12090c;
-  --composer-ink-mid: #1c1014;
+  --composer-ink: var(--color-text);
+  --composer-ink-mid: var(--color-text);
   flex-shrink: 0;
   position: relative;
   z-index: 2;
@@ -391,14 +391,14 @@
   margin-top: 0.45rem;
   padding: 0.8rem 0.75rem 0.85rem;
   border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-top: 2px solid var(--primary, #e03d4b);
+  border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+  border-top: 2px solid var(--primary, var(--color-primary));
   background:
     linear-gradient(180deg, var(--composer-ink-mid) 0%, var(--composer-ink) 100%);
   box-shadow:
-    0 -10px 28px rgba(0, 0, 0, 0.5),
-    0 10px 28px rgba(224, 61, 75, 0.2),
-    inset 0 1px 0 rgba(255, 180, 186, 0.12);
+    0 -10px 28px color-mix(in srgb, var(--color-shadow) 50%, transparent),
+    0 10px 28px color-mix(in srgb, var(--color-primary) 20%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-primary-light) 12%, transparent);
   animation: composerRise 0.32s ease-out;
 }
 
@@ -413,12 +413,12 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    var(--primary-light, #ff5a67) 22%,
-    var(--primary, #e03d4b) 50%,
-    var(--primary-light, #ff5a67) 78%,
+    var(--primary-light, var(--color-primary-light)) 22%,
+    var(--primary, var(--color-primary)) 50%,
+    var(--primary-light, var(--color-primary-light)) 78%,
     transparent 100%
   );
-  box-shadow: 0 0 12px rgba(224, 61, 75, 0.55);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--color-primary) 55%, transparent);
   pointer-events: none;
 }
 
@@ -428,7 +428,7 @@
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.14em;
-  color: #ff9aa3;
+  color: var(--color-primary-fg);
 }
 
 .input {
@@ -436,28 +436,28 @@
   resize: none;
   min-height: 3.15rem;
   border-radius: 0.75rem;
-  border: 1.5px solid rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  border: 1.5px solid color-mix(in srgb, var(--color-text) 28%, transparent);
+  background: color-mix(in srgb, var(--color-text) 10%, transparent);
+  color: var(--color-text);
   padding: 0.7rem 0.85rem;
   font: inherit;
   font-size: 0.9rem;
   line-height: 1.4;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .input::placeholder {
-  color: rgba(255, 232, 234, 0.58);
+  color: var(--color-text-secondary);
   font-weight: 500;
 }
 
 .input:focus {
   outline: none;
-  border-color: var(--primary-light, #ff5a67);
-  background: rgba(255, 255, 255, 0.14);
+  border-color: var(--primary-light, var(--color-primary-light));
+  background: color-mix(in srgb, var(--color-text) 14%, transparent);
   box-shadow:
-    0 0 0 3px rgba(224, 61, 75, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .send {
@@ -467,14 +467,14 @@
   border-radius: 999px;
   padding: 0.6rem 1.15rem;
   background: linear-gradient(165deg, var(--primary-light), var(--primary) 50%, var(--primary-dark));
-  color: #fff;
+  color: var(--color-text);
   font-weight: 800;
   font-size: 0.9rem;
   letter-spacing: 0.06em;
   cursor: pointer;
   box-shadow:
-    0 8px 20px rgba(224, 61, 75, 0.42),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    0 8px 20px color-mix(in srgb, var(--color-primary) 42%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-text) 25%, transparent);
 }
 
 .send:disabled {
@@ -509,7 +509,7 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: rgba(6, 4, 6, 0.72);
+  background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
   backdrop-filter: blur(6px);
 }
 
@@ -522,11 +522,11 @@
   overflow: hidden;
   padding: 0;
   border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: linear-gradient(180deg, #1a1014 0%, #0c090b 100%);
+  border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+  background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg) 100%);
   box-shadow:
-    0 20px 48px rgba(0, 0, 0, 0.55),
-    0 0 0 1px rgba(224, 61, 75, 0.18);
+    0 20px 48px color-mix(in srgb, var(--color-shadow) 55%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
 .previewChrome {
@@ -536,15 +536,15 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.65rem 0.75rem 0.55rem 1rem;
-  border-bottom: 1px solid rgba(255, 180, 188, 0.14);
-  background: linear-gradient(180deg, rgba(28, 16, 20, 0.95) 0%, rgba(16, 10, 12, 0.88) 100%);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-primary-light) 14%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 95%, transparent) 0%, color-mix(in srgb, var(--color-surface) 88%, transparent) 100%);
 }
 
 .previewChromeLabel {
   font-size: 0.72rem;
   font-weight: 750;
   letter-spacing: 0.16em;
-  color: rgba(255, 176, 184, 0.78);
+  color: color-mix(in srgb, var(--color-primary-fg) 78%, transparent);
 }
 
 .previewClose {
@@ -553,18 +553,18 @@
   width: 2rem;
   height: 2rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(0, 0, 0, 0.35);
-  color: #fff;
+  border: 1px solid color-mix(in srgb, var(--color-text) 22%, transparent);
+  background: color-mix(in srgb, var(--color-shadow) 35%, transparent);
+  color: var(--color-on-media);
   font-size: 1.2rem;
   line-height: 1;
   cursor: pointer;
 }
 
 .previewClose:hover {
-  border-color: rgba(255, 90, 103, 0.55);
-  color: #ffb3ba;
-  background: rgba(224, 61, 75, 0.18);
+  border-color: color-mix(in srgb, var(--color-primary-light) 55%, transparent);
+  color: var(--color-primary-fg);
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
 .previewBody {
@@ -580,8 +580,8 @@
   margin-bottom: 0.85rem;
   border-radius: 0.75rem;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: color-mix(in srgb, var(--color-shadow) 35%, transparent);
 }
 
 .previewPortrait {
@@ -597,13 +597,13 @@
   object-position: center center;
   height: auto;
   max-height: min(68vh, 16rem);
-  background: #12080c;
+  background: var(--color-surface);
 }
 
 .previewPortraitEmpty {
   width: 100%;
   height: 12rem;
-  background: linear-gradient(160deg, rgba(224, 61, 75, 0.2), rgba(20, 12, 16, 0.95));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--color-primary) 20%, transparent), color-mix(in srgb, var(--color-surface) 95%, transparent));
 }
 
 .previewName {
@@ -616,13 +616,13 @@
 .previewMeta {
   margin: 0.35rem 0 0;
   font-size: 0.8rem;
-  color: rgba(255, 220, 224, 0.72);
+  color: color-mix(in srgb, var(--color-primary-lighter) 72%, transparent);
 }
 
 .previewIntro {
   margin-top: 0.85rem;
   padding-top: 0.75rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
 }
 
 .previewIntroTitle {
@@ -630,14 +630,14 @@
   font-size: 0.82rem;
   font-weight: 750;
   letter-spacing: 0.04em;
-  color: #ffb3ba;
+  color: var(--color-primary-fg);
 }
 
 .previewIntroBody {
   margin: 0 0 0.55rem;
   font-size: 0.84rem;
   line-height: 1.5;
-  color: rgba(232, 238, 248, 0.9);
+  color: color-mix(in srgb, var(--color-text) 90%, transparent);
   white-space: pre-wrap;
 }
 
@@ -648,5 +648,5 @@
 .previewIntroMuted {
   margin: 0;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.42);
+  color: var(--color-text-muted);
 }

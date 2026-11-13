@@ -2,8 +2,8 @@
   min-height: 100vh;
   min-height: 100dvh;
   padding: 48px 20px 72px;
-  color: #27221f;
-  background: #f6f2ec;
+  color: var(--color-text);
+  background: var(--color-bg);
   overflow-wrap: anywhere;
   -webkit-text-size-adjust: 100%;
 }
@@ -12,10 +12,10 @@
   width: min(920px, 100%);
   margin: 0 auto;
   padding: 44px 52px;
-  border: 1px solid rgba(80, 61, 46, 0.14);
+  border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
   border-radius: 18px;
-  background: #fffdf9;
-  box-shadow: 0 18px 48px rgba(69, 50, 36, 0.08);
+  background: var(--color-surface);
+  box-shadow: 0 18px 48px color-mix(in srgb, var(--color-highlight) 8%, transparent);
   font-size: 16px;
   line-height: 1.85;
 }
@@ -35,7 +35,7 @@
   padding: 0 10px 0 6px;
   border: 0;
   border-radius: 12px;
-  color: #765037;
+  color: var(--color-highlight);
   background: transparent;
   font: inherit;
   font-size: 15px;
@@ -52,23 +52,23 @@
 }
 
 .backButton:hover {
-  color: #5d3d2b;
-  background: rgba(142, 95, 61, 0.1);
+  color: var(--color-highlight);
+  background: color-mix(in srgb, var(--color-highlight) 10%, transparent);
 }
 
 .backButton:active {
-  background: rgba(142, 95, 61, 0.16);
+  background: color-mix(in srgb, var(--color-highlight) 16%, transparent);
 }
 
 .backButton:focus-visible {
-  outline: 2px solid #8e5f3d;
+  outline: 2px solid var(--color-highlight);
   outline-offset: 2px;
 }
 
 .document h1,
 .document h2,
 .document h3 {
-  color: #1f1a17;
+  color: var(--color-text);
   line-height: 1.4;
 }
 
@@ -103,13 +103,13 @@
 }
 
 .document a {
-  color: #8e5f3d;
+  color: var(--color-highlight);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
 .document strong {
-  color: #171311;
+  color: var(--color-text);
 }
 
 @media (max-width: 767px) {
@@ -127,7 +127,7 @@
   .document {
     padding: 24px 20px calc(32px + env(safe-area-inset-bottom));
     border-radius: 16px;
-    box-shadow: 0 8px 24px rgba(69, 50, 36, 0.07);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--color-highlight) 7%, transparent);
     font-size: 16px;
     line-height: 1.75;
   }

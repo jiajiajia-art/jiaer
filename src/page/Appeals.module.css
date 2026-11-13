@@ -2,8 +2,8 @@
 
 .pageRoot {
   min-height: 100vh;
-  background: #0b0b0c;
-  color: #ffffff;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .main {
@@ -36,7 +36,7 @@
   border: none;
   border-radius: 999px;
   background: transparent;
-  color: #ffffff;
+  color: var(--color-text);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -57,9 +57,9 @@
 .actionBtn,
 .pageBtn {
   appearance: none;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: #1c1c1e;
-  color: rgba(255, 255, 255, 0.88);
+  border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+  background: var(--color-surface);
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
   border-radius: 999px;
   padding: 8px 14px;
   font-size: 13px;
@@ -76,15 +76,15 @@
 
 .newBtn,
 .actionBtn {
-  background: #8e2135;
-  border-color: #8e2135;
-  color: #ffffff;
+  background: var(--color-primary-bold);
+  border-color: var(--color-primary-bold);
+  color: var(--color-on-primary);
 }
 
 .newBtn:hover,
 .actionBtn:hover {
-  background: #a8283c;
-  border-color: #a8283c;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .title {
@@ -95,8 +95,8 @@
 }
 
 .card {
-  background: #1a1a1a;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
   border-radius: 16px;
   padding: 16px 16px 14px;
 }
@@ -106,12 +106,12 @@
   font-size: 13px;
   font-weight: 650;
   letter-spacing: 0.02em;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--color-text-secondary);
 }
 
 .empty {
   margin: 0;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--color-text-muted);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -132,8 +132,8 @@
   width: 100%;
   padding: 14px 14px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: #1c1c1e;
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  background: var(--color-surface);
   color: inherit;
   text-align: left;
   cursor: pointer;
@@ -141,7 +141,7 @@
 }
 
 .listItem:hover {
-  background: #222224;
+  background: var(--color-surface-2);
 }
 
 .itemHead {
@@ -156,7 +156,7 @@
   font-size: 16px;
   font-weight: 650;
   line-height: 1.35;
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .itemMeta {
@@ -164,7 +164,7 @@
   margin: 0;
   font-size: 12px;
   line-height: 1.4;
-  color: rgba(255, 255, 255, 0.42);
+  color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -172,7 +172,7 @@
   margin: 0;
   font-size: 13px;
   line-height: 1.55;
-  color: rgba(255, 255, 255, 0.62);
+  color: var(--color-text-secondary);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -198,7 +198,7 @@
 
 .pageInfo {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--color-text-secondary);
 }
 
 .pageBtn:disabled {

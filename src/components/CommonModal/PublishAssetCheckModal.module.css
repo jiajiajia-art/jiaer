@@ -1,8 +1,8 @@
 .warnBox {
   padding: 16px;
   border-radius: 12px;
-  background: rgba(224, 61, 75, 0.08);
-  border: 1px solid rgba(224, 61, 75, 0.25);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
   margin-bottom: 12px;
 }
 
@@ -10,13 +10,13 @@
   margin: 0 0 10px 0;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--color-text);
 }
 
 .list {
   margin: 0;
   padding-left: 1.2rem;
-  color: #444;
+  color: var(--color-text-secondary);
   font-size: 0.9rem;
   line-height: 1.6;
 }

@@ -20,6 +20,8 @@ interface MembershipPlanCardConfig {
     key: 'week' | 'month';
     name: string;
     plan: MembershipPlanState | null | undefined;
+    tagline: string;
+    total: string;
     rewards: string[];
 }
 
@@ -52,6 +54,8 @@ const VipStatusModal: React.FC<VipStatusModalProps> = ({
             key: 'week',
             name: '周卡',
             plan: membership?.week,
+            tagline: '7 天畅享',
+            total: '540',
             rewards: [
                 '每日签到额外领取 77 永久KK币，第 7 天领取 78 币',
                 '7 天累计可领取 540 永久KK币',
@@ -62,6 +66,8 @@ const VipStatusModal: React.FC<VipStatusModalProps> = ({
             key: 'month',
             name: '月卡',
             plan: membership?.month,
+            tagline: '30 天畅享',
+            total: '2,000',
             rewards: [
                 '每日签到额外领取 66 永久KK币，第 30 天领取 86 币',
                 '30 天累计可领取 2,000 永久KK币',
@@ -121,36 +127,51 @@ const VipStatusModal: React.FC<VipStatusModalProps> = ({
                 {(() => {
                     const status = resolveMembershipPlanStatus(selectedPlan.plan, now);
                     return (
-                        <article className={`${styles.planCard} ${status === 'active' ? styles.planCardActive : ''}`}>
-                            <div className={styles.planHeader}>
-                                <h3>{selectedPlan.name}</h3>
-                                <span className={`${styles.statusBadge} ${styles[`status_${status}`]}`}>
-                                    {STATUS_LABELS[status]}
-                                </span>
-                            </div>
+                        <>
+                            <article className={`${styles.hero} ${status === 'active' ? styles.heroActive : ''}`}>
+                                <div className={styles.heroTop}>
+                                    <div>
+                                        <p className={styles.heroEyebrow}>{selectedPlan.tagline}</p>
+                                        <h3>{selectedPlan.name}会员</h3>
+                                    </div>
+                                    <span className={`${styles.statusBadge} ${styles[`status_${status}`]}`}>
+                                        <i aria-hidden="true" />
+                                        {STATUS_LABELS[status]}
+                                    </span>
+                                </div>
+                                <p className={styles.heroValue}>
+                                    累计可领 <strong>{selectedPlan.total}</strong> 永久KK币
+                                </p>
+                                <dl className={styles.timeGrid}>
+                                    <div>
+                                        <dt>生效时间</dt>
+                                        <dd>{formatMembershipDateTime(selectedPlan.plan?.startAt)}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>到期时间</dt>
+                                        <dd>{formatMembershipDateTime(selectedPlan.plan?.endAt)}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>剩余时长</dt>
+                                        <dd>{status === 'active' ? formatRemainingMembershipTime(selectedPlan.plan?.endAt, now) : '—'}</dd>
+                                    </div>
+                                </dl>
+                            </article>
 
-                            <dl className={styles.timeList}>
-                                <div>
-                                    <dt>生效时间</dt>
-                                    <dd>{formatMembershipDateTime(selectedPlan.plan?.startAt)}</dd>
-                                </div>
-                                <div>
-                                    <dt>到期时间</dt>
-                                    <dd>{formatMembershipDateTime(selectedPlan.plan?.endAt)}</dd>
-                                </div>
-                                <div>
-                                    <dt>剩余时长</dt>
-                                    <dd>{status === 'active' ? formatRemainingMembershipTime(selectedPlan.plan?.endAt, now) : '—'}</dd>
-                                </div>
-                            </dl>
-
-                            <div className={styles.benefits}>
-                                <strong>会员福利</strong>
+                            <section className={styles.benefits}>
+                                <h4>会员福利</h4>
                                 <ul>
-                                    {selectedPlan.rewards.map((reward) => <li key={reward}>{reward}</li>)}
+                                    {selectedPlan.rewards.map((reward) => (
+                                        <li key={reward}>
+                                            <span className={styles.check} aria-hidden="true">
+                                                <svg viewBox="0 0 16 16" width="12" height="12"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                            </span>
+                                            {reward}
+                                        </li>
+                                    ))}
                                 </ul>
-                            </div>
-                        </article>
+                            </section>
+                        </>
                     );
                 })()}
 
@@ -159,7 +180,7 @@ const VipStatusModal: React.FC<VipStatusModalProps> = ({
                 </p>
 
                 <button type="button" className={styles.purchaseButton} onClick={onPurchase}>
-                    购买/续费会员卡
+                    {resolveMembershipPlanStatus(selectedPlan.plan, now) === 'active' ? `续费${selectedPlan.name}` : `立即开通${selectedPlan.name}`}
                 </button>
             </section>
         </div>,

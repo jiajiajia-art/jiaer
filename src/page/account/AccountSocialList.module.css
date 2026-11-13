@@ -1,12 +1,12 @@
 .pageRoot {
-    --social-bg: #000000;
-    --social-card: #1C1C1E;
-    --social-label: #8E8E93;
-    --social-value: #FFFFFF;
-    --social-accent: #A8283C;
-    --social-accent-soft: rgba(168, 40, 60, 0.22);
-    --social-divider: rgba(255, 255, 255, 0.1);
-    --social-btn: #2C2C2E;
+    --social-bg: var(--color-bg);
+    --social-card: var(--color-surface);
+    --social-label: var(--color-text-muted);
+    --social-value: var(--color-text);
+    --social-accent: var(--color-primary);
+    --social-accent-soft: color-mix(in srgb, var(--color-primary) 22%, transparent);
+    --social-divider: color-mix(in srgb, var(--color-text) 10%, transparent);
+    --social-btn: var(--color-surface-2);
     width: 100%;
     min-height: 100vh;
     max-width: 720px;
@@ -39,7 +39,7 @@
     background: transparent;
     cursor: pointer;
     padding: 0;
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .backBtn:hover {
@@ -50,8 +50,8 @@
     display: block;
     width: 10px;
     height: 10px;
-    border-left: 2px solid #ffffff;
-    border-bottom: 2px solid #ffffff;
+    border-left: 2px solid var(--color-text);
+    border-bottom: 2px solid var(--color-text);
     transform: rotate(45deg);
     margin-left: 4px;
 }
@@ -177,7 +177,7 @@
 }
 
 .sortToggle:hover {
-    color: rgba(199, 199, 204, 1);
+    color: var(--color-text-secondary);
 }
 
 .sortIcon {
@@ -274,8 +274,8 @@
 }
 
 .moreBtn:hover {
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.06);
+    color: var(--color-text);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .moreBtn:disabled {
@@ -299,7 +299,7 @@
     padding: 6px 0;
     border-radius: 10px;
     background: var(--social-card);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 10px 28px color-mix(in srgb, var(--color-shadow) 45%, transparent);
     border: 1px solid var(--social-divider);
 }
 
@@ -320,8 +320,8 @@
 }
 
 .moreMenuItem:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #ffffff;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--color-text);
 }
 
 .moreMenuItem:disabled {
@@ -344,7 +344,7 @@
     margin: 0;
     padding: 0;
     border: none;
-    background: rgba(0, 0, 0, 0.55);
+    background: color-mix(in srgb, var(--color-shadow) 55%, transparent);
     cursor: pointer;
 }
 
@@ -379,12 +379,12 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    background: #2c2c2e;
-    color: #ffffff;
+    background: var(--color-surface-2);
+    color: var(--color-text);
 }
 
 .sheetAction:hover {
-    background: #3a3a3c;
+    background: var(--color-surface-2);
 }
 
 .sheetAction:disabled,
@@ -402,12 +402,12 @@
 }
 
 .sheetCancel {
-    background: #3a3a3c;
-    color: #ffffff;
+    background: var(--color-surface-2);
+    color: var(--color-text);
 }
 
 .sheetCancel:hover {
-    background: #48484a;
+    background: var(--color-text-muted);
 }
 
 @keyframes sheetRise {
@@ -435,7 +435,7 @@
 
 .loadMoreBtn {
     appearance: none;
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
     background: var(--social-btn);
     color: var(--social-value);
     font-size: 13px;
@@ -456,7 +456,7 @@
     object-fit: cover;
     flex-shrink: 0;
     background: var(--social-btn);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .nickname {
@@ -508,12 +508,12 @@
 .followBtnActive {
     background: var(--social-btn);
     color: var(--social-value);
-    border-color: rgba(255, 255, 255, 0.16);
+    border-color: color-mix(in srgb, var(--color-text) 16%, transparent);
 }
 
 .followBtnIdle {
-    background: rgba(255, 59, 97, 0.6);
-    color: #ffffff;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
     border-color: transparent;
 }
 
@@ -547,7 +547,7 @@
         padding: 8px;
         border-bottom: none;
         border-radius: 14px;
-        background: rgba(255, 255, 255, 0.03);
+        background: color-mix(in srgb, var(--color-text) 3%, transparent);
         position: sticky;
         top: 64px;
     }
@@ -566,7 +566,7 @@
     }
 
     .tabActive {
-        color: #ffffff;
+        color: var(--color-on-primary);
         background: var(--social-accent);
     }
 

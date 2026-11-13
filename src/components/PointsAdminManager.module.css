@@ -6,10 +6,10 @@
 
 .heroCard,
 .card {
-    background: #fff;
-    border: 1px solid rgba(222, 191, 166, 0.45);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 45%, transparent);
     border-radius: 22px;
-    box-shadow: 0 18px 40px rgba(181, 135, 92, 0.14);
+    box-shadow: 0 18px 40px color-mix(in srgb, var(--color-highlight) 14%, transparent);
 }
 
 .heroCard {
@@ -25,8 +25,8 @@
     align-items: center;
     padding: 8px 16px;
     border-radius: 999px;
-    background: #e6f4ff;
-    color: #a5602f;
+    background: var(--color-bg);
+    color: var(--color-highlight);
     font-size: 14px;
     font-weight: 700;
 }
@@ -34,14 +34,14 @@
 .heroTitle {
     margin: 18px 0 12px;
     font-size: 24px;
-    color: #2e241d;
+    color: var(--color-text);
 }
 
 .heroDesc,
 .cardDesc,
 .itemMeta,
 .emptyState {
-    color: #705b4b;
+    color: var(--color-text-secondary);
     line-height: 1.7;
 }
 
@@ -68,21 +68,21 @@
 
 .tabButton,
 .tabButtonActive {
-    border: 1px solid rgba(215, 182, 156, 0.45);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 45%, transparent);
     padding: 12px 22px;
     font-size: 15px;
 }
 
 .tabButton {
-    background: #fff;
-    color: #8b664d;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
 }
 
 .tabButtonActive {
     border-color: transparent;
-    background: #1677ff;
-    color: #fffaf4;
-    box-shadow: 0 14px 24px rgba(181, 111, 59, 0.22);
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    box-shadow: 0 14px 24px color-mix(in srgb, var(--color-highlight) 22%, transparent);
 }
 
 .actionBadge {
@@ -96,11 +96,11 @@
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    background: linear-gradient(135deg, #d64545 0%, #f06745 100%);
-    color: #fff;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%);
+    color: var(--color-on-primary);
     font-size: 12px;
     font-weight: 700;
-    box-shadow: 0 10px 22px rgba(214, 69, 69, 0.24);
+    box-shadow: 0 10px 22px color-mix(in srgb, var(--color-primary) 24%, transparent);
 }
 
 .primaryButton,
@@ -111,14 +111,14 @@
 
 .primaryButton {
     border: none;
-    background: #1677ff;
-    color: #fffaf4;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
 }
 
 .secondaryButton {
-    border: 1px solid rgba(220, 195, 175, 0.88);
-    background: #fff;
-    color: #4c3d31;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 88%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
 }
 
 .primaryButton:disabled,
@@ -140,7 +140,7 @@
 .cardTitle {
     margin: 0 0 8px;
     font-size: 18px;
-    color: #2e241d;
+    color: var(--color-text);
 }
 
 .specialGrid {
@@ -161,7 +161,7 @@
     gap: 10px;
     font-size: 14px;
     font-weight: 700;
-    color: #4c3d31;
+    color: var(--color-text-secondary);
 }
 
 .textInput,
@@ -169,9 +169,9 @@
 .select {
     width: 100%;
     border-radius: 18px;
-    border: 1px solid rgba(220, 195, 175, 0.88);
-    background: #fff;
-    color: #34281f;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 88%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text);
     font-size: 15px;
     box-sizing: border-box;
 }
@@ -191,14 +191,14 @@
 .userCard {
     padding: 20px;
     border-radius: 16px;
-    background: #fff;
-    border: 1px solid rgba(228, 205, 187, 0.7);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 70%, transparent);
 }
 
 .userName {
     font-size: 18px;
     font-weight: 700;
-    color: #2e241d;
+    color: var(--color-text);
     margin-bottom: 8px;
 }
 
@@ -212,8 +212,8 @@
 .reviewTableWrapper {
     overflow-x: auto;
     border-radius: 16px;
-    border: 1px solid rgba(228, 205, 187, 0.72);
-    background: #fff;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 72%, transparent);
+    background: var(--color-surface);
 }
 
 .reviewTable {
@@ -251,16 +251,16 @@
 .reviewTable th,
 .reviewTable td {
     padding: 14px 12px;
-    border-bottom: 1px solid rgba(205, 157, 120, 0.18);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-highlight) 18%, transparent);
     text-align: center;
     vertical-align: middle;
 }
 
 .reviewTable th {
-    color: #6f5a49;
+    color: var(--color-text-secondary);
     font-size: 13px;
     font-weight: 700;
-    background: #fff;
+    background: var(--color-surface);
     white-space: nowrap;
 }
 
@@ -269,11 +269,11 @@
 }
 
 .reviewTableRow {
-    background: #fff;
+    background: var(--color-surface);
 }
 
 .reviewTable tbody tr:hover {
-    background: #f5faff;
+    background: var(--color-bg);
 }
 
 .paginationBar {
@@ -287,7 +287,7 @@
 
 .rewardTitleCell,
 .rewardAccountCell {
-    color: #2e241d;
+    color: var(--color-text);
     font-size: 14px;
     line-height: 1.6;
     text-align: left;
@@ -300,18 +300,18 @@
 }
 
 .shareRatioTypeCell {
-    color: #3f332a;
+    color: var(--color-text);
     font-size: 14px;
     font-weight: 700;
 }
 
 .shareRatioValueCell {
-    color: #2e241d;
+    color: var(--color-text);
 }
 
 .shareRatioValue {
     display: block;
-    color: #2e241d;
+    color: var(--color-text);
     font-size: 15px;
     line-height: 1.35;
 }
@@ -319,7 +319,7 @@
 .shareRatioSource {
     display: block;
     margin-top: 3px;
-    color: #806b59;
+    color: var(--color-text-muted);
     font-size: 12px;
     line-height: 1.35;
 }
@@ -330,10 +330,10 @@
     justify-content: center;
     min-height: 34px;
     padding: 6px 10px;
-    border: 1px solid rgba(201, 169, 142, 0.72);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 72%, transparent);
     border-radius: 999px;
-    background: #fff;
-    color: #6f5a49;
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
     font-size: 12px;
     font-weight: 700;
     line-height: 1.35;
@@ -341,7 +341,7 @@
 }
 
 .rewardPointsCell {
-    color: #2e241d;
+    color: var(--color-text);
     font-size: 14px;
     font-weight: 700;
 }
@@ -367,19 +367,19 @@
 }
 
 .statusPending {
-    background: rgba(209, 147, 99, 0.16);
-    color: #a5602f;
+    background: color-mix(in srgb, var(--color-highlight) 16%, transparent);
+    color: var(--color-highlight);
 }
 
 .statusIssued {
-    background: rgba(69, 157, 104, 0.14);
-    color: #2d8c58;
+    background: color-mix(in srgb, var(--color-success) 14%, transparent);
+    color: var(--color-success);
 }
 
 .emptyState {
     padding: 16px;
     border-radius: 18px;
-    background: #fff;
+    background: var(--color-surface);
 }
 
 .detailOverlay,
@@ -391,7 +391,7 @@
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background: rgba(45, 28, 18, 0.34);
+    background: color-mix(in srgb, var(--color-highlight) 34%, transparent);
     backdrop-filter: blur(6px);
 }
 
@@ -399,9 +399,9 @@
 .confirmDialog {
     width: min(960px, 100%);
     border-radius: 24px;
-    border: 1px solid rgba(222, 191, 166, 0.45);
-    background: #fff;
-    box-shadow: 0 20px 56px rgba(98, 59, 33, 0.1);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 45%, transparent);
+    background: var(--color-surface);
+    box-shadow: 0 20px 56px color-mix(in srgb, var(--color-highlight) 10%, transparent);
 }
 
 .detailDialog {
@@ -416,20 +416,20 @@
 }
 
 .confirmTitle {
-    color: #2e241d;
+    color: var(--color-text);
     font-size: 20px;
     font-weight: 700;
 }
 
 .confirmDesc {
     margin-top: 12px;
-    color: #705b4b;
+    color: var(--color-text-secondary);
     font-size: 15px;
     line-height: 1.8;
 }
 
 .confirmHighlight {
-    color: #a5602f;
+    color: var(--color-highlight);
     font-weight: 700;
 }
 
@@ -445,12 +445,12 @@
     gap: 12px;
     padding: 18px;
     border-radius: 16px;
-    border: 1px solid rgba(205, 157, 120, 0.22);
-    background: #fff;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 22%, transparent);
+    background: var(--color-surface);
 }
 
 .detailSectionTitle {
-    color: #2f241d;
+    color: var(--color-text);
     font-size: 16px;
     font-weight: 700;
 }
@@ -469,20 +469,20 @@
 }
 
 .detailLabel {
-    color: #6f5a49;
+    color: var(--color-text-secondary);
     font-size: 12px;
     font-weight: 700;
 }
 
 .detailValue {
-    color: #2f241d;
+    color: var(--color-text);
     font-size: 14px;
     line-height: 1.7;
     word-break: break-word;
 }
 
 .detailTextBlock {
-    color: #2f241d;
+    color: var(--color-text);
     font-size: 14px;
     line-height: 1.8;
     white-space: pre-wrap;
@@ -496,7 +496,7 @@
 }
 
 .detailLinkItem {
-    color: #aa5a2d;
+    color: var(--color-highlight);
     text-decoration: none;
     word-break: break-all;
 }
@@ -515,7 +515,7 @@
 .detailVideo {
     width: 100%;
     border-radius: 18px;
-    background: #fff;
+    background: var(--color-surface);
 }
 
 .detailImage {

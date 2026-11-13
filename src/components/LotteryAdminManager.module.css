@@ -10,16 +10,16 @@
 .linkHint {
   margin: 0 0 12px;
   font-size: 13px;
-  color: #666;
+  color: var(--color-text-secondary);
   word-break: break-all;
 }
 
 .configCard {
   margin-bottom: 16px;
   padding: 12px 14px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: #fafbfc;
+  background: var(--color-bg);
 }
 
 .configCard h3 {
@@ -39,21 +39,21 @@
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  color: #555;
+  color: var(--color-text-secondary);
 }
 
 .configGrid input {
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid #ddd;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   font-size: 13px;
 }
 
 .configHint {
   margin: 0 0 8px;
   font-size: 12px;
-  color: #666;
+  color: var(--color-text-secondary);
   line-height: 1.45;
 }
 
@@ -68,14 +68,14 @@
 .row button {
   padding: 8px 12px;
   border-radius: 8px;
-  border: 1px solid #ddd;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   cursor: pointer;
 }
 
 .tableWrap {
   overflow: auto;
-  border: 1px solid #eee;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
 }
 
@@ -87,14 +87,14 @@
 
 .table th,
 .table td {
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--color-border);
   padding: 8px 10px;
   text-align: left;
   vertical-align: top;
 }
 
 .table th {
-  background: #fafafa;
+  background: var(--color-bg);
   white-space: nowrap;
 }
 
@@ -109,7 +109,7 @@
 
 .pagerMeta {
   font-size: 12px;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .pagerBtns {
@@ -120,8 +120,8 @@
 .pagerBtns button {
   padding: 6px 12px;
   border-radius: 8px;
-  border: 1px solid #ddd;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   cursor: pointer;
 }
 

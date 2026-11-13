@@ -12,17 +12,17 @@
     align-items: center;
     gap: 9px;
     padding: 0 12px;
-    border: 1px solid rgba(255, 255, 255, 0.11);
+    border: 1px solid color-mix(in srgb, var(--color-text) 11%, transparent);
     border-radius: 10px;
-    background: #09090a;
-    color: #ffffff;
+    background: var(--color-bg);
+    color: var(--color-text);
     cursor: pointer;
     font-size: 12px;
     text-align: left;
 }
 
 .trigger > span {
-    color: #a8a8ad;
+    color: var(--color-text-secondary);
 }
 
 .trigger strong {
@@ -35,7 +35,7 @@
 .trigger svg {
     width: 17px;
     height: 17px;
-    color: #a8a8ad;
+    color: var(--color-text-secondary);
     transition: transform 180ms ease;
 }
 
@@ -44,14 +44,14 @@
 }
 
 .trigger:hover {
-    border-color: rgba(255, 142, 165, 0.52);
-    background: #111113;
+    border-color: color-mix(in srgb, var(--color-primary-light) 52%, transparent);
+    background: var(--color-surface);
 }
 
 .trigger:focus-visible,
 .option:focus-visible,
 .optionActive:focus-visible {
-    outline: 3px solid rgba(255, 123, 153, 0.58);
+    outline: 3px solid color-mix(in srgb, var(--color-primary-light) 58%, transparent);
     outline-offset: 2px;
 }
 
@@ -63,10 +63,10 @@
     display: grid;
     gap: 3px;
     padding: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.13);
+    border: 1px solid color-mix(in srgb, var(--color-text) 13%, transparent);
     border-radius: 12px;
-    background: #202023;
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+    background: var(--color-surface-2);
+    box-shadow: 0 18px 48px color-mix(in srgb, var(--color-shadow) 50%, transparent);
     box-sizing: border-box;
 }
 
@@ -82,20 +82,20 @@
     border: 0;
     border-radius: 8px;
     background: transparent;
-    color: #dddddf;
+    color: var(--color-text);
     cursor: pointer;
     font-size: 14px;
     text-align: left;
 }
 
 .option:hover {
-    background: rgba(255, 255, 255, 0.07);
-    color: #ffffff;
+    background: color-mix(in srgb, var(--color-text) 7%, transparent);
+    color: var(--color-text);
 }
 
 .optionActive {
-    background: rgba(217, 60, 91, 0.18);
-    color: #ffb3c1;
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+    color: var(--color-primary-fg);
     font-weight: 700;
 }
 

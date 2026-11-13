@@ -3,16 +3,16 @@
 
 .pageRoot {
   /* 功能注释：仓库壳对齐首页 Home 色板，禁止浅灰纸质 Studio Catalog */
-  --wh-ink: #ffffff;
-  --wh-muted: #8e8e93;
-  --wh-line: rgba(255, 255, 255, 0.12);
-  --wh-paper: #1a1a1a;
-  --wh-stage: #000000;
-  --wh-coral: #a8283c;
-  --wh-coral-deep: #8e2135;
-  --wh-coral-soft: rgba(168, 40, 60, 0.22);
-  --wh-chip: #1c1c1e;
-  --wh-hover: #2c2c2e;
+  --wh-ink: var(--color-text);
+  --wh-muted: var(--color-text-muted);
+  --wh-line: color-mix(in srgb, var(--color-text) 12%, transparent);
+  --wh-paper: var(--color-surface);
+  --wh-stage: var(--color-bg);
+  --wh-coral: var(--color-primary);
+  --wh-coral-deep: var(--color-primary-bold);
+  --wh-coral-soft: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  --wh-chip: var(--color-surface);
+  --wh-hover: var(--color-surface-2);
   --wh-display: 'Songti SC', 'STSong', 'Source Han Serif SC', 'Noto Serif SC', serif;
   --wh-radius: 16px;
 
@@ -75,7 +75,7 @@
   padding: 10px 12px;
   border-radius: 10px;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--color-text-secondary);
   cursor: pointer;
   text-decoration: none;
   transition: background 0.15s ease, color 0.15s ease;
@@ -89,9 +89,9 @@
 .navBtnActive {
   /* 效果图选中：实心珊瑚白字，非浅粉底 */
   background: var(--wh-coral);
-  color: #fff;
+  color: var(--color-on-primary);
   font-weight: 700;
-  box-shadow: 0 6px 16px rgba(168, 40, 60, 0.35);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 .soon {
@@ -105,23 +105,23 @@
 }
 
 .navBtnActive .soon {
-  background: rgba(255, 255, 255, 0.22);
-  color: #fff;
+  background: color-mix(in srgb, var(--color-text) 22%, transparent);
+  color: var(--color-text);
 }
 
 .uploadCard {
   margin-top: 14px;
   padding: 14px 12px;
   border-radius: 12px;
-  background: linear-gradient(160deg, #2a2228 0%, #1a1418 100%);
-  color: #fff;
+  background: linear-gradient(160deg, var(--color-surface-2) 0%, var(--color-surface) 100%);
+  color: var(--color-text);
 }
 
 .uploadCard p {
   margin: 0 0 12px;
   font-size: 12px;
   line-height: 1.55;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--color-text-secondary);
 }
 
 .uploadBtn {
@@ -130,7 +130,7 @@
   border-radius: 10px;
   padding: 9px 12px;
   background: var(--wh-coral);
-  color: #fff;
+  color: var(--color-on-primary);
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
@@ -194,7 +194,7 @@
   flex-shrink: 0;
   border: 1px solid var(--wh-line);
   background: var(--wh-chip);
-  color: #fff;
+  color: var(--color-text);
   border-radius: 999px;
   padding: 9px 16px;
   font-size: 13px;
@@ -227,7 +227,7 @@
   text-decoration: none;
   border: 1px solid transparent;
   background: var(--wh-chip);
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--color-text-secondary);
   border-radius: 999px;
   padding: 8px 14px;
   font-size: 13px;
@@ -238,9 +238,9 @@
 .railChipActive {
   border-color: transparent;
   background: var(--wh-coral);
-  color: #fff;
+  color: var(--color-on-primary);
   font-weight: 700;
-  box-shadow: 0 6px 18px rgba(168, 40, 60, 0.38);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--color-primary) 38%, transparent);
 }
 
 .mobileUploadStrip {
@@ -253,9 +253,9 @@
   border-radius: 14px;
   padding: 12px 14px;
   background:
-    linear-gradient(105deg, rgba(168, 40, 60, 0.18) 0%, transparent 42%),
-    linear-gradient(160deg, #2a2228 0%, #1a1418 100%);
-  color: #fff;
+    linear-gradient(105deg, color-mix(in srgb, var(--color-primary) 18%, transparent) 0%, transparent 42%),
+    linear-gradient(160deg, var(--color-surface-2) 0%, var(--color-surface) 100%);
+  color: var(--color-text);
   cursor: pointer;
   text-align: left;
 }
@@ -263,7 +263,7 @@
 .mobileUploadCopy {
   font-size: 13px;
   line-height: 1.35;
-  color: rgba(255, 255, 255, 0.88);
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
   min-width: 0;
   font-weight: 500;
 }
@@ -273,11 +273,11 @@
   flex-shrink: 0;
   font-size: 12px;
   font-weight: 800;
-  color: #fff;
+  color: var(--color-on-primary);
   background: var(--wh-coral);
   border-radius: 999px;
   padding: 7px 14px;
-  box-shadow: 0 4px 12px rgba(168, 40, 60, 0.4);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 40%, transparent);
 }
 
 /* —— 底栏目录 sheet（仅手机挂载时出现） —— */
@@ -318,7 +318,7 @@
     inset: 0;
     z-index: -1;
     background: var(--wh-stage);
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 6px 14px color-mix(in srgb, var(--color-shadow) 45%, transparent);
     pointer-events: none;
   }
 
@@ -339,7 +339,7 @@
     position: fixed;
     inset: 0;
     z-index: 1200;
-    background: rgba(23, 20, 26, 0.48);
+    background: color-mix(in srgb, var(--color-surface) 48%, transparent);
     animation: whSheetFade 0.2s ease both;
   }
 
@@ -354,7 +354,7 @@
     background: var(--wh-paper);
     border-radius: 20px 20px 0 0;
     padding: 10px 16px calc(24px + env(safe-area-inset-bottom, 0px));
-    box-shadow: 0 -18px 48px rgba(23, 20, 26, 0.18);
+    box-shadow: 0 -18px 48px color-mix(in srgb, var(--color-shadow) 18%, transparent);
     animation: whSheetUp 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
@@ -362,7 +362,7 @@
     width: 36px;
     height: 4px;
     border-radius: 999px;
-    background: #3a3a3c;
+    background: var(--color-surface-2);
     margin: 2px auto 12px;
   }
 
@@ -383,7 +383,7 @@
   .sheetClose {
     border: none;
     background: var(--wh-hover);
-    color: rgba(255, 255, 255, 0.72);
+    color: var(--color-text-secondary);
     border-radius: 999px;
     padding: 6px 12px;
     font-size: 13px;
@@ -416,7 +416,7 @@
     text-decoration: none;
     padding: 12px 14px;
     border-radius: 12px;
-    color: rgba(255, 255, 255, 0.72);
+    color: var(--color-text-secondary);
     font-size: 15px;
     background: var(--wh-chip);
     border: 1px solid transparent;
@@ -425,9 +425,9 @@
   .sheetLinkActive {
     background: var(--wh-coral);
     border-color: transparent;
-    color: #fff;
+    color: var(--color-on-primary);
     font-weight: 700;
-    box-shadow: 0 6px 16px rgba(168, 40, 60, 0.35);
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary) 35%, transparent);
   }
 
   .sheetUpload {
@@ -437,7 +437,7 @@
     border-radius: 12px;
     padding: 13px 16px;
     background: var(--wh-coral);
-    color: #fff;
+    color: var(--color-on-primary);
     font-size: 15px;
     font-weight: 800;
     cursor: pointer;
@@ -452,4 +452,23 @@
 @keyframes whSheetUp {
   from { transform: translateY(18%); opacity: 0.85; }
   to { transform: none; opacity: 1; }
+}
+
+/* ===== 功能注释：手机端顶部精修——上传条加珊瑚光与丝线纹理，目录按钮更轻 ===== */
+.mobileUploadStrip {
+  position: relative;
+  overflow: hidden;
+  padding: 14px 14px 14px 16px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 22%, transparent);
+  background:
+    repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 6%, transparent) 0 1px, transparent 1px 14px),
+    radial-gradient(220px 120px at 0% 0%, color-mix(in srgb, var(--color-primary) 26%, transparent), transparent 70%),
+    var(--color-surface);
+}
+.mobileUploadCopy { font-size: 14px; font-weight: 700; color: var(--color-text); }
+.mobileUploadCta { background-image: var(--main-background); padding: 8px 16px; }
+.mobileCatalogBtn {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
 }

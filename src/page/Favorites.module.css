@@ -1,15 +1,15 @@
 .pageRoot {
   /* 功能注释：收藏夹对齐效果图——墨黑壳 + 返回/白字标题，禁止浅色灰底 */
-  --primary: #a8283c;
-  --primary-light: #c23a50;
-  --primary-dark: #8e2135;
-  --favorites-muted: #8e8e93;
+  --primary: var(--color-primary);
+  --primary-light: var(--color-primary);
+  --primary-dark: var(--color-primary-bold);
+  --favorites-muted: var(--color-text-muted);
   width: 100%;
   min-height: 100vh;
   max-width: none;
   margin: 0;
-  background: #000000;
-  color: #ffffff;
+  background: var(--color-bg);
+  color: var(--color-text);
   overflow-x: hidden;
 }
 
@@ -58,7 +58,7 @@
   border: none;
   border-radius: 999px;
   background: transparent;
-  color: #ffffff;
+  color: var(--color-text);
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -74,11 +74,11 @@
 }
 
 .backButton:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .backButton:focus-visible {
-  outline: 2px solid rgba(168, 40, 60, 0.55);
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
   outline-offset: 2px;
 }
 
@@ -88,7 +88,7 @@
   font-weight: 700;
   line-height: 1.35;
   letter-spacing: 0.02em;
-  color: #ffffff;
+  color: var(--color-text);
 }
 
 .emptyState {

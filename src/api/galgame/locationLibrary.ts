@@ -10,6 +10,11 @@ export type LocationLibraryTreeRoom = {
   imageUrl?: string;
   parentKey?: string | null;
   order?: number;
+  /** 点位（百分比 0–100）：顶层相对大地图封面，子节点相对父节点 innerMapUrl */
+  mapX?: number;
+  mapY?: number;
+  /** 本节点的内部地图（其子节点在上面标点） */
+  innerMapUrl?: string;
 };
 
 export type LocationLibraryItem = {

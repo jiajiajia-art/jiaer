@@ -280,7 +280,7 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
                                         <div
                                             className={styles.functionalNPCButton}
                                             style={{
-                                                backgroundColor: abilityNode.color || '#E03D4B',
+                                                backgroundColor: abilityNode.color || 'var(--color-primary)',
                                                 padding: '8px 16px',
                                                 borderRadius: '8px',
                                                 color: 'white',
@@ -288,7 +288,7 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
                                                 fontWeight: 600,
                                                 whiteSpace: 'nowrap',
                                                 cursor: 'pointer',
-                                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                                                boxShadow: '0 4px 12px color-mix(in srgb, var(--color-shadow) 30%, transparent)',
                                             }}
                                         >
                                             {abilityNode.name}
@@ -302,7 +302,7 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
                                                 width: '100px',
                                                 height: '150px',
                                                 objectFit: 'contain',
-                                                filter: 'drop-shadow(0 10px 30px rgba(0, 0, 0, 0.7))',
+                                                filter: 'drop-shadow(0 10px 30px color-mix(in srgb, var(--color-shadow) 70%, transparent))',
                                             }}
                                             useCanvas={true}
                                         />

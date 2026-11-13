@@ -6,7 +6,7 @@
 }
 
 .mainContent {
-    color: black;
+    color: var(--color-text);
     display: flex;
     margin: 0;
     padding: 0;
@@ -74,7 +74,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.3);
+    background: color-mix(in srgb, var(--color-shadow) 30%, transparent);
     z-index: 1;
 }
 
@@ -102,15 +102,15 @@
     height: 120px;
     border-radius: 50%;
     object-fit: cover;
-    border: 3px solid #fff;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border: 3px solid var(--color-text);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-shadow) 30%, transparent);
 }
 
 .userName {
     font-size: 30px;
     font-weight: 600;
-    color: #fff;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    color: var(--color-on-media);
+    text-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 50%, transparent);
 }
 
 .userNameWrapper {
@@ -141,8 +141,8 @@
     height: 20px;
     padding: 0 8px;
     border-radius: 999px;
-    background: linear-gradient(135deg, #f8df9c 0%, #d7b26d 100%);
-    color: #5f4211;
+    background: linear-gradient(135deg, var(--color-highlight) 0%, var(--color-highlight) 100%);
+    color: var(--color-highlight);
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.5px;
@@ -152,15 +152,15 @@
 
 .memberExpire {
     font-size: 13px;
-    color: #f4f4f4;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+    color: var(--color-on-media);
+    text-shadow: 0 1px 3px color-mix(in srgb, var(--color-shadow) 45%, transparent);
     white-space: nowrap;
     flex-shrink: 0;
 }
 
 .editNameIcon {
     font-size: 20px;
-    color: #fff;
+    color: var(--color-text);
     cursor: pointer;
     opacity: 0.8;
     transition: opacity 0.2s;
@@ -178,11 +178,11 @@
 
 .editNameInput {
     padding: 6px 12px;
-    border: 2px solid #fff;
+    border: 2px solid var(--color-text);
     border-radius: 6px;
     font-size: 16px;
     outline: none;
-    background: rgba(255, 255, 255, 0.9);
+    background: color-mix(in srgb, var(--color-surface) 90%, transparent);
     width: 150px;
 }
 
@@ -197,21 +197,21 @@
 }
 
 .editNameConfirm {
-    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
-    color: #fff;
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-light) 100%);
+    color: var(--color-on-primary);
 }
 
 .editNameConfirm:hover {
-    background: linear-gradient(135deg, #e03545 0%, #e94a5a 100%);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%);
 }
 
 .editNameCancel {
-    background: rgba(255, 255, 255, 0.3);
-    color: #fff;
+    background: color-mix(in srgb, var(--color-text) 30%, transparent);
+    color: var(--color-text);
 }
 
 .editNameCancel:hover {
-    background: rgba(255, 255, 255, 0.5);
+    background: color-mix(in srgb, var(--color-surface) 50%, transparent);
 }
 
 /* Kuran号 */
@@ -222,8 +222,8 @@
     gap: 6px;
     font-size: 16px;
     font-weight: 400;
-    color: #f5f5f5;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+    color: var(--color-on-media);
+    text-shadow: 0 1px 4px color-mix(in srgb, var(--color-shadow) 50%, transparent);
 }
 
 .userCodeText {
@@ -234,7 +234,7 @@
     background: transparent;
     border-radius: 4px;
     border: none;
-    color: #ffffff;
+    color: var(--color-text);
     min-width: auto;
     min-height: auto;
     display: flex;
@@ -247,7 +247,7 @@
 }
 
 .userCodeCopyButton:hover {
-    color: #fcfbfa;
+    color: var(--color-text);
     transform: translateY(-1px);
 }
 
@@ -264,15 +264,15 @@
     flex-direction: column;
     padding: 12px 12px 10px;
     box-sizing: border-box;
-    background: var(--creator-card, #1C1C1E);
-    border: 1px solid rgba(255, 255, 255, 0.04);
+    background: var(--creator-card, var(--color-surface));
+    border: 1px solid color-mix(in srgb, var(--color-text) 4%, transparent);
     border-radius: 10px;
 }
 
 .functionListHeading {
     margin: 0 4px 10px;
     padding: 0;
-    color: #ffffff;
+    color: var(--color-text);
     font-size: 15px;
     font-weight: 700;
     line-height: 1.3;
@@ -295,18 +295,18 @@
     padding: 8px 4px;
     border-radius: 10px;
     background: transparent;
-    color: #ffffff;
+    color: var(--color-text);
     cursor: pointer;
     box-sizing: border-box;
     transition: background 0.15s ease;
 }
 
 .functionGridItem:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
 .functionGridItemActive {
-    background: rgba(255, 255, 255, 0.06);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .functionGridIcon {
@@ -315,7 +315,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(255, 255, 255, 0.92);
+    color: color-mix(in srgb, var(--color-text) 92%, transparent);
     font-size: 30px;
     flex-shrink: 0;
 }
@@ -338,7 +338,7 @@
     font-weight: 500;
     line-height: 1.35;
     text-align: center;
-    color: rgba(255, 255, 255, 0.92);
+    color: color-mix(in srgb, var(--color-text) 92%, transparent);
     word-break: break-word;
 }
 
@@ -371,7 +371,7 @@
 }
 
 .functionItem:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
 .functionItemExpanded {
@@ -391,7 +391,7 @@
     justify-content: center;
     background: none;
     border-radius: 0;
-    color: #ffffff;
+    color: var(--color-text);
     font-size: 20px;
     flex-shrink: 0;
 }
@@ -413,7 +413,7 @@
     min-width: 0;
     font-size: 15px;
     font-weight: 500;
-    color: #ffffff;
+    color: var(--color-text);
     line-height: 1.3;
 }
 
@@ -434,12 +434,12 @@
 .functionHint {
     font-size: 13px;
     font-weight: 400;
-    color: rgba(255, 255, 255, 0.42);
+    color: var(--color-text-muted);
     white-space: nowrap;
 }
 
 .functionChevron {
-    color: rgba(255, 255, 255, 0.32);
+    color: var(--color-text-muted);
     font-size: 18px;
     line-height: 1;
     font-weight: 300;
@@ -466,12 +466,12 @@
 
 .functionDesc {
     font-size: 14px;
-    color: rgba(255, 255, 255, 0.42);
+    color: var(--color-text-muted);
     word-break: break-word;
 }
 
 .inviteCodeHighlight {
-    color: #ff6b6b;
+    color: var(--color-primary-fg);
     font-weight: 700;
 }
 
@@ -493,15 +493,15 @@
 
 /* 未签到状态 - 红色渐变 */
 .functionButtonCheckIn {
-    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
-    color: #fff;
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-light) 100%);
+    color: var(--color-on-primary);
     cursor: pointer;
 }
 
 .functionButtonCheckIn:hover {
-    background: linear-gradient(135deg, #e03545 0%, #e94a5a 100%);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%);
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(251, 70, 85, 0.3);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 .functionButtonCheckIn:active {
@@ -510,16 +510,16 @@
 
 /* 已签到状态 - 柔和的蓝灰色渐变 */
 .functionButtonSignedIn {
-    background: #99999998;
-    color: #fff;
+    background: color-mix(in srgb, var(--color-surface) 59.6%, transparent);
+    color: var(--color-text);
     cursor: not-allowed;
-    box-shadow: 0 2px 6px rgba(108, 155, 210, 0.25);
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--color-info) 25%, transparent);
 }
 
 /* 其他按钮样式（保持原有红色） */
 .functionButton:not(.functionButtonCheckIn):not(.functionButtonSignedIn) {
-    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
-    color: #fff;
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-light) 100%);
+    color: var(--color-on-primary);
     cursor: pointer;
 }
 
@@ -536,15 +536,15 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
-    color: #fff;
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-light) 100%);
+    color: var(--color-on-primary);
     cursor: pointer;
 }
 
 .exchangeButton:hover {
-    background: linear-gradient(135deg, #e03545 0%, #e94a5a 100%);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%);
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(251, 70, 85, 0.3);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 .exchangeButton:active {
@@ -552,9 +552,9 @@
 }
 
 .functionButton:not(.functionButtonCheckIn):not(.functionButtonSignedIn):hover {
-    background: linear-gradient(135deg, #e03545 0%, #e94a5a 100%);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%);
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(251, 70, 85, 0.3);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 .functionButton:not(.functionButtonCheckIn):not(.functionButtonSignedIn):active {
@@ -573,9 +573,9 @@
 
 .inviteCampaignSection {
     margin: 4px 8px 10px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     border-radius: 14px;
-    background: rgba(255, 255, 255, 0.1);
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
     padding: 20px 20px 16px;
     display: flex;
     flex-direction: column;
@@ -592,8 +592,8 @@
     width: 48px;
     height: 48px;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.12);
-    color: #fff;
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: var(--color-text);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -612,7 +612,7 @@
     font-size: 16px;
     line-height: 1.35;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .inviteCampaignCodeRow {
@@ -629,15 +629,15 @@
     line-height: 1.2;
     font-weight: 600;
     letter-spacing: 0.06em;
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .inviteCampaignCopyBtn {
     border: none;
     border-radius: 8px;
     padding: 8px 16px;
-    background: rgba(255, 255, 255, 0.18);
-    color: #fff;
+    background: color-mix(in srgb, var(--color-text) 18%, transparent);
+    color: var(--color-text);
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -647,7 +647,7 @@
 }
 
 .inviteCampaignCopyBtn:hover {
-    background: rgba(255, 255, 255, 0.28);
+    background: color-mix(in srgb, var(--color-text) 28%, transparent);
     transform: translateY(-1px);
 }
 
@@ -655,8 +655,8 @@
     border: none;
     border-radius: 8px;
     padding: 8px 16px;
-    background: rgba(255, 255, 255, 0.18);
-    color: #fff;
+    background: color-mix(in srgb, var(--color-text) 18%, transparent);
+    color: var(--color-text);
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -666,21 +666,21 @@
 }
 
 .inviteCampaignRewardBtn:hover {
-    background: rgba(255, 255, 255, 0.28);
+    background: color-mix(in srgb, var(--color-text) 28%, transparent);
     transform: translateY(-1px);
 }
 
 .inviteCampaignMeta {
     font-size: 13px;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     margin-top: 8px;
 }
 
 .payButton {
-    background-color: #FB4655;
+    background-color: var(--color-primary-light);
     border-radius: 5px;
     padding: 8px 16px;
-    color: #ffffff;
+    color: var(--color-on-primary);
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -690,44 +690,44 @@
 
 .payButton:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-shadow) 15%, transparent);
 }
 
 .inviteInput {
     flex: 1;
     min-width: 0;
     padding: 8px 12px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
     border-radius: 8px;
     font-size: 14px;
     outline: none;
     transition: border-color 0.2s;
     box-sizing: border-box;
-    background: rgba(255, 255, 255, 0.06);
-    color: #ffffff;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--color-text);
 }
 
 .inviteInput:focus {
-    border-color: rgba(255, 255, 255, 0.35);
+    border-color: color-mix(in srgb, var(--color-text) 35%, transparent);
 }
 
 .redeemInput {
     width: 100%;
     padding: 8px 12px;
-    border: 2px solid #ddd;
+    border: 2px solid var(--color-border);
     border-radius: 6px;
     font-size: 14px;
     outline: none;
     transition: border-color 0.2s;
     box-sizing: border-box;
-    background: #fff;
-    color: #262626;
+    background: var(--color-surface);
+    color: var(--color-text);
 }
 
 .redeemInput:focus {
-    border-color: #B69B74;
-    background: #fff;
-    color: #262626;
+    border-color: var(--color-highlight);
+    background: var(--color-surface);
+    color: var(--color-text);
 }
 
 .redeemResultBadge {
@@ -736,14 +736,14 @@
     align-items: center;
     padding: 2px 8px;
     border-radius: 999px;
-    background: rgba(182, 155, 116, 0.16);
-    color: #8a6a46;
+    background: color-mix(in srgb, var(--color-highlight) 16%, transparent);
+    color: var(--color-highlight);
     font-size: 12px;
     font-weight: 600;
 }
 
 .inviteInput::placeholder {
-    color: rgba(255, 255, 255, 0.35);
+    color: var(--color-text-muted);
 }
 
 .functionExpandSubmit {
@@ -753,8 +753,8 @@
     height: 34px;
     padding: 0 14px;
     border-radius: 8px;
-    background: #7a2e35;
-    color: #ffffff;
+    background: var(--color-primary-bold);
+    color: var(--color-on-primary);
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
@@ -768,7 +768,7 @@
 .dailyTaskModalOverlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: color-mix(in srgb, var(--color-shadow) 70%, transparent);
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
     display: flex;
@@ -806,8 +806,8 @@
     overflow: hidden;
     border-radius: 6px;
     background:
-        linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
-        linear-gradient(180deg, #343434 0%, rgba(52, 52, 52, 0.78) 100%);
+        linear-gradient(0deg, color-mix(in srgb, var(--color-text) 15%, transparent), color-mix(in srgb, var(--color-text) 15%, transparent)),
+        linear-gradient(180deg, var(--color-surface-2) 0%, color-mix(in srgb, var(--color-surface) 78%, transparent) 100%);
     border: 0.68px solid transparent;
     backdrop-filter: blur(47px);
     -webkit-backdrop-filter: blur(47px);
@@ -828,13 +828,13 @@
     padding: 0.68px;
     background: linear-gradient(
         135deg,
-        rgba(255, 255, 255, 0.55) 0%,
-        rgba(255, 255, 255, 0.18) 60%,
-        rgba(255, 255, 255, 0) 90%
+        color-mix(in srgb, var(--color-surface) 55%, transparent) 0%,
+        color-mix(in srgb, var(--color-text) 18%, transparent) 60%,
+        transparent 90%
     );
     -webkit-mask:
-        linear-gradient(#fff 0 0) content-box,
-        linear-gradient(#fff 0 0);
+        linear-gradient(var(--color-surface) 0 0) content-box,
+        linear-gradient(var(--color-surface) 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;
@@ -849,7 +849,7 @@
     width: 160px;
     height: 160px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(255, 59, 97, 0.08) 0%, transparent 70%);
+    background: radial-gradient(circle, color-mix(in srgb, var(--color-primary) 8%, transparent) 0%, transparent 70%);
     pointer-events: none;
     z-index: 0;
 }
@@ -864,7 +864,7 @@
     border: none;
     border-radius: 50%;
     background: transparent;
-    color: #ffffff;
+    color: var(--color-text);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -881,8 +881,8 @@
     display: block;
     width: 10px;
     height: 10px;
-    border-left: 2px solid #ffffff;
-    border-bottom: 2px solid #ffffff;
+    border-left: 2px solid var(--color-text);
+    border-bottom: 2px solid var(--color-text);
     transform: rotate(45deg);
     margin-left: 4px;
 }
@@ -900,7 +900,7 @@
     margin: 0 0 8px;
     font-size: 17px;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--color-text);
     letter-spacing: 0.02em;
     text-align: center;
 }
@@ -910,7 +910,7 @@
     font-size: 13px;
     font-weight: 400;
     line-height: 1.4;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     text-align: left;
 }
 
@@ -918,7 +918,7 @@
     position: relative;
     z-index: 1;
     font-size: 13px;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--color-text-secondary);
     text-align: center;
     padding: 24px 0;
 }
@@ -927,7 +927,7 @@
     position: relative;
     z-index: 1;
     font-size: 13px;
-    color: #FF7D7D;
+    color: var(--color-primary-fg);
 }
 
 .dailyTaskList {
@@ -940,14 +940,14 @@
     flex: 1 1 auto;
     margin: 0 -4px;
     padding: 0 4px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    scrollbar-color: color-mix(in srgb, var(--color-text) 20%, transparent) transparent;
 }
 
 .dailyTaskItem {
     border: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     border-radius: 0;
     background: transparent;
     padding: 14px 2px;
@@ -965,17 +965,17 @@
     z-index: 1;
     flex-shrink: 0;
     padding: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     border-radius: 12px;
-    background: rgba(18, 18, 21, 0.56);
+    background: color-mix(in srgb, var(--color-surface) 56%, transparent);
     opacity: 0.58;
     transition: opacity 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .makeupCardRewardReady {
     opacity: 1;
-    border-color: rgba(255, 64, 103, 0.55);
-    background: linear-gradient(135deg, rgba(255, 47, 91, 0.16), rgba(255, 255, 255, 0.04));
+    border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 16%, transparent), color-mix(in srgb, var(--color-text) 4%, transparent));
 }
 
 .makeupCardRewardHeader {
@@ -992,13 +992,13 @@
 }
 
 .makeupCardRewardHeader strong {
-    color: #fff;
+    color: var(--color-text);
     font-size: 14px;
 }
 
 .makeupCardRewardHeader span,
 .makeupCardRewardHeader b {
-    color: rgba(255, 255, 255, 0.62);
+    color: var(--color-text-secondary);
     font-size: 12px;
     font-weight: 500;
 }
@@ -1008,14 +1008,14 @@
     margin: 10px 0;
     overflow: hidden;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.1);
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
 }
 
 .makeupCardProgress span {
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, #ff315f, #ff6f8e);
+    background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
     transition: width 0.2s ease;
 }
 
@@ -1024,16 +1024,16 @@
     min-height: 36px;
     border: 0;
     border-radius: 999px;
-    background: #ff315f;
-    color: #fff;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
     font-size: 13px;
     font-weight: 650;
     cursor: pointer;
 }
 
 .makeupCardClaimButton:disabled {
-    background: rgba(255, 255, 255, 0.09);
-    color: rgba(255, 255, 255, 0.42);
+    background: color-mix(in srgb, var(--color-text) 9%, transparent);
+    color: var(--color-text-muted);
     cursor: not-allowed;
 }
 
@@ -1052,14 +1052,14 @@
     font-size: 14px;
     font-weight: 500;
     line-height: 1.35;
-    color: rgba(255, 255, 255, 0.92);
+    color: color-mix(in srgb, var(--color-text) 92%, transparent);
     letter-spacing: 0.01em;
 }
 
 .dailyTaskReward {
     font-size: 12px;
     font-weight: 600;
-    color: #FF3B61;
+    color: var(--color-primary);
     flex-shrink: 0;
     letter-spacing: 0.01em;
     font-variant-numeric: tabular-nums;
@@ -1068,7 +1068,7 @@
 .dailyTaskDescription {
     font-size: 12px;
     line-height: 1.45;
-    color: rgba(255, 255, 255, 0.38);
+    color: var(--color-text-muted);
     word-break: break-word;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -1096,7 +1096,7 @@
     position: relative;
     width: 100%;
     height: 2px;
-    background: rgba(255, 255, 255, 0.12);
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
     border-radius: 0;
     overflow: hidden;
 }
@@ -1107,14 +1107,14 @@
     top: 0;
     bottom: 0;
     width: 0;
-    background: #FF3B61;
+    background: var(--color-primary);
     border-radius: 0;
     transition: width 0.2s ease;
 }
 
 .dailyTaskProgressText {
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.42);
+    color: var(--color-text-muted);
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.01em;
 }
@@ -1147,12 +1147,12 @@
 
 .dailyTaskPrimaryBtn {
     border: none;
-    background: #FF3B61;
-    color: #ffffff;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
 }
 
 .dailyTaskPrimaryBtn:hover:not(:disabled) {
-    background: #ff4d6f;
+    background: var(--color-primary-light);
 }
 
 .dailyTaskPrimaryBtn:disabled {
@@ -1161,20 +1161,20 @@
 }
 
 .dailyTaskSecondaryBtn {
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    border: 1px solid color-mix(in srgb, var(--color-text) 18%, transparent);
     background: transparent;
-    color: rgba(255, 255, 255, 0.88);
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
 }
 
 .dailyTaskSecondaryBtn:hover {
-    border-color: rgba(255, 255, 255, 0.32);
-    background: rgba(255, 255, 255, 0.06);
+    border-color: color-mix(in srgb, var(--color-text) 32%, transparent);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .dailyTaskDoneLabel {
     font-size: 12px;
     font-weight: 400;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--color-text-muted);
     line-height: 30px;
     white-space: nowrap;
 }
@@ -1184,7 +1184,7 @@
     z-index: 1;
     font-size: 11px;
     line-height: 1.4;
-    color: rgba(255, 255, 255, 0.38);
+    color: var(--color-text-muted);
     flex-shrink: 0;
     text-align: center;
 }
@@ -1431,7 +1431,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: color-mix(in srgb, var(--color-shadow) 70%, transparent);
     backdrop-filter: blur(5px);
     display: flex;
     align-items: center;
@@ -1450,11 +1450,11 @@
 }
 
 .groupModalContent {
-    background: #fff;
+    background: var(--color-surface);
     border-radius: 16px;
     width: 90%;
     max-width: 400px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 40px color-mix(in srgb, var(--color-shadow) 30%, transparent);
     animation: slideUp 0.3s ease-out;
     position: relative;
     display: flex;
@@ -1493,7 +1493,7 @@
 }
 
 .groupModalText {
-    color: #333;
+    color: var(--color-text);
     font-size: 16px;
     text-align: center;
     line-height: 1.6;
@@ -1502,7 +1502,7 @@
 }
 
 .groupNumber {
-    color: #FB4655;
+    color: var(--color-primary-fg);
     font-weight: 600;
     font-size: 18px;
 }
@@ -1528,25 +1528,25 @@
 }
 
 .groupModalCancelBtn {
-    background: #f5f5f5;
-    color: #333;
+    background: var(--color-bg);
+    color: var(--color-text);
 }
 
 .groupModalCancelBtn:hover {
-    background: #e0e0e0;
+    background: var(--color-surface-2);
     transform: translateY(-1px);
 }
 
 .groupModalCopyBtn {
-    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
-    color: #fff;
-    box-shadow: 0 2px 8px rgba(251, 70, 85, 0.3);
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-light) 100%);
+    color: var(--color-on-primary);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 .groupModalCopyBtn:hover {
-    background: linear-gradient(135deg, #e03545 0%, #e94a5a 100%);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(251, 70, 85, 0.4);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 40%, transparent);
 }
 
 .groupModalCancelBtn:active,
@@ -1591,7 +1591,7 @@
 .editNameModalOverlay {
     position: fixed;
     inset: 0;
-    background-color: rgba(0, 0, 0, 0.45);
+    background-color: color-mix(in srgb, var(--color-shadow) 45%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1600,13 +1600,13 @@
 }
 
 .editNameModal {
-    background-color: #ffffff;
+    background-color: var(--color-surface);
     border-radius: 16px;
     padding: 20px 22px 16px;
     min-width: 280px;
     max-width: 360px;
     width: 100%;
-    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+    box-shadow: 0 18px 45px color-mix(in srgb, var(--color-shadow) 18%, transparent);
 }
 
 .editNameModalHeader {
@@ -1616,7 +1616,7 @@
 .editNameModalTitle {
     font-size: 18px;
     font-weight: 600;
-    color: #111827;
+    color: var(--color-text);
 }
 
 .editNameModalBody {
@@ -1627,27 +1627,27 @@
     width: 100%;
     padding: 8px 12px;
     border-radius: 10px;
-    border: 1px solid #E5E7EB;
+    border: 1px solid var(--color-border);
     font-size: 14px;
     outline: none;
     box-sizing: border-box;
 }
 
 .editNameModalBody .editNameInput:focus {
-    border-color: #FB4655;
-    box-shadow: 0 0 0 1px rgba(251, 70, 85, 0.2);
+    border-color: var(--color-primary-light);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .editNameTips {
     margin-top: 6px;
     font-size: 12px;
-    color: #6B7280;
+    color: var(--color-text-muted);
 }
 
 .bindAccountStatusText {
     font-size: 15px;
     font-weight: 600;
-    color: #111827;
+    color: var(--color-text);
     line-height: 1.6;
 }
 
@@ -1661,9 +1661,9 @@
 .editNameCancelButton {
     padding: 6px 14px;
     border-radius: 999px;
-    border: 1px solid #E5E7EB;
-    background-color: #ffffff;
-    color: #4B5563;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-surface);
+    color: var(--color-text-secondary);
     font-size: 13px;
     cursor: pointer;
 }
@@ -1672,8 +1672,8 @@
     padding: 6px 16px;
     border-radius: 999px;
     border: none;
-    background-color: #FB4655;
-    color: #ffffff;
+    background-color: var(--color-primary-light);
+    color: var(--color-on-primary);
     font-size: 13px;
     cursor: pointer;
 }
@@ -1683,3 +1683,39 @@
     opacity: 0.7;
     cursor: not-allowed;
 }
+
+/* ================= 统一视觉（与弹窗体系一致） ================= */
+.functionList {
+    padding: 16px 14px 12px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+    border-radius: 18px;
+    background: var(--color-surface);
+}
+.functionListHeading { margin: 0 6px 12px; font-size: 15px; }
+.functionGrid { gap: 6px 4px; }
+.functionGridItem { gap: 8px; padding: 10px 4px; border-radius: 14px; transition: background 0.15s, transform 0.1s; }
+.functionGridItem:active { transform: scale(0.96); }
+.functionGridIcon {
+    width: 44px; height: 44px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--color-text);
+    font-size: 22px;
+    transition: background 0.15s, color 0.15s;
+}
+.functionGridIcon svg { width: 22px; height: 22px; }
+.functionGridIcon img { width: 24px; height: 24px; }
+.functionGridItem:hover .functionGridIcon,
+.functionGridItemActive .functionGridIcon { background: color-mix(in srgb, var(--color-primary) 16%, transparent); color: var(--color-primary-fg); }
+.functionGridLabel { color: color-mix(in srgb, var(--color-text) 78%, transparent); font-size: 12px; }
+.functionButton { border-radius: 10px; }
+.functionButtonCheckIn,
+.functionButton:not(.functionButtonCheckIn):not(.functionButtonSignedIn) { background: var(--color-primary); color: var(--color-on-primary); }
+.functionButtonCheckIn:hover,
+.functionButton:not(.functionButtonCheckIn):not(.functionButtonSignedIn):hover { background: var(--color-primary-bold); color: var(--color-on-primary); }
+.functionButtonSignedIn { background: color-mix(in srgb, var(--color-text) 10%, transparent); color: var(--color-text-secondary); }
+.functionExpandSubmit { border-radius: 10px; background: var(--color-primary); color: var(--color-on-primary); }
+.functionExpandSubmit:hover:not(:disabled) { background: var(--color-primary-bold); color: var(--color-on-primary); }
+.inviteCampaignSection { border-color: color-mix(in srgb, var(--color-text) 6%, transparent); border-radius: 18px; background: var(--color-surface); }
+.makeupCardClaimButton { border-radius: 10px; background: var(--color-primary); color: var(--color-on-primary); }
+.makeupCardProgress > * { background: var(--color-primary); color: var(--color-on-primary); }

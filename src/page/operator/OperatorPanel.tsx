@@ -22,8 +22,8 @@ import { isAdminRole } from '../../utils/userRoles';
 import AdminPublicAvatarManager from '../../components/admin/AdminPublicAvatarManager';
 import AdminLocationLibraryManager from '../../components/admin/AdminLocationLibraryManager';
 import AdminLocationAssetLibraryManager from '../../components/admin/AdminLocationAssetLibraryManager';
+import AdminArtStyleManager from '../../components/admin/AdminArtStyleManager';
 import AdminAudioLibraryManager from '../../components/admin/AdminAudioLibraryManager';
-import AdminArtStyleLibraryManager from '../../components/admin/AdminArtStyleLibraryManager';
 import AdminPlayModManager from '../../components/admin/AdminPlayModManager';
 import ContentReportAdminManager from '../../components/admin/ContentReportAdminManager';
 import ContentAppealAdminManager from '../../components/admin/ContentAppealAdminManager';
@@ -80,9 +80,9 @@ const resolveOperatorTab = (pathname: string): OperatorTab => {
   if (pathname.startsWith('/operator/withdraw')) return 'withdraw';
   if (pathname.startsWith('/operator/avatars')) return 'avatars';
   if (pathname.startsWith('/operator/location-assets')) return 'locationAssets';
-  if (pathname.startsWith('/operator/locations')) return 'locations';
   if (pathname.startsWith('/operator/audio-library')) return 'audioLibrary';
   if (pathname.startsWith('/operator/art-styles')) return 'artStyles';
+  if (pathname.startsWith('/operator/locations')) return 'locations';
   if (pathname.startsWith('/operator/components') || pathname.startsWith('/operator/play-mods')) return 'components';
   if (pathname.startsWith('/operator/ai-model-center')) return 'aiModelCenter';
   if (pathname.startsWith('/operator/platform-benefits')) return 'platformBenefits';
@@ -261,7 +261,7 @@ const OperatorPanel: React.FC = () => {
             {activeTab === 'locations' ? <AdminLocationLibraryManager /> : null}
             {activeTab === 'locationAssets' ? <AdminLocationAssetLibraryManager /> : null}
             {activeTab === 'audioLibrary' ? <AdminAudioLibraryManager /> : null}
-            {activeTab === 'artStyles' ? <AdminArtStyleLibraryManager /> : null}
+            {activeTab === 'artStyles' ? <AdminArtStyleManager /> : null}
             {activeTab === 'components' ? <AdminPlayModManager /> : null}
             {!isLoading && activeTab === 'promotions' ? (
               <PromotionAdminManager onRefreshCounts={refreshPromotionPendingReviewCount} />

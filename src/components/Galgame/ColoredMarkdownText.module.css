@@ -5,27 +5,27 @@
 
 /* 颜色标签样式 */
 .colorRed {
-    color: #ff4444 !important;
+    color: var(--color-primary-fg) !important;
     font-weight: 500;
 }
 
 .colorYellow {
-    color: #ffd700 !important;
+    color: var(--color-highlight) !important;
     font-weight: 500;
 }
 
 .colorGreen {
-    color: #4ade80 !important;
+    color: var(--color-success) !important;
     font-weight: 500;
 }
 
 .colorBlue {
-    color: #60a5fa !important;
+    color: var(--color-info) !important;
     font-weight: 500;
 }
 
 .colorPurple {
-    color: #c084fc !important;
+    color: var(--color-accent) !important;
     font-weight: 500;
 }
 

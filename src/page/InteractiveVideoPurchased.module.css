@@ -1,13 +1,13 @@
 .pageRoot {
-    --ivp-bg: #000000;
-    --ivp-card: #1c1c1e;
-    --ivp-elevated: #242426;
-    --ivp-border: #2c2c2e;
-    --ivp-label: #8e8e93;
-    --ivp-value: #ffffff;
-    --ivp-primary: #a8283c;
-    --ivp-primary-hover: #c23a50;
-    --ivp-divider: rgba(255, 255, 255, 0.1);
+    --ivp-bg: var(--color-bg);
+    --ivp-card: var(--color-surface);
+    --ivp-elevated: var(--color-surface-2);
+    --ivp-border: var(--color-border);
+    --ivp-label: var(--color-text-muted);
+    --ivp-value: var(--color-text);
+    --ivp-primary: var(--color-primary);
+    --ivp-primary-hover: var(--color-primary);
+    --ivp-divider: color-mix(in srgb, var(--color-text) 10%, transparent);
     min-height: 100vh;
     background: var(--ivp-bg);
     color: var(--ivp-value);
@@ -30,7 +30,7 @@
     top: 0;
     z-index: 20;
     padding: calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px;
-    background: rgba(0, 0, 0, 0.92);
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
     box-sizing: border-box;
     backdrop-filter: blur(8px);
 }
@@ -118,7 +118,7 @@
     gap: 8px;
     padding: 0 16px;
     background: var(--ivp-primary);
-    color: #fff;
+    color: var(--color-on-primary);
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -168,8 +168,8 @@
 .coverFallback {
     display: grid;
     place-items: center;
-    background: linear-gradient(135deg, rgba(168, 40, 60, 0.35), rgba(36, 36, 38, 0.95));
-    color: #ff8a98;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 35%, transparent), color-mix(in srgb, var(--color-surface) 95%, transparent));
+    color: var(--color-primary-fg);
     font-size: 40px;
     font-weight: 800;
 }
@@ -183,8 +183,8 @@
     border-radius: 999px;
     display: inline-flex;
     align-items: center;
-    background: rgba(0, 0, 0, 0.72);
-    color: #fff;
+    background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
+    color: var(--color-on-media);
     font-size: 12px;
     font-weight: 700;
 }
@@ -216,8 +216,8 @@
     border-radius: 999px;
     display: inline-flex;
     align-items: center;
-    background: rgba(168, 40, 60, 0.18);
-    color: #ff8a98;
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+    color: var(--color-primary-fg);
     font-size: 12px;
     font-weight: 700;
 }

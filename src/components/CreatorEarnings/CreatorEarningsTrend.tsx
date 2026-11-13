@@ -37,9 +37,9 @@ interface Props {
 }
 
 const SERIES = {
-    editor: { dataKey: 'editorGrossYuan', name: '编辑器作品', color: '#ff829e' },
-    custom: { dataKey: 'customGrossYuan', name: '自定义作品', color: '#8f83ff' },
-    sdk: { dataKey: 'sdkGrossYuan', name: 'SDK 外部应用', color: '#54d4b4' },
+    editor: { dataKey: 'editorGrossYuan', name: '编辑器作品', color: 'var(--color-primary-light)' },
+    custom: { dataKey: 'customGrossYuan', name: '自定义作品', color: 'var(--color-info)' },
+    sdk: { dataKey: 'sdkGrossYuan', name: 'SDK 外部应用', color: 'var(--color-success)' },
 } as const;
 
 const CreatorEarningsTrend: React.FC<Props> = ({
@@ -79,10 +79,10 @@ const CreatorEarningsTrend: React.FC<Props> = ({
                 <div className={styles.chartWrap}>
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={data} margin={{ top: 12, right: 12, bottom: 4, left: 0 }}>
-                            <CartesianGrid stroke="rgba(255,255,255,.08)" vertical={false} />
-                            <XAxis dataKey="bucket" ticks={ticks} tickFormatter={(value) => formatCreatorTrendAxisDate(String(value), period)} stroke="#9b98aa" tickLine={false} axisLine={false} />
-                            <YAxis stroke="#9b98aa" tickLine={false} axisLine={false} width={48} />
-                            <Tooltip labelFormatter={(value) => formatCreatorTrendTooltipDate(String(value))} contentStyle={{ background: '#24202b', border: '1px solid #514959', borderRadius: 10 }} formatter={(value) => [`¥${Number(value).toFixed(2)}`, '']} />
+                            <CartesianGrid stroke="color-mix(in srgb, var(--color-text) 8%, transparent)" vertical={false} />
+                            <XAxis dataKey="bucket" ticks={ticks} tickFormatter={(value) => formatCreatorTrendAxisDate(String(value), period)} stroke="var(--color-text-secondary)" tickLine={false} axisLine={false} />
+                            <YAxis stroke="var(--color-text-secondary)" tickLine={false} axisLine={false} width={48} />
+                            <Tooltip labelFormatter={(value) => formatCreatorTrendTooltipDate(String(value))} contentStyle={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 10 }} formatter={(value) => [`¥${Number(value).toFixed(2)}`, '']} />
                             <Legend />
                             {visible.map((key) => <Line key={key} type="monotone" dataKey={SERIES[key].dataKey} name={SERIES[key].name} stroke={SERIES[key].color} strokeWidth={3} dot={false} activeDot={{ r: 5 }} />)}
                         </LineChart>

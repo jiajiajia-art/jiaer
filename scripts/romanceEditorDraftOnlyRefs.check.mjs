@@ -46,9 +46,9 @@ const texts = (r) => r.issues.filter((i) => i.level === 'error').map((i) => i.te
 
 test('auditStory_草稿空表单_引用娱乐圈同名id也报引用了不存在', async () => {
   const { auditStory } = await loadRefAudit();
-  // 功能注释：内置娱乐圈预置人物/地点/物品已清空，不再回退 star2005；旧 id 在非草稿下同样不存在
-  const legacy = auditStory({ draft: false, events: [refEvent()], skip: ['flag'] });
-  assert.ok(texts(legacy).some((t) => t.includes('不存在')), '清空后的内置世界不应再认这些旧 id');
+  // 对照：表单里有这些 id 时不报「不存在」（内置娱乐圈世界已清空人物 / 物品，不能再拿它当对照）
+  const present = auditStory({ events: [refEvent()], npcIds: [ENT.npc], roomIds: [ENT.room], itemIds: [ENT.item], skip: ['flag'] });
+  assert.equal(texts(present).filter((t) => t.includes('不存在')).length, 0, '表单里有的 id 不应报错');
   // 草稿口径：传入空数组也是权威，不并入 LIVE_*
   const draft = auditStory({ events: [refEvent()], npcIds: [], roomIds: [], itemIds: [], skip: ['flag'] });
   const errs = texts(draft);
@@ -166,8 +166,8 @@ test('FixedEventsPanel_草稿下条件效果下拉只读draftRefs_审计不再sk
   assert.match(src, /draftRefs \? draftRefs\.rooms/);
   assert.match(src, /draftRefs \? draftRefs\.items/);
   assert.match(src, /draftRefs \? draftRefs\.people|draftRefs\?\.people/);
-  assert.match(src, /defaultCond\(e\.target\.value as FixedCond\["kind"\], draftRefs\)/);
-  assert.match(src, /defaultEffect\(e\.target\.value as FixedEffect\["kind"\], draftRefs\)/);
+  assert.match(src, /defaultCond\((?:e\.target\.value as FixedCond\["kind"\]|k), draftRefs\)/);
+  assert.match(src, /defaultEffect\((?:e\.target\.value as FixedEffect\["kind"\]|k), draftRefs\)/);
   assert.match(src, /draft: true, events/);
   assert.doesNotMatch(src, /skip: \["item", "location", "npc", "flag"\]/);
   assert.match(src, /itemIds: draftItems\.map/);

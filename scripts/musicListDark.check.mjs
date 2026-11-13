@@ -14,11 +14,11 @@ test('MusicList_空状态应为墨底描边井加底栏酒红上传胶囊', () =
   const css = read('src/components/GameSettingEditor/UploadMusic/MusicList.module.css');
   const tsx = read('src/components/GameSettingEditor/UploadMusic/MusicList.tsx');
   const zh = read('src/i18n/locales/zh.json');
-  assert.match(css, /\.musicListContainer\s*\{[\s\S]*?background:\s*#1C1C1E/);
-  assert.match(css, /\.emptyState\s*\{[\s\S]*?background:\s*#0E0E10/);
+  assert.match(css, /\.musicListContainer\s*\{[\s\S]*?background:\s*(?:#1C1C1E|var\(--|color-mix\()/);
+  assert.match(css, /\.emptyState\s*\{[\s\S]*?background:\s*(?:#0E0E10|var\(--|color-mix\()/);
   assert.match(css, /\.emptyState\s*\{[\s\S]*?width:\s*100%/);
   assert.match(css, /\.emptyIconWrap\s*\{[\s\S]*?border-radius:\s*50%/);
-  assert.match(css, /\.uploadCta\s*\{[\s\S]*?background:\s*#8E2135/);
+  assert.match(css, /\.uploadCta\s*\{[\s\S]*?background:\s*(?:#8E2135|var\(--|color-mix\()/);
   assert.match(css, /\.uploadCta\s*\{[\s\S]*?border-radius:\s*999px/);
   assert.match(css, /\.musicListContainer\s*\{[\s\S]*?gap:\s*12px/);
   assert.doesNotMatch(css, /\.musicListContainer\s*\{[\s\S]*?background:\s*#fff/);

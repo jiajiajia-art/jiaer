@@ -11,7 +11,7 @@ import test from 'node:test';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(join(root, rel), 'utf8');
 
-test('人物Section_顶部嵌ContactsPanel_无独立人脉页面配置Section', () => {
+test('人物Section_人物卡在前_ContactsPanel全作品共用单独成块在后', () => {
   const editor = read('Romance/src/components/ModEditorPanel.tsx');
   assert.doesNotMatch(editor, /title="人脉页面配置"/);
   const peopleAt = editor.indexOf('title="人物"');
@@ -20,7 +20,8 @@ test('人物Section_顶部嵌ContactsPanel_无独立人脉页面配置Section', 
   const endAt = editor.indexOf('title="总养成开关"', peopleAt);
   const peopleBlock = editor.slice(peopleAt, endAt > peopleAt ? endAt : peopleAt + 8000);
   assert.match(peopleBlock, /ContactsPanel/);
-  assert.ok(peopleBlock.indexOf('ContactsPanel') < peopleBlock.indexOf('npcs.map'), 'ContactsPanel 须在人物列表之上');
+  assert.ok(peopleBlock.indexOf('<ContactsPanel') > peopleBlock.indexOf('npcs.map'), '人物卡（姓名）须在关系档位之前');
+  assert.match(read('Romance/src/components/ContactsPanel.tsx'), /关系档位 · 全作品共用/);
 });
 
 test('ContactsPanel_仅关系档位_无卡片数值与双列预览', () => {

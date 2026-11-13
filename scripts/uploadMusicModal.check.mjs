@@ -20,11 +20,11 @@ test('UploadMusicModal_应对齐白纸弹层与虚线投递区', () => {
   const tsx = read('src/components/GameSettingEditor/UploadMusic/UploadMusicModal.tsx');
   const zh = read('src/i18n/locales/zh.json');
 
-  assert.match(css, /\.modalContent\s*\{[\s\S]*?background:\s*#ffffff/);
+  assert.match(css, /\.modalContent\s*\{[\s\S]*?background:\s*(?:#ffffff|var\(--|color-mix\()/);
   assert.match(css, /\.uploadArea\s*\{[\s\S]*?border:\s*1px dashed/);
-  assert.match(css, /\.footerBtn\s*\{[\s\S]*?background:\s*#ffffff/);
-  assert.match(css, /--music-modal-accent:\s*#8e2135/);
-  assert.match(css, /--music-modal-required:\s*#e03d4b/);
+  assert.match(css, /\.footerBtn\s*\{[\s\S]*?background:\s*(?:#ffffff|var\(--|color-mix\()/);
+  assert.match(css, /--music-modal-accent:\s*(?:#8e2135|var\(--|color-mix\()/);
+  assert.match(css, /--music-modal-required:\s*(?:#e03d4b|var\(--|color-mix\()/);
   assert.doesNotMatch(css, /\.ghostSmall/);
 
   assert.match(tsx, /rejectUploadMusicFile/);

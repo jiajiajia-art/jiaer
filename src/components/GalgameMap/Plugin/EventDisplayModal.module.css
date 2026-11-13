@@ -4,7 +4,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: color-mix(in srgb, var(--color-shadow) 70%, transparent);
     backdrop-filter: blur(5px);
     display: flex;
     align-items: center;
@@ -34,7 +34,7 @@
     max-width: 500px;
     max-height: 76vh;
     overflow-y: auto;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 40px color-mix(in srgb, var(--color-shadow) 30%, transparent);
     animation: slideUp 0.3s ease-out;
     position: relative;
     display: flex;
@@ -91,7 +91,7 @@
 }
 
 .eventDescription p {
-    color: #B24F1B;
+    color: var(--color-highlight);
     font-size: 1.2rem;
     font-weight: 600;
     text-align: center;
@@ -113,7 +113,7 @@
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
-    color: #E4D2A9;
+    color: var(--color-highlight);
     border: none;
     border-radius: 8px;
     font-size: 0.9rem;
@@ -122,11 +122,11 @@
     text-align: center;
     line-height: 32px;
     text-shadow:
-        1px 1px 1px #7a5231,   /* 右下浅棕阴影 */
-       -1px -1px 1px #7a5231,  /* 左上阴影 */
-        1px -1px 1px #7a5231,  /* 右上阴影 */
-       -1px 1px 1px #7a5231,   /* 左下阴影 */
-        0 0 4px #7a5231;  
+        1px 1px 1px var(--color-highlight),   /* 右下浅棕阴影 */
+       -1px -1px 1px var(--color-highlight),  /* 左上阴影 */
+        1px -1px 1px var(--color-highlight),  /* 右上阴影 */
+       -1px 1px 1px var(--color-highlight),   /* 左下阴影 */
+        0 0 4px var(--color-highlight);  
     padding: 0;
 }
 

@@ -18,7 +18,7 @@ test('MobileBottomNavIcons_应按设计稿导出五枚图标且创作固定红�
   assert.match(src, /export function BottomNavRankingsIcon/);
   assert.match(src, /export function BottomNavProfileIcon/);
   assert.match(src, /stroke="currentColor"/);
-  assert.match(src, /fill="#D52D49"/);
+  assert.match(src, /fill="(?:#D52D49"|var\(--|color-mix\()/);
   assert.match(src, /stroke="white"/);
   assert.match(src, /M179\.5 21H187\.5M187\.5 21H195\.5M187\.5 21V13M187\.5 21V29/);
   assert.match(src, /M48\.8333 31\.4995V22\.6576/);
@@ -38,7 +38,7 @@ test('MobileBottomNav_应改用内联设计图标而非 assetsv2 img', () => {
   assert.match(tsx, /data-bottom-nav="design-v2"/);
   assert.doesNotMatch(tsx, /assetsv2\/home\/(home|bookshelf|create|rank|mine)\.svg/);
   assert.doesNotMatch(tsx, /<img\s/);
-  assert.match(css, /\.navItemActive[\s\S]*color:\s*#F16C83/);
+  assert.match(css, /\.navItemActive[\s\S]*color:\s*(?:#F16C83|var\(--|color-mix\()/);
   assert.match(css, /\.createIcon/);
   // 功能注释：创作钮必须按稿 40×32，禁止再缩回与两侧线框接近的尺寸
   assert.match(css, /\.createIcon\s*\{[^}]*width:\s*40px/);

@@ -1,13 +1,13 @@
 /* NPC详情样式 */
 .npcDetail {
-    background: #ffffff;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     border-radius: 24px;
     padding: 24px;
     display: flex;
     flex-direction: column;
     gap: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 4%, transparent);
 }
 
 .detailHeaderRow {
@@ -20,14 +20,14 @@
 .detailHeader h3 {
     margin: 0;
     font-size: 1.1rem;
-    color: #1a1a1a;
+    color: var(--color-text);
     font-weight: 600;
 }
 
 .emptyDetail {
     text-align: center;
     padding: 60px 20px;
-    color: rgba(0, 0, 0, 0.4);
+    color: var(--color-text-muted);
 }
 
 .detailForm {
@@ -55,7 +55,7 @@
 .typeLabel {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--color-text);
 }
 
 .typeSelectWrapper {
@@ -65,12 +65,12 @@
 
 .typeSelect {
     padding: 10px 40px 10px 14px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     border-radius: 12px;
     font-size: 0.9rem;
     font-family: inherit;
     transition: 0.2s ease;
-    background: #fff;
+    background: var(--color-surface);
     cursor: pointer;
     width: 100%;
     appearance: none;
@@ -92,7 +92,7 @@
     height: 0;
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
-    border-top: 6px solid rgba(0, 0, 0, 0.5);
+    border-top: 6px solid color-mix(in srgb, var(--color-text) 50%, transparent);
     pointer-events: none;
     transition: transform 0.2s ease;
 }
@@ -125,19 +125,19 @@
 .formGroup label span {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--color-text);
 }
 
 .formGroup input,
 .formGroup select,
 .formGroup textarea {
     padding: 10px 14px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     border-radius: 12px;
     font-size: 0.9rem;
     font-family: inherit;
     transition: 0.2s ease;
-    background: #fff;
+    background: var(--color-surface);
 }
 
 /* 复选框标签样式 */
@@ -159,7 +159,7 @@
 .checkboxLabel span {
     font-size: 0.9rem;
     font-weight: 500;
-    color: #1a1a1a;
+    color: var(--color-text);
     user-select: none;
 }
 
@@ -201,7 +201,7 @@
 .imagePromptInput textarea {
     width: 100%;
     padding: 10px 14px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     border-radius: 12px;
     font-size: 0.9rem;
     font-family: inherit;
@@ -235,8 +235,8 @@
     height: 100%;
     border-radius: 12px;
     overflow: hidden;
-    background: rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: color-mix(in srgb, var(--color-text) 5%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .imagePreview img {
@@ -249,12 +249,12 @@
     width: 100%;
     height: 100%;
     border-radius: 12px;
-    background: rgba(0, 0, 0, 0.05);
-    border: 1px dashed rgba(0, 0, 0, 0.2);
+    background: color-mix(in srgb, var(--color-text) 5%, transparent);
+    border: 1px dashed color-mix(in srgb, var(--color-text) 20%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(0, 0, 0, 0.4);
+    color: var(--color-text-muted);
     font-size: 0.85rem;
 }
 
@@ -265,7 +265,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(255, 255, 255, 0.9);
+    background: color-mix(in srgb, var(--color-surface) 90%, transparent);
     backdrop-filter: blur(2px);
     display: flex;
     flex-direction: column;
@@ -287,7 +287,7 @@
 .loadingSpinner {
     width: 24px;
     height: 24px;
-    border: 2px solid #f3f3f3;
+    border: 2px solid var(--color-text);
     border-top: 2px solid var(--primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
@@ -296,7 +296,7 @@
 }
 
 .loadingText {
-    color: #1a1a1a;
+    color: var(--color-text);
     font-size: 0.85rem;
     font-weight: 500;
     flex-shrink: 0;
@@ -319,7 +319,7 @@
 .optionsHeader span {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--color-text);
 }
 
 .optionsList {
@@ -330,9 +330,9 @@
 
 .optionItem {
     padding: 16px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     border-radius: 12px;
-    background: rgba(0, 0, 0, 0.01);
+    background: color-mix(in srgb, var(--color-text) 1%, transparent);
 }
 
 .optionHeader {
@@ -345,7 +345,7 @@
 .optionHeader span {
     font-size: 0.85rem;
     font-weight: 600;
-    color: rgba(0, 0, 0, 0.6);
+    color: var(--color-text-secondary);
 }
 
 .optionFields {
@@ -363,13 +363,13 @@
 .optionFields label span {
     font-size: 0.85rem;
     font-weight: 500;
-    color: #1a1a1a;
+    color: var(--color-text);
 }
 
 .optionFields input,
 .optionFields textarea {
     padding: 8px 12px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     border-radius: 8px;
     font-size: 0.85rem;
     font-family: inherit;
@@ -384,9 +384,9 @@
 .deleteButton {
     padding: 4px 10px;
     border-radius: 6px;
-    border: 1px solid rgba(220, 53, 69, 0.3);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
     background: transparent;
-    color: #dc3545;
+    color: var(--color-primary);
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
@@ -394,14 +394,14 @@
 }
 
 .deleteButton:hover {
-    background: rgba(220, 53, 69, 0.1);
-    border-color: #dc3545;
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    border-color: var(--color-primary);
 }
 
 .emptyOptions {
     text-align: center;
     padding: 20px;
-    color: rgba(0, 0, 0, 0.4);
+    color: var(--color-text-muted);
     font-size: 0.85rem;
 }
 
@@ -421,7 +421,7 @@
 .loadingState {
     text-align: center;
     padding: 60px 20px;
-    color: rgba(0, 0, 0, 0.4);
+    color: var(--color-text-muted);
 }
 
 .labelRowWithCounter {
@@ -435,6 +435,6 @@
     margin-left: auto;
     font-size: 0.7rem !important;
     font-weight: 400 !important;
-    color: rgba(0, 0, 0, 0.35) !important;
+    color: var(--color-text-muted) !important;
 }
 

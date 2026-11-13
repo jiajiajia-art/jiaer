@@ -59,7 +59,7 @@ const GenerateResultModal: React.FC<GenerateResultModalProps> = ({
                     <div className={styles.modalBody}>
                         {generatedCount !== undefined && totalCount !== undefined && (
                             <div className={styles.resultItem}>
-                                <BsCheckCircle className={styles.resultIcon} style={{ color: '#22c55e' }} />
+                                <BsCheckCircle className={styles.resultIcon} style={{ color: 'var(--color-success)' }} />
                                 <span className={styles.resultText}>
                                     {t('createGame.successGenerated', { count: `${generatedCount}/${totalCount}` })}
                                 </span>
@@ -68,7 +68,7 @@ const GenerateResultModal: React.FC<GenerateResultModalProps> = ({
 
                         {pointsDeducted !== undefined && (
                             <div className={styles.resultItem}>
-                                <IoCashOutline className={styles.resultIcon} style={{ color: '#f59e0b' }} />
+                                <IoCashOutline className={styles.resultIcon} style={{ color: 'var(--color-highlight)' }} />
                                 <span className={styles.resultText}>
                                     {t('createGame.thisTimeDeducted', { points: pointsDeducted })}
                                 </span>
@@ -77,7 +77,7 @@ const GenerateResultModal: React.FC<GenerateResultModalProps> = ({
 
                         {remainingPoints !== undefined && (
                             <div className={styles.resultItem}>
-                                <IoWalletOutline className={styles.resultIcon} style={{ color: '#6366f1' }} />
+                                <IoWalletOutline className={styles.resultIcon} style={{ color: 'var(--color-info)' }} />
                                 <span className={styles.resultText}>
                                     {t('createGame.remainingPoints', { points: remainingPoints })}
                                 </span>

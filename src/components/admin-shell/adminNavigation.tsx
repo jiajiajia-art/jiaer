@@ -141,7 +141,6 @@ const adminGroups = (badges: Record<string, number>): AdminNavigationGroup[] => 
         icon: <PictureOutlined />,
         children: [
           { key: 'avatars', label: '公共头像', path: '/admin/avatars' },
-          { key: 'audioLibrary', label: '音频库', path: '/admin/audio-library' },
           { key: 'artStyles', label: '画风管理', path: '/admin/art-styles' },
         ],
       },

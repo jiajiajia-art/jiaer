@@ -10,7 +10,7 @@ import GameGridSkeleton from '../Skeleton/GameGridSkeleton';
 import { useAuthStore } from '../../store/useAuthStore';
 import getGameDataApi from '../../api/home/getGameData';
 import type { UserGameData } from '../../api/home/getGameData.type';
-import { clearBrowsingHistory, fetchBrowsingHistory, readBrowsingHistory } from '../../utils/browsingHistory';
+import { clearBrowsingHistory, readBrowsingHistory } from '../../utils/browsingHistory';
 import accountSocialApi from '../../api/account/accountSocialApi';
 import GameAction from '../../api/rpgGame/gameAction';
 import favoriteApi from '../../api/favorite/favoriteApi';
@@ -72,9 +72,6 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     const navigate = useNavigate();
     const user = useAuthStore((s) => s.user);
     const worksSectionRef = useRef<HTMLDivElement>(null);
-
-    const isPreview = mode === 'preview';
-    // 功能注释：须在任何 useState 惰性初始化之前声明，避免闭包读到暂存死区变量导致黑屏
     const isVisitor = access === 'visitor';
 
     const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
@@ -95,6 +92,8 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     const [favoritesLoaded, setFavoritesLoaded] = useState(false);
     const [homeHidden, setHomeHidden] = useState(false);
     const [draftCapacity, setDraftCapacity] = useState<{ count: number; limit: number; canCreate: boolean } | null>(null);
+
+    const isPreview = mode === 'preview';
     // 功能注释：下架只认 moderationStatus（兼容 moderation_status），勿用申诉 approved 推断已上架
     const hasTakenDownWork = useMemo(
         () => !isVisitor && fileMetas.some((game) => {
@@ -353,11 +352,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     const handleWorksTabChange = (nextTab: WorksTabKey) => {
         if (isVisitor && nextTab !== 'published') return;
         setWorksTab(nextTab);
-        // 功能注释：切到浏览记录时优先拉服务端，失败则仍展示本机缓存
-        if (nextTab === 'history') {
-            setHistoryGames(readBrowsingHistory(historyUserId));
-            void fetchBrowsingHistory(historyUserId).then(setHistoryGames);
-        }
+        if (nextTab === 'history') setHistoryGames(readBrowsingHistory(historyUserId));
         setWorksPage(1);
         setIsDraftManageMode(false);
         setSelectedDraftIds([]);
@@ -455,9 +450,9 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
     );
 
     const handleClearHistory = () => {
+        clearBrowsingHistory(historyUserId);
         setHistoryGames([]);
         setWorksPage(1);
-        void clearBrowsingHistory(historyUserId);
     };
 
     const renderManageActions = () => {

@@ -6,9 +6,9 @@
 
 .heroCard,
 .card {
-  border: 1px solid var(--admin-border, rgba(222, 191, 166, 0.45));
-  background: #fff;
-  box-shadow: 0 18px 40px var(--admin-shadow, rgba(181, 135, 92, 0.14));
+  border: 1px solid var(--admin-border, color-mix(in srgb, var(--color-highlight) 45%, transparent));
+  background: var(--color-surface);
+  box-shadow: 0 18px 40px var(--admin-shadow, color-mix(in srgb, var(--color-highlight) 14%, transparent));
 }
 
 .heroCard {
@@ -26,15 +26,15 @@
   align-items: center;
   padding: 8px 16px;
   border-radius: 999px;
-  background: var(--admin-accent-soft, #e6f4ff);
-  color: var(--admin-accent-strong, #a5602f);
+  background: var(--admin-accent-soft, var(--color-bg));
+  color: var(--admin-accent-strong, var(--color-highlight));
   font-size: 14px;
   font-weight: 700;
 }
 
 .heroTitle {
   margin: 18px 0 12px;
-  color: var(--admin-text, #2e241d);
+  color: var(--admin-text, var(--color-text));
   font-size: 24px;
 }
 
@@ -43,7 +43,7 @@
 .userMeta,
 .emptyState,
 .confirmDesc {
-  color: var(--admin-text-soft, #705b4b);
+  color: var(--admin-text-soft, var(--color-text-secondary));
   line-height: 1.7;
 }
 
@@ -65,7 +65,7 @@
 
 .cardTitle {
   margin: 0 0 8px;
-  color: var(--admin-text, #2e241d);
+  color: var(--admin-text, var(--color-text));
   font-size: 18px;
 }
 
@@ -76,7 +76,7 @@
 }
 
 .fieldLabel {
-  color: var(--admin-text, #4c3d31);
+  color: var(--admin-text, var(--color-text-secondary));
   font-size: 14px;
   font-weight: 700;
 }
@@ -86,10 +86,10 @@
 .select {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid var(--admin-border-strong, rgba(220, 195, 175, 0.88));
+  border: 1px solid var(--admin-border-strong, color-mix(in srgb, var(--color-highlight) 88%, transparent));
   border-radius: 16px;
-  background: #fff;
-  color: var(--admin-text, #34281f);
+  background: var(--color-surface);
+  color: var(--admin-text, var(--color-text));
   font: inherit;
   transition: border-color 180ms ease, box-shadow 180ms ease;
 }
@@ -112,23 +112,23 @@
 .primaryButton:focus-visible,
 .secondaryButton:focus-visible,
 .dangerButton:focus-visible {
-  outline: 3px solid rgba(201, 115, 63, 0.25);
+  outline: 3px solid color-mix(in srgb, var(--color-highlight) 25%, transparent);
   outline-offset: 2px;
 }
 
 .inputError {
-  border-color: #bd4545;
+  border-color: var(--color-primary);
 }
 
 .fieldError {
   margin-top: -4px;
-  color: #a93232;
+  color: var(--color-primary);
   font-size: 13px;
 }
 
 .remarkCount {
   margin-top: -6px;
-  color: var(--admin-muted, #8d7664);
+  color: var(--admin-muted, var(--color-text-muted));
   font-size: 12px;
   text-align: right;
 }
@@ -139,14 +139,14 @@
   justify-content: space-between;
   gap: 20px;
   padding: 20px;
-  border: 1px solid var(--admin-border, rgba(228, 205, 187, 0.7));
+  border: 1px solid var(--admin-border, color-mix(in srgb, var(--color-highlight) 70%, transparent));
   border-radius: 18px;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .userName {
   margin-bottom: 8px;
-  color: var(--admin-text, #2e241d);
+  color: var(--admin-text, var(--color-text));
   font-size: 18px;
   font-weight: 700;
 }
@@ -159,8 +159,8 @@
   min-width: 116px;
   padding: 14px 16px;
   border-radius: 16px;
-  background: var(--admin-accent-soft, #e6f4ff);
-  color: var(--admin-accent-strong, #a5602f);
+  background: var(--admin-accent-soft, var(--color-bg));
+  color: var(--admin-accent-strong, var(--color-highlight));
   text-align: right;
 }
 
@@ -193,20 +193,20 @@
 
 .primaryButton {
   border: none;
-  background: #1677ff;
-  color: #fffaf4;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .secondaryButton {
-  border: 1px solid var(--admin-border-strong, rgba(220, 195, 175, 0.88));
-  background: #fff;
-  color: var(--admin-text, #4c3d31);
+  border: 1px solid var(--admin-border-strong, color-mix(in srgb, var(--color-highlight) 88%, transparent));
+  background: var(--color-surface);
+  color: var(--admin-text, var(--color-text-secondary));
 }
 
 .dangerButton {
   border: none;
-  background: #cf1322;
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .primaryButton:disabled,
@@ -219,7 +219,7 @@
 .emptyState {
   padding: 18px;
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .confirmOverlay {
@@ -230,7 +230,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(45, 28, 18, 0.52);
+  background: color-mix(in srgb, var(--color-highlight) 52%, transparent);
   backdrop-filter: blur(6px);
 }
 
@@ -239,15 +239,15 @@
   max-height: calc(100vh - 48px);
   overflow-y: auto;
   padding: 28px;
-  border: 1px solid var(--admin-border, rgba(222, 191, 166, 0.45));
+  border: 1px solid var(--admin-border, color-mix(in srgb, var(--color-highlight) 45%, transparent));
   border-radius: 24px;
-  background: #fff;
-  box-shadow: 0 24px 64px rgba(65, 39, 23, 0.24);
+  background: var(--color-surface);
+  box-shadow: 0 24px 64px color-mix(in srgb, var(--color-highlight) 24%, transparent);
 }
 
 .confirmTitle {
   margin: 0;
-  color: var(--admin-text, #2e241d);
+  color: var(--admin-text, var(--color-text));
   font-size: 21px;
 }
 
@@ -267,23 +267,23 @@
   grid-template-columns: 120px minmax(0, 1fr);
   gap: 16px;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(205, 157, 120, 0.2);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-highlight) 20%, transparent);
 }
 
 .confirmDetails dt {
-  color: var(--admin-text-soft, #705b4b);
+  color: var(--admin-text-soft, var(--color-text-secondary));
 }
 
 .confirmDetails dd {
   min-width: 0;
   margin: 0;
-  color: var(--admin-text, #2e241d);
+  color: var(--admin-text, var(--color-text));
   font-weight: 700;
   overflow-wrap: anywhere;
 }
 
 .confirmBalance {
-  color: var(--admin-accent-strong, #a5602f) !important;
+  color: var(--admin-accent-strong, var(--color-highlight)) !important;
 }
 
 .actionRow {

@@ -1,7 +1,7 @@
 .modalOverlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: color-mix(in srgb, var(--color-shadow) 70%, transparent);
     backdrop-filter: blur(5px);
     display: flex;
     align-items: center;
@@ -17,21 +17,21 @@
 }
 
 .modalContent {
-    --ex-elevated: rgba(255, 255, 255, 0.06);
-    --ex-label: rgba(255, 255, 255, 0.55);
-    --ex-value: #FFFFFF;
-    --ex-border: rgba(255, 255, 255, 0.08);
-    --ex-primary: #A8283C;
-    --ex-primary-hover: #C23A50;
-    --ex-primary-dark: #8E2135;
+    --ex-elevated: color-mix(in srgb, var(--color-text) 6%, transparent);
+    --ex-label: var(--color-text-secondary);
+    --ex-value: var(--color-text);
+    --ex-border: color-mix(in srgb, var(--color-text) 8%, transparent);
+    --ex-primary: var(--color-primary);
+    --ex-primary-hover: var(--color-primary);
+    --ex-primary-dark: var(--color-primary-bold);
     position: relative;
     width: min(322px, calc(100vw - 20px));
     max-width: 322px;
     border-radius: 10px;
     /* 上深下浅，底部保留灰，避免通透成黑 */
     background:
-        linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
-        linear-gradient(180deg, #343434 0%, rgba(52, 52, 52, 0.72) 100%);
+        linear-gradient(0deg, color-mix(in srgb, var(--color-text) 15%, transparent), color-mix(in srgb, var(--color-text) 15%, transparent)),
+        linear-gradient(180deg, var(--color-surface-2) 0%, color-mix(in srgb, var(--color-surface) 72%, transparent) 100%);
     box-sizing: border-box;
     border: 0.68px solid transparent;
     backdrop-filter: blur(47px);
@@ -54,13 +54,13 @@
     padding: 0.68px;
     background: linear-gradient(
         135deg,
-        rgba(255, 255, 255, 0.55) 0%,
-        rgba(255, 255, 255, 0.18) 60%,
-        rgba(255, 255, 255, 0) 90%
+        color-mix(in srgb, var(--color-surface) 55%, transparent) 0%,
+        color-mix(in srgb, var(--color-text) 18%, transparent) 60%,
+        transparent 90%
     );
     -webkit-mask:
-        linear-gradient(#fff 0 0) content-box,
-        linear-gradient(#fff 0 0);
+        linear-gradient(var(--color-surface) 0 0) content-box,
+        linear-gradient(var(--color-surface) 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;
@@ -80,7 +80,7 @@
     cursor: pointer;
     z-index: 10;
     transition: opacity 0.2s ease;
-    color: #ffffff;
+    color: var(--color-text);
     background: transparent;
     border: none;
     padding: 0;
@@ -99,8 +99,8 @@
     display: block;
     width: 10px;
     height: 10px;
-    border-left: 2px solid #ffffff;
-    border-bottom: 2px solid #ffffff;
+    border-left: 2px solid var(--color-text);
+    border-bottom: 2px solid var(--color-text);
     transform: rotate(45deg);
     margin-left: 4px;
 }
@@ -203,7 +203,7 @@
     align-items: center;
     gap: 10px;
     padding: 12px 14px;
-    background: rgba(0, 0, 0, 0.28);
+    background: color-mix(in srgb, var(--color-text) 28%, transparent);
     border-radius: 10px;
     border: 1px solid var(--ex-border);
     transition: border-color 0.2s ease;
@@ -318,7 +318,7 @@
     border-radius: 6px;
     background: var(--ex-primary-dark);
     border: none;
-    color: #ffffff;
+    color: var(--color-on-primary);
     font-size: 12px;
     font-weight: 600;
     margin-left: 4px;
@@ -327,7 +327,7 @@
 .errorHint {
     text-align: left;
     font-size: 13px;
-    color: #FF8A9A;
+    color: var(--color-primary-fg);
     margin: 0 0 10px;
     font-weight: 500;
 }
@@ -337,7 +337,7 @@
     min-height: 44px;
     padding: 0 16px;
     background: var(--ex-primary);
-    color: #ffffff;
+    color: var(--color-on-primary);
     border: none;
     border-radius: 999px;
     font-size: 15px;
@@ -394,3 +394,23 @@
         font-size: 14px;
     }
 }
+
+/* ================= 统一弹窗风格 ================= */
+.modalContent {
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 18px;
+    background: var(--color-surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: 0 24px 64px color-mix(in srgb, var(--color-shadow) 50%, transparent);
+}
+.modalContent::before { display: none; }
+.submitBtn {
+    border: 0;
+    border-radius: 12px;
+    background: var(--color-primary);
+    background-image: none;
+    box-shadow: none;
+    color: var(--color-on-primary);
+}
+.submitBtn:hover:not(:disabled) { background: var(--color-primary-bold); color: var(--color-on-primary); }

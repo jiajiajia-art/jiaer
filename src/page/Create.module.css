@@ -7,29 +7,30 @@
     --creator-radius: 16px;
     --creator-gap: 18px;
     --creator-padding: 26px;
-    --creator-bg: #000000;
-    --creator-card: #1C1C1E;
-    --creator-card-elevated: #242426;
-    --creator-label: #8E8E93;
-    --creator-value: #FFFFFF;
-    --creator-title: #A8283C;
-    --creator-accent: #8E2135;
-    --creator-accent-soft: rgba(168, 40, 60, 0.28);
-    --creator-divider: rgba(255, 255, 255, 0.12);
-    --primary: #A8283C;
-    --primary-light: #C23A50;
-    --primary-dark: #8E2135;
+    --creator-bg: var(--color-bg);
+    --creator-card: var(--color-surface);
+    --creator-card-elevated: var(--color-surface-2);
+    --creator-label: var(--color-text-muted);
+    --creator-value: var(--color-text);
+    --creator-title: var(--color-primary);
+    --creator-accent: var(--color-primary-bold);
+    --creator-accent-soft: color-mix(in srgb, var(--color-primary) 28%, transparent);
+    --creator-divider: color-mix(in srgb, var(--color-text) 12%, transparent);
+    --primary: var(--color-primary);
+    --primary-light: var(--color-primary);
+    --primary-dark: var(--color-primary-bold);
     width: 100%;
-    /* 功能注释：高度交给 AppPageShell；勿再垫满屏最小高度，否则中间区被撑出多余滚动条；全宽不封顶 1920 */
+    /* 功能注释：高度交给 AppPageShell；勿再垫满屏最小高度，否则中间区被撑出多余滚动条 */
+    max-width: 1920px;
     margin: 0 auto;
-    background: #000000;
-    color: #FFFFFF;
+    background: var(--color-bg);
+    color: var(--color-text);
 }
 
 /* --- Page Layout --- */
 /* 功能注释：上/下避让由 AppPageShell 负责；纵向堆叠让页脚落底部，主内容占满壳宽 */
 .mainContent {
-    color: #FFFFFF;
+    color: var(--color-text);
     display: flex;
     flex-direction: column;
     margin: 0;
@@ -92,7 +93,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.3);
+    background: color-mix(in srgb, var(--color-shadow) 30%, transparent);
     z-index: 1;
 }
 
@@ -113,8 +114,8 @@
     height: 120px;
     border-radius: 50%;
     object-fit: cover;
-    border: 3px solid #fff;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border: 3px solid var(--color-text);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-shadow) 30%, transparent);
     margin-top: 80px;
 }
 
@@ -139,8 +140,8 @@
     border-radius: 16px;
     padding: 20px 24px 12px;
     /* 顶部衔接 Navbar 黑色，底部略深于原卡片色 */
-    background: linear-gradient(180deg, #000000 0%, #0a0a0a 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg) 100%);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     box-shadow: none;
     display: flex;
     flex-direction: column;
@@ -152,12 +153,12 @@
     border-radius: 10px;
     padding: 14px 16px 12px;
     background: var(--creator-card);
-    border: 1px solid rgba(255, 255, 255, 0.04);
+    border: 1px solid color-mix(in srgb, var(--color-text) 4%, transparent);
     box-shadow: none;
 }
 
 .accountPanelTitle {
-    color: #ffffff;
+    color: var(--color-text);
     font-size: 16px;
     font-weight: 700;
     line-height: 1.3;
@@ -180,7 +181,7 @@
     gap: 6px;
     padding: 2px;
     cursor: pointer;
-    color: rgba(255, 255, 255, 0.88);
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
 }
 
 .accountActionIcon {
@@ -188,13 +189,13 @@
     height: 36px;
     border-radius: 4px;
     opacity: 1;
-    background: rgba(255, 255, 255, 0.2);
+    background: color-mix(in srgb, var(--color-text) 20%, transparent);
     border: none;
     box-shadow: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: #FF3B61;
+    color: var(--color-primary);
 }
 
 .accountActionIcon img {
@@ -215,7 +216,7 @@
     line-height: 1.2;
     text-align: center;
     white-space: normal;
-    color: rgba(255, 255, 255, 0.88);
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
 }
 
 .accountViewAllButton {
@@ -236,7 +237,7 @@
 }
 
 .accountViewAllButton:hover {
-    color: rgba(255, 255, 255, 0.85);
+    color: color-mix(in srgb, var(--color-text) 85%, transparent);
 }
 
 .accountViewAllIcon {
@@ -304,7 +305,7 @@
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.45);
+    background: color-mix(in srgb, var(--color-shadow) 45%, transparent);
 }
 
 .hiddenFileInput {
@@ -353,7 +354,7 @@
     font-size: 28px;
     line-height: 1.2;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-text);
     word-break: break-word;
     margin: 0;
 }
@@ -383,7 +384,7 @@
 
 .creatorEditNameBtn:hover {
     color: var(--creator-value);
-    background: rgba(255, 255, 255, 0.06);
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .creatorGenderBadge {
@@ -394,9 +395,9 @@
     height: 30px;
     margin-left: 4px;
     margin-top: 2px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
     border-radius: 999px;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 8px 18px rgba(0, 0, 0, 0.18);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent), 0 8px 18px color-mix(in srgb, var(--color-shadow) 18%, transparent);
     cursor: pointer;
     flex-shrink: 0;
     padding: 0;
@@ -408,39 +409,39 @@
 
 .creatorGenderBadgeFemale {
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%),
-        rgba(168, 40, 60, 0.2);
-    color: #ff8793;
+        linear-gradient(180deg, color-mix(in srgb, var(--color-text) 12%, transparent) 0%, color-mix(in srgb, var(--color-text) 5%, transparent) 100%),
+        color-mix(in srgb, var(--color-primary) 20%, transparent);
+    color: var(--color-primary-fg);
 }
 
 .creatorGenderBadgeMale {
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%),
-        rgba(56, 189, 248, 0.18);
-    color: #38bdf8;
+        linear-gradient(180deg, color-mix(in srgb, var(--color-text) 12%, transparent) 0%, color-mix(in srgb, var(--color-text) 5%, transparent) 100%),
+        color-mix(in srgb, var(--color-info) 18%, transparent);
+    color: var(--color-info);
 }
 
 .creatorGenderBadge:hover,
 .creatorGenderBadge:focus-visible {
-    color: #ffffff;
+    color: var(--color-text);
     outline: none;
     transform: translateY(-1px);
 }
 
 .creatorGenderBadgeFemale:hover,
 .creatorGenderBadgeFemale:focus-visible {
-    border-color: rgba(255, 135, 147, 0.68);
+    border-color: color-mix(in srgb, var(--color-primary-light) 68%, transparent);
     background:
-        linear-gradient(180deg, rgba(255, 135, 147, 0.18) 0%, rgba(168, 40, 60, 0.16) 100%),
-        rgba(168, 40, 60, 0.24);
+        linear-gradient(180deg, color-mix(in srgb, var(--color-primary-light) 18%, transparent) 0%, color-mix(in srgb, var(--color-primary) 16%, transparent) 100%),
+        color-mix(in srgb, var(--color-primary) 24%, transparent);
 }
 
 .creatorGenderBadgeMale:hover,
 .creatorGenderBadgeMale:focus-visible {
-    border-color: rgba(56, 189, 248, 0.7);
+    border-color: color-mix(in srgb, var(--color-info) 70%, transparent);
     background:
-        linear-gradient(180deg, rgba(56, 189, 248, 0.2) 0%, rgba(14, 165, 233, 0.16) 100%),
-        rgba(56, 189, 248, 0.22);
+        linear-gradient(180deg, color-mix(in srgb, var(--color-info) 20%, transparent) 0%, color-mix(in srgb, var(--color-info) 16%, transparent) 100%),
+        color-mix(in srgb, var(--color-info) 22%, transparent);
 }
 
 .creatorStreakBadge {
@@ -448,8 +449,8 @@
     align-items: center;
     padding: 4px 10px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.12);
-    color: rgba(255, 255, 255, 0.88);
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
     font-size: 12px;
     font-weight: 500;
     white-space: nowrap;
@@ -518,7 +519,7 @@
 }
 
 .creatorSocialItem:hover .creatorSocialValue {
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .creatorSocialLabel {
@@ -546,10 +547,10 @@
     flex-shrink: 0;
     height: 26px;
     padding: 0 10px;
-    border: 1px solid rgba(255, 255, 255, 0.22);
+    border: 1px solid color-mix(in srgb, var(--color-text) 22%, transparent);
     border-radius: 999px;
-    background: #2C2C2E;
-    color: #ffffff;
+    background: var(--color-surface-2);
+    color: var(--color-text);
     font-size: 12px;
     font-weight: 500;
     line-height: 1;
@@ -558,8 +559,8 @@
 }
 
 .creatorPreviewHomeBtn:hover {
-    background: #3A3A3C;
-    border-color: rgba(255, 255, 255, 0.32);
+    background: var(--color-surface-2);
+    border-color: color-mix(in srgb, var(--color-text) 32%, transparent);
 }
 
 .creatorPreviewHomeIcon {
@@ -612,7 +613,7 @@
 }
 
 .creatorCopyLink:hover {
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .creatorRoleBadge {
@@ -621,7 +622,7 @@
     padding: 2px 8px;
     border-radius: 6px;
     background: var(--creator-accent);
-    color: #ffffff;
+    color: var(--color-on-primary);
     font-size: 12px;
     font-weight: 500;
     white-space: nowrap;
@@ -640,10 +641,10 @@
     align-items: center;
     justify-content: center;
     padding: 2px 9px;
-    border: 1px solid rgba(255, 196, 207, 0.48);
+    border: 1px solid color-mix(in srgb, var(--color-primary-light) 48%, transparent);
     border-radius: 6px;
     background: var(--creator-accent);
-    color: #ffffff;
+    color: var(--color-on-primary);
     font-size: 12px;
     font-weight: 800;
     letter-spacing: 0.06em;
@@ -652,21 +653,21 @@
 }
 
 .creatorVipBadgeInactive {
-    border-color: #9a9a9a;
-    background: #777777;
-    color: #e5e5e5;
+    border-color: var(--color-border);
+    background: var(--color-text-muted);
+    color: var(--color-text);
 }
 
 .creatorVipBadgeInactive:hover,
 .creatorVipBadgeInactive:focus-visible {
-    border-color: #b0b0b0;
-    background: #888888;
-    color: #ffffff;
+    border-color: var(--color-border);
+    background: var(--color-text-muted);
+    color: var(--color-text);
 }
 
 .creatorVipBadge:hover,
 .creatorVipBadge:focus-visible {
-    border-color: rgba(255, 224, 230, 0.86);
+    border-color: color-mix(in srgb, var(--color-primary-lighter) 86%, transparent);
     background: var(--creator-accent-soft);
     outline: none;
 }
@@ -695,7 +696,7 @@
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: #FF8A9A;
+    color: var(--color-primary-fg);
     margin-bottom: 4px;
 }
 
@@ -704,8 +705,8 @@
     display: flex;
     align-items: stretch;
     border-radius: 16px;
-    background: #1C1C1E;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     padding: 16px;
     gap: 12px;
 }
@@ -720,7 +721,7 @@
 
 .creatorAccountDivider {
     width: 1px;
-    background: rgba(255, 255, 255, 0.12);
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
 }
 
 .creatorAccountLabel {
@@ -744,7 +745,7 @@
     background: transparent;
     border-radius: 999px;
     border: none;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -778,8 +779,8 @@
     align-items: flex-start;
     gap: 8px;
     border-radius: var(--creator-radius);
-    background: #1C1C1E;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     padding: 16px;
 }
 
@@ -837,8 +838,8 @@
     width: auto;
     border-radius: 999px;
     border: none;
-    background: #8E2135;
-    color: #ffffff;
+    background: var(--color-primary-bold);
+    color: var(--color-on-primary);
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -859,8 +860,8 @@
     width: 40px;
     height: 40px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: #1C1C1E;
+    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+    background: var(--color-surface);
     color: var(--creator-title);
     cursor: pointer;
     display: inline-flex;
@@ -897,8 +898,7 @@
 .primaryStatsBar,
 .expandedStatsBar {
     display: grid;
-    /* 功能注释：7.1 主数据条三列（KK / 织梦豆 / 作品数） */
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     align-items: stretch;
     width: 100%;
     gap: 0;
@@ -917,9 +917,9 @@
     position: relative;
 }
 
-/* 三列网格：行末不加竖线 */
-.primaryStatItem:not(:nth-child(3n))::after,
-.expandedStatItem:not(:nth-child(3n))::after {
+/* 四列网格：行末不加竖线 */
+.primaryStatItem:not(:nth-child(4n))::after,
+.expandedStatItem:not(:nth-child(4n))::after {
     content: '';
     position: absolute;
     right: 0;
@@ -932,7 +932,7 @@
 .primaryStatValue {
     font-size: 22px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-text);
     line-height: 1.1;
     font-variant-numeric: tabular-nums;
 }
@@ -950,11 +950,11 @@
 }
 
 .primaryStatItemClickable:hover {
-    background-color: rgba(255, 255, 255, 0.04);
+    background-color: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
 .primaryStatItemClickable:focus-visible {
-    outline: 1px solid rgba(255, 255, 255, 0.35);
+    outline: 1px solid color-mix(in srgb, var(--color-text) 35%, transparent);
     outline-offset: 2px;
 }
 
@@ -978,7 +978,7 @@
 }
 
 .statsExpandToggle:hover {
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .statsExpandIcon {
@@ -1050,7 +1050,7 @@
 
 .statsUpdateTime {
     flex-shrink: 0;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     font-size: 13px;
     white-space: nowrap;
 }
@@ -1061,7 +1061,7 @@
     height: 64px;
     font-size: 28px;
     font-weight: 700;
-    color: #FFFFFF;
+    color: var(--color-text);
 }
 
 .more {
@@ -1074,7 +1074,7 @@
     background-color: transparent;
     outline: none;
     border: none;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     font-size: 20px;
     display: flex;
     align-items: center;
@@ -1100,8 +1100,8 @@
     gap: 0;
     border-radius: 16px;
     overflow: hidden;
-    background: #1A1A1A;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .statBox {
@@ -1115,7 +1115,7 @@
     justify-content: center;
     gap: 8px;
     box-shadow: none;
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    border-right: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     transition: background 0.2s ease;
 }
 
@@ -1126,18 +1126,18 @@
 .statBox:hover {
     transform: none;
     box-shadow: none;
-    background: rgba(255, 255, 255, 0.04);
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
 .statValue {
     font-size: 26px;
     font-weight: 700;
-    color: #FFFFFF;
+    color: var(--color-text);
 }
 
 .statLabel {
     font-size: 16px;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     font-weight: 500;
     display: flex;
     align-items: center;
@@ -1167,8 +1167,8 @@
 .settleButton {
     min-height: 34px;
     padding: 0 14px;
-    background-color: #8E2135;
-    color: #fff;
+    background-color: var(--color-primary-bold);
+    color: var(--color-on-primary);
     border: none;
     border-radius: 999px;
     font-size: 14px;
@@ -1209,9 +1209,9 @@
     box-sizing: border-box;
     /* 功能注释：Tab 条圆角略小于卡片，避免显得过圆 */
     border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
 }
 
 /* 功能注释：栏目常驻左侧；草稿「管理」/「全部」靠右占位，切 Tab 不左右跳动 */
@@ -1248,7 +1248,7 @@
     appearance: none;
     border: none;
     background: transparent;
-    color: rgba(255, 255, 255, 0.72);
+    color: var(--color-text-secondary);
     font-size: 14px;
     font-weight: 600;
     line-height: 1.2;
@@ -1262,7 +1262,7 @@
 }
 
 .worksViewAllBtn:hover {
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .worksTabs::-webkit-scrollbar {
@@ -1284,7 +1284,7 @@
 }
 
 .worksTabActive {
-    color: #ffffff;
+    color: var(--color-text);
 }
 
 .worksTabActive::after {
@@ -1295,7 +1295,7 @@
     bottom: 0;
     height: 3px;
     border-radius: 999px;
-    background: #ffffff;
+    background: var(--color-surface);
 }
 
 .appealBanner {
@@ -1306,9 +1306,9 @@
     margin: 0 0 12px;
     padding: 10px 14px;
     border-radius: 12px;
-    background: rgba(184, 50, 72, 0.16);
-    border: 1px solid rgba(184, 50, 72, 0.35);
-    color: rgba(255, 220, 224, 0.95);
+    background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+    color: color-mix(in srgb, var(--color-primary-lighter) 95%, transparent);
     font-size: 13px;
     line-height: 1.4;
 }
@@ -1319,8 +1319,8 @@
     border: none;
     border-radius: 999px;
     padding: 6px 12px;
-    background: rgba(184, 50, 72, 0.9);
-    color: #fff;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
     font-size: 12px;
     font-weight: 650;
     cursor: pointer;
@@ -1385,7 +1385,7 @@
 .draftManageCount {
     flex: 1 1 auto;
     min-width: 0;
-    color: rgba(255, 255, 255, 0.88);
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
     font-size: 14px;
     font-weight: 600;
     line-height: 1.2;
@@ -1401,7 +1401,7 @@
     border: none;
     border-radius: 0;
     background: transparent;
-    color: rgba(255, 255, 255, 0.72);
+    color: var(--color-text-secondary);
     font-size: 14px;
     font-weight: 600;
     line-height: 1.2;
@@ -1411,7 +1411,7 @@
 }
 
 .draftManageButton:hover {
-    color: #ffffff;
+    color: var(--color-text);
     transform: none;
     box-shadow: none;
 }
@@ -1425,11 +1425,11 @@
 
 .draftDeleteButton {
     border: none;
-    color: #FF8A9A;
+    color: var(--color-primary-fg);
 }
 
 .draftDeleteButton:hover:not(:disabled) {
-    color: #FFB0BB;
+    color: var(--color-primary-fg);
 }
 
 .draftSectionBody {
@@ -1445,9 +1445,9 @@
 }
 
 .draftFilterChip {
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: #2C2C2E;
-    color: #C7C7CC;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    background: var(--color-surface-2);
+    color: var(--color-text-secondary);
     border-radius: 999px;
     padding: 8px 14px;
     font-size: 13px;
@@ -1457,19 +1457,19 @@
 }
 
 .draftFilterChip:hover {
-    border-color: rgba(168, 40, 60, 0.45);
-    color: #FFFFFF;
+    border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+    color: var(--color-text);
 }
 
 .draftFilterChipActive {
-    background: #8E2135;
+    background: var(--color-primary-bold);
     border-color: transparent;
-    color: #fff;
+    color: var(--color-on-primary);
 }
 
 .draftFilterEmpty {
     text-align: center;
-    color: #8E8E93;
+    color: var(--color-text-muted);
     min-height: 100px;
     line-height: 100px;
 }
@@ -1477,8 +1477,8 @@
 .draftManageTip {
     padding: 10px 14px;
     border-radius: 14px;
-    background: rgba(142, 33, 53, 0.22);
-    color: #FF8A9A;
+    background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+    color: var(--color-primary-fg);
     font-size: 14px;
     font-weight: 600;
 }
@@ -1500,10 +1500,6 @@
 
 /* Tablet & Mobile: <= 1080px */
 @media (max-width: 1080px) {
-    .pageRoot {
-        padding-bottom: 20px;
-    }
-
     .main {
         max-width: 100%;
         padding: 0 12px;
@@ -1579,7 +1575,7 @@
     }
 
     .creatorHeroBadgeRow {
-        flex-basis: 100%;
+        flex-basis: auto;
         margin-left: 0;
     }
 
@@ -1643,7 +1639,7 @@
 
     .primaryStatsBar,
     .expandedStatsBar {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
     .primaryStatItem,
@@ -1777,7 +1773,7 @@
     }
 
     .statsGrid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0;
     }
 
@@ -1785,8 +1781,8 @@
         width: 100%;
         max-width: 100%;
         height: 90px;
-        border-right: 1px solid rgba(255, 255, 255, 0.08);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        border-right: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+        border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     }
 
     .statBox:nth-child(2n) {
@@ -1799,7 +1795,7 @@
     }
 
     .statValue {
-        font-size: 18px;
+        font-size: 26px;
     }
 
     .statLabel {

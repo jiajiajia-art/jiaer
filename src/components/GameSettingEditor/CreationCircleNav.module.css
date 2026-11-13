@@ -7,11 +7,11 @@
 @media (max-width: 768px) {
   .nav {
     /* Stadium Capsule：横排均分，胶囊底与标签垂直节奏固定 */
-    --circle-nav-accent: #d8315b;
-    --circle-nav-accent-deep: #b82848;
-    --circle-nav-idle-bg: #1a1a1a;
-    --circle-nav-rim: inset 0 1px 0 rgba(255, 255, 255, 0.14);
-    --circle-nav-rim-strong: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    --circle-nav-accent: var(--color-primary);
+    --circle-nav-accent-deep: var(--color-primary);
+    --circle-nav-idle-bg: var(--color-surface);
+    --circle-nav-rim: inset 0 1px 0 color-mix(in srgb, var(--color-text) 14%, transparent);
+    --circle-nav-rim-strong: inset 0 1px 0 color-mix(in srgb, var(--color-text) 22%, transparent);
 
     display: flex;
     align-items: flex-start;
@@ -71,14 +71,14 @@
     font-size: 0.75rem;
     font-weight: 600;
     line-height: 1.2;
-    color: #ffffff;
+    color: var(--color-text);
     white-space: nowrap;
   }
 
   /* 已走过：略深莓红底 + 白图标，同胶囊形与内高光 */
   .itemDone .iconWrap {
     background: var(--circle-nav-accent-deep);
-    color: #ffffff;
+    color: var(--color-on-primary);
     box-shadow: var(--circle-nav-rim);
   }
 
@@ -87,13 +87,13 @@
     width: 56px;
     height: 40px;
     background: var(--circle-nav-accent);
-    color: #ffffff;
+    color: var(--color-on-primary);
     box-shadow: var(--circle-nav-rim-strong);
     transform: none;
   }
 
   .itemActive .label {
-    color: #ffffff;
+    color: var(--color-text);
     font-weight: 700;
   }
 

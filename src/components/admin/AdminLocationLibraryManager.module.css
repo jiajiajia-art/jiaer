@@ -1,12 +1,12 @@
 /* 运营地点库：暖色浅底，与公共头像管理同系 */
 
 .root {
-  --loc-ink: #3b2a1d;
-  --loc-muted: #8a7463;
-  --loc-line: rgba(201, 139, 92, 0.22);
-  --loc-surface: rgba(255, 251, 246, 0.96);
-  --loc-accent: #c9733f;
-  --loc-danger: #b4232c;
+  --loc-ink: var(--color-highlight);
+  --loc-muted: var(--color-text-muted);
+  --loc-line: color-mix(in srgb, var(--color-highlight) 22%, transparent);
+  --loc-surface: color-mix(in srgb, var(--color-surface) 96%, transparent);
+  --loc-accent: var(--color-highlight);
+  --loc-danger: var(--color-primary);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -47,7 +47,7 @@
   border-radius: 12px;
   padding: 8px 12px;
   font-size: 13px;
-  background: #fff;
+  background: var(--color-surface);
   color: var(--loc-ink);
   box-sizing: border-box;
 }
@@ -63,7 +63,7 @@
   padding: 7px 14px;
   font-size: 12.5px;
   font-weight: 600;
-  background: #fff;
+  background: var(--color-surface);
   color: var(--loc-ink);
   cursor: pointer;
 }
@@ -74,18 +74,18 @@
   padding: 7px 14px;
   font-size: 12.5px;
   font-weight: 600;
-  background: var(--loc-accent);
-  color: #fff;
+  background: color-mix(in srgb, var(--loc-accent) 68%, var(--color-shadow));
+  color: var(--color-on-primary);
   cursor: pointer;
 }
 
 .btnDanger {
-  border: 1px solid rgba(180, 35, 44, 0.35);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
   border-radius: 999px;
   padding: 7px 14px;
   font-size: 12.5px;
   font-weight: 600;
-  background: #fff;
+  background: var(--color-surface);
   color: var(--loc-danger);
   cursor: pointer;
 }
@@ -110,7 +110,7 @@
   max-height: 180px;
   width: 100%;
   object-fit: cover;
-  background: #f3ebe3;
+  background: var(--color-surface-2);
 }
 
 .body {
@@ -141,7 +141,7 @@
   padding: 2px 8px;
   font-size: 11px;
   font-weight: 700;
-  background: rgba(201, 115, 63, 0.12);
+  background: color-mix(in srgb, var(--color-highlight) 12%, transparent);
   color: var(--loc-accent);
 }
 
@@ -152,7 +152,7 @@
   padding: 2px 8px;
   font-size: 11px;
   font-weight: 700;
-  background: rgba(180, 35, 44, 0.1);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
   color: var(--loc-danger);
 }
 

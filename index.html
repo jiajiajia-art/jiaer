@@ -5,7 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="/funloom_icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>funloom</title>
-  </head>
+    <!-- 首屏主题：在样式生效前写入 data-theme / data-mode，键名与 src/lib/theme.ts 一致 -->
+    <script>
+      (function () {
+        var d = document.documentElement, t = 'default', m = 'dark';
+        try { t = localStorage.getItem('funloom.theme') || t; m = localStorage.getItem('funloom.themeMode') || m; } catch (e) {}
+        if (m === 'system') m = window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        d.setAttribute('data-theme', t);
+        d.setAttribute('data-mode', m === 'light' ? 'light' : 'dark');
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet" />
+</head>
   <body>
     <div id="root"></div>
     <!-- 微信 JSSDK：放 body 底部，避免挡首屏解析；模块脚本 defer，仍会在本脚本之后执行 -->

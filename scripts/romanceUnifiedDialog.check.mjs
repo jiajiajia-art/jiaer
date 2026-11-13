@@ -77,9 +77,9 @@ test('Modal调用方_不再传wide或xl', () => {
 
 test('人物交谈_在统一框内_名字快捷句输入都在框里_不铺满屏', () => {
   const talk = src('components/TalkPanel.tsx');
-  assert.match(talk, /className="ui-sheet ui-dialog animate-pop"/);
+  assert.match(talk, /className="ui-sheet ui-dialog ui-dialog-game animate-pop"/);
   assert.doesNotMatch(talk, /h-\[100dvh\]|h-\[90dvh\]|max-w-3xl/);
-  const box = talk.slice(talk.indexOf('ui-dialog animate-pop'));
+  const box = talk.slice(talk.indexOf('ui-dialog ui-dialog-game animate-pop'));
   // 名片栏（含名字）→ 消息区（含快捷句）→ 底部输入，依次位于同一个框内
   const iName = box.indexOf('{name}</h3>');
   const iBody = box.indexOf('ui-dialog-body');

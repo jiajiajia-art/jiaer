@@ -419,17 +419,20 @@ const Navbar: React.FC<NavbarProps> = ({
                                     aria-expanded={showUserMenu}
                                     onClick={(event) => {
                                         event.stopPropagation();
-                                        setShowUserMenu((prev) => !prev);
-                                    }}
-                                    onTouchStart={(event) => {
-                                        // 功能注释：小程序 web-view 也要下拉菜单；click 经常丢，用 touchstart 切换并挡住随后的 click
-                                        if (!isWebViewEnv()) return;
-                                        event.preventDefault();
+                                        // 功能注释：手机端点头像直接进个人中心（运营 / 管理入口与退出登录都在个人中心）；PC 端展开下拉菜单
+                                        if (!isDesktopLayout) {
+                                            runLeaveAction(() => navigate('/profile'));
+                                            return;
+                                        }
                                         setShowUserMenu((prev) => !prev);
                                     }}
                                     onKeyDown={(event) => {
                                         if (event.key === 'Enter' || event.key === ' ') {
                                             event.preventDefault();
+                                            if (!isDesktopLayout) {
+                                                runLeaveAction(() => navigate('/profile'));
+                                                return;
+                                            }
                                             setShowUserMenu((prev) => !prev);
                                         }
                                     }}
@@ -443,17 +446,18 @@ const Navbar: React.FC<NavbarProps> = ({
                                         <img
                                             key={user?.user?.avatarUrl || 'default-avatar'}
                                             src={(() => {
-                                                // 功能注释：getImageUrl 已对用户头像追加 format=webp；默认图不加查询参数
                                                 const baseUrl = getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/default_avatar.png`;
+                                                // 功能注释：用户头像统一请求 webp 格式；后端按 USER_AVATAR_WEBP_AB_PERCENT 决定返回 webp 或原图。
                                                 if (!baseUrl || baseUrl.includes('default_avatar')) return baseUrl;
-                                                return baseUrl;
+                                                const sep = baseUrl.includes('?') ? '&' : '?';
+                                                return `${baseUrl}${sep}format=webp`;
                                             })()}
                                             alt=""
                                         />
                                     </UserAvatar>
                                 </div>
 
-                                {showUserMenu && (
+                                {showUserMenu && isDesktopLayout && (
                                     <div className={styles.userMenu} role="menu">
                                         {isDesktopLayout && (
                                             <button
@@ -467,34 +471,6 @@ const Navbar: React.FC<NavbarProps> = ({
                                             >
                                                 {t('nav.profile')}
                                             </button>
-                                        )}
-                                        {!isDesktopLayout && (
-                                            <>
-                                                <button
-                                                    className={styles.menuBtn}
-                                                    onClick={() => {
-                                                        if (!requireAuth()) return;
-                                                        runLeaveAction(() => {
-                                                            navigate('/warehouse');
-                                                            setShowUserMenu(false);
-                                                        });
-                                                    }}
-                                                >
-                                                    {t('nav.warehouse')}
-                                                </button>
-                                                <button
-                                                    className={styles.menuBtn}
-                                                    onClick={() => {
-                                                        if (!requireAuth()) return;
-                                                        runLeaveAction(() => {
-                                                            navigate('/favorites');
-                                                            setShowUserMenu(false);
-                                                        });
-                                                    }}
-                                                >
-                                                    {t('nav.favorites')}
-                                                </button>
-                                            </>
                                         )}
                                         {isOperatorRole(user?.user?.role) && isDesktopLayout && (
                                             <button

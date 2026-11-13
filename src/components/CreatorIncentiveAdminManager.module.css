@@ -11,9 +11,9 @@
     gap: 20px;
     padding: 12px 16px;
     border-radius: 30px;
-    border: 1px solid var(--admin-border, rgba(201, 139, 92, 0.22));
-    background: #fff;
-    box-shadow: 0 20px 56px var(--admin-shadow, rgba(98, 59, 33, 0.1));
+    border: 1px solid var(--admin-border, color-mix(in srgb, var(--color-highlight) 22%, transparent));
+    background: var(--color-surface);
+    box-shadow: 0 20px 56px var(--admin-shadow, color-mix(in srgb, var(--color-highlight) 10%, transparent));
 }
 
 .heroMain {
@@ -26,8 +26,8 @@
     justify-content: center;
     padding: 7px 14px;
     border-radius: 999px;
-    background: var(--admin-accent-soft, #e6f4ff);
-    color: var(--admin-accent-strong, #aa5a2d);
+    background: var(--admin-accent-soft, var(--color-bg));
+    color: var(--admin-accent-strong, var(--color-highlight));
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -35,14 +35,14 @@
 
 .heroTitle {
     margin: 16px 0 0;
-    color: var(--admin-text, #2f241d);
+    color: var(--admin-text, var(--color-text));
     font-size: 28px;
     line-height: 1.25;
 }
 
 .heroDesc {
     margin: 0;
-    color: var(--admin-text-soft, #6f5a49);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     font-size: 14px;
     line-height: 1.8;
 }
@@ -60,17 +60,17 @@
     min-width: 92px;
     padding: 8px 12px;
     border-radius: 8px;
-    border: 1px solid rgba(205, 157, 120, 0.24);
-    background: #fff;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 24%, transparent);
+    background: var(--color-surface);
 }
 
 .statItem span {
-    color: var(--admin-text-soft, #6f5a49);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     font-size: 12px;
 }
 
 .statItem strong {
-    color: var(--admin-text, #2f241d);
+    color: var(--admin-text, var(--color-text));
     font-size: 20px;
     line-height: 1.2;
 }
@@ -85,9 +85,9 @@
 .card {
     padding: 24px;
     border-radius: 30px;
-    border: 1px solid var(--admin-border, rgba(201, 139, 92, 0.22));
-    background: #fff;
-    box-shadow: 0 20px 56px var(--admin-shadow, rgba(98, 59, 33, 0.1));
+    border: 1px solid var(--admin-border, color-mix(in srgb, var(--color-highlight) 22%, transparent));
+    background: var(--color-surface);
+    box-shadow: 0 20px 56px var(--admin-shadow, color-mix(in srgb, var(--color-highlight) 10%, transparent));
 }
 
 .cardHeader {
@@ -100,13 +100,13 @@
 
 .cardTitle {
     margin: 0;
-    color: var(--admin-text, #2f241d);
+    color: var(--admin-text, var(--color-text));
     font-size: 24px;
 }
 
 .cardDesc {
     margin: 8px 0 0;
-    color: var(--admin-text-soft, #6f5a49);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     font-size: 14px;
     line-height: 1.75;
 }
@@ -138,9 +138,9 @@
     gap: 8px;
     padding: 8px 12px;
     border-radius: 999px;
-    border: 1px solid rgba(205, 157, 120, 0.28);
-    background: #fff;
-    color: var(--admin-text, #2f241d);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 28%, transparent);
+    background: var(--color-surface);
+    color: var(--admin-text, var(--color-text));
     font-size: 13px;
     cursor: pointer;
 }
@@ -162,17 +162,17 @@
     gap: 6px;
     padding: 12px;
     border-radius: 16px;
-    border: 1px solid rgba(205, 157, 120, 0.22);
-    background: #fff;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 22%, transparent);
+    background: var(--color-surface);
 }
 
 .summaryItem span {
-    color: var(--admin-text-soft, #6f5a49);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     font-size: 12px;
 }
 
 .summaryItem strong {
-    color: var(--admin-text, #2f241d);
+    color: var(--admin-text, var(--color-text));
     font-size: 14px;
 }
 
@@ -182,9 +182,9 @@
     width: 100%;
     padding: 12px 14px;
     border-radius: 16px;
-    border: 1px solid rgba(205, 157, 120, 0.34);
-    background: #fff;
-    color: var(--admin-text, #2f241d);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 34%, transparent);
+    background: var(--color-surface);
+    color: var(--admin-text, var(--color-text));
     font-size: 14px;
     box-sizing: border-box;
 }
@@ -210,13 +210,13 @@
     gap: 12px;
     padding: 16px;
     border-radius: 22px;
-    border: 1px solid rgba(205, 157, 120, 0.22);
-    background: #fff;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 22%, transparent);
+    background: var(--color-surface);
 }
 
 .itemCardActive {
-    border-color: var(--admin-border-strong, rgba(201, 115, 63, 0.34));
-    box-shadow: 0 16px 34px rgba(201, 115, 63, 0.14);
+    border-color: var(--admin-border-strong, color-mix(in srgb, var(--color-highlight) 34%, transparent));
+    box-shadow: 0 16px 34px color-mix(in srgb, var(--color-highlight) 14%, transparent);
 }
 
 .itemMainButton {
@@ -235,13 +235,13 @@
 }
 
 .itemTitle {
-    color: var(--admin-text, #2f241d);
+    color: var(--admin-text, var(--color-text));
     font-size: 16px;
     font-weight: 700;
 }
 
 .itemMeta {
-    color: var(--admin-text-soft, #6f5a49);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     font-size: 13px;
     line-height: 1.7;
 }
@@ -255,8 +255,8 @@
 .remarkLine {
     padding: 10px 12px;
     border-radius: 14px;
-    background: #fff;
-    color: var(--admin-text-soft, #6f5a49);
+    background: var(--color-surface);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     font-size: 13px;
     line-height: 1.7;
 }
@@ -267,45 +267,45 @@
     justify-content: center;
     padding: 5px 11px;
     border-radius: 999px;
-    background: rgba(201, 115, 63, 0.12);
-    color: var(--admin-accent-strong, #aa5a2d);
+    background: color-mix(in srgb, var(--color-highlight) 12%, transparent);
+    color: var(--admin-accent-strong, var(--color-highlight));
     font-size: 12px;
     font-weight: 700;
 }
 
 .statusJoined {
-    background: rgba(69, 157, 104, 0.14);
-    color: #2d8c58;
+    background: color-mix(in srgb, var(--color-success) 14%, transparent);
+    color: var(--color-success);
 }
 
 .statusGameIncentive {
-    background: rgba(80, 122, 210, 0.14);
-    color: #3e68b9;
+    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+    color: var(--color-primary-fg);
 }
 
 .statusIncentive {
-    background: rgba(156, 39, 176, 0.14);
-    color: #7b1fa2;
+    background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+    color: var(--color-accent);
 }
 
 .statusCodeIncentive {
-    background: rgba(255, 152, 0, 0.14);
-    color: #e65100;
+    background: color-mix(in srgb, var(--color-highlight) 14%, transparent);
+    color: var(--color-highlight);
 }
 
 .statusAllIncentive {
-    background: rgba(38, 166, 154, 0.16);
-    color: #0f766e;
+    background: color-mix(in srgb, var(--color-text) 16%, transparent);
+    color: var(--color-text-secondary);
 }
 
 .statusNone {
-    background: rgba(146, 125, 107, 0.14);
-    color: #7b6552;
+    background: color-mix(in srgb, var(--color-text) 14%, transparent);
+    color: var(--color-text-secondary);
 }
 
 .statusFinished {
-    background: rgba(80, 122, 210, 0.14);
-    color: #3e68b9;
+    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+    color: var(--color-primary-fg);
 }
 
 .actionRow {
@@ -328,8 +328,8 @@
 .summaryCard {
     padding: 20px;
     border-radius: 18px;
-    background: linear-gradient(135deg, rgba(76, 175, 80, 0.08) 0%, rgba(76, 175, 80, 0.04) 100%);
-    border: 1px solid rgba(76, 175, 80, 0.2);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-success) 8%, transparent) 0%, color-mix(in srgb, var(--color-success) 4%, transparent) 100%);
+    border: 1px solid color-mix(in srgb, var(--color-success) 20%, transparent);
 }
 
 .summaryTitle {
@@ -339,7 +339,7 @@
     margin-bottom: 16px;
     font-size: 16px;
     font-weight: 600;
-    color: #2e7d32;
+    color: var(--color-success);
 }
 
 .summaryGrid {
@@ -354,23 +354,23 @@
     gap: 6px;
     padding: 14px;
     border-radius: 12px;
-    background: #fff;
-    border: 1px solid rgba(76, 175, 80, 0.12);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-success) 12%, transparent);
 }
 
 .summaryLabel {
     font-size: 12px;
-    color: #666;
+    color: var(--color-text-secondary);
 }
 
 .summaryValue {
     font-size: 22px;
     font-weight: 700;
-    color: #2e7d32;
+    color: var(--color-success);
 }
 
 .summaryTotal {
-    color: #1b5e20;
+    color: var(--color-success);
     font-size: 26px;
 }
 
@@ -394,23 +394,23 @@
 
 .codeIncentiveForm .fieldLabel {
     font-size: 13px;
-    color: #555;
+    color: var(--color-text-secondary);
     font-weight: 500;
 }
 
 .codeIncentiveForm .textInput {
     padding: 10px 14px;
     border-radius: 10px;
-    border: 1px solid rgba(76, 175, 80, 0.3);
-    background: #fff;
+    border: 1px solid color-mix(in srgb, var(--color-success) 30%, transparent);
+    background: var(--color-surface);
     font-size: 14px;
-    color: #333;
+    color: var(--color-text);
 }
 
 .codeIncentiveForm .textInput:focus {
     outline: none;
-    border-color: #4caf50;
-    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.15);
+    border-color: var(--color-success);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-success) 15%, transparent);
 }
 
 .primaryButton,
@@ -426,20 +426,20 @@
 
 .primaryButton {
     border: none;
-    color: #fff;
-    background: #1677ff;
+    color: var(--color-on-primary);
+    background: var(--color-primary);
 }
 
 .secondaryButton {
-    border: 1px solid rgba(205, 157, 120, 0.34);
-    background: #fff;
-    color: var(--admin-text, #2f241d);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 34%, transparent);
+    background: var(--color-surface);
+    color: var(--admin-text, var(--color-text));
 }
 
 .dangerButton {
-    border: 1px solid rgba(187, 53, 53, 0.18);
-    background: rgba(187, 53, 53, 0.08);
-    color: #b73a3a;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 18%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    color: var(--color-primary);
 }
 
 .primaryButton:hover,
@@ -459,8 +459,8 @@
 .emptyState {
     padding: 16px;
     border-radius: 18px;
-    background: #fff;
-    color: var(--admin-text-soft, #6f5a49);
+    background: var(--color-surface);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     line-height: 1.8;
 }
 
@@ -472,7 +472,7 @@
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background: rgba(45, 28, 18, 0.34);
+    background: color-mix(in srgb, var(--color-highlight) 34%, transparent);
     backdrop-filter: blur(6px);
 }
 
@@ -482,9 +482,9 @@
     overflow-y: auto;
     padding: 24px;
     border-radius: 30px;
-    border: 1px solid var(--admin-border, rgba(201, 139, 92, 0.22));
-    background: #fff;
-    box-shadow: 0 20px 56px var(--admin-shadow, rgba(98, 59, 33, 0.1));
+    border: 1px solid var(--admin-border, color-mix(in srgb, var(--color-highlight) 22%, transparent));
+    background: var(--color-surface);
+    box-shadow: 0 20px 56px var(--admin-shadow, color-mix(in srgb, var(--color-highlight) 10%, transparent));
 }
 
 .formArea {
@@ -511,8 +511,8 @@
 .pendingAmountDisplay {
     padding: 12px 16px;
     border-radius: 12px;
-    background: rgba(201, 115, 63, 0.08);
-    color: var(--admin-accent-strong, #aa5a2d);
+    background: color-mix(in srgb, var(--color-highlight) 8%, transparent);
+    color: var(--admin-accent-strong, var(--color-highlight));
     font-size: 14px;
     font-weight: 600;
     text-align: center;
@@ -528,7 +528,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    color: var(--admin-text, #2f241d);
+    color: var(--admin-text, var(--color-text));
     font-size: 14px;
     font-weight: 700;
 }
@@ -544,7 +544,7 @@
 }
 
 .loadingText {
-    color: var(--admin-text-soft, #6f5a49);
+    color: var(--admin-text-soft, var(--color-text-secondary));
     font-size: 13px;
 }
 

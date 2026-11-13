@@ -8,8 +8,8 @@
     gap: 4px;
     padding: 4px;
     border-radius: 999px;
-    background: #fff;
-    border: 1px solid rgba(228, 205, 187, 0.9);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 90%, transparent);
 }
 
 .tab,
@@ -21,20 +21,20 @@
     font-weight: 700;
     cursor: pointer;
     background: transparent;
-    color: #5e3f2a;
+    color: var(--color-highlight);
 }
 
 .tabActive {
-    background: #e6f4ff;
-    color: #1a1a1a;
-    box-shadow: 0 1px 2px rgba(94, 63, 42, 0.12);
+    background: var(--color-bg);
+    color: var(--color-text);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--color-highlight) 12%, transparent);
 }
 
 .tab:focus-visible,
 .tabActive:focus-visible,
 .control:focus-visible,
 .note:focus-visible {
-    outline: 2px solid rgba(165, 96, 47, 0.45);
+    outline: 2px solid color-mix(in srgb, var(--color-highlight) 45%, transparent);
     outline-offset: 2px;
 }
 
@@ -56,14 +56,14 @@
     padding: 6px 2px;
     border: none;
     background: transparent;
-    color: #5e3f2a;
+    color: var(--color-highlight);
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
 }
 
 .toolbarBtn:hover:not(:disabled) {
-    color: #a5602f;
+    color: var(--color-highlight);
 }
 
 .toolbarBtn:disabled {
@@ -72,7 +72,7 @@
 }
 
 .toolbarBtn:focus-visible {
-    outline: 2px solid rgba(165, 96, 47, 0.45);
+    outline: 2px solid color-mix(in srgb, var(--color-highlight) 45%, transparent);
     outline-offset: 2px;
 }
 
@@ -90,8 +90,8 @@
     margin-bottom: 4px;
     padding: 4px 4px 4px 10px;
     border-radius: 999px;
-    background: rgba(165, 96, 47, 0.12);
-    color: #5e3f2a;
+    background: color-mix(in srgb, var(--color-highlight) 12%, transparent);
+    color: var(--color-highlight);
     font-size: 13px;
     font-weight: 650;
 }
@@ -100,14 +100,14 @@
     padding: 0;
     border: none;
     background: none;
-    color: #111111;
+    color: var(--color-text);
     font: inherit;
     text-align: left;
     cursor: pointer;
 }
 
 .nameFilter:hover {
-    color: #a5602f;
+    color: var(--color-highlight);
     text-decoration: underline;
     text-underline-offset: 3px;
 }
@@ -126,7 +126,7 @@
 .fieldLabel {
     font-size: 12px;
     font-weight: 700;
-    color: #7c593f;
+    color: var(--color-highlight);
 }
 
 .control {
@@ -135,9 +135,9 @@
     min-width: 132px;
     box-sizing: border-box;
     border-radius: 12px;
-    border: 1px solid rgba(222, 191, 166, 0.9);
-    background: #fff;
-    color: #111111;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 90%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text);
     padding: 0 12px;
     font-size: 14px;
     font-family: inherit;
@@ -146,8 +146,8 @@
 .tableWrap {
     overflow-x: auto;
     border-radius: 16px;
-    border: 1px solid rgba(228, 205, 187, 0.72);
-    background: #fff;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 72%, transparent);
+    background: var(--color-surface);
 }
 
 .table {
@@ -159,10 +159,10 @@
 .table th {
     text-align: left;
     padding: 12px;
-    color: #6f5a49;
+    color: var(--color-text-secondary);
     font-size: 12px;
     font-weight: 700;
-    background: #fff;
+    background: var(--color-surface);
     white-space: nowrap;
 }
 
@@ -188,7 +188,7 @@
     border: none;
     border-radius: 6px;
     background: transparent;
-    color: #8a7362;
+    color: var(--color-text-muted);
     cursor: pointer;
 }
 
@@ -200,8 +200,8 @@
 
 .thFilterBtn:hover,
 .thFilterBtnActive {
-    color: #a5602f;
-    background: rgba(165, 96, 47, 0.12);
+    color: var(--color-highlight);
+    background: color-mix(in srgb, var(--color-highlight) 12%, transparent);
 }
 
 .thFilterPop {
@@ -212,9 +212,9 @@
     width: 220px;
     padding: 10px;
     border-radius: 12px;
-    border: 1px solid rgba(222, 191, 166, 0.9);
-    background: #fff;
-    box-shadow: 0 10px 28px rgba(46, 36, 29, 0.16);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 90%, transparent);
+    background: var(--color-surface);
+    box-shadow: 0 10px 28px color-mix(in srgb, var(--color-shadow) 16%, transparent);
 }
 
 .thFilterInput {
@@ -222,9 +222,9 @@
     height: 36px;
     box-sizing: border-box;
     border-radius: 10px;
-    border: 1px solid rgba(222, 191, 166, 0.9);
-    background: #fff;
-    color: #111111;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 90%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text);
     padding: 0 10px;
     font-size: 13px;
     font-family: inherit;
@@ -240,20 +240,20 @@
 
 .table td {
     padding: 12px;
-    color: #111111;
-    border-top: 1px solid rgba(222, 191, 166, 0.4);
+    color: var(--color-text);
+    border-top: 1px solid color-mix(in srgb, var(--color-highlight) 40%, transparent);
     vertical-align: middle;
 }
 
 .table tbody tr:hover {
-    background: #f5faff;
+    background: var(--color-bg);
 }
 
 .drawerBackdrop {
     position: fixed;
     inset: 0;
     z-index: 4000;
-    background: rgba(46, 36, 29, 0.45);
+    background: color-mix(in srgb, var(--color-surface) 45%, transparent);
     display: flex;
     justify-content: flex-end;
 }
@@ -261,11 +261,11 @@
 .drawer {
     width: min(440px, 100%);
     height: 100%;
-    background: #fff;
-    color: #111111;
+    background: var(--color-surface);
+    color: var(--color-text);
     padding: 22px 22px 32px;
     overflow-y: auto;
-    box-shadow: -12px 0 36px rgba(46, 36, 29, 0.18);
+    box-shadow: -12px 0 36px color-mix(in srgb, var(--color-shadow) 18%, transparent);
     box-sizing: border-box;
 }
 
@@ -275,14 +275,14 @@
     justify-content: space-between;
     gap: 12px;
     padding-bottom: 14px;
-    border-bottom: 1px solid rgba(222, 191, 166, 0.7);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-highlight) 70%, transparent);
 }
 
 .drawerTitle {
     margin: 0;
     font-size: 18px;
     font-weight: 700;
-    color: #2e241d;
+    color: var(--color-text);
 }
 
 .metaLine {
@@ -292,7 +292,7 @@
     margin: 14px 0 0;
     font-size: 12px;
     line-height: 1.4;
-    color: #8a7362;
+    color: var(--color-text-muted);
 }
 
 .caseBlock {
@@ -309,7 +309,7 @@
     font-size: 22px;
     font-weight: 700;
     line-height: 1.3;
-    color: #2e241d;
+    color: var(--color-text);
     word-break: break-word;
 }
 
@@ -319,7 +319,7 @@
 }
 
 .subjectLink:hover {
-    color: #a5602f;
+    color: var(--color-highlight);
 }
 
 .reasonTitle {
@@ -327,7 +327,7 @@
     font-size: 16px;
     font-weight: 650;
     line-height: 1.4;
-    color: #2e241d;
+    color: var(--color-text);
 }
 
 .ledger {
@@ -336,7 +336,7 @@
     gap: 16px;
     margin-top: 26px;
     padding-top: 16px;
-    border-top: 1px solid rgba(222, 191, 166, 0.7);
+    border-top: 1px solid color-mix(in srgb, var(--color-highlight) 70%, transparent);
 }
 
 .statPair {
@@ -359,7 +359,7 @@
     padding: 0;
     border-radius: 0;
     background: transparent;
-    color: #5e3f2a;
+    color: var(--color-highlight);
     font-size: 13px;
     font-weight: 700;
 }
@@ -367,7 +367,7 @@
 .chip + .chip::before {
     content: '·';
     margin: 0 8px;
-    color: #a8957f;
+    color: var(--color-text-muted);
     font-weight: 500;
 }
 
@@ -387,14 +387,14 @@
     margin-bottom: 4px;
     font-size: 12px;
     font-weight: 700;
-    color: #7c593f;
+    color: var(--color-highlight);
 }
 
 .factValue {
     margin: 0;
     font-size: 14px;
     line-height: 1.5;
-    color: #111111;
+    color: var(--color-text);
     word-break: break-word;
 }
 
@@ -409,7 +409,7 @@
     flex: 0 0 2.5em;
     font-size: 12px;
     font-weight: 700;
-    color: #7c593f;
+    color: var(--color-highlight);
 }
 
 .factLine .factValue,
@@ -423,21 +423,21 @@
     font-size: 14px;
     line-height: 1.5;
     font-weight: 650;
-    color: #111111;
+    color: var(--color-text);
     text-decoration: underline;
     text-underline-offset: 3px;
     word-break: break-word;
 }
 
 .factLink:hover {
-    color: #a5602f;
+    color: var(--color-highlight);
 }
 
 .factSub {
     margin: 4px 0 0;
     font-size: 12px;
     line-height: 1.45;
-    color: #705b4b;
+    color: var(--color-text-secondary);
     word-break: break-all;
 }
 
@@ -446,7 +446,7 @@
     font-size: 13px;
     font-weight: 500;
     line-height: 1.5;
-    color: #5c4638;
+    color: var(--color-text-secondary);
 }
 
 .evidenceGrid {
@@ -460,8 +460,8 @@
     aspect-ratio: 1;
     border-radius: 12px;
     overflow: hidden;
-    border: 1px solid rgba(228, 205, 187, 0.72);
-    background: #fff;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 72%, transparent);
+    background: var(--color-surface);
 }
 
 .evidenceThumb img {
@@ -478,7 +478,7 @@
     display: flex;
     flex-direction: column;
     gap: 0;
-    border-left: 2px solid rgba(222, 191, 166, 0.85);
+    border-left: 2px solid color-mix(in srgb, var(--color-highlight) 85%, transparent);
 }
 
 .historyList > li {
@@ -504,11 +504,11 @@
 }
 
 .historyItem:hover .historyType {
-    color: #a5602f;
+    color: var(--color-highlight);
 }
 
 .historyItem:focus-visible {
-    outline: 2px solid #a5602f;
+    outline: 2px solid var(--color-highlight);
     outline-offset: 2px;
     border-radius: 6px;
 }
@@ -521,12 +521,12 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #a5602f;
-    box-shadow: 0 0 0 3px #fffaf5;
+    background: var(--color-highlight);
+    box-shadow: 0 0 0 3px var(--color-shadow);
 }
 
 .historyItemMuted::before {
-    background: #c4b0a0;
+    background: var(--color-text-muted);
 }
 
 .historyMain {
@@ -539,11 +539,11 @@
 .historyType {
     font-size: 13px;
     font-weight: 650;
-    color: #2e241d;
+    color: var(--color-text);
 }
 
 .historyItemMuted .historyType {
-    color: #8a7362;
+    color: var(--color-text-muted);
     font-weight: 600;
 }
 
@@ -551,11 +551,11 @@
     flex-shrink: 0;
     font-size: 12px;
     font-weight: 650;
-    color: #7c593f;
+    color: var(--color-highlight);
 }
 
 .historyStatusRevoked {
-    color: #8e2135;
+    color: var(--color-primary-bold);
 }
 
 .historyTime {
@@ -563,14 +563,14 @@
     margin-top: 3px;
     font-size: 12px;
     line-height: 1.4;
-    color: #8a7362;
+    color: var(--color-text-muted);
 }
 
 .historySheetBackdrop {
     position: fixed;
     inset: 0;
     z-index: 4100;
-    background: rgba(46, 36, 29, 0.4);
+    background: color-mix(in srgb, var(--color-surface) 40%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -580,10 +580,10 @@
 
 .historySheet {
     width: min(360px, 100%);
-    background: #fff;
-    border: 1px solid rgba(222, 191, 166, 0.85);
+    background: var(--color-surface);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 85%, transparent);
     border-radius: 16px;
-    box-shadow: 0 18px 48px rgba(46, 36, 29, 0.22);
+    box-shadow: 0 18px 48px color-mix(in srgb, var(--color-shadow) 22%, transparent);
     padding: 18px 18px 20px;
     box-sizing: border-box;
 }
@@ -594,14 +594,14 @@
     justify-content: space-between;
     gap: 12px;
     padding-bottom: 12px;
-    border-bottom: 1px solid rgba(222, 191, 166, 0.7);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-highlight) 70%, transparent);
 }
 
 .historySheetTitle {
     margin: 0;
     font-size: 16px;
     font-weight: 700;
-    color: #2e241d;
+    color: var(--color-text);
 }
 
 .historySheetBody {
@@ -617,7 +617,7 @@
     gap: 12px;
     margin-top: 20px;
     padding-top: 16px;
-    border-top: 1px solid rgba(222, 191, 166, 0.7);
+    border-top: 1px solid color-mix(in srgb, var(--color-highlight) 70%, transparent);
 }
 
 .revokeConfirmBody {
@@ -636,9 +636,9 @@
     box-sizing: border-box;
     resize: vertical;
     border-radius: 12px;
-    border: 1px solid rgba(222, 191, 166, 0.9);
-    background: #fff;
-    color: #111111;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 90%, transparent);
+    background: var(--color-surface);
+    color: var(--color-text);
     padding: 10px 12px;
     font: inherit;
     font-size: 14px;
@@ -655,7 +655,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #111111;
+    color: var(--color-text);
     font-size: 13px;
 }
 
@@ -684,23 +684,23 @@
 }
 
 .decisionReject {
-    background: #fff;
-    color: #b73a3a;
-    border-color: rgba(183, 58, 58, 0.45);
+    background: var(--color-surface);
+    color: var(--color-primary);
+    border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
 .decisionReject:hover:not(:disabled) {
-    background: rgba(187, 53, 53, 0.1);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
 .decisionApprove {
-    background: #1677ff;
-    color: #fff;
-    border-color: #1677ff;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    border-color: var(--color-primary);
 }
 
 .decisionApprove:hover:not(:disabled) {
-    background: #8d4f24;
+    background: var(--color-highlight);
 }
 
 @media (max-width: 640px) {

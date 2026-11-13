@@ -39,7 +39,8 @@ test('GameDetail_非在架应只显示说明', () => {
   assert.match(src, /resolvePublicListingState/);
   assert.match(src, /listingState\.canEnter/);
   assert.match(src, /data-listing-gate/);
-  assert.match(src, /全部作品/);
+  // 非在架页提供返回与「回到首页」（多语言），不是死页面
+  assert.match(src, /navigate\('\/home'\)[^<]*className=\{styles\.backButton\}[\s\S]{0,80}gameDetail\.backToHome/);
 });
 
 test('WorldPanel_题材单选与停用展示', () => {

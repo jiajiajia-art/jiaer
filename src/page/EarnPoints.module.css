@@ -1,11 +1,11 @@
 .pageRoot {
-    --earn-bg: #000000;
-    --earn-card: #1c1c1e;
-    --earn-elevated: #28282a;
-    --earn-border: rgba(255, 255, 255, 0.08);
-    --earn-text: #ffffff;
-    --earn-muted: #8e8e93;
-    --earn-accent: #c92343;
+    --earn-bg: var(--color-bg);
+    --earn-card: var(--color-surface);
+    --earn-elevated: var(--color-surface-2);
+    --earn-border: color-mix(in srgb, var(--color-text) 8%, transparent);
+    --earn-text: var(--color-text);
+    --earn-muted: var(--color-text-muted);
+    --earn-accent: var(--color-primary);
     min-height: 100vh;
     min-height: 100dvh;
     background: var(--earn-bg);
@@ -30,7 +30,7 @@
 
 .taskRow:focus-visible,
 .exchangeCard button:focus-visible {
-    outline: 2px solid #ff5a78;
+    outline: 2px solid var(--color-primary-light);
     outline-offset: 3px;
 }
 
@@ -144,8 +144,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.14);
-    color: #ff3b61;
+    background: color-mix(in srgb, var(--color-text) 14%, transparent);
+    color: var(--color-primary);
 }
 
 .itemIcon img,
@@ -173,7 +173,7 @@ button.taskRow {
 }
 
 button.taskRow:hover {
-    background: #303033;
+    background: var(--color-surface-2);
 }
 
 .taskCopy {
@@ -209,7 +209,7 @@ button.taskRow:hover {
 .primaryAction,
 .exchangeCard button {
     background: var(--earn-accent);
-    color: #ffffff;
+    color: var(--color-on-primary);
 }
 
 .taskRowDisabled {
@@ -217,8 +217,8 @@ button.taskRow:hover {
 }
 
 .disabledAction {
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    color: rgba(255, 255, 255, 0.56);
+    border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+    color: var(--color-text-secondary);
 }
 
 .exchangeCard {
@@ -239,7 +239,7 @@ button.taskRow:hover {
 }
 
 .exchangeCard button:hover {
-    background: #e03354;
+    background: var(--color-primary);
 }
 
 @media (max-width: 768px) {
