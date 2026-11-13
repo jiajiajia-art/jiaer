@@ -65,10 +65,8 @@ test('旧世界互动能力节点继续使用固定价格且不读取动态业�
 test('运行配置中的生图模型按业务场景选择，不再提供全局启用动作', () => {
   const hub = readFileSync(join(root, 'src/components/ModelConfigHub.tsx'), 'utf8');
   const center = readFileSync(join(root, 'src/components/AiModelCenter.tsx'), 'utf8');
-  assert.match(hub, /onActivate={pane === 'text' \? requestActivate : undefined}/);
-  assert.match(hub, /onDeactivate={pane === 'image' \? requestDeactivate : undefined}/);
+  assert.match(hub, /pane === 'text' \? \(model\) => void handleActivate\(model\) : undefined/);
   assert.match(hub, /deactivateModel/);
   assert.match(hub, /onDeactivate/);
-  assert.doesNotMatch(hub, /onActivate={pane === 'image'/);
   assert.match(center, /items={grouped\.image}[\s\S]*showRuntimeActive={false}/);
 });

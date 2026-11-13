@@ -23,9 +23,9 @@ test('history API exposes separate point and diamond endpoints with page size te
 
 test('shared history table renders exactly the requested five columns and paging controls', () => {
   const source = read('src/components/AdminManualAdjustmentHistory.tsx');
-  // 功能注释：记录表已改用 antd Table/Pagination，列标题在 columns.title，空态走 emptyText
-  const titles = [...source.matchAll(/title:\s*'([^']+)'/g)].map((match) => match[1]);
-  assert.deepEqual(titles, ['操作人', '变更用户', '变更情况', '备注', '操作时间']);
+  // 已改用 antd Table + Pagination：列定义里的 title 顺序即表头
+  const headers = [...source.matchAll(/title:\s*'([^']+)'/g)].map((match) => match[1].trim());
+  assert.deepEqual(headers, ['操作人', '变更用户', '变更情况', '备注', '操作时间']);
   assert.match(source, /<Pagination/);
   assert.match(source, /重新加载/);
   assert.match(source, /emptyText:\s*'暂无特殊变更记录'/);
