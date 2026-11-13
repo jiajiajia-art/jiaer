@@ -46,9 +46,9 @@ const texts = (r) => r.issues.filter((i) => i.level === 'error').map((i) => i.te
 
 test('auditStory_草稿空表单_引用娱乐圈同名id也报引用了不存在', async () => {
   const { auditStory } = await loadRefAudit();
-  // 对照：存档/非草稿口径下这些 id 确实存在于内置世界，不会报错
+  // 功能注释：内置娱乐圈预置人物/地点/物品已清空，不再回退 star2005；旧 id 在非草稿下同样不存在
   const legacy = auditStory({ draft: false, events: [refEvent()], skip: ['flag'] });
-  assert.equal(texts(legacy).filter((t) => t.includes('不存在')).length, 0, '内置世界里应存在这些 id');
+  assert.ok(texts(legacy).some((t) => t.includes('不存在')), '清空后的内置世界不应再认这些旧 id');
   // 草稿口径：传入空数组也是权威，不并入 LIVE_*
   const draft = auditStory({ events: [refEvent()], npcIds: [], roomIds: [], itemIds: [], skip: ['flag'] });
   const errs = texts(draft);

@@ -112,7 +112,8 @@ test('chat_IncomingCall_PeekApp_绿信串走brand_不再写死', () => {
 
   const call = read('components/phone/IncomingCall.tsx');
   assert.match(call, /useCommsBrand\(\)/);
-  assert.match(call, /`\$\{brand\.appName\}\$\{r\.video \? "视频" : "语音"\}`/);
+  // 功能注释：通话类型走 commTerm，避免把「视频/语音」写死在来电号码上
+  assert.match(call, /`\$\{brand\.appName\}\$\{commTerm\(r\.video \? "video" : "voice"\)\}`/);
   assert.doesNotMatch(call, /app: "绿信"|"绿信视频"|"绿信语音"/);
 
   const peek = read('components/phone/PeekApp.tsx');

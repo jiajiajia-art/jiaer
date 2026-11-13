@@ -262,6 +262,17 @@
   min-width: 0;
 }
 
+.splitPreview {
+  max-width: 1100px;
+}
+
+@media (min-width: 1024px) {
+  .splitPreview {
+    position: sticky;
+    top: 16px;
+  }
+}
+
 .previewPane {
   background: #fff;
   border-radius: 16px;

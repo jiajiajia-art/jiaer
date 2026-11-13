@@ -113,7 +113,8 @@ test('resolveGameCardTags_无题材时不回落game_tags', () => {
 test('resolveGameCardTags_应过滤引擎码避免与封面角标重复', () => {
   assert.deepEqual(resolveGameCardTags({ game_tags: 'CUSTOM' }), []);
   assert.deepEqual(resolveGameCardTags({ game_tags: 'TXT' }), []);
-  assert.deepEqual(resolveGameCardTags({ game_tags: 'TXT,权谋' }), ['权谋']);
+  // 功能注释：题材只读 theme_tag_names，game_tags 即使混有权谋也不再回落
+  assert.deepEqual(resolveGameCardTags({ game_tags: 'TXT,权谋' }), []);
   assert.deepEqual(resolveGameCardTags({ theme_tag_names: ['CUSTOM', '都市现代', '全部'] }), ['都市现代']);
 });
 

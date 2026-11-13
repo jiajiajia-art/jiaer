@@ -1,8 +1,8 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-import zhTranslation from './locales/zh.json';
-import enTranslation from './locales/en.json';
+import zhTranslation from './locales/zh.json' with { type: 'json' };
+import enTranslation from './locales/en.json' with { type: 'json' };
 import { LANGUAGE } from '../config';
 import {
   DEFAULT_APP_LANGUAGE,

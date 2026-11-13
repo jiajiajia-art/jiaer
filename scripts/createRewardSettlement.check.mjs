@@ -20,28 +20,23 @@ test('Create_创作激励应跳转独立页面且删除旧收益弹窗', () => {
   const en = read('src/i18n/locales/en.json');
 
   assert.match(app, /path="\/create\/incentives"/);
-  assert.match(create, /navigate\('\/create\/incentives'\)/);
+  // 功能注释：允许带 returnTo state，便于从个人中心/创作页返回
+  assert.match(create, /navigate\(\s*'\/create\/incentives'[\s\S]*?\)/);
   assert.match(create, /create\.accountCreatorIncentive/);
   assert.doesNotMatch(create, /isEarningsModalOpen|earningsModalOverlay|earningsModalCloseIcon/);
   assert.doesNotMatch(css, /\.earningsModal(?:Overlay|CloseBtn|Title|CloseIcon)?\s*\{/);
 
+  // 功能注释：创作者中心已改为 CreatorEarnings* 组件拼装，不再内嵌 settlePoints / WORK_TABS
+  assert.match(incentive, /CreatorEarningsOverview/);
+  assert.match(incentive, /CreatorEarningsTrend/);
+  assert.match(incentive, /CreatorWorkEarnings/);
+  assert.match(incentive, /CreatorEarningsWithdrawalModal/);
   assert.match(incentive, /statisticsApi\.getALLGameStats/);
-  assert.match(incentive, /settlePoints\('points'\)/);
-  assert.match(incentive, /settlePoints\('diamonds'\)/);
-  assert.match(incentive, /data-testid="creator-incentive-overview"/);
-  assert.match(incentive, /data-testid="creator-incentive-chart"/);
-  assert.match(incentive, /data-testid="creator-incentive-works"/);
-  assert.match(incentive, /const WORK_TABS/);
-  assert.match(incentive, /const WORKS_PER_PAGE = 6/);
-  assert.match(incentive, /role="tablist"/);
-  assert.match(incentive, /aria-selected=/);
-  assert.match(incentive, /styles\.pagination/);
-  assert.match(incentiveCss, /\.analyticsPanel\s*\{/);
-  assert.match(incentiveCss, /\.workTabs\s*\{/);
-  assert.match(incentiveCss, /\.workGrid\s*\{/);
+  assert.match(incentive, /promotion\.totalIncentiveAmount/);
+  assert.match(incentiveCss, /\.promotionPanel\s*\{/);
 
-  assert.match(zh, /"accountCreatorIncentive":\s*"创作激励"/);
-  assert.match(en, /"accountCreatorIncentive":\s*"Creator Incentives"/);
+  assert.match(zh, /"accountCreatorIncentive":\s*"创作者中心"/);
+  assert.match(en, /"accountCreatorIncentive":\s*"Creator Center"/);
 });
 
 test('创作激励_创作收益与推广激励应分区展示并保留各自数据', () => {
@@ -50,13 +45,12 @@ test('创作激励_创作收益与推广激励应分区展示并保留各自数�
   const zh = read('src/i18n/locales/zh.json');
   const en = read('src/i18n/locales/en.json');
 
-  assert.match(incentive, /id="settlement-title"[^>]*>\{t\('create\.creativeRevenueTitle'\)\}/);
+  // 功能注释：创作收益区由 CreatorEarningsOverview 承接；推广激励仍为本页独立区块
+  assert.match(incentive, /<CreatorEarningsOverview[\s\S]*?<CreatorEarningsTrend/);
   assert.match(incentive, /id="promotion-incentive-title"[^>]*>\{t\('create\.promotionIncentiveTitle'\)\}/);
-  assert.match(incentive, /stats\.totalAmount/);
-  assert.match(incentive, /stats\.totalDiamondsAmount/);
-  assert.match(incentive, /stats\.totalIncentiveAmount/);
-  assert.match(incentive, /stats\.inviteTotalAmount/);
-  assert.ok(incentive.indexOf('id="settlement-title"') < incentive.indexOf('id="promotion-incentive-title"'));
+  assert.match(incentive, /promotion\.totalIncentiveAmount/);
+  assert.match(incentive, /promotion\.inviteTotalAmount/);
+  assert.ok(incentive.indexOf('CreatorEarningsOverview') < incentive.indexOf('id="promotion-incentive-title"'));
   assert.doesNotMatch(incentive, /new-incentive-settlement|newIncentiveSettlement/);
   assert.match(incentiveCss, /\.promotionPanel\s*\{/);
   assert.doesNotMatch(incentiveCss, /\.newIncentiveSettlement/);
@@ -65,7 +59,6 @@ test('创作激励_创作收益与推广激励应分区展示并保留各自数�
   assert.match(en, /"creativeRevenueTitle":\s*"Creation Revenue"/);
   assert.match(en, /"promotionIncentiveTitle":\s*"Promotion Incentives"/);
 });
-
 test('创作者权益_计入作品应分页且未计入作品默认收起', () => {
   const benefits = read('src/page/CreatorBenefits.tsx');
   const benefitsCss = read('src/page/CreatorBenefits.module.css');
@@ -223,19 +216,21 @@ test('创作者权益_作品模式标签与标题整体垂直居中并适当放�
 
 test('创作者权益_应可查看等级与分成说明表', () => {
   const benefits = read('src/page/CreatorBenefits.tsx');
-  const benefitsCss = read('src/page/CreatorBenefits.module.css');
+  const modal = read('src/components/CreatorBenefits/CreatorBenefitRulesModal.tsx');
+  const modalCss = read('src/components/CreatorBenefits/CreatorBenefitRulesModal.module.css');
   const zh = JSON.parse(read('src/i18n/locales/zh.json'));
 
   assert.match(benefits, /IoHelpCircleOutline/);
   assert.match(benefits, /const \[isBenefitGuideOpen, setIsBenefitGuideOpen\] = useState\(false\)/);
-  assert.match(benefits, /aria-modal="true"/);
-  assert.match(benefits, /<table>/);
-  assert.match(benefitsCss, /\.modalOverlay\s*\{/);
+  assert.match(benefits, /<CreatorBenefitRulesModal/);
+  // 功能注释：说明表已抽到独立弹窗组件
+  assert.match(modal, /aria-modal="true"/);
+  assert.match(modal, /<table>/);
+  assert.match(modalCss, /\.overlay\s*\{|\.modalOverlay\s*\{/);
   assert.equal(zh.creatorBenefits.guideTitle, '创作者等级与权益');
   assert.equal(zh.creatorBenefits.guideEditorRatio, '编辑器作品分成比例');
   assert.equal(zh.creatorBenefits.guideCustomRatio, '自定义作品分成比例');
 });
-
 test('创作者权益_等级说明弹窗不显示底部补充小字', () => {
   const modal = read('src/components/CreatorBenefits/CreatorBenefitRulesModal.tsx');
   const modalCss = read('src/components/CreatorBenefits/CreatorBenefitRulesModal.module.css');
@@ -259,16 +254,16 @@ test('个人中心_极窄屏下创作者等级不应被其他标签挤出屏幕'
   const createCss = read('src/page/Create.module.css');
   const badgeRowStart = create.indexOf('className={styles.creatorHeroBadgeRow}');
   const badgeRowEnd = create.indexOf('</div>', badgeRowStart);
-  const badgeRow = create.slice(badgeRowStart, badgeRowEnd);
+  const badgeRow = create.slice(badgeRowStart, badgeRowEnd + 6);
 
   assert.match(create, /className=\{styles\.creatorHeroIdGroup\}/);
-  assert.ok(badgeRow.indexOf('creatorBenefits') < badgeRow.indexOf('isMember'));
+  // 功能注释：头像区徽章改为 VIP / 推广者，窄屏须可换行，避免挤出视口
+  assert.match(badgeRow, /creatorVipBadge/);
   assert.match(createCss, /\.creatorHeroMetaRow\s*\{[\s\S]*?flex-wrap:\s*wrap/);
   assert.match(createCss, /\.creatorHeroBadgeRow\s*\{[\s\S]*?flex-wrap:\s*wrap/);
   assert.match(createCss, /\.creatorHeroId\s*\{[\s\S]*?text-overflow:\s*ellipsis/);
   assert.match(createCss, /@media \(max-width: 1080px\)[\s\S]*?\.creatorHeroBadgeRow\s*\{[\s\S]*?flex-basis:\s*100%/);
 });
-
 test('创作者权益管理_全平台作品应默认筛选公开发布', () => {
   const manager = read('src/components/CreatorBenefitsAdminManager.tsx');
 

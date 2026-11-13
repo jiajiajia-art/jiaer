@@ -240,7 +240,7 @@ test('withdrawal modal renders titled work sources bank account and in-place aud
   assert.match(modal, /申请已提交，等待审核/);
   assert.match(modal, /已受理，尚未到账/);
   assert.match(modal, /返回创作者中心/);
-  assert.match(modal, /未达到提现金额/);
+  assert.match(modal, /未达到 ¥100 人民币提现门槛/);
   assert.match(modal, /提取KK币/);
   assert.match(modal, /继续累计收益/);
   assert.match(modal, /disabled=\{submitting/);

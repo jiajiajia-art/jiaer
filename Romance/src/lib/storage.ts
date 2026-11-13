@@ -18,6 +18,12 @@ import localforage from "localforage";
 import type { GameState } from "./types";
 import { exportSaveData, loadGlobal, removeGlobal, purgeSaveData, getCurrentSaveId } from "./saveScope";
 import { AUTHOR_PREVIEW_AUTO_SLOT, isAuthorPreview } from "./authorPreview";
+import {
+  deleteCloudSave,
+  isRomanceCloudDisabled,
+  putCloudSave,
+  renameCloudSave,
+} from "./cloudSaves";
 
 /* ───────────── 顶部统一配置区（改这里即可） ───────────── */
 export const DB_NAME = "gameSaveDB"; // 独立数据库实例名
@@ -68,7 +74,39 @@ export type SaveSlot = {
   state: GameState; // 完整游戏状态（大容量 JSON）
 };
 
-const slotKey = (id: string) => `slot:${id}`;
+/** 功能注释：当前作品 fileId；玩家局按作品隔离本地槽，避免 A/B 互踩自动存档 */
+let currentGameFileId = "";
+export function setStorageGameFileId(fileId: string): void {
+  currentGameFileId = String(fileId || "").trim();
+}
+export function getStorageGameFileId(): string {
+  if (currentGameFileId) return currentGameFileId;
+  try {
+    return new URLSearchParams(window.location.search).get("fileId")?.trim() || "";
+  } catch {
+    return "";
+  }
+}
+
+const slotKey = (id: string) => {
+  const gid = getStorageGameFileId();
+  return gid ? `slot:${gid}:${id}` : `slot:${id}`;
+};
+
+let lastCloudAutosaveAt = 0;
+const CLOUD_AUTOSAVE_MIN_MS = 15_000;
+
+function mirrorCloud(slot: SaveSlot, isAuto: boolean): void {
+  const gid = getStorageGameFileId();
+  if (!gid || isRomanceCloudDisabled() || isAuthorPreview()) return;
+  if (String(slot.id || "").startsWith("__author_preview")) return;
+  if (isAuto) {
+    const now = Date.now();
+    if (now - lastCloudAutosaveAt < CLOUD_AUTOSAVE_MIN_MS) return;
+    lastCloudAutosaveAt = now;
+  }
+  void putCloudSave(gid, slot);
+}
 
 /* 列出全部存档：自动存档置顶，其余按更新时间倒序；作者测试槽不出现在正式列表 */
 export async function listSaves(): Promise<SaveSlot[]> {
@@ -76,8 +114,19 @@ export async function listSaves(): Promise<SaveSlot[]> {
     "listSaves",
     async () => {
       const out: SaveSlot[] = [];
-      await gameSaveDB.iterate<SaveSlot, void>((v) => {
-        if (v && v.id && v.id !== AUTHOR_PREVIEW_AUTO_SLOT && !String(v.id).startsWith("__author_preview")) out.push(v);
+      const gid = getStorageGameFileId();
+      const prefix = gid ? `slot:${gid}:` : "slot:";
+      await gameSaveDB.iterate<SaveSlot, void>((v, key) => {
+        if (!v || !v.id) return;
+        if (v.id === AUTHOR_PREVIEW_AUTO_SLOT || String(v.id).startsWith("__author_preview")) return;
+        // 功能注释：有 gameFileId 时只列本作品槽；无 id（编辑器草稿）只列未加作品前缀的遗留键
+        const keyStr = String(key || "");
+        if (gid) {
+          if (!keyStr.startsWith(prefix)) return;
+        } else if (keyStr.startsWith("slot:") && keyStr.split(":").length > 2) {
+          return;
+        }
+        out.push(v);
       });
       out.sort((a, b) => {
         if (a.auto && !b.auto) return -1;
@@ -101,6 +150,7 @@ export async function writeSlot(slot: SaveSlot): Promise<boolean> {
     "writeSlot",
     async () => {
       await gameSaveDB.setItem(slotKey(slot.id), slot);
+      mirrorCloud(slot, Boolean(slot.auto));
       return true;
     },
     false,
@@ -154,6 +204,10 @@ export async function deleteSlot(id: string): Promise<boolean> {
     async () => {
       const gone = (await gameSaveDB.getItem<SaveSlot>(slotKey(id)))?.state?.id;
       await gameSaveDB.removeItem(slotKey(id));
+      const gid = getStorageGameFileId();
+      if (gid && !isRomanceCloudDisabled() && !String(id).startsWith("__author_preview")) {
+        void deleteCloudSave(gid, id);
+      }
       // 该局已无任何存档位（含自动存档）且不在游玩中 → 清理它残留的私有数据，释放本地空间
       if (gone && gone !== getCurrentSaveId() && !(await listSaves()).some((x) => x.state?.id === gone)) purgeSaveData(gone);
       return true;
@@ -166,7 +220,13 @@ export async function deleteSlot(id: string): Promise<boolean> {
 export async function renameSlot(id: string, name: string): Promise<boolean> {
   const slot = await getSlot(id);
   if (!slot) return false;
-  return writeSlot({ ...slot, name: name.trim() || slot.name });
+  const next = { ...slot, name: name.trim() || slot.name };
+  const ok = await writeSlot(next);
+  const gid = getStorageGameFileId();
+  if (ok && gid && !isRomanceCloudDisabled()) {
+    void renameCloudSave(gid, id, next.name);
+  }
+  return ok;
 }
 
 /* ───────────── 防抖存档 ───────────── */

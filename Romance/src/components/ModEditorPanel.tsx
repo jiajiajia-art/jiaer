@@ -931,7 +931,7 @@ export default function ModEditorPanel({ initial, isNew, onClose, onAiChat, onBa
             >
               素材库
             </button>
-            {/* 功能注释：顶栏「保存 / 放弃 / 预览」；退出用左侧‹返回 */}
+            {/* 功能注释：顶栏只留「保存 / 放弃 / 预览」；退出用左侧‹返回 */}
             <button
               type="button"
               onClick={() => save(true)}

@@ -421,6 +421,12 @@ const Navbar: React.FC<NavbarProps> = ({
                                         event.stopPropagation();
                                         setShowUserMenu((prev) => !prev);
                                     }}
+                                    onTouchStart={(event) => {
+                                        // 功能注释：小程序 web-view 也要下拉菜单；click 经常丢，用 touchstart 切换并挡住随后的 click
+                                        if (!isWebViewEnv()) return;
+                                        event.preventDefault();
+                                        setShowUserMenu((prev) => !prev);
+                                    }}
                                     onKeyDown={(event) => {
                                         if (event.key === 'Enter' || event.key === ' ') {
                                             event.preventDefault();
@@ -461,6 +467,34 @@ const Navbar: React.FC<NavbarProps> = ({
                                             >
                                                 {t('nav.profile')}
                                             </button>
+                                        )}
+                                        {!isDesktopLayout && (
+                                            <>
+                                                <button
+                                                    className={styles.menuBtn}
+                                                    onClick={() => {
+                                                        if (!requireAuth()) return;
+                                                        runLeaveAction(() => {
+                                                            navigate('/warehouse');
+                                                            setShowUserMenu(false);
+                                                        });
+                                                    }}
+                                                >
+                                                    {t('nav.warehouse')}
+                                                </button>
+                                                <button
+                                                    className={styles.menuBtn}
+                                                    onClick={() => {
+                                                        if (!requireAuth()) return;
+                                                        runLeaveAction(() => {
+                                                            navigate('/favorites');
+                                                            setShowUserMenu(false);
+                                                        });
+                                                    }}
+                                                >
+                                                    {t('nav.favorites')}
+                                                </button>
+                                            </>
                                         )}
                                         {isOperatorRole(user?.user?.role) && isDesktopLayout && (
                                             <button

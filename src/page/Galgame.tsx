@@ -1850,13 +1850,13 @@ const Galgame = () => {
                             )}
                         </div>
                     )} */}
-                    {/* 功能注释：旁路立绘优先，避免消息层与 bridge 抢源导致连环换图闪屏 */}
-                    {(controller.rawBridgePortrait?.characterImage || normalModeMessage?.characterImage)
+                    {/* 功能注释：局内覆盖后的 normalModeMessage 优先，Aliyun raw bridge 只做立绘兜底 */}
+                    {(normalModeMessage?.characterImage || controller.rawBridgePortrait?.characterImage)
                         && !controller.isTextMode && (
                         <CharacterLayer
                             characterImage={
-                                controller.rawBridgePortrait?.characterImage
-                                || normalModeMessage?.characterImage
+                                normalModeMessage?.characterImage
+                                || controller.rawBridgePortrait?.characterImage
                             }
                             characterPosition={
                                 controller.rawBridgePortrait?.characterPosition

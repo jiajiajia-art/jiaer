@@ -36,13 +36,12 @@ test('account types expose wallet, membership, recharge, and activity metadata',
 test('profile overview shows total KK coins and included limited coins', () => {
   const source = readSource('src/page/Create.tsx');
   const styles = readSource('src/page/Create.module.css');
-  assert.match(source, /含.*限时币/);
+  // 功能注释：限时币并进主标签「KK币（含 N 限时KK币）」，不再单独挂 primaryStatValueHint
+  assert.match(source, /含[\s\S]*限时KK币/);
   assert.match(source, /kkBalance/);
   assert.match(source, /formatKk/);
-  assert.match(source, /primaryStatValueHint/);
-  assert.match(source, /primaryStatLabel[^]*KK币/);
+  assert.match(source, /primaryStatLabel[\s\S]*限时KK币/);
   assert.doesNotMatch(source, /KK币：.*币/);
-  assert.match(styles, /\.primaryStatValueHint/);
 });
 
 test('asset details expose wallet breakdown and KK activity filters', () => {
@@ -134,7 +133,7 @@ test('profile VIP badge opens separate week and month status modal', () => {
   const modalStyles = readSource('src/components/Profile/VipStatusModal.module.css');
 
   assert.match(source, /hasActiveVip/);
-  assert.match(source, /className=\{styles\.creatorVipBadge\}/);
+  assert.match(source, /styles\.creatorVipBadge/);
   assert.match(source, />\s*VIP\s*</);
   assert.match(source, /<VipStatusModal/);
   assert.match(source, /setIsMembershipRechargeModalOpen\(true\)/);
@@ -146,7 +145,7 @@ test('profile VIP badge opens separate week and month status modal', () => {
   assert.match(modal, /剩余时长/);
   assert.match(modal, /购买\/续费会员卡/);
   assert.match(modal, /正式发布的 AI 文游/);
-  assert.match(modalStyles, /\.planGrid\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s);
+  assert.match(modalStyles, /\.planTabs\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s);
 });
 
 test('asset dropdowns share the filter row right edge with responsive widths', () => {
@@ -261,7 +260,8 @@ test('membership admin separates records, key generation, and key usage with com
   const styles = readSource('src/components/SubscriptionAdminManager.module.css');
   const api = readSource('src/api/subscriptionKeys/subscriptionKeysApi.ts');
 
-  assert.match(source, /会员状态记录/);
+  const nav = readSource('src/components/admin-shell/adminNavigation.tsx');
+  assert.match(nav, /会员状态记录/);
   assert.match(source, /会员兑换卡密钥生成/);
   assert.match(source, /会员兑换卡使用记录/);
   assert.match(source, /直接发放给用户（Kuran号）/);

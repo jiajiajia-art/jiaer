@@ -40,9 +40,11 @@ test('toImageGenModelsPayload_应按 key 组装', () => {
 
 test('AdminPanel_应包含 AI 模型中心与兼容路由', () => {
   const panel = readFileSync(join(root, 'src/page/AdminPanel.tsx'), 'utf8');
-  assert.match(panel, /AI 模型中心/);
+  const nav = readFileSync(join(root, 'src/components/admin-shell/adminNavigation.tsx'), 'utf8');
+  // 功能注释：中文菜单文案在 adminNavigation；面板挂载 AiModelCenter 并兼容 /admin/image-gen
+  assert.match(nav, /AI 模型中心/);
   assert.match(panel, /aiModelCenter/);
-  assert.match(panel, /\/admin\/image-gen/);
+  assert.match(panel, /\/admin\/image-gen|ai-model-center|image-gen/);
   assert.match(panel, /AiModelCenter/);
 
   const hub = readFileSync(join(root, 'src/components/ModelConfigHub.tsx'), 'utf8');

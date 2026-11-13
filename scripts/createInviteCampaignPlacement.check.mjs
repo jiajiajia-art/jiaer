@@ -1,5 +1,5 @@
 /**
- * Create 页：邀请好友卡片应挂在「我的账户」面板底部，且不再出现在 ProfileFunctionPanel 列表顶部。
+ * Create 页：邀请好友卡片挂在账户区底部，且不在 ProfileFunctionPanel 列表内。
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -18,9 +18,10 @@ test('Create_邀请卡片应在账户面板底部且离开功能列表', () => {
   const authTypes = read('src/api/account/auth.type.ts');
 
   assert.match(create, /import InviteCampaignCard from '\.\.\/components\/Profile\/InviteCampaignCard'/);
+  // 功能注释：精简个人中心后不再插入 TodayEarnPointsPanel，邀请卡紧挨更多服务
   assert.match(
     create,
-    /<\/div>\s*<InviteCampaignCard\s*\/>\s*<TodayEarnPointsPanel\s*\/>\s*<ProfileFunctionPanel\s*\/>\s*<\/div>/,
+    /<InviteCampaignCard\s*\/>\s*<ProfileFunctionPanel\s*\/>/,
   );
   assert.doesNotMatch(
     create,
@@ -33,10 +34,11 @@ test('Create_邀请卡片应在账户面板底部且离开功能列表', () => {
   assert.match(card, /inviteCampaignFields/);
   assert.match(card, /inviteCampaignCodeTray|inviteCampaignCodeRow/);
   assert.match(card, /inviteCampaignRedeemRow/);
-  assert.doesNotMatch(card, /InviteRewardModal|getInviteStats|inviteStats|claimPoints/);
+  // 功能注释：可读 user.inviteStats 展示人数；禁止旧领奖弹窗与独立 claim/stats API
+  assert.doesNotMatch(card, /InviteRewardModal|getInviteStats|claimPoints\(/);
   assert.doesNotMatch(card, /inviteCampaignFooterRow|inviteCampaignMeta|inviteCampaignRewardBtn/);
   assert.doesNotMatch(authApi, /getInviteStats|claimInviteReward|\/auth\/invite\/stats|\/auth\/invite\/claim/);
-  assert.doesNotMatch(authTypes, /InviteRewardItem|InviteStats|InviteClaimResult/);
+  assert.doesNotMatch(authTypes, /InviteRewardItem|InviteClaimResult/);
   assert.match(authApi, /api\.post<ApiResponse<InviteCodeUseResult>>\('\/auth\/invite\/use-code'/);
   assert.match(authTypes, /interface InviteCodeUseResult[\s\S]*?diamondsAdded:\s*number[\s\S]*?remainingDiamonds:\s*number[\s\S]*?inviterName:\s*string/);
   assert.equal(existsSync(join(root, 'src/components/InviteRewardModal.tsx')), false);
@@ -49,8 +51,8 @@ test('Create_邀请卡片应在账户面板底部且离开功能列表', () => {
 
   const en = read('src/i18n/locales/en.json');
   const zh = read('src/i18n/locales/zh.json');
-  assert.match(en, /"inviteCampaignTitle":\s*"Invite a friend and you both get 30 KK Coins!"/);
-  assert.match(zh, /"inviteCampaignTitle":\s*"邀请好友，双方各得 30 KK币！"/);
+  assert.match(en, /"inviteCampaignTitle":\s*"Invite a friend and you both get \{\{amount\}\} limited-time KK Coins!"/);
+  assert.match(zh, /"inviteCampaignTitle":\s*"邀请好友，双方各得 \{\{amount\}\} 限时KK币！"/);
   assert.doesNotMatch(en, /"inviteStatsText"|\n  "inviteReward": \{/);
   assert.doesNotMatch(zh, /"inviteStatsText"|\n  "inviteReward": \{/);
 
@@ -59,6 +61,6 @@ test('Create_邀请卡片应在账户面板底部且离开功能列表', () => {
   assert.doesNotMatch(panel, /InviteRewardModal/);
   assert.doesNotMatch(panel, /getInviteStats/);
   assert.doesNotMatch(panel, /useInviteCode|redeemInviteCode|showInputInviteCode/);
-  assert.match(panel, /profile\.purchaseRecords/);
-  assert.match(panel, /\/asset\/details/);
+  // 功能注释：7.1 更多服务去掉消费记录入口；/asset/details 页本身保留
+  assert.doesNotMatch(panel, /profile\.purchaseRecords|\/asset\/details/);
 });

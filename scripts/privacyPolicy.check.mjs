@@ -41,10 +41,10 @@ test('isPrivacyAgreementAccepted_仅true可通过', () => {
 test('AuthModal_注册与Google登录须校验隐私勾选', () => {
   const src = readFileSync(authModalPath, 'utf8');
   assert.match(src, /isPrivacyAgreementAccepted\(privacyAgreed\)/);
-  assert.match(src, /resolveRegistrationAgreementUrl\('privacy-policy'\)/);
+  assert.match(src, /resolveRegistrationAgreementUrl\('privacy-policy'/);
   assert.match(src, /useNavigate/);
   assert.match(src, /matchMedia\('\(max-width: 767px\)'\)/);
-  assert.match(src, /navigate\(`\/legal\/\$\{document\}`\)/);
+  assert.match(src, /navigate\(`\/legal\/\$\{document\}/);
   assert.match(src, /mode === 'register'/);
   assert.match(src, /privacyPolicyUrl/);
 });

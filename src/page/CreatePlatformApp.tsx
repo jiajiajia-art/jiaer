@@ -7,8 +7,8 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AppPageShell from '../components/Layout/AppPageShell';
 import { useAuthStore } from '../store/useAuthStore';
-import { isOperatorRole } from '../utils/userRoles';
 import { getImageUrl } from '../utils/constants';
+import PhoneAppLivePreview from '../components/Create/PhoneAppLivePreview';
 import { HOST_ADDRESS } from '../config';
 import {
   PLATFORM_APP_TYPE_OPTIONS,
@@ -96,15 +96,20 @@ const CreatePlatformApp: React.FC = () => {
   const navigate = useNavigate();
   const token = useAuthStore((s) => s.user?.token);
   const userCode = useAuthStore((s) => s.user?.user?.userCode);
-  const role = useAuthStore((s) => s.user?.user?.role);
-  const isStaff = isOperatorRole(role);
   const [mine, setMine] = useState<PlatformApp[]>([]);
-  const [published, setPublished] = useState<PlatformApp[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const previewDraft = {
+    name: form.name,
+    summary: form.summary,
+    category: form.category,
+    type: form.type,
+    contentText: form.contentText,
+    pages: form.pages,
+  };
   const [brief, setBrief] = useState('');
   const [chatInput, setChatInput] = useState('');
   const [turns, setTurns] = useState<PhoneAppAiTurn[]>([
@@ -164,17 +169,12 @@ const CreatePlatformApp: React.FC = () => {
       const res = await platformAppsApi.listMine(token);
       if (!res.success) throw new Error(res.message || '加载失败');
       setMine(Array.isArray(res.data) ? res.data : []);
-      if (isStaff) {
-        const pub = await platformAppsApi.listPublished(token);
-        if (pub.success && Array.isArray(pub.data)) setPublished(pub.data);
-        else setPublished([]);
-      } else setPublished([]);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : '加载我的应用失败');
     } finally {
       setLoading(false);
     }
-  }, [token, isStaff]);
+  }, [token]);
 
   useEffect(() => {
     if (!allowed) return;
@@ -650,8 +650,8 @@ const CreatePlatformApp: React.FC = () => {
         </div>
       </section>
       </div>
-      <aside className={styles.previewPane} aria-label="实时预览">
-        <h2 className={styles.cardTitle}>实时预览</h2>
+      <aside className={`${styles.previewPane} ${styles.splitPreview}`} aria-label="实时预览">
+        <PhoneAppLivePreview draft={previewDraft} />
         <p className={styles.fieldHint}>和玩家手机里同一套 kkapp 渲染；点按钮在沙盒数值上结算，不写任何存档。</p>
         <iframe
           ref={previewRef}
@@ -662,31 +662,6 @@ const CreatePlatformApp: React.FC = () => {
         {phoneAppContentIssues(form.contentText).length ? <p className={styles.fieldError}>配置有误，预览暂停更新</p> : null}
       </aside>
       </div>
-
-      {isStaff ? (
-        <section className={styles.card}>
-          <h2 className={styles.cardTitle}>运营 · 已上架应用</h2>
-          <p className={styles.hint}>作者和运营改的是同一条记录；保存后商店与已装手机一起更换。</p>
-          {published.map((app) => (
-            <div key={`pub-${app.appId}`} className={styles.listItem}>
-              {app.icon ? (
-                <img className={styles.iconPreview} src={getImageUrl(app.icon)} alt="" />
-              ) : (
-                <span className={styles.iconPreview} />
-              )}
-              <div className={styles.meta}>
-                <p className={styles.metaName}>{app.name}</p>
-                <p className={styles.metaSub}>
-                  {app.summary || '暂无说明'} · {app.authorName || app.authorId}
-                </p>
-              </div>
-              <button type="button" className={styles.btnGhost} onClick={() => startEdit(app)}>
-                编辑
-              </button>
-            </div>
-          ))}
-        </section>
-      ) : null}
 
       <section className={styles.card}>
         <h2 className={styles.cardTitle}>我的应用</h2>

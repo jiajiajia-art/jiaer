@@ -4,43 +4,21 @@ import {
   toDisplayCoverUrl,
 } from './displayCoverUrl';
 import { shiftIsoDate, shanghaiTodayIso } from './operatorReportChart';
-
-/** 功能注释：运营全站统计时间快捷（Asia/Shanghai），与计划书 §2.4 对齐 */
-export type OperatorStatsPreset =
-  | 'today'
-  | 'yesterday'
-  | 'last7'
-  | 'last30'
-  | 'thisWeek'
-  | 'thisMonth'
-  | 'lastMonth'
-  | 'all'
-  | 'custom';
-
-export type OperatorSortBy =
-  | 'pv'
-  | 'uv'
-  | 'playCount'
-  | 'playDurationSeconds'
-  | 'likeCount'
-  | 'favoriteCount'
-  | 'commentCount'
-  | 'spendPoints'
-  | 'spendKkMinor'
-  | 'aiTokens';
-
-export const OPERATOR_METRIC_KEYS: OperatorSortBy[] = [
-  'pv',
-  'uv',
-  'playCount',
-  'playDurationSeconds',
-  'likeCount',
-  'favoriteCount',
-  'commentCount',
-  'spendPoints',
-  'spendKkMinor',
-  'aiTokens',
-];
+// 功能注释：query 解析与指标枚举抽到无资源依赖模块，便于 Node check 直接 import
+export type {
+  OperatorSortBy,
+  OperatorStatsPreset,
+  OperatorStatsSearchType,
+} from './operatorStatsQuery.ts';
+export {
+  OPERATOR_METRIC_KEYS,
+  OPERATOR_SEARCH_TYPES,
+  isOperatorSortBy,
+  isOperatorStatsSearchType,
+  parseOperatorStatsQuery,
+} from './operatorStatsQuery.ts';
+import type { OperatorSortBy, OperatorStatsPreset, OperatorStatsSearchType } from './operatorStatsQuery.ts';
+import { OPERATOR_METRIC_KEYS } from './operatorStatsQuery.ts';
 
 export const OPERATOR_KPI_KEYS = OPERATOR_METRIC_KEYS;
 export type OperatorKpiKey = OperatorSortBy;
@@ -246,27 +224,6 @@ export function resolveOperatorCoverFallbackSrc(
   return fallbackPath ? getImageUrl(fallbackPath) : '';
 }
 
-export function isOperatorSortBy(value: string | null | undefined): value is OperatorSortBy {
-  return Boolean(value && OPERATOR_METRIC_KEYS.includes(value as OperatorSortBy));
-}
-
-/** 功能注释：运营全站统计搜索类型（与后端 searchType 对齐） */
-export type OperatorStatsSearchType = 'title' | 'fileId' | 'nickname' | 'userCode' | 'phone';
-
-export const OPERATOR_SEARCH_TYPES: OperatorStatsSearchType[] = [
-  'title',
-  'fileId',
-  'nickname',
-  'userCode',
-  'phone',
-];
-
-export function isOperatorStatsSearchType(
-  value: string | null | undefined,
-): value is OperatorStatsSearchType {
-  return Boolean(value && OPERATOR_SEARCH_TYPES.includes(value as OperatorStatsSearchType));
-}
-
 export function operatorSearchTypeLabelKey(type: OperatorStatsSearchType): string {
   switch (type) {
     case 'title':
@@ -360,53 +317,4 @@ export function buildOperatorStatsQuery(params: {
   }
   if (params.creatorUserId) search.set('creatorUserId', params.creatorUserId);
   return search.toString();
-}
-
-export function parseOperatorStatsQuery(search: string): {
-  preset: OperatorStatsPreset;
-  startDate?: string;
-  endDate?: string;
-  sortBy: OperatorSortBy;
-  order: 'asc' | 'desc';
-  q: string;
-  searchType: OperatorStatsSearchType;
-  creatorUserId: string;
-} {
-  const params = new URLSearchParams(search);
-  const rawPreset = params.get('preset') || '';
-  const startDate = params.get('startDate') || undefined;
-  const endDate = params.get('endDate') || undefined;
-  // 功能注释：运营全站统计无 query 时默认「全部」（非近 7 日）
-  let preset: OperatorStatsPreset = 'all';
-  if (
-    rawPreset === 'today'
-    || rawPreset === 'yesterday'
-    || rawPreset === 'last7'
-    || rawPreset === 'last30'
-    || rawPreset === 'thisWeek'
-    || rawPreset === 'thisMonth'
-    || rawPreset === 'lastMonth'
-    || rawPreset === 'all'
-    || rawPreset === 'custom'
-  ) {
-    preset = rawPreset;
-  } else if (startDate || endDate) {
-    preset = 'custom';
-  }
-
-  const sortRaw = params.get('sortBy');
-  const sortBy = isOperatorSortBy(sortRaw) ? sortRaw : 'pv';
-  const order = params.get('order') === 'asc' ? 'asc' : 'desc';
-  const searchTypeRaw = params.get('searchType');
-  const searchType = isOperatorStatsSearchType(searchTypeRaw) ? searchTypeRaw : 'title';
-  return {
-    preset,
-    startDate,
-    endDate,
-    sortBy,
-    order,
-    q: params.get('q') || '',
-    searchType,
-    creatorUserId: params.get('creatorUserId') || '',
-  };
 }

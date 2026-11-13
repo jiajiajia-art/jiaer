@@ -444,18 +444,18 @@ test('Create_创作主按钮应铺满资产卡整行避免与积分卡齐边', (
 
 test('Create_手机我的数据应三列且数字缩小', () => {
   const css = read('src/page/Create.module.css');
-  /* 功能注释：≤1080 我的数据一行三格；数字 18px，禁止再写 26px */
+  /* 功能注释：≤1080 主数据条三列紧凑；数字 ≤18px，禁止再写 26px 大字 */
   assert.match(
     css,
-    /@media \(max-width:\s*1080px\)[\s\S]*?\.statsGrid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/,
+    /@media \(max-width:\s*1080px\)[\s\S]*?\.primaryStatsBar[\s\S]*?grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/,
   );
   assert.match(
     css,
-    /@media \(max-width:\s*1080px\)[\s\S]*?\.statValue\s*\{[\s\S]*?font-size:\s*18px/,
+    /@media \(max-width:\s*1080px\)[\s\S]*?\.primaryStatValue\s*\{[\s\S]*?font-size:\s*1[0-8]px/,
   );
   assert.doesNotMatch(
     css,
-    /@media \(max-width:\s*1080px\)[\s\S]*?\.statValue\s*\{[^}]*font-size:\s*26px/,
+    /@media \(max-width:\s*1080px\)[\s\S]*?\.primaryStatValue\s*\{[^}]*font-size:\s*26px/,
   );
 });
 
@@ -503,18 +503,17 @@ test('StGameCreate_应对齐图1世界观设定暗色卡风格', () => {
 test('Document_文档中心应对齐白顶栏加墨黑阅读区', () => {
   const css = read('src/page/Document.module.css');
   const tsx = read('src/page/Document.tsx');
-  /* 功能注释：效果图保留白顶栏；正文/侧栏走 funloom 墨黑与酒红轨 */
+  /* 功能注释：全站暗色后顶栏也走墨黑；正文/侧栏酒红轨不变 */
   assert.match(css, /\.pageRoot\s*\{[\s\S]*?--doc-bg:\s*#000000/);
   assert.match(css, /\.pageRoot\s*\{[\s\S]*?--brand-red:\s*#A8283C/);
   assert.match(css, /\.pageRoot\s*\{[\s\S]*?--brand-red-deep:\s*#8E2135/);
   assert.match(css, /\.pageRoot\s*\{[\s\S]*?background:\s*var\(--doc-bg\)/);
   assert.match(css, /\.pageRoot\s*\{[\s\S]*?max-width:\s*none/);
   assert.doesNotMatch(css, /\.pageRoot\s*\{[^}]*max-width:\s*1920px/);
-  assert.match(css, /\.topNav\s*\{[\s\S]*?background:\s*#ffffff/);
+  assert.match(css, /\.topNav\s*\{[\s\S]*?background:\s*(?:#000000|var\(--doc-bg\))/);
   assert.match(css, /\.templateDownloadButton\s*\{[\s\S]*?border-radius:\s*999px/);
   assert.match(css, /\.markdownBody\s*\{[\s\S]*?color:\s*rgba\(255,\s*255,\s*255/);
   assert.match(css, /\.markdownBody h2\s*\{[\s\S]*?border-left:\s*4px solid var\(--brand-red\)/);
-  assert.match(css, /\.copyButton\s*\{[\s\S]*?background:\s*#ffffff/);
   assert.match(css, /\.sidebar\s*\{[\s\S]*?background:\s*var\(--doc-bg\)/);
   assert.match(css, /\.contentPanel\s*\{[^}]*background:\s*transparent/);
   assert.doesNotMatch(css, /\.title\s*\{[^}]*color:\s*#0f0f0f/);

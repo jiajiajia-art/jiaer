@@ -37,14 +37,10 @@ test('WarehousePanel_角色卡应对齐首页暗色表面与双列网格', () =>
   assert.match(css, /\.cardActive\s*\{[\s\S]*?border-color:\s*var\(--wh-coral\)/);
   assert.match(css, /\.cardActions \.actionPrimary\s*\{[\s\S]*?background:\s*var\(--wh-coral\)/);
   assert.match(css, /\.formOverlay\s*\{[\s\S]*?place-items:\s*center/);
-  assert.match(
-    css,
-    /@media \(max-width:\s*980px\)[\s\S]*?\.formOverlay\s*\{[\s\S]*?place-items:\s*center/,
-  );
-  assert.doesNotMatch(
-    css,
-    /@media \(max-width:\s*980px\)[\s\S]*?\.formOverlay\s*\{[\s\S]*?align-items:\s*flex-start/,
-  );
+  const mobileCss = css.slice(css.search(/@media \(max-width:\s*980px\)/));
+  const mobileOverlay = mobileCss.match(/\.formOverlay\s*\{([^}]*)\}/)?.[1] ?? '';
+  assert.match(mobileOverlay, /place-items:\s*center/);
+  assert.doesNotMatch(mobileOverlay, /align-items:\s*flex-start/);
   assert.doesNotMatch(css, /--wh-ink:\s*#17141a/);
   assert.doesNotMatch(css, /--wh-soft:\s*#fff0f2/);
 });

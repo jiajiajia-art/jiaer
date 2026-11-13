@@ -1,4 +1,14 @@
-export const ON_SERVER: boolean = import.meta.env.PROD;
+type VitePublicEnv = {
+  PROD?: boolean;
+  VITE_API_BASE_URL?: string;
+  VITE_RUNTIME?: string;
+  VITE_RECORD_CONVERSION?: string;
+};
+
+/** 功能注释：Node 单测没有 Vite 注入的 import.meta.env，缺省按非生产处理，避免整文件加载失败 */
+const viteEnv = (import.meta.env ?? {}) as VitePublicEnv;
+
+export const ON_SERVER: boolean = Boolean(viteEnv.PROD);
 
 /**
  * 功能注释：API 根地址。
@@ -7,11 +17,11 @@ export const ON_SERVER: boolean = import.meta.env.PROD;
  * - 兼容旧本地注释预设时可临时硬编码覆盖
  */
 function resolveHostAddress(): string {
-  const fromEnv = String(import.meta.env.VITE_API_BASE_URL || '').trim();
+  const fromEnv = String(viteEnv.VITE_API_BASE_URL || '').trim();
   if (fromEnv) return fromEnv.replace(/\/$/, '');
-  if (!import.meta.env.PROD) return '';
+  if (!viteEnv.PROD) return '';
   // 功能注释：Aliyun 同源 Nginx 反代（含 gogo/neo/qqq 子域）用空基址 → 请求当前域名 /api
-  if (String(import.meta.env.VITE_RUNTIME || '').trim().toLowerCase() === 'aliyun') {
+  if (String(viteEnv.VITE_RUNTIME || '').trim().toLowerCase() === 'aliyun') {
     return '';
   }
   // CF 等生产构建若未注入 env，回退 Cloudflare API（避免打到错误环境）
@@ -49,9 +59,9 @@ export function resolveImageHostAddress(imagePath: string, apiBase: string = HOS
 // 本地联调后端：改 devApiPresets.ts 的 ACTIVE_DEV_API
 // 构建部署：用 deploy profile 的 VITE_API_BASE_URL（勿在此硬编码）
 
-export const RECORD_CONVERSION = import.meta.env.PROD
+export const RECORD_CONVERSION = viteEnv.PROD
   ? true
-  : import.meta.env.VITE_RECORD_CONVERSION === 'true';
+  : viteEnv.VITE_RECORD_CONVERSION === 'true';
 
 // Language default: Simplified Chinese. Runtime switch via Navbar (zh / zh-TW / en).
 export const LANGUAGE: 'zh' | 'zh-TW' | 'en' = 'zh';

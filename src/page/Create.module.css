@@ -20,8 +20,7 @@
     --primary-light: #C23A50;
     --primary-dark: #8E2135;
     width: 100%;
-    /* 功能注释：高度交给 AppPageShell；勿再垫满屏最小高度，否则中间区被撑出多余滚动条 */
-    max-width: 1920px;
+    /* 功能注释：高度交给 AppPageShell；勿再垫满屏最小高度，否则中间区被撑出多余滚动条；全宽不封顶 1920 */
     margin: 0 auto;
     background: #000000;
     color: #FFFFFF;
@@ -898,7 +897,8 @@
 .primaryStatsBar,
 .expandedStatsBar {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    /* 功能注释：7.1 主数据条三列（KK / 织梦豆 / 作品数） */
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     align-items: stretch;
     width: 100%;
     gap: 0;
@@ -917,9 +917,9 @@
     position: relative;
 }
 
-/* 四列网格：行末不加竖线 */
-.primaryStatItem:not(:nth-child(4n))::after,
-.expandedStatItem:not(:nth-child(4n))::after {
+/* 三列网格：行末不加竖线 */
+.primaryStatItem:not(:nth-child(3n))::after,
+.expandedStatItem:not(:nth-child(3n))::after {
     content: '';
     position: absolute;
     right: 0;
@@ -1579,7 +1579,7 @@
     }
 
     .creatorHeroBadgeRow {
-        flex-basis: auto;
+        flex-basis: 100%;
         margin-left: 0;
     }
 
@@ -1643,7 +1643,7 @@
 
     .primaryStatsBar,
     .expandedStatsBar {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .primaryStatItem,
@@ -1777,7 +1777,7 @@
     }
 
     .statsGrid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 0;
     }
 
@@ -1799,7 +1799,7 @@
     }
 
     .statValue {
-        font-size: 26px;
+        font-size: 18px;
     }
 
     .statLabel {

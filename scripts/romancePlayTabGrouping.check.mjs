@@ -168,7 +168,7 @@ test('线上编辑器_创建世界五页签且基础含玩法无功能开关', {
     assert.equal(await page.getByRole('button', { name: /⑤ 玩法 Mod/ }).count(), 0);
     assert.equal(await page.getByText('底栏页签', { exact: true }).count(), 0);
     await tab(/⑤ 美化/).click();
-    for (const label of ['手机应用配置', '皮肤美化', '音乐', '开场剧情', '剧情美化', '底栏页签']) {
+    for (const label of ['手机应用配置', '皮肤美化', '开场剧情', '剧情美化', '底栏页签']) {
       await page.getByText(label, { exact: true }).first().waitFor();
     }
     if (coverDeployed) {
@@ -189,6 +189,8 @@ test('线上编辑器_创建世界五页签且基础含玩法无功能开关', {
     assert.equal(await page.getByText('基本信息', { exact: true }).count(), 0);
     assert.equal(await page.getByText('养成模块', { exact: true }).count(), 0);
     await tab(/① 基础/).click();
+    // 功能注释：音乐已从⑤美化挪到①基础
+    await page.getByText('音乐', { exact: true }).first().waitFor();
     await page.getByText('头像', { exact: true }).waitFor();
     await page.getByText('建角', { exact: true }).waitFor();
     // 功能注释：只看 Section summary 标题，避免正文「换地点」等把 body.indexOf('地点') 提前

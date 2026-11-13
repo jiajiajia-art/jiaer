@@ -16,7 +16,6 @@ import {
     MdOutlineManageAccounts,
     MdOutlinePersonOff,
     MdOutlinePlayCircle,
-    MdOutlineReceiptLong,
 } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import type { SubscriptionRedeemResult, User } from '../../api/account/auth.type';
@@ -274,17 +273,6 @@ const ProfileFunctionPanel: React.FC = () => {
                                 <MdOutlineCardMembership />
                             </span>
                             <span className={styles.functionGridLabel}>{t('profile.membershipRedeem')}</span>
-                        </button>
-
-                        <button
-                            type="button"
-                            className={styles.functionGridItem}
-                            onClick={() => navigate('/asset/details')}
-                        >
-                            <span className={styles.functionGridIcon} aria-hidden="true">
-                                <MdOutlineReceiptLong />
-                            </span>
-                            <span className={styles.functionGridLabel}>{t('profile.purchaseRecords')}</span>
                         </button>
 
                         <button

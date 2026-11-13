@@ -1,12 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { IoChevronDown, IoEyeOutline } from 'react-icons/io5';
 import { MdContentCopy, MdOutlineEdit, MdOutlineTaskAlt } from 'react-icons/md';
 import ExchangeModal from '../components/Purchase/ExchangeModal';
-import ConfirmModal from '../components/CommonModal/ConfirmModal';
-import confirmModalStyles from '../components/CommonModal/ConfirmModal.module.css';
 import { RiAccountCircleLine } from 'react-icons/ri';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Trans, useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import styles from './Create.module.css';
 import AppPageShell from '../components/Layout/AppPageShell';
@@ -20,11 +17,9 @@ import ProfilePreferenceModal from '../components/ProfilePreferenceModal';
 import { useAuthStore } from '../store/useAuthStore';
 import { useProfileIdentityEdit } from '../hooks/useProfileIdentityEdit';
 import statisticsApi from '../api/statistics/statisticsApi';
-import creatorStatsApi, { type StatsOverview } from '../api/stats/creatorStatsApi';
 import payApi from '../api/pay/payApi';
 import type { PayOrderRequest } from '../api/pay/pay.type';
 import { auth } from '../api/account/authApi';
-import { getApiErrorMessage } from '../utils/error';
 import { copyTextToClipboard } from '../utils/clipboard';
 import { getImageUrl } from '../utils/constants';
 import { getGenderSymbol, normalizeGender } from '../utils/profileCompletion';
@@ -40,14 +35,6 @@ import type { RechargeReceipt } from '../lib/rechargeReceipt';
 import accountSocialApi from '../api/account/accountSocialApi';
 
 type CreatorStatsIncentiveType = 'none' | 'incentive' | 'game_incentive' | 'code_incentive' | 'all_incentive';
-
-const formatPlayDuration = (seconds: number) => {
-    const safe = Math.max(0, Number(seconds) || 0);
-    const hours = Math.floor(safe / 3600);
-    const minutes = Math.floor((safe % 3600) / 60);
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
-};
 
 const Create: React.FC = () => {
     const { t } = useTranslation();
@@ -75,18 +62,12 @@ const Create: React.FC = () => {
         invitePendingIncome: 0,
         incentiveType: 'none' as CreatorStatsIncentiveType,
     });
-    const [creatorStats, setCreatorStats] = useState<StatsOverview | null>(null);
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [returnedRechargeReceipt, setReturnedRechargeReceipt] = useState<{ outTradeNo: string; receipt: RechargeReceipt } | null>(null);
     const [isMembershipRechargeModalOpen, setIsMembershipRechargeModalOpen] = useState(false);
     const [isVipStatusModalOpen, setIsVipStatusModalOpen] = useState(false);
     const [streakDays, setStreakDays] = useState(0);
-    const [isStatsExpanded, setIsStatsExpanded] = useState(false);
     const [isExchangeModalOpen, setIsExchangeModalOpen] = useState(false);
-    const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
-    const [isSettleDiamondsModalOpen, setIsSettleDiamondsModalOpen] = useState(false);
-    const [isSettling, setIsSettling] = useState(false);
-    const [isEarningsModalOpen, setIsEarningsModalOpen] = useState(false);
     const [isProfilePreferenceOpen, setIsProfilePreferenceOpen] = useState(false);
     const [followingCount, setFollowingCount] = useState(0);
     const [followersCount, setFollowersCount] = useState(0);
@@ -103,12 +84,6 @@ const Create: React.FC = () => {
     const membership = user?.user?.membership;
     const isVipActive = hasActiveVip(membership);
     const isPromotionPartner = Boolean(user?.user?.userSegment && user.user.userSegment !== 'normal');
-    const isWorkIncentive = stats.incentiveType === 'incentive' || stats.incentiveType === 'game_incentive' || stats.incentiveType === 'all_incentive';
-    const isCodeIncentive = stats.incentiveType === 'code_incentive' || stats.incentiveType === 'all_incentive';
-    const hasExtraEarnings = isWorkIncentive || isCodeIncentive;
-
-    const formatEarningsValue = (value: number) => (Number(value) || 0).toLocaleString('zh-CN');
-
     const getGameTotalStats = async () => {
         if (!user?.user?.id) {
             return;
@@ -132,21 +107,6 @@ const Create: React.FC = () => {
             }
         } catch (error) {
             console.error('获取我的游戏统计错误:', error);
-        }
-    };
-
-    const getCreatorOverviewStats = async () => {
-        if (!user?.user?.id) {
-            return;
-        }
-
-        try {
-            const response = await creatorStatsApi.getOverview();
-            if (response.data.success) {
-                setCreatorStats(response.data.data);
-            }
-        } catch (error) {
-            console.error('获取创作者统计错误:', error);
         }
     };
 
@@ -182,7 +142,6 @@ const Create: React.FC = () => {
 
     useEffect(() => {
         getGameTotalStats();
-        getCreatorOverviewStats();
         getUserInfo();
         getSignInStreak();
     }, [user?.user?.id]);
@@ -273,14 +232,6 @@ const Create: React.FC = () => {
         })();
     }, [location.pathname, location.search, navigate, t]);
 
-    const handlePreviewHomepage = () => {
-        if (!userCode) {
-            toast.error(t('create.previewHomepageNoCode'));
-            return;
-        }
-        navigate(`/account/${encodeURIComponent(userCode)}`);
-    };
-
     const handleOpenSocialList = (tab: 'following' | 'followers') => {
         if (!userCode) {
             toast.error(t('create.previewHomepageNoCode'));
@@ -325,56 +276,6 @@ const Create: React.FC = () => {
 
         toast.error(response.data.message || t('create.rechargeFailed'));
         return null;
-    };
-
-    const handleSettle = async () => {
-        if (isSettling) return;
-        setIsSettling(true);
-        try {
-            const response = await auth.settlePoints('points');
-            if (!response.data.success || !response.data.data) {
-                toast.error(response.data.message || t('create.settleFailed'));
-                return;
-            }
-            const pointsAmount = response.data.data.pointsSettled || 0;
-            const diamondsAmount = response.data.data.diamondsSettled || 0;
-            const successMsg = pointsAmount > 0 && diamondsAmount > 0
-                ? t('create.settleSuccessDual', { points: pointsAmount, diamonds: diamondsAmount })
-                : pointsAmount > 0
-                    ? t('create.settleSuccess', { amount: pointsAmount })
-                    : diamondsAmount > 0
-                        ? t('create.settleSuccessDiamonds', { amount: diamondsAmount })
-                        : t('create.settleSuccessZero');
-            toast.success(successMsg);
-            await Promise.all([getGameTotalStats(), getCreatorOverviewStats(), getUserInfo()]);
-            setIsSettleModalOpen(false);
-        } catch (error: unknown) {
-            toast.error(getApiErrorMessage(error, t('create.settleFailed')));
-        } finally {
-            setIsSettling(false);
-        }
-    };
-
-    const handleSettleDiamonds = async () => {
-        if (isSettling) return;
-        setIsSettling(true);
-        try {
-            const response = await auth.settlePoints('diamonds');
-            if (!response.data.success || !response.data.data) {
-                toast.error(response.data.message || t('create.settleFailed'));
-                return;
-            }
-            const amount = response.data.data.diamondsSettled || 0;
-            toast.success(amount > 0
-                ? t('create.settleSuccessDiamonds', { amount })
-                : t('create.settleSuccessZero'));
-            await Promise.all([getGameTotalStats(), getUserInfo()]);
-            setIsSettleDiamondsModalOpen(false);
-        } catch (error: unknown) {
-            toast.error(getApiErrorMessage(error, t('create.settleFailed')));
-        } finally {
-            setIsSettling(false);
-        }
     };
 
     return (
@@ -511,19 +412,11 @@ const Create: React.FC = () => {
                                                 <span className={styles.creatorSocialValue}>{followersCount}</span>
                                             </button>
                                         </div>
-                                        <button
-                                            type="button"
-                                            className={styles.creatorPreviewHomeBtn}
-                                            onClick={handlePreviewHomepage}
-                                            aria-label={t('create.previewHomepage')}
-                                        >
-                                            <IoEyeOutline className={styles.creatorPreviewHomeIcon} aria-hidden="true" />
-                                            <span>{t('create.previewHomepage')}</span>
-                                        </button>
                                     </div>
                                 </div>
                             </div>
 
+                            {/* 功能注释：7.1 精简个人中心——只保留 KK / 织梦豆 / 作品数，去掉总点赞与「更多数据」 */}
                             <div className={styles.creatorHeroStats}>
                                 <div className={styles.primaryStatsBar}>
                                     <div
@@ -564,77 +457,8 @@ const Create: React.FC = () => {
                                         <div className={styles.primaryStatValue}>{stats.totalCreated}</div>
                                         <div className={styles.primaryStatLabel}>{t('create.totalCreated')}</div>
                                     </div>
-                                    <div className={styles.primaryStatItem}>
-                                        <div className={styles.primaryStatValue}>{creatorStats?.likeCount ?? 0}</div>
-                                        <div className={styles.primaryStatLabel}>{t('creatorStats.totalLikes')}</div>
-                                    </div>
                                 </div>
-
-                                {!isStatsExpanded && (
-                                    <button
-                                        type="button"
-                                        className={styles.statsExpandToggle}
-                                        onClick={() => setIsStatsExpanded(true)}
-                                        aria-expanded={false}
-                                    >
-                                        <span>{t('create.expandMoreStats')}</span>
-                                        <IoChevronDown className={styles.statsExpandIcon} />
-                                    </button>
-                                )}
-
-                                {isStatsExpanded && (
-                                    <div className={styles.expandedStatsBar}>
-                                        <div className={styles.expandedStatItem}>
-                                            <div className={styles.primaryStatValue}>{stats.totalViews}</div>
-                                            <div className={styles.primaryStatLabel}>{t('create.totalViews')}</div>
-                                        </div>
-                                        <div className={styles.expandedStatItem}>
-                                            <div className={styles.primaryStatValue}>{stats.totalClicks}</div>
-                                            <div className={styles.primaryStatLabel}>{t('create.totalVisitors')}</div>
-                                        </div>
-                                        <div className={styles.expandedStatItem}>
-                                            <div className={styles.primaryStatValue}>{creatorStats?.playCount ?? 0}</div>
-                                            <div className={styles.primaryStatLabel}>{t('creatorStats.playCount')}</div>
-                                        </div>
-                                        <div className={styles.expandedStatItem}>
-                                            <div className={styles.primaryStatValue}>{creatorStats?.playRounds ?? 0}</div>
-                                            <div className={styles.primaryStatLabel}>{t('creatorStats.playRounds')}</div>
-                                        </div>
-                                        <div className={styles.expandedStatItem}>
-                                            <div className={styles.primaryStatValue}>
-                                                {formatPlayDuration(creatorStats?.playDurationSeconds ?? 0)}
-                                            </div>
-                                            <div className={styles.primaryStatLabel}>{t('creatorStats.playDuration')}</div>
-                                        </div>
-                                        <div className={styles.expandedStatItem}>
-                                            <div className={styles.primaryStatValue}>{creatorStats?.shareCount ?? 0}</div>
-                                            <div className={styles.primaryStatLabel}>{t('creatorStats.shareCount')}</div>
-                                        </div>
-                                        <div className={styles.expandedStatItem}>
-                                            <div className={styles.primaryStatValue}>{creatorStats?.commentCount ?? 0}</div>
-                                            <div className={styles.primaryStatLabel}>{t('creatorStats.commentCount')}</div>
-                                        </div>
-                                        <div className={styles.expandedStatItem}>
-                                            <div className={styles.primaryStatValue}>{creatorStats?.spendPoints ?? 0}</div>
-                                            <div className={styles.primaryStatLabel}>{t('creatorStats.spendPoints')}</div>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
-
-                            {isStatsExpanded && (
-                                <button
-                                    type="button"
-                                    className={`${styles.statsExpandToggle} ${styles.statsExpandToggleFooter}`}
-                                    onClick={() => setIsStatsExpanded(false)}
-                                    aria-expanded={true}
-                                >
-                                    <span>{t('create.collapseMoreStats')}</span>
-                                    <IoChevronDown
-                                        className={`${styles.statsExpandIcon} ${styles.statsExpandIconOpen}`}
-                                    />
-                                </button>
-                            )}
                         </div>
 
                         <div className={styles.accountPanel}>
@@ -734,129 +558,7 @@ const Create: React.FC = () => {
                     void getUserInfo();
                 }}
             />
-            {isEarningsModalOpen && (
-                <div
-                    className={styles.earningsModalOverlay}
-                    onClick={() => setIsEarningsModalOpen(false)}
-                >
-                    <div
-                        className={styles.earningsModal}
-                        role="dialog"
-                        aria-modal="true"
-                        aria-label={t('create.accountRewardSettlement')}
-                        onClick={(event) => event.stopPropagation()}
-                    >
-                        <button
-                            type="button"
-                            className={styles.earningsModalCloseBtn}
-                            onClick={() => setIsEarningsModalOpen(false)}
-                            aria-label={t('common.close')}
-                        >
-                            <span className={styles.earningsModalCloseIcon} aria-hidden="true" />
-                        </button>
-                        <h3 className={styles.earningsModalTitle}>{t('create.accountRewardSettlement')}</h3>
-                        <div className={styles.earningsModalBody}>
-                            <div className={styles.earningsModalPrimary}>
-                                <div className={styles.earningsPanelItem}>
-                                    <div className={styles.earningsPanelLabel}>{t('create.pendingRewardPoints')}</div>
-                                    <div className={styles.earningsPanelValueRow}>
-                                        <div className={styles.earningsPanelValue}>{formatEarningsValue(stats.totalAmount)}</div>
-                                        {stats.totalAmount > 0 && (
-                                            <button
-                                                type="button"
-                                                className={styles.earningsInlineSettleButton}
-                                                onClick={() => setIsSettleModalOpen(true)}
-                                                disabled={isSettling}
-                                            >
-                                                {t('create.settle')}
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className={styles.earningsPanelItem}>
-                                    <div className={styles.earningsPanelLabel}>{t('create.pendingRewardDiamonds')}</div>
-                                    <div className={styles.earningsPanelValueRow}>
-                                        <div className={styles.earningsPanelValue}>{formatEarningsValue(stats.totalDiamondsAmount)}</div>
-                                        {stats.totalDiamondsAmount > 0 && (
-                                            <button
-                                                type="button"
-                                                className={styles.earningsInlineSettleButton}
-                                                onClick={() => setIsSettleDiamondsModalOpen(true)}
-                                                disabled={isSettling}
-                                            >
-                                                {t('create.settle')}
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                            {hasExtraEarnings && (
-                                <div className={styles.earningsModalExtra}>
-                                    {isWorkIncentive && (
-                                        <div className={styles.earningsExtraItem}>
-                                            <div className={styles.earningsExtraLabel}>{t('create.totalIncentiveEarnings')}</div>
-                                            <div className={styles.earningsExtraValue}>{stats.totalIncentiveAmount}</div>
-                                        </div>
-                                    )}
-                                    {isWorkIncentive && (
-                                        <div className={styles.earningsExtraItem}>
-                                            <div className={styles.earningsExtraLabel}>{t('create.pendingIncentiveEarnings')}</div>
-                                            <div className={styles.earningsExtraValue}>{stats.pendingIncome}</div>
-                                        </div>
-                                    )}
-                                    {isCodeIncentive && (
-                                        <div className={styles.earningsExtraItem}>
-                                            <div className={styles.earningsExtraLabel}>{t('create.inviteCodeTotalEarnings')}</div>
-                                            <div className={styles.earningsExtraValue}>{stats.inviteTotalAmount}</div>
-                                        </div>
-                                    )}
-                                    {isCodeIncentive && (
-                                        <div className={styles.earningsExtraItem}>
-                                            <div className={styles.earningsExtraLabel}>{t('create.inviteCodePendingEarnings')}</div>
-                                            <div className={styles.earningsExtraValue}>{stats.invitePendingIncome}</div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {identityEditModal}
-
-            <ConfirmModal
-                isOpen={isSettleModalOpen}
-                onConfirm={handleSettle}
-                onCancel={() => setIsSettleModalOpen(false)}
-                title={t('create.confirmSettle')}
-                message={(
-                    <Trans
-                        i18nKey="create.settleConfirmMessage"
-                        values={{ amount: stats.totalAmount }}
-                        components={{ hl: <strong className={confirmModalStyles.amountHighlight} /> }}
-                    />
-                )}
-                confirmButtonText={isSettling ? t('create.settling') : t('create.confirmSettleBtn')}
-                cancelButtonText={t('create.cancel')}
-                tone="dark"
-            />
-            <ConfirmModal
-                isOpen={isSettleDiamondsModalOpen}
-                onConfirm={handleSettleDiamonds}
-                onCancel={() => setIsSettleDiamondsModalOpen(false)}
-                title={t('create.confirmSettleDiamonds')}
-                message={(
-                    <Trans
-                        i18nKey="create.settleConfirmDiamondsMessage"
-                        values={{ amount: stats.totalDiamondsAmount }}
-                        components={{ hl: <strong className={confirmModalStyles.amountHighlight} /> }}
-                    />
-                )}
-                confirmButtonText={isSettling ? t('create.settling') : t('create.confirmSettleBtn')}
-                cancelButtonText={t('create.cancel')}
-                tone="dark"
-            />
 
             <ProfilePreferenceModal
                 isOpen={isProfilePreferenceOpen}
