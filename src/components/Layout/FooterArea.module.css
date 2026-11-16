@@ -1,6 +1,7 @@
 /* 功能注释：全站页脚——PC 品牌左+三列右；移动端仅法律一行（见 max-width:768） */
 .footer {
-  --footer-surface: #0A0A0A;
+  /* 功能注释：页脚跟主题底色；深色仍近黑，浅色不再锁死 #0A0A0A 黑条 */
+  --footer-surface: var(--color-bg);
   --footer-title: var(--color-text);
   --footer-muted: var(--color-text-secondary);
   --footer-faint: var(--color-text-muted);

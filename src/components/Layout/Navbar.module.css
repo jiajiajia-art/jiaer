@@ -30,12 +30,12 @@
     --navbar-action-bg-hover: color-mix(in srgb, var(--color-text) 14%, transparent);
     --navbar-action-border: color-mix(in srgb, var(--color-text) 14%, transparent);
     --navbar-action-text: var(--color-text);
-    /* 与首页「立即加入」同色：酒红扁平胶囊，非亮珊瑚外发光 */
-    --navbar-login-bg: linear-gradient(180deg, #b83248 0%, #8e2135 100%);
-    --navbar-login-bg-hover: linear-gradient(180deg, #b83248 0%, #8e2135 100%);
+    /* 功能注释：登录钮跟主题 primary；禁止写死 #b83248/#8e2135，浅色模式也能对上品牌色 */
+    --navbar-login-bg: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
+    --navbar-login-bg-hover: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
     --navbar-login-border: transparent;
     --navbar-login-text: var(--color-on-primary);
-    --navbar-login-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    --navbar-login-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent);
     --navbar-login-shadow-hover: inset 0 1px 0 color-mix(in srgb, var(--color-text) 16%, transparent);
     /* 功能注释：头像下拉对齐 funloom 墨黑片 + 白字（与语言弹窗同层级），禁止白底粉条旧稿 */
     --navbar-menu-bg: var(--color-surface-2);

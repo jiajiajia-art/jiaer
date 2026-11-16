@@ -6,8 +6,9 @@
     --rank-text: var(--color-text);
     --rank-muted: var(--color-text-muted);
     --rank-tag: color-mix(in srgb, var(--color-surface) 55%, transparent);
-    --rank-primary: #A8283C;
-    --rank-primary-deep: #8E2135;
+    /* 功能注释：榜单强调色跟主题 primary，禁止写死酒红以免浅色模式发脏 */
+    --rank-primary: var(--color-primary);
+    --rank-primary-deep: var(--color-primary-bold);
     --rank-primary-hot: var(--color-primary);
     --rank-rank-muted: var(--color-text-muted);
     --rank-border: color-mix(in srgb, var(--color-text) 8%, transparent);

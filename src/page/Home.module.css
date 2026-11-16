@@ -1,18 +1,18 @@
-.pageRoot {
+﻿.pageRoot {
     --home-navbar-height: var(--app-desktop-navbar-height);
-    /* 功能注释：首页本地暗色 funloom 令牌（黑底 + 酒红），不改全局 body */
-    --primary: #A8283C;
-    --primary-light: #B83248;
-    --primary-dark: #8E2135;
+    /* 功能注释：首页跟 data-mode 主题令牌；深色仍是黑底酒红，浅色自动变浅，禁止写死 #000/#8E2135 */
+    --primary: var(--color-primary);
+    --primary-light: var(--color-primary);
+    --primary-dark: var(--color-primary-bold);
     /* 功能注释：筛选条上间距 / 下间距=一半，保证精选卡→筛选→列表节奏一致 */
     --home-filter-gap-above: 16px;
     --home-filter-gap-below: calc(var(--home-filter-gap-above) / 2);
-    /* 功能注释：PC 全宽铺黑，避免超宽屏两侧露出 body 白底 */
+    /* 功能注释：PC 全宽铺底色，避免超宽屏两侧露出 body 白底 */
     width: 100%;
     min-height: 100vh;
     max-width: none;
     margin: 0;
-    background: #000000;
+    background: var(--color-bg);
     color: var(--color-text);
 }
 
@@ -378,7 +378,7 @@
     gap: 10px;
     cursor: pointer;
     text-align: left;
-    background: #1A1A1A;
+    background: var(--color-surface);
     box-shadow: none;
     position: relative;
     overflow: hidden;
@@ -1154,7 +1154,7 @@
 .themeShowcaseItemActive:hover {
     transform: none;
     border-color: transparent;
-    background: #8E2135;
+    background: var(--color-primary-bold);
     color: var(--color-on-primary);
     box-shadow: none;
 }
@@ -1244,7 +1244,7 @@
 @media (min-width: 769px) {
     .homeTicker {
         border-color: color-mix(in srgb, var(--color-text) 10%, transparent);
-        background: #1A1A1A;
+        background: var(--color-surface);
         box-shadow: none;
     }
 
@@ -1317,7 +1317,7 @@
     .themeShowcaseItemActive,
     .themeShowcaseItemActive:hover {
         border-color: transparent;
-        background: #8E2135;
+        background: var(--color-primary-bold);
         color: var(--color-on-primary);
         box-shadow: none;
     }
@@ -1430,7 +1430,7 @@
         border-radius: 999px;
         grid-template-columns: auto auto minmax(0, 1fr) auto;
         border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
-        background: #1A1A1A;
+        background: var(--color-surface);
         box-shadow: none;
     }
 
@@ -1573,7 +1573,7 @@
     .themeShowcaseItemActive,
     .themeShowcaseItemActive:hover {
         border-color: transparent;
-        background: #8E2135;
+        background: var(--color-primary-bold);
         color: var(--color-on-primary);
         box-shadow: none;
     }
@@ -1614,7 +1614,7 @@
         padding: 14px 16px 14px 14px;
         border: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
         border-radius: 18px;
-        background: #1C1C1E;
+        background: var(--color-surface);
         box-shadow: none;
         display: grid;
         grid-template-columns: auto minmax(0, 1fr) max-content;
@@ -1686,7 +1686,7 @@
         min-width: 88px;
         padding: 11px 18px;
         border-radius: 999px;
-        background: linear-gradient(180deg, #B83248 0%, #8E2135 100%);
+        background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
         box-shadow: 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent) inset;
         color: var(--color-on-primary);
         font-size: 14px;
@@ -1835,7 +1835,7 @@
     width: 4px;
     height: 18px;
     border-radius: 999px;
-    background: linear-gradient(180deg, #B83248 0%, #8E2135 100%);
+    background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
     box-shadow: 0 0 10px color-mix(in srgb, var(--color-primary) 45%, transparent);
 }
 
