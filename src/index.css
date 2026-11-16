@@ -3,7 +3,7 @@
   --app-desktop-shell-max: 1560px;
   --app-desktop-gutter: clamp(24px, 2vw, 40px);
   --app-desktop-navbar-height: 80px;
-  --app-mobile-navbar-height: 60px;
+  --app-mobile-navbar-height: 72px;
   /* 功能注释：内容避让用「栏高 + 安全区」；中间滚动区 top/bottom 读这两个，禁止各页再写死上边距 */
   --app-navbar-offset: calc(var(--app-desktop-navbar-height) + env(safe-area-inset-top, 0px));
   --app-bottom-nav-offset: 0px;
@@ -60,24 +60,35 @@ html,
   font-family: 'Sarasa Gothic Rounded', 'Source Han Rounded SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
-html, body { height: 100%; }
+html, body {
+  height: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
 /* 功能注释：全站壳底改为黑，避免暗色页内容不足时底部露出白底 */
-body { background: var(--color-bg); color: var(--color-text); overflow: hidden; }
+body { background: var(--color-bg); color: var(--color-text); }
 
 #root {
-  min-height: 100vh;
-  max-height: 100vh;
+  height: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
   overflow-x: hidden;
   overflow-y: auto;
   background: var(--color-bg);
 }
 
-/* 与 Navbar.module.css 手机高度 60px 对齐；底栏 72px + Home Indicator */
+/* 功能注释：有 AppPageShell 时禁止 #root 再滚一层，否则版权与固定底栏之间会空出一截 */
+#root:has([data-app-page-shell]) {
+  overflow: hidden;
+}
+
+/* 与 Navbar.module.css 手机高度 72px 对齐；底栏 80px + Home Indicator */
 @media (max-width: 768px) {
   :root {
     --app-desktop-navbar-height: var(--app-mobile-navbar-height);
     --app-navbar-offset: calc(var(--app-mobile-navbar-height) + env(safe-area-inset-top, 0px));
-    --app-bottom-nav-offset: calc(72px + env(safe-area-inset-bottom, 0px));
+    --app-bottom-nav-offset: calc(80px + env(safe-area-inset-bottom, 0px));
   }
 }
 

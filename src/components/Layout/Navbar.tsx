@@ -23,16 +23,15 @@ import UserAvatar from '../UserAvatar';
 import LanguageSelectModal from './LanguageSelectModal';
 import toast from 'react-hot-toast';
 import { isCreatorFrozen, isPublishBanned } from '../../lib/userPunishment';
+import { resolveMode, useThemeSettings } from '../../lib/theme';
 
-/** 功能注释：暗色 funloom 导航图标基路径（assetsv2/home） */
+/** 功能注释：暗色 funloom 导航图标基路径（assetsv2/home）；白描边位图需配合 --icon-invert-filter */
 const HOME_ICON_BASE = `${import.meta.env.BASE_URL}data/assetsv2/home`;
 const NAV_SEARCH_ICON = `${HOME_ICON_BASE}/nav_search.webp`;
 const NAV_MESSAGE_ICON = `${HOME_ICON_BASE}/nav_message.webp`;
-/** 功能注释：顶栏圆形按钮半透明底（效果图切图） */
-const NAV_BTN_BG = `${HOME_ICON_BASE}/nav_btn_bg.webp`;
-const NAVBAR_BTN_BG_STYLE = {
-    ['--navbar-btn-circle-bg' as string]: `url("${NAV_BTN_BG}")`,
-};
+/** 功能注释：浅色用黑字 LOGO.png，深色用白字 LOGO2.png，避免浅底上看不见 */
+const LOGO_LIGHT_SRC = `${import.meta.env.BASE_URL}data/assets/LOGO.png`;
+const LOGO_DARK_SRC = `${import.meta.env.BASE_URL}data/assets/LOGO2.png`;
 
 const isWebViewEnv = (): boolean => {
     const win = window as { __wxjs_environment?: string };
@@ -72,6 +71,8 @@ const Navbar: React.FC<NavbarProps> = ({
     const { isAuthenticated, initialize, logout, user } = useAuthStore();
     const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
     const { unreadCount, refreshUnreadCount, clearUnreadCount } = useMessageStore();
+    const { mode: themeMode } = useThemeSettings();
+    const isDarkMode = resolveMode(themeMode) === 'dark';
     useMessageRealtime();
     const publishBanned = isPublishBanned(user?.user?.publishBanUntil);
     const creatorFrozen = isCreatorFrozen(user?.user?.creatorFrozen);
@@ -85,7 +86,7 @@ const Navbar: React.FC<NavbarProps> = ({
     const closeLanguageModal = useCallback(() => setShowLanguageModal(false), []);
 
     const handleLanguageChange = (code: AppLanguageCode) => {
-        void applyAppLanguage(code, (lng) => i18n.changeLanguage(lng));
+        void applyAppLanguage(code, (lng) => i18n.changeLanguage(lng), { userChoice: true });
     };
 
     useEffect(() => {
@@ -207,7 +208,7 @@ const Navbar: React.FC<NavbarProps> = ({
 
     const activeNav = getActiveNav();
     const unreadBadgeText = unreadCount > 99 ? '99+' : (unreadCount > 0 ? String(unreadCount) : '');
-    const logoSrc = `${import.meta.env.BASE_URL}data/assets/LOGO2.png`;
+    const logoSrc = isDarkMode ? LOGO_DARK_SRC : LOGO_LIGHT_SRC;
     const navbarContainerClassName = [
         styles.navbarContainer,
         mobileVariant === 'home-overlay' ? styles.navbarContainerMobileHome : '',
@@ -273,16 +274,16 @@ const Navbar: React.FC<NavbarProps> = ({
     };
 
     return (
-        <div className={navbarContainerClassName} style={NAVBAR_BTN_BG_STYLE}>
+        <div className={navbarContainerClassName}>
             <div className={styles.navbar}>
                 {/* 功能注释：点击品牌 Logo 回首页，与「首页」导航一致 */}
                 <button
                     type="button"
                     className={styles.logo}
                     onClick={() => runLeaveAction(() => navigate('/home'))}
-                    aria-label="回到首页"
+                    aria-label={t('nav.logoHome')}
                 >
-                    <img src={logoSrc} alt="funloom" />
+                    <img key={logoSrc} src={logoSrc} alt="funloom" />
                 </button>
 
                 <div className={styles.navLinks}>

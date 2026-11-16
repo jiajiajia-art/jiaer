@@ -46,15 +46,16 @@
 
 .title {
     margin: 0 0 12px;
-    font-size: 20px;
-    font-weight: 700;
+    font-size: var(--modal-fs-title);
+    font-weight: var(--modal-fw-title);
+    line-height: var(--modal-lh-title);
     color: var(--color-text);
 }
 
 .intro {
     margin: 0 0 14px;
-    font-size: 13px;
-    line-height: 1.65;
+    font-size: var(--modal-fs-body);
+    line-height: var(--modal-lh-body);
     color: color-mix(in srgb, var(--color-text) 88%, transparent);
     text-align: left;
 }
@@ -63,8 +64,8 @@
     margin: 0 0 14px;
     padding-left: 1.25em;
     text-align: left;
-    font-size: 13px;
-    line-height: 1.7;
+    font-size: var(--modal-fs-body);
+    line-height: var(--modal-lh-body);
     color: color-mix(in srgb, var(--color-text) 88%, transparent);
 }
 
@@ -74,8 +75,8 @@
 
 .footerNote {
     margin: 0 0 18px;
-    font-size: 12px;
-    line-height: 1.5;
+    font-size: var(--modal-fs-caption);
+    line-height: var(--modal-lh-meta);
     color: var(--color-text-secondary);
     text-align: left;
 }
@@ -91,8 +92,8 @@
     flex: 1;
     min-height: 44px;
     border-radius: 999px;
-    font-size: 14px;
-    font-weight: 700;
+    font-size: var(--modal-fs-button);
+    font-weight: var(--modal-fw-button);
     cursor: pointer;
     border: none;
     outline: none;
@@ -137,12 +138,12 @@
     }
 
     .title {
-        font-size: 18px;
+        font-size: var(--modal-fs-title);
     }
 
     .intro,
     .list {
-        font-size: 12.5px;
+        font-size: var(--modal-fs-body);
     }
 }
 

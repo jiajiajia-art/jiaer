@@ -284,20 +284,25 @@ export function CastRow({ segments: raw, changes = [], npcs, onOpen }: { segment
 export function ErrorBanner({ error }: { error: { title: string; text: string; preview?: string } }) {
   const { regenerate, busy } = useGame();
   return (
-    <div className="flex items-start gap-3 rounded-2xl border border-[var(--danger)]/30 bg-[var(--danger)]/5 px-3.5 py-2.5">
+    <div className="flex flex-col gap-2.5 rounded-[var(--radius-ui)] border border-jade/20 bg-gradient-to-br from-jade/[0.07] to-paper px-3.5 py-3 shadow-[var(--shadow-ui)] sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
-        <div className="text-[13px] font-semibold text-[var(--danger)]">{error.title}</div>
+        <div className="text-[13px] font-bold text-ink">{error.title}</div>
         <div className="mt-0.5 whitespace-pre-line text-[12px] leading-relaxed text-ink-soft">{error.text}</div>
         {/* 功能注释：解析失败时已生成的正文只供查看，不算进剧情、不进提示词 */}
         {error.preview && (
           <details className="mt-1.5">
-            <summary className="cursor-pointer text-[11.5px] font-semibold text-ink-soft">查看这次生成的正文（未计入剧情）</summary>
-            <div className="mt-1 max-h-48 overflow-y-auto whitespace-pre-line rounded-lg bg-paper/70 px-2.5 py-2 text-[12px] leading-relaxed text-ink-soft">{error.preview}</div>
+            <summary className="cursor-pointer text-[11.5px] font-semibold text-ink-soft">查看这次生成的正文</summary>
+            <div className="mt-1 max-h-40 overflow-y-auto whitespace-pre-line rounded-lg bg-paper-2/80 px-2.5 py-2 text-[12px] leading-relaxed text-ink-soft">{error.preview}</div>
           </details>
         )}
       </div>
-      <button type="button" disabled={busy} onClick={() => regenerate()} className="shrink-0 rounded-full bg-[var(--danger)] px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-50">
-        ↻ 重新生成
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => regenerate()}
+        className="shrink-0 self-end rounded-full bg-jade px-3.5 py-1.5 text-[12.5px] font-bold text-paper transition hover:brightness-110 disabled:opacity-50 sm:self-center"
+      >
+        重新生成
       </button>
     </div>
   );
@@ -500,7 +505,7 @@ export default function StoryTab() {
                 <button
                   key={i}
                   onClick={() => send(o.value)}
-                  className="group flex items-center gap-2 rounded-xl border border-line bg-paper px-3.5 py-2.5 text-left text-[14px] text-ink transition hover:border-jade hover:bg-jade/8"
+                  className="option-btn group flex items-center gap-2 rounded-xl border border-line bg-paper px-3.5 py-2.5 text-left text-ink transition hover:border-jade hover:bg-jade/8"
                 >
                   <IconSparkle width={15} height={15} className="shrink-0 text-jade opacity-60 transition group-hover:opacity-100" />
                   {o.label}
@@ -524,7 +529,7 @@ export default function StoryTab() {
                 placeholder="写下你的行动或台词……（Enter 发送 / Shift+Enter 换行）"
                 rows={1}
                 disabled={busy}
-                className="max-h-32 min-h-[42px] flex-1 resize-none rounded-xl border border-line bg-paper px-3 py-2.5 text-[14px] text-ink outline-none transition focus:border-jade disabled:opacity-60"
+                className="story-input max-h-32 min-h-[42px] flex-1 resize-none rounded-xl border border-line bg-paper px-3 py-2.5 text-[14px] text-ink outline-none transition focus:border-jade disabled:opacity-60"
               />
               <button
                 onClick={() => send(input)}

@@ -45,7 +45,9 @@ const AppPageShell: React.FC<AppPageShellProps> = ({
     <div className={[styles.shell, shellClassName || ''].filter(Boolean).join(' ')} data-app-page-shell="1">
       <Navbar {...navbarProps} />
       <main ref={mainRef} className={mainCls} data-app-page-main="1">
-        {children}
+        <div className={styles.mainInner} data-app-page-main-inner="1">
+          {children}
+        </div>
       </main>
       {!hideBottomNav ? <MobileBottomNav hidden={bottomNavHidden} /> : null}
     </div>

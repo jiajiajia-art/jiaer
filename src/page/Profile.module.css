@@ -10,8 +10,8 @@
     display: flex;
     margin: 0;
     padding: 0;
-    margin-bottom: 200px;
-    min-height: 100vh;
+    /* 功能注释：底栏避让交给 AppPageShell，禁止再垫 200px 造成版权下方大块空白 */
+    min-height: 0;
 }
 
 .main {
@@ -28,6 +28,7 @@
 .profileFunctionPanel {
     display: flex;
     flex-direction: column;
+    gap: 12px;
     width: 100%;
     position: relative;
     margin-top: 0;
@@ -281,7 +282,7 @@
 .functionGrid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 4px 2px;
+    gap: 10px 8px;
 }
 
 .functionGridItem {
@@ -291,9 +292,9 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
-    padding: 8px 4px;
-    border-radius: 10px;
+    gap: 8px;
+    padding: 10px 6px;
+    border-radius: 12px;
     background: transparent;
     color: var(--color-text);
     cursor: pointer;
@@ -805,13 +806,9 @@
     max-height: calc(100dvh - 32px - env(safe-area-inset-bottom));
     overflow: hidden;
     border-radius: 6px;
-    background:
-        linear-gradient(0deg, color-mix(in srgb, var(--color-text) 15%, transparent), color-mix(in srgb, var(--color-text) 15%, transparent)),
-        linear-gradient(180deg, var(--color-surface-2) 0%, color-mix(in srgb, var(--color-surface) 78%, transparent) 100%);
-    border: 0.68px solid transparent;
-    backdrop-filter: blur(47px);
-    -webkit-backdrop-filter: blur(47px);
-    box-shadow: none;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 18px 48px color-mix(in srgb, var(--color-shadow) 22%, transparent);
     padding: 18px 16px 14px;
     display: flex;
     flex-direction: column;
@@ -898,18 +895,19 @@
 
 .dailyTaskModalTitle {
     margin: 0 0 8px;
-    font-size: 17px;
-    font-weight: 600;
+    font-size: var(--modal-fs-title);
+    font-weight: var(--modal-fw-title);
+    line-height: var(--modal-lh-title);
     color: var(--color-text);
-    letter-spacing: 0.02em;
+    letter-spacing: 0.01em;
     text-align: center;
 }
 
 .dailyTaskSummary {
     margin: 0;
-    font-size: 13px;
-    font-weight: 400;
-    line-height: 1.4;
+    font-size: var(--modal-fs-meta);
+    font-weight: var(--modal-fw-meta);
+    line-height: var(--modal-lh-meta);
     color: var(--color-text-secondary);
     text-align: left;
 }
@@ -967,15 +965,15 @@
     padding: 12px;
     border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     border-radius: 12px;
-    background: color-mix(in srgb, var(--color-surface) 56%, transparent);
-    opacity: 0.58;
+    background: var(--color-surface-2);
+    opacity: 1;
     transition: opacity 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .makeupCardRewardReady {
     opacity: 1;
     border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
-    background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 16%, transparent), color-mix(in srgb, var(--color-text) 4%, transparent));
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
 }
 
 .makeupCardRewardHeader {
@@ -1237,15 +1235,15 @@
     .pageRoot {
         width: 100%;
         min-width: auto;
-        min-height: 100vh;
+        min-height: 0;
         height: auto;
         background-size: cover;
-        padding-bottom: 90px;
+        /* 功能注释：勿再 padding-bottom 躲底栏，壳层已用 --app-bottom-nav-offset */
+        padding-bottom: 0;
     }
 
     .mainContent {
-        min-height: calc(100vh - 40px - 70px);
-        /* padding-top: 20px; */
+        min-height: 0;
     }
 
     .main {
@@ -1300,17 +1298,17 @@
     }
 
     .functionListHeading {
-        margin: 0 2px 8px;
+        margin: 0 2px 6px;
         font-size: 14px;
     }
 
     .functionGrid {
-        gap: 2px 0;
+        gap: 2px 4px;
     }
 
     .functionGridItem {
-        padding: 6px 4px;
-        gap: 5px;
+        padding: 4px 2px;
+        gap: 4px;
     }
 
     .functionGridIcon {
@@ -1382,11 +1380,11 @@
     }
 
     .dailyTaskModalTitle {
-        font-size: 16px;
+        font-size: var(--modal-fs-title);
     }
 
     .dailyTaskSummary {
-        font-size: 12px;
+        font-size: var(--modal-fs-meta);
     }
 
     .dailyTaskItem {
@@ -1614,8 +1612,9 @@
 }
 
 .editNameModalTitle {
-    font-size: 18px;
-    font-weight: 600;
+    font-size: var(--modal-fs-title);
+    font-weight: var(--modal-fw-title);
+    line-height: var(--modal-lh-title);
     color: var(--color-text);
 }
 
@@ -1686,28 +1685,28 @@
 
 /* ================= 统一视觉（与弹窗体系一致） ================= */
 .functionList {
-    padding: 16px 14px 12px;
+    padding: 14px 12px 12px;
     border: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
-    border-radius: 18px;
+    border-radius: 14px;
     background: var(--color-surface);
 }
-.functionListHeading { margin: 0 6px 12px; font-size: 15px; }
-.functionGrid { gap: 6px 4px; }
-.functionGridItem { gap: 8px; padding: 10px 4px; border-radius: 14px; transition: background 0.15s, transform 0.1s; }
+.functionListHeading { margin: 0 4px 6px; font-size: 14px; }
+.functionGrid { gap: 2px 4px; }
+.functionGridItem { gap: 4px; padding: 4px 2px; border-radius: 12px; transition: background 0.15s, transform 0.1s; }
 .functionGridItem:active { transform: scale(0.96); }
 .functionGridIcon {
-    width: 44px; height: 44px;
-    border-radius: 14px;
+    width: 36px; height: 36px;
+    border-radius: 10px;
     background: color-mix(in srgb, var(--color-text) 6%, transparent);
     color: var(--color-text);
-    font-size: 22px;
+    font-size: 18px;
     transition: background 0.15s, color 0.15s;
 }
-.functionGridIcon svg { width: 22px; height: 22px; }
-.functionGridIcon img { width: 24px; height: 24px; }
+.functionGridIcon svg { width: 18px; height: 18px; }
+.functionGridIcon img { width: 20px; height: 20px; }
 .functionGridItem:hover .functionGridIcon,
 .functionGridItemActive .functionGridIcon { background: color-mix(in srgb, var(--color-primary) 16%, transparent); color: var(--color-primary-fg); }
-.functionGridLabel { color: color-mix(in srgb, var(--color-text) 78%, transparent); font-size: 12px; }
+.functionGridLabel { color: color-mix(in srgb, var(--color-text) 78%, transparent); font-size: 11px; }
 .functionButton { border-radius: 10px; }
 .functionButtonCheckIn,
 .functionButton:not(.functionButtonCheckIn):not(.functionButtonSignedIn) { background: var(--color-primary); color: var(--color-on-primary); }

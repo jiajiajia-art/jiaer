@@ -12,7 +12,9 @@ import { getImageUrl, resolveGameCoverUrl } from '../utils/constants';
 import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
 import { getGameTypeLabel, getGameTypeTone, type GameTypeTone } from '../utils/gameTypeLabel';
 import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
+import { translateThemeLabel } from '../utils/themeTags';
 import type { UserGameData } from '../api/home/getGameData.type';
+import i18n from '../i18n';
 import {
     clearRankingsLoadingFlags,
     isRankingsVisibleAllSectionKey,
@@ -76,6 +78,8 @@ interface RankedGame {
     tags: string[];
     gameTags: string[];
     gameTypeLabel: string;
+    gameTagsRaw?: string | null;
+    engine?: string | null;
     gameTypeTone: GameTypeTone;
     theme_tag_names?: string[];
 }
@@ -98,13 +102,13 @@ function apiGameToRanked(item: RankingsGameItem): RankedGame {
         ? item.game_tags.split(/[,，;；\s]+/).filter(Boolean)
         : [];
     const tags = tagsFromTheme.length > 0 ? tagsFromTheme : tagsFromGame;
-    const author = item.author_name && item.author_name.trim() ? item.author_name : '匿名作者';
+    const author = item.author_name && item.author_name.trim() ? item.author_name : i18n.t('pagesRankings.anonymousAuthor');
     const coverRaw = resolveGameCoverUrl(item) || item.cover_url || '';
     const cover = getImageUrl(coverRaw) || DEFAULT_RANKING_COVER;
-    const category = tags[0] ?? item.engine ?? '综合';
+    const category = tags[0] ?? item.engine ?? i18n.t('pagesRankings.categoryFallback');
     const updatedAt = item.updated_at ? new Date(item.updated_at) : null;
     const updateInfo = updatedAt && !Number.isNaN(updatedAt.getTime())
-        ? `更新于 ${updatedAt.toLocaleDateString('zh-CN')}`
+        ? i18n.t('pagesRankings.updatedAt', { date: updatedAt.toLocaleDateString() })
         : '';
     const gameTypeLabel = getGameTypeLabel(item.game_tags, item.engine);
     const gameTypeTone = getGameTypeTone(item.game_tags, item.engine);
@@ -128,6 +132,8 @@ function apiGameToRanked(item: RankingsGameItem): RankedGame {
         tags,
         gameTags: tagsFromGame,
         gameTypeLabel,
+        gameTagsRaw: item.game_tags,
+        engine: item.engine,
         gameTypeTone,
         theme_tag_names: item.theme_tag_names ?? [],
     };
@@ -139,7 +145,7 @@ function apiAuthorToRanked(item: RankingsAuthorItem): RankedAuthor {
     return {
         creatorUserId: item.creator_user_id,
         userCode: item.user_code || '',
-        nickname: item.nickname?.trim() || '匿名作者',
+        nickname: item.nickname?.trim() || i18n.t('pagesRankings.anonymousAuthor'),
         avatarUrl: getImageUrl(avatarRaw) || DEFAULT_AUTHOR_AVATAR,
         playRounds: Number(item.play_rounds || 0),
         publicWorkCount: Number(item.public_work_count || 0),
@@ -182,27 +188,23 @@ function rankedGameToPreview(game: RankedGame): UserGameData {
     };
 }
 
-const TAB_CONFIG: { key: RankingTab; label: string; labelZh: string }[] = [
-    { key: 'all', label: 'All', labelZh: '全部' },
-    { key: 'hot', label: 'Hot', labelZh: '人气榜' },
-    { key: 'new', label: 'New', labelZh: '新作榜' },
-    { key: 'rising', label: 'Rising', labelZh: '飙升榜' },
-    { key: 'sales', label: 'Sales', labelZh: '高分榜' },
-    { key: 'romance', label: 'Interaction', labelZh: '互动榜' },
-    { key: 'authors', label: 'Authors', labelZh: '作者榜' },
+const TAB_CONFIG: { key: RankingTab }[] = [
+    { key: 'all' },
+    { key: 'hot' },
+    { key: 'new' },
+    { key: 'rising' },
+    { key: 'sales' },
+    { key: 'romance' },
+    { key: 'authors' },
 ];
 
-const ALL_TAB_SECTION_CONFIG: Array<{
-    key: RankingsCategoryKey;
-    label: string;
-    labelZh: string;
-}> = [
-    { key: 'overall', label: 'Hot', labelZh: '人气榜' },
-    { key: 'new', label: 'New', labelZh: '新作榜' },
-    { key: 'hot', label: 'Rising', labelZh: '飙升榜' },
-    { key: 'interaction', label: 'Interaction', labelZh: '互动榜' },
-    { key: 'authors', label: 'Authors', labelZh: '作者榜' },
-    { key: 'rating', label: 'Sales', labelZh: '高分榜' },
+const ALL_TAB_SECTION_CONFIG: Array<{ key: RankingsCategoryKey }> = [
+    { key: 'overall' },
+    { key: 'new' },
+    { key: 'hot' },
+    { key: 'interaction' },
+    { key: 'authors' },
+    { key: 'rating' },
 ];
 
 const RANK_BADGE_ASSETS: Record<number, string> = {
@@ -256,7 +258,16 @@ const emptyGameTabState = (): TabState => ({
 });
 
 const Rankings: React.FC = () => {
-    const { i18n } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const language = i18n.resolvedLanguage || i18n.language;
+    const localizeThemeTag = useCallback(
+        (name: string) => translateThemeLabel(name, t, language),
+        [language, t],
+    );
+    const localizeGameTypeLabel = useCallback(
+        (game: RankedGame) => getGameTypeLabel(game.gameTagsRaw, game.engine) || game.gameTypeLabel,
+        [],
+    );
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<RankingTab>('all');
     const [apiTabState, setApiTabState] = useState<Record<GameRankingTab, TabState>>(
@@ -296,8 +307,6 @@ const Rankings: React.FC = () => {
             allAbortRef.current?.abort();
         };
     }, []);
-
-    const isZh = useMemo(() => i18n.language.startsWith('zh'), [i18n.language]);
 
     /** 功能注释：中止后必须清 loading，否则 shouldFetch 虽会重拉，UI 也会一直转圈 */
     const releaseGameTabLoading = (tab: GameRankingTab) => {
@@ -364,7 +373,7 @@ const Rankings: React.FC = () => {
 
             const payload = resp?.data;
             if (!payload?.success) {
-                throw new Error(payload?.message || '加载排行榜失败');
+                throw new Error(payload?.message || t('pagesRankings.errors.loadFailed'));
             }
             const items = Array.isArray(payload.data) ? payload.data.map(apiGameToRanked) : [];
             setApiTabState((prev) => {
@@ -401,7 +410,7 @@ const Rankings: React.FC = () => {
                 return;
             }
             if (!isMountedRef.current) return;
-            const message = e?.response?.data?.message || e?.message || '加载排行榜失败，请稍后再试';
+            const message = e?.response?.data?.message || e?.message || t('pagesRankings.errors.loadFailedRetry');
             setApiTabState((prev) => ({
                 ...prev,
                 [tab]: { ...prev[tab], loading: false, loadingMore: false, error: message },
@@ -446,7 +455,7 @@ const Rankings: React.FC = () => {
 
             const payload = resp?.data;
             if (!payload?.success) {
-                throw new Error(payload?.message || '加载作者榜失败');
+                throw new Error(payload?.message || t('pagesRankings.errors.loadAuthorsFailed'));
             }
             const items = Array.isArray(payload.data) ? payload.data.map(apiAuthorToRanked) : [];
             setAuthorTabState((prev) => {
@@ -478,7 +487,11 @@ const Rankings: React.FC = () => {
                 return;
             }
             if (!isMountedRef.current) return;
-            const message = e?.response?.data?.message || e?.message || '加载作者榜失败，请稍后再试';
+            const rawMessage = e?.response?.data?.message || e?.message || '';
+            // 功能注释：cn-test 等旧后端尚未上线 type=authors，接口会回「可选值: overall|new|…」；转成可读提示
+            const message = /无效的排行榜类型|overall\s*\|\s*new\s*\|\s*hot/i.test(String(rawMessage))
+                ? t('pagesRankings.errors.authorsApiUnavailable')
+                : (rawMessage || t('pagesRankings.errors.loadAuthorsFailedRetry'));
             setAuthorTabState((prev) => ({ ...prev, loading: false, loadingMore: false, error: message }));
         } finally {
             if (append) loadingMoreRef.current = false;
@@ -501,7 +514,7 @@ const Rankings: React.FC = () => {
 
             const payload = resp?.data;
             if (!payload?.success) {
-                throw new Error(payload?.message || '加载排行榜失败');
+                throw new Error(payload?.message || t('pagesRankings.errors.loadFailed'));
             }
 
             const rawData = payload.data ?? {};
@@ -529,7 +542,7 @@ const Rankings: React.FC = () => {
             }
             if (!isMountedRef.current) return;
             const message =
-                e?.response?.data?.message || e?.message || '加载排行榜失败，请稍后再试';
+                e?.response?.data?.message || e?.message || t('pagesRankings.errors.loadFailedRetry');
             setAllTabState((prev) => ({ ...prev, loading: false, error: message }));
         }
     };
@@ -679,12 +692,12 @@ const Rankings: React.FC = () => {
         const heat = game.heatCount || game.playCount || 0;
         const favorite = game.favoriteCount || game.likeCount || 0;
         return (
-            <div className={rowClassName} aria-label={isZh ? '热度与收藏' : 'Heat and favorites'}>
-                <span className={styles.statItem} title={isZh ? '热度' : 'Heat'}>
+            <div className={rowClassName} aria-label={t('pagesRankings.aria.heatAndFavorites')}>
+                <span className={styles.statItem} title={t('pagesRankings.aria.heat')}>
                     <CardFlameIcon className={styles.statFlame} />
                     <span className={styles.statValue}>{heat}</span>
                 </span>
-                <span className={styles.statItem} title={isZh ? '收藏' : 'Favorites'}>
+                <span className={styles.statItem} title={t('pagesRankings.aria.favorites')}>
                     <CardHeartIcon className={styles.statHeart} />
                     <span className={styles.statValue}>{favorite}</span>
                 </span>
@@ -697,7 +710,7 @@ const Rankings: React.FC = () => {
             return (
                 <div className={styles.stateWrap}>
                     <div className={styles.spinner} aria-hidden="true" />
-                    <span className={styles.stateText}>{isZh ? '加载中…' : 'Loading…'}</span>
+                    <span className={styles.stateText}>{t('pagesRankings.loading')}</span>
                 </div>
             );
         }
@@ -706,7 +719,7 @@ const Rankings: React.FC = () => {
                 <div className={styles.stateWrap}>
                     <span className={styles.stateText}>{error}</span>
                     <button className={styles.retryBtn} onClick={onRetry}>
-                        {isZh ? '重试' : 'Retry'}
+                        {t('pagesRankings.retry')}
                     </button>
                 </div>
             );
@@ -715,7 +728,7 @@ const Rankings: React.FC = () => {
             return (
                 <div className={styles.stateWrap}>
                     <span className={styles.stateText}>
-                        {isZh ? '暂无数据' : 'No data yet'}
+                        {t('pagesRankings.noData')}
                     </span>
                 </div>
             );
@@ -753,13 +766,11 @@ const Rankings: React.FC = () => {
                                     <h4 className={styles.horizontalCardTitle}>{author.nickname}</h4>
                                 </div>
                                 <div className={styles.horizontalCardAuthor}>
-                                    {isZh
-                                        ? `游玩轮次 ${author.playRounds}`
-                                        : `${author.playRounds} play rounds`}
+                                    {t('pagesRankings.playRounds', { count: author.playRounds })}
                                 </div>
                                 {author.topWorkTitle ? (
                                     <div className={styles.horizontalCardDesc}>
-                                        {isZh ? `代表作：${author.topWorkTitle}` : `Top work: ${author.topWorkTitle}`}
+                                        {t('pagesRankings.topWork', { title: author.topWorkTitle })}
                                     </div>
                                 ) : null}
                             </div>
@@ -776,7 +787,7 @@ const Rankings: React.FC = () => {
             return (
                 <div className={styles.stateWrap}>
                     <div className={styles.spinner} aria-hidden="true" />
-                    <span className={styles.stateText}>{isZh ? '加载中…' : 'Loading…'}</span>
+                    <span className={styles.stateText}>{t('pagesRankings.loading')}</span>
                 </div>
             );
         }
@@ -788,7 +799,7 @@ const Rankings: React.FC = () => {
                         className={styles.retryBtn}
                         onClick={() => fetchGameTabData(activeTab as GameRankingTab)}
                     >
-                        {isZh ? '重试' : 'Retry'}
+                        {t('pagesRankings.retry')}
                     </button>
                 </div>
             );
@@ -797,7 +808,7 @@ const Rankings: React.FC = () => {
             return (
                 <div className={styles.stateWrap}>
                     <span className={styles.stateText}>
-                        {isZh ? '暂无数据' : 'No data yet'}
+                        {t('pagesRankings.noData')}
                     </span>
                 </div>
             );
@@ -820,15 +831,15 @@ const Rankings: React.FC = () => {
                                     alt={game.title}
                                     className={styles.horizontalCardCover}
                                 />
-                                {game.gameTypeLabel && (
+                                {localizeGameTypeLabel(game) ? (
                                     <div
                                         className={styles.horizontalCardTag}
                                         style={resolveGameTypeToneStyle(game.gameTypeTone)}
-                                        title={game.gameTypeLabel}
+                                        title={localizeGameTypeLabel(game)}
                                     >
-                                        {game.gameTypeLabel}
+                                        {localizeGameTypeLabel(game)}
                                     </div>
-                                )}
+                                ) : null}
                             </div>
                             <div className={styles.horizontalCardInfo}>
                                 <div className={styles.horizontalCardTitleRow}>
@@ -855,7 +866,7 @@ const Rankings: React.FC = () => {
                                 {getThemeTags(game).length > 0 ? (
                                     <div className={styles.horizontalCardTags}>
                                         {getThemeTags(game).slice(0, 2).map((tag) => (
-                                            <span key={tag} className={styles.horizontalCardTagPill}>{tag}</span>
+                                            <span key={tag} className={styles.horizontalCardTagPill}>{localizeThemeTag(tag)}</span>
                                         ))}
                                     </div>
                                 ) : null}
@@ -879,7 +890,7 @@ const Rankings: React.FC = () => {
             mainRef={mainRef}
         >
                 <div className={styles.pageInner}>
-                <div className={styles.tabBar} role="tablist" aria-label={isZh ? '排行分类' : 'Ranking categories'}>
+                <div className={styles.tabBar} role="tablist" aria-label={t('pagesRankings.aria.rankingCategories')}>
                     {filteredTabs.map((tab) => (
                         <button
                             key={tab.key}
@@ -890,7 +901,7 @@ const Rankings: React.FC = () => {
                             onClick={() => setActiveTab(tab.key)}
                         >
                             <span className={styles.tabLabel}>
-                                {isZh ? tab.labelZh : tab.label}
+                                {t(`pagesRankings.tabs.${tab.key}`)}
                             </span>
                             {activeTab === tab.key && (
                                 <span className={styles.tabUnderline} />
@@ -912,10 +923,10 @@ const Rankings: React.FC = () => {
                                 <div key={section.key} className={styles.categoryBox}>
                                     <div className={styles.categoryBoxHeader}>
                                         <h2 className={styles.categoryBoxTitle}>
-                                            {isZh ? section.labelZh : section.label}
+                                            {t(`pagesRankings.sections.${section.key}`)}
                                         </h2>
                                         <span className={styles.categoryBoxMore} aria-hidden="true">
-                                            {isZh ? '更多' : 'More'}
+                                            {t('pagesRankings.more')}
                                             <img src={`${import.meta.env.BASE_URL}data/assets/向右箭头.svg`} alt="" className={styles.moreArrow} />
                                         </span>
                                     </div>
@@ -937,7 +948,7 @@ const Rankings: React.FC = () => {
                             <div className={styles.stateWrap} style={{ gridColumn: '1 / -1' }}>
                                 <span className={styles.stateText}>{allTabState.error}</span>
                                 <button className={styles.retryBtn} onClick={fetchAllTabData}>
-                                    {isZh ? '重试' : 'Retry'}
+                                    {t('pagesRankings.retry')}
                                 </button>
                             </div>
                         ) : (
@@ -949,14 +960,14 @@ const Rankings: React.FC = () => {
                                         <div key={section.key} className={styles.categoryBox}>
                                             <div className={styles.categoryBoxHeader}>
                                                 <h2 className={styles.categoryBoxTitle}>
-                                                    {isZh ? section.labelZh : section.label}
+                                                    {t(`pagesRankings.sections.${section.key}`)}
                                                 </h2>
                                                 <button
                                                     type="button"
                                                     className={styles.categoryBoxMore}
                                                     onClick={() => setActiveTab('authors')}
                                                 >
-                                                    {isZh ? '更多' : 'More'}
+                                                    {t('pagesRankings.more')}
                                                     <img src={`${import.meta.env.BASE_URL}data/assets/向右箭头.svg`} alt="" className={styles.moreArrow} />
                                                 </button>
                                             </div>
@@ -979,9 +990,7 @@ const Rankings: React.FC = () => {
                                                         <div className={styles.categoryBoxInfo}>
                                                             <div className={styles.categoryBoxTitle2}>{author.nickname}</div>
                                                             <div className={styles.categoryBoxAuthor}>
-                                                                {isZh
-                                                                    ? `游玩轮次 ${author.playRounds}`
-                                                                    : `${author.playRounds} rounds`}
+                                                                {t('pagesRankings.playRoundsShort', { count: author.playRounds })}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -997,14 +1006,14 @@ const Rankings: React.FC = () => {
                                     <div key={section.key} className={styles.categoryBox}>
                                         <div className={styles.categoryBoxHeader}>
                                             <h2 className={styles.categoryBoxTitle}>
-                                                {isZh ? section.labelZh : section.label}
+                                                {t(`pagesRankings.sections.${section.key}`)}
                                             </h2>
                                             <button
                                                 type="button"
                                                 className={styles.categoryBoxMore}
                                                 onClick={() => setActiveTab(API_TYPE_TO_TAB[section.key])}
                                             >
-                                                {isZh ? '更多' : 'More'}
+                                                {t('pagesRankings.more')}
                                                 <img src={`${import.meta.env.BASE_URL}data/assets/向右箭头.svg`} alt="" className={styles.moreArrow} />
                                             </button>
                                         </div>
@@ -1020,15 +1029,15 @@ const Rankings: React.FC = () => {
                                                     <span className={styles.categoryBoxRank} data-rank={index + 1}>{index + 1}</span>
                                                     <div className={styles.categoryBoxCoverWrap}>
                                                         <img src={game.coverUrl} alt={game.title} className={styles.categoryBoxCover} />
-                                                        {game.gameTypeLabel && (
+                                                        {localizeGameTypeLabel(game) ? (
                                                             <div
                                                                 className={styles.categoryBoxTag}
                                                                 style={resolveGameTypeToneStyle(game.gameTypeTone)}
-                                                                title={game.gameTypeLabel}
+                                                                title={localizeGameTypeLabel(game)}
                                                             >
-                                                                {game.gameTypeLabel}
+                                                                {localizeGameTypeLabel(game)}
                                                             </div>
-                                                        )}
+                                                        ) : null}
                                                     </div>
                                                     <div className={styles.categoryBoxInfo}>
                                                         <div className={styles.categoryBoxTitle2}>{game.title}</div>
@@ -1044,7 +1053,7 @@ const Rankings: React.FC = () => {
                                                         {themeTags.length > 0 ? (
                                                             <div className={styles.categoryBoxMeta}>
                                                                 {themeTags.slice(0, 2).map((tag) => (
-                                                                    <span key={tag} className={styles.categoryBoxMetaPill}>{tag}</span>
+                                                                    <span key={tag} className={styles.categoryBoxMetaPill}>{localizeThemeTag(tag)}</span>
                                                                 ))}
                                                             </div>
                                                         ) : null}
@@ -1072,7 +1081,7 @@ const Rankings: React.FC = () => {
                     )}
                     <div ref={loadMoreSentinelRef} className={styles.loadMoreSentinel} aria-hidden="true" />
                     {authorTabState.loadingMore ? (
-                        <div className={styles.loadMoreHint}>{isZh ? '加载中…' : 'Loading…'}</div>
+                        <div className={styles.loadMoreHint}>{t('pagesRankings.loading')}</div>
                     ) : null}
                     </>
                 ) : (
@@ -1080,7 +1089,7 @@ const Rankings: React.FC = () => {
                     {renderApiContent()}
                     <div ref={loadMoreSentinelRef} className={styles.loadMoreSentinel} aria-hidden="true" />
                     {apiTabCurrent?.loadingMore ? (
-                        <div className={styles.loadMoreHint}>{isZh ? '加载中…' : 'Loading…'}</div>
+                        <div className={styles.loadMoreHint}>{t('pagesRankings.loading')}</div>
                     ) : null}
                     </>
                 )}

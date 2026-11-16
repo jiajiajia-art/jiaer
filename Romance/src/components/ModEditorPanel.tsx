@@ -18,6 +18,7 @@ import {
   AUTHOR_PREVIEW_FATAL,
   assessAuthorPreview,
   assessAuthorRequiredFields,
+  isAuthorPreview,
   requestAuthorPreview,
   type AuthorPreviewSession,
   type AuthorRequiredIssue,
@@ -940,6 +941,7 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
       )}
       {requiredGate && (
         <Modal title={`${requiredGate.action}前还需补全`} onClose={() => setRequiredGate(null)} heavyBackdrop>
+          <div className="settings-fixed">
           <p className="text-[13px] leading-relaxed text-ink-soft">
             以下 {requiredGate.issues.length} 项缺失，补全前不能{requiredGate.action}。点击任一项可直接定位：
           </p>
@@ -949,12 +951,13 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
                 key={issue.field}
                 type="button"
                 onClick={() => goRequiredIssue(issue)}
-                className="flex w-full items-center justify-between gap-3 rounded-xl border border-line bg-paper px-3 py-2 text-left text-[12.5px] font-semibold text-ink transition hover:border-jade hover:text-jade"
+                className="settings-card flex w-full items-center justify-between gap-3 rounded-xl border bg-paper px-3 py-2 text-left text-[12.5px] font-semibold text-ink transition hover:border-jade hover:text-jade"
               >
                 <span>{issue.label}</span>
-                <span aria-hidden>›</span>
+                <span aria-hidden className="text-jade">›</span>
               </button>
             ))}
+          </div>
           </div>
         </Modal>
       )}
@@ -1137,7 +1140,8 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
           ← 返回修改设定
         </button>
       ) : null}
-      {draft.pending && (
+      {/* 功能注释：作者预览时编辑器壳仍保活；草稿冲突弹窗不得再挂到预览局内页上 */}
+      {draft.pending && !isAuthorPreview() && (
         <Modal title="发现本机未保存的草稿" locked onClose={() => { /* 只能点两个按钮，遮罩 / Esc / 关闭都不选版本 */ }}>
           <p className="text-[13px] leading-relaxed text-ink-soft">
             {(() => {
@@ -1187,12 +1191,14 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
       )}
       {/* 功能注释：选完版本前不打开表单，只保留顶栏与弹窗，避免先看到/滚到上次填写位 */}
       {!draft.pending && !authorSimplify && (
-        <ScopeBanner scope="newgame">模组编辑保存后，在下次「开新局」时生效；当前存档继续使用开局时的内容。想改当前存档，请用世界书 / 地图编辑器等面板。</ScopeBanner>
+        <div className="wg-scope-banner">
+          <ScopeBanner scope="newgame">模组编辑保存后，在下次「开新局」时生效；当前存档继续使用开局时的内容。想改当前存档，请用世界书 / 地图编辑器等面板。</ScopeBanner>
+        </div>
       )}
 
       {!draft.pending && onAiChat && (
         <button type="button" onClick={() => onAiChat(structuredClone(m))}
-          className="flex w-full items-center justify-between gap-2 rounded-2xl border border-jade/40 bg-gradient-to-r from-jade/10 to-coral/10 px-3 py-2 text-left transition hover:border-jade">
+          className="wg-ai-chat-banner flex w-full items-center justify-between gap-2 rounded-2xl border border-jade/40 bg-gradient-to-r from-jade/10 to-coral/10 px-3 py-2 text-left transition hover:border-jade">
           <span>
             <span className="flex items-center gap-1 text-[12.5px] font-bold text-ink"><IconSpark size={14} /> 用对话修改这个模组</span>
             <span className="block text-[11px] text-ink-soft">直接说「加个理智值属性」「把打工收入减半」，AI 改好后可再回来手调；未保存的改动会一起带过去</span>
@@ -1269,10 +1275,9 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
                   className={`${inp} ${descOver ? "!border-coral" : ""}`}
                   rows={2}
                   value={m.description ?? ""}
-                  placeholder="按世界观摘要的约 100 字简介（列表与开局页展示，可改）"
+                  placeholder="约 100 字简介（列表 / 开局页展示，可改）"
                   onChange={(e) => setM({ ...m, description: e.target.value })}
                 />
-                <Help>默认是世界观摘要，不是创作者长设定原文；可手改。</Help>
                 <FieldErr>{descErr}</FieldErr>
               </label>
               <label className="sm:col-span-2">
@@ -1287,10 +1292,9 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
                   className={`${inp} max-h-[9.5rem] resize-y overflow-y-auto ${toneOver ? "!border-coral" : ""}`}
                   rows={3}
                   value={scriptToneText}
-                  placeholder="生成世界时由 AI 填写的系统提示词；也可事后手改（最多 5000 字）"
+                  placeholder="AI 生成时可自动填入；开局与每回合注入，最多 5000 字"
                   onChange={(e) => setC({ prompt: applyScriptTone(c.prompt, e.target.value) })}
                 />
-                <Help>生成世界时由 AI 写出并填入；开局与每回合都会注入。超出 5000 字标红，不能照常保存。</Help>
                 <FieldErr>{toneErr}</FieldErr>
               </label>
             </div>
@@ -1329,10 +1333,9 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
                   className={`${inp} ${descOver ? "!border-coral" : ""}`}
                   rows={2}
                   value={m.description ?? ""}
-                  placeholder="按世界观摘要的约 100 字简介（可改，最多 200 字）"
+                  placeholder="约 100 字简介（可改，最多 200 字）"
                   onChange={(e) => setM({ ...m, description: e.target.value })}
                 />
-                <Help>默认是世界观摘要，不是创作者长设定原文；可手改。</Help>
                 <FieldErr>{descErr}</FieldErr>
               </label>
             </div>
@@ -1348,10 +1351,9 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
                 className={`${inp} max-h-[9.5rem] resize-y overflow-y-auto ${toneOver ? "!border-coral" : ""}`}
                 rows={3}
                 value={scriptToneText}
-                placeholder="生成世界时由 AI 填写的系统提示词；也可事后手改（最多 5000 字）"
+                placeholder="AI 生成时可自动填入；开局与每回合注入，最多 5000 字"
                 onChange={(e) => setC({ prompt: applyScriptTone(c.prompt, e.target.value) })}
               />
-              <Help>生成世界时由 AI 写出并填入；开局与每回合都会注入。超出 5000 字标红，不能照常保存。</Help>
               <FieldErr>{toneErr}</FieldErr>
             </label>
             <div>
@@ -1404,11 +1406,10 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
         title="时间与推进"
         target="author-field-start-date"
         on={[c.startDate, c.travel?.apPerTurn, c.travel?.advanceUnit].some(has)}
-        hint="开局日期 · 行动点 · 按日/周/月/年推进 · 年龄随日历（内置）"
+        hint="开局日期 · 行动点 · 推进节奏"
         count={[c.startDate, c.travel?.apPerTurn, c.travel?.advanceUnit, c.travel?.advanceDays].filter((x) => x !== undefined && x !== "").length || undefined}
       >
-        {/* 功能注释：只留日历机制一句；开局地点/开场页/资金等跳转说明不对创作者展示 */}
-        <p className="text-[11px] leading-relaxed text-ink-soft">本引擎用真实日历推进：主线推进前进日历并回满行动点；换地点、进支线扣行动点但不推进日历。此处只编日期与推进节奏。</p>
+        {/* 功能注释：去掉大段机制说明，只留字段；日历/扣点规则见行动点旁短提示 */}
         <div>
           <span className={lbl}>开局日期</span>
           <StartDateSelects
@@ -1418,7 +1419,6 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
           />
           <FieldErr>{dateErr}</FieldErr>
         </div>
-        {/* 功能注释：开局日期下不再挂灰字说明；年/月/日选择本身已够用，建角也不可自选 */}
         <ModTravelEditor part="pace" value={c.travel} rooms={roomIds.map((id) => ({ id, name: rooms[id].name ?? id }))} onChange={(travel) => setC({ travel })} />
       </Section>
 
@@ -1427,7 +1427,7 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
         g="base"
         title="头像"
         on={has(c.avatars)}
-        hint="私库 · 公库 · 分类 · 匹配优先级 · 通用兜底（随本剧保存）"
+        hint="匹配优先级 · 通用兜底"
         count={(Object.keys(c.avatars?.pools ?? {}).length + (c.avatars?.publicRandom?.length ?? 0) + (c.avatars?.match ? 1 : 0)) || undefined}
         defaultOpen
       >
@@ -1833,8 +1833,7 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
         />
       </Section>
 
-      <Section g="story" title="固定事件" target="fixed-events" on={has(c.fixedEvents) || has(c.events)} hint="首次事件 · 预设剧本 · 时间 / 条件触发 · 事件链 · 可 AI 帮写 · 开新局写入" count={c.fixedEvents?.length}>
-        <Help>「开局即可触发」且无前置锁定的条目即首次事件；勿在其它分组再存一份相同事件表。</Help>
+      <Section g="story" title="固定事件" target="fixed-events" on={has(c.fixedEvents) || has(c.events)} hint="时间 / 条件触发 · 可 AI 帮写" count={c.fixedEvents?.length}>
         {/* 功能注释：事件库只传本作品 events/eventGroups；新建为空，禁止回退娱乐圈 123 条预设 */}
         <FixedEventsPanel
           value={c.fixedEvents}
@@ -1862,7 +1861,7 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
         g="story"
         title="剧情线"
         on={has(c.storylines) || has(c.sidelines) || has(c.endings) || has(c.timeLimit) || has(c.gradeDims) || has(c.tuning?.economy)}
-        hint="主线 · 支线 · 结局（时限 / 自定义结局 / 评级 / 经济规则）"
+        hint="主线 · 支线 · 结局"
         count={(c.storylines?.length ?? 0) + (c.sidelines?.length ?? 0) + (c.endings?.length ?? 0) || undefined}
       >
         <PlotLinesTabs

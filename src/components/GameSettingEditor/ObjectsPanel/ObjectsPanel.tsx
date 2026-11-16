@@ -141,7 +141,7 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
                 } catch (error) {
                     // 自动保存失败，显示确认弹窗
                     console.error('自动保存图片失败:', error);
-                    toast.error('自动保存失败，请手动保存');
+                    toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCsPanel.s5ea19fd44b'));
                 }
             }
             
@@ -174,7 +174,7 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
                     } catch (error) {
                         // 自动保存失败，显示确认弹窗
                         console.error('自动保存图片失败:', error);
-                        toast.error('自动保存失败，请手动保存');
+                        toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCsPanel.s5ea19fd44b'));
                     }
                 }
                 
@@ -202,7 +202,7 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
         // 创建新物品（如果自动保存成功，checkBeforeSwitch 已经处理了切换，这里仍然需要创建新物品）
         const newObject: ObjectItem = {
             item_id: `item-${Date.now()}`,
-            name: '新建物品',
+            name: t('gameSettingEditor.objectsPanel.objectDetail.safc6fc22e9'),
             icon: '',
             category: 'consumable',
             stackable: false,
@@ -236,7 +236,7 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
         try {
             const resp = await objectsData.deleteObject(fileId, objectToDelete);
             if (resp.data?.success === false) {
-                toast.error(resp.data.message || '删除失败，请稍后重试');
+                toast.error(resp.data.message || t('gameRating.deleteFailed'));
                 return;
             }
 
@@ -245,13 +245,13 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
                 const remainingObjects = objects.filter(obj => obj.item_id !== objectToDelete);
                 setActiveObjectId(remainingObjects.length > 0 ? remainingObjects[0].item_id : null);
             }
-            toast.success('删除成功');
+            toast.success(t('gameRating.deleteSuccess'));
             setDeleteModalOpen(false);
             setObjectToDelete(null);
 
         } catch (error: any) {
             console.error('删除物品失败:', error);
-            toast.error('删除失败，请检查网络连接');
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCsPanel.sdc451551cf'));
         }
     };
 
@@ -263,7 +263,7 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
     // 一键生成所有图片
     const handleGenerateAllClick = async () => {
         if (!fileId) {
-            toast.error('缺少必要数据');
+            toast.error(t('gameSettingEditor.attributeGrowthPanel.attributeGrowthPanel.s2f396374b7'));
             return;
         }
 
@@ -273,17 +273,17 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
                 setRequiredPoints(response.data.points || 0);
                 setGenerateAllModalOpen(true);
             } else {
-                toast.error('计算织梦豆失败');
+                toast.error(t('gameSettingEditor.objectsPanel.objectsPanel.sace61d65f6'));
             }
         } catch (error: any) {
             console.error('计算积分失败:', error);
-            toast.error('计算织梦豆失败：' + (error.message || '请检查网络连接'));
+            toast.error(t('gameSettingEditor.objectsPanel.objectsPanel.s34e375583f') + (error.message || t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s73a13d2b99')));
         }
     };
 
     const handleConfirmGenerateAll = async () => {
         if (!fileId) {
-            toast.error('缺少必要数据');
+            toast.error(t('gameSettingEditor.attributeGrowthPanel.attributeGrowthPanel.s2f396374b7'));
             return;
         }
 
@@ -293,14 +293,14 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
         try {
             const response = await objectsData.generateAllObjectImages(fileId);
             if (response.data?.success) {
-                toast.success('所有物品图片生成成功');
+                toast.success(t('gameSettingEditor.objectsPanel.objectsPanel.sed38fca374'));
                 await getObjects(); // 刷新物品列表
             } else {
-                toast.error('生成失败：' + (response.data?.message || '未知错误'));
+                toast.error(t('gameSettingEditor.objectsPanel.objectsPanel.s2fd30ac65d') + (response.data?.message || t('gameSettingEditor.objectsPanel.objectsPanel.s5f76edc5de')));
             }
         } catch (error: any) {
             console.error('生成所有图片失败:', error);
-            toast.error('生成失败：' + (error.message || '请检查网络连接'));
+            toast.error(t('gameSettingEditor.objectsPanel.objectsPanel.s2fd30ac65d') + (error.message || t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s73a13d2b99')));
         } finally {
             setIsGeneratingAll(false);
         }
@@ -357,7 +357,7 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
             }
         } catch (error: any) {
             console.error('更新物品状态失败:', error);
-            toast.error('更新失败，请检查网络连接');
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCsPanel.s28e51dba11'));
         }
     };
 
@@ -382,7 +382,7 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
                     />
                     <div className={styles.buttonTextContainer}>
                         <span className={styles.buttonMainText}>
-                            {isGeneratingAll ? '生成中...' : '一键生成所有物品图片'}
+                            {isGeneratingAll ? t('createGame.generating') : t('gameSettingEditor.objectsPanel.objectsPanel.s7356fb8c92')}
                         </span>
                         <span className={styles.buttonSubText}>{LEGACY_WORLD_OBJECT_BATCH_GENERATION_COST}织梦豆/张</span>
                     </div>
@@ -423,10 +423,10 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
                 isOpen={deleteModalOpen}
                 onConfirm={handleConfirmDelete}
                 onCancel={handleCancelDelete}
-                title="删除物品"
+                title={t('gameSettingEditor.objectsPanel.objectsPanel.s3bbb558a1d')}
                 message={objectToDelete ? `确定要删除物品 "${objects.find(o => o.item_id === objectToDelete)?.name || '未命名物品'}" 吗？删除后不可恢复。` : '确定要删除此物品吗？删除后不可恢复。'}
-                confirmButtonText="确认删除"
-                cancelButtonText="取消"
+                confirmButtonText={t('createGame.confirmDelete')}
+                cancelButtonText={t('warehouse.cards.cancel')}
             />
 
             {/* 保存确认弹窗 */}
@@ -440,7 +440,7 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
                             setIsBlockingSwitch(false);
                             executePendingAction();
                         } catch (error) {
-                            toast.error('保存失败，请重试');
+                            toast.error(t('createGame.saveFailedRetry'));
                         }
                     } else {
                         setSaveConfirmModalOpen(false);
@@ -459,10 +459,10 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
                     setPendingAction(null);
                     setIsBlockingSwitch(false);
                 }}
-                title="未保存的修改"
-                message="您有未保存的修改，是否要保存？"
-                saveButtonText="保存"
-                discardButtonText="不保存"
+                title={t('createGame.unsavedChanges')}
+                message={t('createGame.unsavedChangesMessage')}
+                saveButtonText={t('warehouse.cards.save')}
+                discardButtonText={t('common.discard')}
             />
 
             {/* 一键生成所有图片确认弹窗 */}
@@ -470,10 +470,10 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
                 isOpen={generateAllModalOpen}
                 onConfirm={handleConfirmGenerateAll}
                 onCancel={handleCancelGenerateAll}
-                title="一键生成所有物品图片"
+                title={t('gameSettingEditor.objectsPanel.objectsPanel.s7356fb8c92')}
                 message={`本次将为所有物品生成图片，共需扣除 ${requiredPoints} 织梦豆，是否继续？`}
-                confirmButtonText="确认生成"
-                cancelButtonText="取消"
+                confirmButtonText={t('warehouse.avatars.generateConfirm')}
+                cancelButtonText={t('warehouse.cards.cancel')}
             />
 
             {/* 一键生成全部图片加载遮罩 */}

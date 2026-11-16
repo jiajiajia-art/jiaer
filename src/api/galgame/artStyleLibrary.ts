@@ -54,6 +54,10 @@ export const artStyleLibraryApi = {
     const res = await fetch(`${BASE()}/${encodeURIComponent(id)}`, { method: 'PUT', headers: authHeaders(token), body: JSON.stringify(body) });
     return parseJson(res);
   },
+  remove: async (token: string, id: string) => {
+    const res = await fetch(`${BASE()}/${encodeURIComponent(id)}`, { method: 'DELETE', headers: authHeaders(token, false) });
+    return { httpStatus: res.status, ...(await parseJson(res)) };
+  },
   disable: async (token: string, id: string) => {
     const res = await fetch(`${BASE()}/${encodeURIComponent(id)}/disable`, { method: 'POST', headers: authHeaders(token, false) });
     return parseJson(res);

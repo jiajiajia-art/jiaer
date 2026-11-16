@@ -263,7 +263,9 @@ function Root() {
           "font-song", "font-hei", "font-round", "font-elegant", "font-brush", "font-hand", "font-cursive", "font-pixel",
           "nav-icon-c", "nav-label-c", "nav-has-img", "ico-c", "ico-sw",
         );
-        root.classList.add("font-hei");
+        // 功能注释：创作壳卸掉局内皮肤配色，但字体必须跟「设置」一致（含自定义字体文件）
+        root.classList.add(`font-${look.font ?? "song"}`);
+        ensureGameFontsLoaded();
         delete root.dataset.bubble;
         delete root.dataset.avatar;
         delete root.dataset.aframe;
@@ -273,7 +275,10 @@ function Root() {
         delete root.dataset.navanim;
         delete root.dataset.ibtn;
         delete root.dataset.ibtnfill;
-        applyFreeStyle(undefined, undefined, undefined);
+        const fontOnly = look.free?.font?.url && look.free.font.name
+          ? { on: true as const, font: look.free.font }
+          : undefined;
+        applyFreeStyle(fontOnly, undefined, undefined);
         applyLookCss("");
         for (const k of ["--nav-c", "--nav-icon", "--nav-label", "--nav-img", "--ico-c", "--btn-c", "--ico-sw", "--ico-scale", "--scene-dim", "--scene-blur"]) {
           root.style.removeProperty(k);

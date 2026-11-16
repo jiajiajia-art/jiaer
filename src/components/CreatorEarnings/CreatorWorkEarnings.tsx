@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { IoChevronForward } from 'react-icons/io5';
 import type { CreatorWorkEarningAccount } from '../../api/creatorEarnings/creatorEarningsApi';
 import { formatYuan } from '../../lib/creatorEarningsView';
@@ -14,47 +15,50 @@ interface Props {
     onDetails: (fileId: string) => void;
 }
 
-const CreatorWorkEarnings: React.FC<Props> = ({ data, loading, error, onRetry, onDetails }) => (
+const CreatorWorkEarnings: React.FC<Props> = ({ data, loading, error, onRetry, onDetails }) => {
+    const { t } = useTranslation();
+    return (
     <section className={styles.panel} aria-labelledby="creator-work-earnings-title">
         <div className={styles.workHeading}>
-            <h2 id="creator-work-earnings-title">作品收益</h2>
-            <span>共{data.length}款作品</span>
+            <h2 id="creator-work-earnings-title">{t('creatorCenter.worksTitle')}</h2>
+            <span>{t('creatorCenter.workCount', { count: data.length })}</span>
         </div>
-        {loading && <div className={styles.state}>正在加载作品收益…</div>}
-        {error && <div className={styles.state} role="alert">作品收益加载失败<button type="button" onClick={onRetry}>重试</button></div>}
-        {!loading && !error && data.length === 0 && <div className={styles.state}>暂无作品收益记录</div>}
+        {loading && <div className={styles.state}>{t('creatorCenter.worksLoading')}</div>}
+        {error && <div className={styles.state} role="alert">{t('creatorCenter.worksLoadFailed')}<button type="button" onClick={onRetry}>{t('common.retry')}</button></div>}
+        {!loading && !error && data.length === 0 && <div className={styles.state}>{t('creatorCenter.worksEmpty')}</div>}
         {!loading && !error && data.length > 0 && (
             <div className={styles.workList}>
-                <div className={styles.workColumns} aria-hidden="true"><span>作品</span><span>收益明细（税前）</span></div>
+                <div className={styles.workColumns} aria-hidden="true"><span>{t('creatorCenter.workColumn')}</span><span>{t('creatorCenter.detailColumn')}</span></div>
                 {data.map((work) => (
                     <article className={styles.workItem} key={work.fileId}>
                         <div className={styles.workTitle}>
                             <strong>{work.title}</strong>
                             <div className={styles.workMeta}>
-                                <span>总消费 {work.chargedKkTotal} KK币</span>
-                                <span>参与分成 {work.qualifiedKkTotal} KK币</span>
+                                <span>{t('creatorCenter.chargedKk', { amount: work.chargedKkTotal })}</span>
+                                <span>{t('creatorCenter.qualifiedKk', { amount: work.qualifiedKkTotal })}</span>
                             </div>
                         </div>
                         <div className={styles.workRevenueMetrics}>
                             <div className={styles.workRevenueMetric}>
-                                <span>累计收益</span>
+                                <span>{t('creatorCenter.cumulativeEarning')}</span>
                                 <strong>{formatYuan(work.cumulativeYuan)}</strong>
                             </div>
                             <div className={styles.workRevenueMetric}>
-                                <span>已提收益</span>
+                                <span>{t('creatorCenter.paidEarning')}</span>
                                 <strong>{formatYuan(work.paidYuan)}</strong>
                             </div>
                             <div className={styles.workRevenueMetric}>
-                                <span>可提收益</span>
+                                <span>{t('creatorCenter.availableEarning')}</span>
                                 <strong>{formatYuan(work.availableYuan)}</strong>
                             </div>
                         </div>
-                        <button type="button" className={styles.workDetailsButton} onClick={() => onDetails(work.fileId)}>查看明细<IoChevronForward aria-hidden="true" /></button>
+                        <button type="button" className={styles.workDetailsButton} onClick={() => onDetails(work.fileId)}>{t('creatorCenter.viewDetailsButton')}<IoChevronForward aria-hidden="true" /></button>
                     </article>
                 ))}
             </div>
         )}
     </section>
-);
+    );
+};
 
 export default CreatorWorkEarnings;

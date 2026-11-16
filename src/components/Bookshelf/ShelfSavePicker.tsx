@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import styles from './Bookshelf.module.css';
 import {
   formatShelfSaveTime,
@@ -33,6 +34,7 @@ const ShelfSavePicker: React.FC<ShelfSavePickerProps> = ({
   onViewDetail,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const [selectedKey, setSelectedKey] = useState(defaultKey);
 
   useEffect(() => {
@@ -44,17 +46,17 @@ const ShelfSavePicker: React.FC<ShelfSavePickerProps> = ({
 
   return createPortal(
     <div className={styles.sheetOverlay} onClick={onClose}>
-      <div className={styles.sheet} role="dialog" aria-modal="true" aria-label="选择存档" onClick={(e) => e.stopPropagation()}>
+      <div className={styles.sheet} role="dialog" aria-modal="true" aria-label={t('bookshelfUi.savePicker.dialogAria')} onClick={(e) => e.stopPropagation()}>
         <div className={styles.sheetHeader}>
           <div className={styles.sheetHeading}>
-            <h3 className={styles.sheetTitle}>选择存档</h3>
+            <h3 className={styles.sheetTitle}>{t('bookshelfUi.savePicker.title')}</h3>
             <p className={styles.sheetSub}>{gameTitle}</p>
           </div>
-          <button type="button" className={styles.sheetClose} onClick={onClose} aria-label="关闭">×</button>
+          <button type="button" className={styles.sheetClose} onClick={onClose} aria-label={t('bookshelfUi.savePicker.closeAria')}>×</button>
         </div>
         <div className={styles.sheetBody}>
           {options.length === 0 && (
-            <div className={styles.sheetHint}>没有可以读取的存档，请到详情页重新开始或联系作者</div>
+            <div className={styles.sheetHint}>{t('bookshelfUi.savePicker.noReadableSaves')}</div>
           )}
           {options.map((option) => {
             const progress = shelfSaveProgressLabel(option);
@@ -69,8 +71,8 @@ const ShelfSavePicker: React.FC<ShelfSavePickerProps> = ({
                 <span className={`${styles.radio} ${selectedKey === option.key ? styles.radioOn : ''}`} aria-hidden="true" />
                 <span className={styles.saveRowMain}>
                   <span className={styles.saveRowTitle}>
-                    {option.playerName || (option.kind === 'session' ? '上次进度' : '存档')}
-                    {option.kind === 'session' ? '（自动进度）' : ''}
+                    {option.playerName || (option.kind === 'session' ? t('bookshelfUi.savePicker.lastSession') : t('bookshelfUi.savePicker.saveFallback'))}
+                    {option.kind === 'session' ? t('bookshelfUi.savePicker.autoProgress') : ''}
                   </span>
                   {meta && <span className={styles.saveRowMeta}>{meta}</span>}
                   {option.summary && <span className={styles.saveRowSummary}>{option.summary}</span>}
@@ -82,24 +84,24 @@ const ShelfSavePicker: React.FC<ShelfSavePickerProps> = ({
             <div key={entry.saveId} className={`${styles.saveRow} ${styles.saveRowInvalid}`}>
               <span className={styles.radio} aria-hidden="true" />
               <span className={styles.saveRowMain}>
-                <span className={styles.saveRowTitle}>{entry.playerName || '存档'}（无法读取）</span>
+                <span className={styles.saveRowTitle}>{entry.playerName || t('bookshelfUi.savePicker.saveFallback')}{t('bookshelfUi.savePicker.unreadableSuffix')}</span>
                 {entry.createdAt > 0 && (
                   <span className={styles.saveRowMeta}>{formatShelfSaveTime(entry.createdAt)}</span>
                 )}
-                <span className={styles.saveRowReason}>{entry.reason || '存档无法读取'}</span>
+                <span className={styles.saveRowReason}>{entry.reason || t('bookshelfUi.savePicker.unreadableReason')}</span>
               </span>
             </div>
           ))}
         </div>
         <div className={styles.sheetFooter}>
-          <button type="button" className={styles.ghostButton} onClick={onViewDetail}>查看详情</button>
+          <button type="button" className={styles.ghostButton} onClick={onViewDetail}>{t('bookshelfUi.savePicker.viewDetail')}</button>
           <button
             type="button"
             className={styles.primaryButton}
             disabled={!selected}
             onClick={() => selected && onConfirm(selected)}
           >
-            继续游玩
+            {t('bookshelfUi.savePicker.continuePlay')}
           </button>
         </div>
       </div>

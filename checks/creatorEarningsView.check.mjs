@@ -91,8 +91,8 @@ test('creator earnings API exposes the approved read and write surface', () => {
 test('earning records show only recharge KK revenue and multiplied token cost', () => {
   const source = fs.readFileSync('src/components/CreatorEarnings/CreatorEarningsRecordsModal.tsx', 'utf8');
   const card = source.match(/const CreatorLedgerCard[\s\S]*?\n};/)?.[0] || '';
-  assert.match(source, /充值KK币收益/);
-  assert.match(source, /Token消耗成本/);
+  assert.match(source, /creatorCenter\.rechargeKk/);
+  assert.match(source, /creatorCenter\.tokenCost/);
   assert.match(source, /item\.rechargeKkMinorTotal/);
   assert.match(source, /item\.tokenCostKkMinorTotal/);
   assert.doesNotMatch(card, /createdAt|formatTime/);
@@ -151,7 +151,7 @@ test('creator center matches the approved page hierarchy and hides global mobile
   const page = fs.readFileSync('src/page/CreatorIncentive.tsx', 'utf8');
   const css = fs.readFileSync('src/page/CreatorIncentive.module.css', 'utf8');
   assert.match(page, /import CenteredPageHeader from/);
-  assert.match(page, /<CenteredPageHeader[\s\S]*?title="创作者中心"/);
+  assert.match(page, /<CenteredPageHeader[\s\S]*?title=\{t\('create\.accountCreatorIncentive'\)\}/);
   assert.match(page, /className=\{styles\.desktopChrome\}/);
   assert.match(page, /<CreatorBenefitRulesModal/);
   assert.doesNotMatch(page, />续</);
@@ -162,13 +162,13 @@ test('earnings overview follows the hero metrics actions and records layout', ()
   const source = fs.readFileSync('src/components/CreatorEarnings/CreatorEarningsOverview.tsx', 'utf8');
   for (const hook of [
     'overviewHero', 'overviewMetrics', 'overviewActions', 'recordsLink',
-    '今日待结算（税前）', '提现处理中（税前）', '已到账（实收）',
-    '昨日', '本月', '税前累计', '分成规则',
+    'creatorCenter.pendingToday', 'creatorCenter.frozen', 'creatorCenter.paidNet',
+    'creatorCenter.yesterday', 'creatorCenter.month', 'creatorCenter.cumulativePretax', 'creatorCenter.shareRules',
   ]) assert.match(source, new RegExp(hook), hook);
   assert.match(source, /editorShareRatio/);
   assert.match(source, /customShareRatio/);
   assert.match(source, /TXT/);
-  assert.match(source, /自定义/);
+  assert.match(source, /creatorCenter\.customShort/);
   assert.doesNotMatch(source, /CREATOR REVENUE/);
 });
 
@@ -194,20 +194,20 @@ test('empty trend is compact while populated charts retain the full canvas', () 
   const trend = fs.readFileSync('src/components/CreatorEarnings/CreatorEarningsTrend.tsx', 'utf8');
   const css = fs.readFileSync('src/components/CreatorEarnings/CreatorEarnings.module.css', 'utf8');
   assert.match(trend, /chartEmptyCompact/);
-  assert.match(trend, /产生收益后将在这里展示趋势/);
+  assert.match(trend, /creatorCenter\.trendEmptyHint/);
   assert.match(trend, /IoStatsChartOutline/);
   assert.match(css, /\.chartEmptyCompact\s*\{[\s\S]*min-height:\s*140px/);
-  assert.match(css, /\.chartWrap\s*\{[\s\S]*min-height:\s*340px/);
+  assert.match(css, /\.chartWrap\s*\{[\s\S]*min-height:\s*220px/);
 });
 
 test('work earnings keep a clean three-column hierarchy on mobile', () => {
   const work = fs.readFileSync('src/components/CreatorEarnings/CreatorWorkEarnings.tsx', 'utf8');
   const css = fs.readFileSync('src/components/CreatorEarnings/CreatorEarnings.module.css', 'utf8');
   assert.match(work, /workColumns/);
-  assert.match(work, /总消费 \{work\.chargedKkTotal\} KK币/);
-  assert.match(work, /参与分成 \{work\.qualifiedKkTotal\} KK币/);
+  assert.match(work, /creatorCenter\.chargedKk/);
+  assert.match(work, /creatorCenter\.qualifiedKk/);
   assert.doesNotMatch(work, /未参与 \{work\.unqualifiedKkTotal\}/);
-  assert.match(work, /共\{data\.length\}款作品/);
+  assert.match(work, /creatorCenter\.workCount/);
   assert.match(work, /className=\{styles\.workDetailsButton\}/);
   assert.doesNotMatch(work, /每部作品的累计消费与税前分成/);
   assert.match(css, /\.workDetailsButton\s*\{[\s\S]*white-space:\s*nowrap/);
@@ -222,9 +222,9 @@ test('work selector keeps a draft choice until explicit confirmation', () => {
   assert.match(modal, /draftFileId/);
   assert.match(modal, /setDraftFileId\(value\)/);
   assert.match(modal, /onConfirm\(draftFileId\)/);
-  assert.match(modal, /当前已选/);
-  assert.match(modal, /取消/);
-  assert.match(modal, /确认/);
+  assert.match(modal, /creatorCenter\.selectedNow/);
+  assert.match(modal, /common\.cancel/);
+  assert.match(modal, /common\.confirm/);
   assert.match(trend, /CreatorWorkSelectModal/);
   assert.match(trend, /workSelectOpen/);
   assert.doesNotMatch(trend, /<select value=\{fileId\}/);
@@ -237,15 +237,13 @@ test('withdrawal modal renders titled work sources bank account and in-place aud
     assert.match(modal, new RegExp(hook), hook);
   }
   assert.match(modal, /workTitles\[item\.fileId\]\s*\|\|\s*item\.fileId/);
-  assert.match(modal, /申请已提交，等待审核/);
-  // 审核中状态拆成标题「已受理」+「预计到账」金额行
-  assert.match(modal, /<h3>已受理<\/h3>/);
-  assert.match(modal, /预计到账/);
-  assert.match(modal, /返回创作者中心/);
-  // 门槛文案写明具体金额
-  assert.match(modal, /未达到 ¥100 人民币提现门槛/);
-  assert.match(modal, /提取KK币/);
-  assert.match(modal, /继续累计收益/);
+  assert.match(modal, /creatorCenter\.submittedWaiting/);
+  assert.match(modal, /creatorCenter\.accepted/);
+  assert.match(modal, /creatorCenter\.expectedArrival/);
+  assert.match(modal, /creatorCenter\.backToCenter/);
+  assert.match(modal, /creatorCenter\.exchangeBody/);
+  assert.match(modal, /creatorCenter\.exchangeKk/);
+  assert.match(modal, /creatorCenter\.keepAccumulating/);
   assert.match(modal, /disabled=\{submitting/);
   assert.match(modal, /closeDisabled=\{submitting\}/);
   assert.match(shell, /disabled=\{closeDisabled\}/);

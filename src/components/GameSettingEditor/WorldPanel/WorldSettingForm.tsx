@@ -226,7 +226,7 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                                         aria-pressed={selected}
                                         title={disabledSelected ? `${tag.pathLabel || tag.name}（已停用）` : (tag.pathLabel || tag.name)}
                                     >
-                                        {tag.name}{disabledSelected ? ' · 已停用' : ''}
+                                        {tag.name}{disabledSelected ? t('gameSettingEditor.worldPanel.worldSettingForm.s6e22179a9b') : ''}
                                     </button>
                                 );
                             })}

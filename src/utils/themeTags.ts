@@ -43,6 +43,29 @@ export const flattenThemeTags = (tree: GameTagTreeNode[]): FlatThemeTag[] => {
     return flat.filter((item) => Number.isFinite(item.id) && item.id > 0 && item.name);
 };
 
+type ThemeLabelTranslator = (key: string, options?: { defaultValue?: string }) => string;
+
+/** 功能注释：后台题材名优先用语言包；没有译文时简体保持原文，繁体只做字形转换 */
+export function translateThemeLabel(
+    name: string,
+    t: ThemeLabelTranslator,
+    language?: string | null,
+): string {
+    const trimmed = String(name || '').trim();
+    if (!trimmed) return '';
+    const translated = t(`themeNames.${trimmed}`, { defaultValue: '' });
+    if (translated) return translated;
+    return localizeChineseByLanguage(trimmed, language);
+}
+
+function translateThemePath(pathLabel: string, t: ThemeLabelTranslator, language?: string | null): string {
+    return pathLabel
+        .split('/')
+        .map((part) => translateThemeLabel(part.trim(), t, language))
+        .filter(Boolean)
+        .join(' / ');
+}
+
 /** 功能注释：题材名来自后台简体；按当前语言转繁体，id 不变以免提交错标签 */
 export function localizeFlatThemeTags(
     tags: FlatThemeTag[],
@@ -62,10 +85,16 @@ export function localizeFlatThemeTags(
 export function useLocalizedThemeTags<T extends Pick<FlatThemeTag, 'id' | 'name'> & Partial<FlatThemeTag>>(
     tags: T[],
 ): T[] {
-    const { i18n } = useTranslation();
+    const { t, i18n } = useTranslation();
     const language = i18n.resolvedLanguage || i18n.language;
     return useMemo(
-        () => localizeFlatThemeTags(tags as FlatThemeTag[], language) as T[],
-        [tags, language],
+        () => (tags || []).map((tag) => ({
+            ...tag,
+            name: translateThemeLabel(tag.name, t, language),
+            parentName: tag.parentName ? translateThemeLabel(tag.parentName, t, language) : tag.parentName,
+            pathNames: tag.pathNames?.map((name) => translateThemeLabel(name, t, language)),
+            pathLabel: tag.pathLabel ? translateThemePath(tag.pathLabel, t, language) : tag.pathLabel,
+        })) as T[],
+        [language, t, tags],
     );
 }

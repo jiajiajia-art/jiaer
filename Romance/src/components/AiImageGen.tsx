@@ -25,8 +25,9 @@ function sizeBadge(size?: string): string {
 /* AI 生图：编辑（提示词 + 最多 2 张参考图）→ 点「开始生成」→ 生成中 → 结果（重新生成 / 使用这张图）。
  * bare：嵌在 Modal 里时去掉外框与「AI 生成」标题，避免和弹窗标题重复。
  * initialPrompt：地点/人物/封面等可把当前项已有文字预填进提示词（单段，兼容旧调用）。
- * initialParts：三层提示词（画风 / 主体 / 负面词）——有值时弹窗显示三个可编辑框，
- *   正向 = 画风 + 主体，负面词单独传给生图；点「开始生成」时回调 onPartsCommit 让作品保存画风与负面词。
+ * initialParts：三层提示词（画风 / 主体 / 负面词）——有值时弹窗显示主体可编辑框；
+ *   正向 = 画风 + 主体，负面词后台静默合并（选画风时写入），不对创作者露出编辑框；
+ *   点「开始生成」时回调 onPartsCommit 让作品保存画风与负面词。
  * initialRefs：默认带入的参考图（如重绘人物时的当前头像），最多 2 张，创作者可移除。
  * autoRun / autoApply：兼容旧调用；默认关闭——打开弹窗不得自动开跑，也不得跳过「使用这张图」。 */
 export default function AiImageGen({
@@ -356,29 +357,22 @@ export default function AiImageGen({
 
           {layered ? (
             <div className="space-y-2.5">
-              {/* 功能注释：主体 / 负面词常显；画风已进上方 Tab */}
-              {(
-                [
-                  ["本张主体 · 只写这一张", subject, setSubject, 4, placeholder ?? "这一张画什么：主体、构图……"],
-                  ["负面词 · 不想出现的内容", negative, setNegative, 2, "如：文字，水印，畸形手指"],
-                ] as const
-              ).map(([title, val, setVal, rows, ph]) => (
-                <div key={title}>
-                  <p className="mb-1.5 text-[11px] font-bold tracking-wide text-ink-soft">
-                    {locked ? `${title} · 生成中不可修改` : `${title} · 可编辑`}
-                  </p>
-                  <textarea
-                    rows={rows}
-                    value={val}
-                    readOnly={locked}
-                    onChange={(e) => setVal(e.target.value)}
-                    placeholder={ph}
-                    className={`w-full rounded-lg border border-line px-2.5 py-1.5 text-[12.5px] text-ink outline-none focus:border-coral ${
-                      locked ? "cursor-not-allowed bg-paper-2 text-ink-soft" : "bg-paper"
-                    }`}
-                  />
-                </div>
-              ))}
+              {/* 功能注释：只露出主体；负面词随画风静默合并，不给创作者看/改 */}
+              <div>
+                <p className="mb-1.5 text-[11px] font-bold tracking-wide text-ink-soft">
+                  {locked ? "本张主体 · 只写这一张 · 生成中不可修改" : "本张主体 · 只写这一张 · 可编辑"}
+                </p>
+                <textarea
+                  rows={4}
+                  value={subject}
+                  readOnly={locked}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder={placeholder ?? "这一张画什么：主体、构图……"}
+                  className={`w-full rounded-lg border border-line px-2.5 py-1.5 text-[12.5px] text-ink outline-none focus:border-coral ${
+                    locked ? "cursor-not-allowed bg-paper-2 text-ink-soft" : "bg-paper"
+                  }`}
+                />
+              </div>
             </div>
           ) : (
             <div>

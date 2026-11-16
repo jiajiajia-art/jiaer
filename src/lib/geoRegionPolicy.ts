@@ -43,6 +43,15 @@ export function mapCountryToRegion(country?: string | null): GeoRegionData {
     };
   }
 
+  if (normalized === 'JP') {
+    return {
+      country: normalized,
+      language: 'ja',
+      payRegion: 'overseas',
+      defaultPayMethod: 'overseas',
+    };
+  }
+
   return {
     country: normalized,
     language: 'en',

@@ -120,8 +120,10 @@ html[data-romance] .romance-host {
   --color-danger: var(--danger);
   --color-line: var(--line);
 
-  --font-serif: 'Noto Serif SC', serif;
-  --font-sans: 'Noto Sans SC', sans-serif;
+  /* 功能注释：UI 壳字跟主站圆角黑体；剧情正文单独走 --font-serif */
+  --font-ui: 'Sarasa Gothic Rounded', 'Source Han Rounded SC', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  --font-sans: var(--font-ui);
+  --font-serif: 'Noto Serif SC', 'Source Han Serif SC', serif;
 
   /* —— 全局设计令牌（8pt 栅格）：圆角 / 阴影 / 动效，全部组件共用 —— */
   --radius-ui-sm: 8px;   /* 输入框、小按钮 */
@@ -132,47 +134,60 @@ html[data-romance] .romance-host {
   --ease-ui: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* —— 字体皮肤：整体换字，仅改字形不动布局 ——
-   通过 <html class="font-xxx"> 同时覆盖 --font-serif / --font-sans，
-   让正文（story-prose）、对话气泡、界面 chrome 都跟到同一套预设。
-   默认（font-song）两侧皆用思源宋体；字形由 lib/gameFonts.ts 注入的镜像 stylesheet 提供。 */
+/* —— 字体皮肤：设置里换字 → 覆盖 --font-serif；剧情正文 + 编辑器/创作壳跟它走；
+   局内顶栏·底栏·输入仍用 --font-ui。字形由 lib/gameFonts.ts 注入。 */
 html[data-romance].font-song {
-  --font-serif: 'Noto Serif SC', serif;
-  --font-sans: 'Noto Serif SC', serif;
+  --font-serif: 'Noto Serif SC', 'Source Han Serif SC', serif;
 }
 html[data-romance].font-hei {
-  --font-serif: 'Noto Sans SC', sans-serif;
-  --font-sans: 'Noto Sans SC', sans-serif;
+  --font-serif: 'Noto Sans SC', var(--font-ui);
 }
 html[data-romance].font-round {
   --font-serif: 'ZCOOL KuaiLe', 'Noto Sans SC', sans-serif;
-  --font-sans: 'ZCOOL KuaiLe', 'Noto Sans SC', sans-serif;
 }
 html[data-romance].font-elegant {
   --font-serif: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
-  --font-sans: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
 }
 html[data-romance].font-brush {
   --font-serif: 'Ma Shan Zheng', 'Noto Serif SC', serif;
-  --font-sans: 'Ma Shan Zheng', 'Noto Serif SC', serif;
 }
 html[data-romance].font-hand {
   --font-serif: 'Long Cang', 'Noto Serif SC', serif;
-  --font-sans: 'Long Cang', 'Noto Serif SC', serif;
 }
 html[data-romance].font-cursive {
   --font-serif: 'Zhi Mang Xing', 'Noto Serif SC', serif;
-  --font-sans: 'Zhi Mang Xing', 'Noto Serif SC', serif;
 }
 html[data-romance].font-pixel {
   --font-serif: 'Pixelify Sans', 'VT323', 'Noto Sans SC', monospace;
-  --font-sans: 'Pixelify Sans', 'VT323', 'Noto Sans SC', monospace;
 }
 
-/* 功能注释：对话气泡显式跟预设，避免局部 utility 把字体重置回系统默认 */
+/* 功能注释：局内顶栏/底栏仍用 UI 字；创作壳与编辑器整页跟「设置 · 字体」（--font-serif） */
+html[data-romance] :is(.mud-shell, .app-topbar) {
+  font-family: var(--font-ui);
+  letter-spacing: normal;
+}
+html[data-romance] :is(.mud-shell, .app-topbar)
+  :is(button, input, textarea, select, label, nav, .nav-txt, .send-btn) {
+  font-family: inherit;
+}
+/* 功能注释：主站有 `* { font-family: UI字 }`，会打断 inherit；编辑器 / 人脉子树必须显式写 --font-serif */
+html[data-romance] :is(.world-gen-shell, .world-gen-editor, .romance-platform, .mod-editor-root, .editor-hub, .npc-tab),
+html[data-romance] :is(.world-gen-shell, .world-gen-editor, .romance-platform, .mod-editor-root, .editor-hub, .npc-tab) :where(*):not(.phone-os, .phone-os *, .font-mono, [class*="font-mono"]) {
+  font-family: var(--font-serif);
+  letter-spacing: normal;
+}
+/* 局内打开编辑器 / 人脉时，盖过 mud-shell / 主站 * 选择器 */
+html[data-romance] .mud-shell :is(.mod-editor-root, .editor-hub, .npc-tab),
+html[data-romance] .mud-shell :is(.mod-editor-root, .editor-hub, .npc-tab) :where(*):not(.phone-os, .phone-os *, .font-mono, [class*="font-mono"]) {
+  font-family: var(--font-serif);
+}
+
+/* 功能注释：对话气泡显式跟预设 + 正文同一字号，避免局部 utility 把字体重置回系统默认 */
 html[data-romance] .dlg-bubble,
 html[data-romance] .dlg-bubble-me {
   font-family: var(--font-serif);
+  font-size: var(--story-font-size, 15px);
+  font-style: normal;
 }
 
 /* 星光2005 · 年代美术：奶油纸白 / 旧报深褐 / 酒红 / 唱片墨绿 */
@@ -245,7 +260,7 @@ html[data-romance] body,
 html[data-romance] .romance-host {
   height: 100%;
   min-height: 100%;
-  font-family: var(--font-sans);
+  font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
   transition: background-color 0.4s ease, color 0.4s ease;
 }
@@ -1301,9 +1316,62 @@ html[data-stone="dusk"] .scene-img { filter: blur(var(--scene-blur, 0px)) satura
   box-shadow: none;
 }
 
-/* 设置页：字体颜色固定为中性色，切换皮肤 / 主色时保持不变（仅区分深浅模式） */
-.settings-fixed { --ink: #2a2a30; --ink-soft: #6c6c74; }
-html[data-romance].dark .settings-fixed { --ink: #eaeaef; --ink-soft: #a6a6af; }
+/* 设置页：跟当前皮肤 / 主色美化，不再锁中性灰字色 */
+.settings-fixed {
+  color: var(--ink);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--jade) 6%, transparent) 0%,
+      transparent 7rem
+    );
+}
+.settings-fixed .settings-card {
+  border-color: color-mix(in srgb, var(--jade) 18%, var(--line));
+  background: color-mix(in srgb, var(--paper) 92%, var(--jade));
+  box-shadow: 0 8px 22px -18px var(--dream-glow, color-mix(in srgb, var(--jade) 35%, transparent));
+}
+.settings-fixed .settings-card:hover {
+  border-color: color-mix(in srgb, var(--jade) 32%, var(--line));
+}
+.settings-fixed .settings-chip {
+  border-color: color-mix(in srgb, var(--jade) 28%, var(--line));
+  background: color-mix(in srgb, var(--jade) 10%, var(--paper-2));
+  color: var(--jade-deep);
+}
+.settings-fixed .settings-card-body {
+  border-top-color: color-mix(in srgb, var(--jade) 14%, var(--line));
+  background: color-mix(in srgb, var(--paper-2) 88%, var(--jade));
+}
+/* 可爱 / 梦幻皮：设置卡再叠一层柔光玻璃感 */
+html[data-romance].skin-cute .settings-fixed .settings-card,
+html[data-romance].skin-dream .settings-fixed .settings-card {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--paper) 78%, #fff) 0%,
+      color-mix(in srgb, var(--jade) 8%, var(--paper)) 100%
+    );
+  box-shadow:
+    0 10px 28px -18px var(--dream-glow, color-mix(in srgb, var(--jade) 40%, transparent)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+html[data-romance].skin-cute.dark .settings-fixed .settings-card,
+html[data-romance].skin-dream.dark .settings-fixed .settings-card {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--paper) 88%, var(--jade)) 0%,
+      color-mix(in srgb, var(--paper-2) 90%, var(--coral)) 100%
+    );
+  box-shadow:
+    0 10px 28px -16px var(--dream-glow, color-mix(in srgb, var(--jade) 45%, transparent)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+html[data-romance].skin-bloody .settings-fixed .settings-card {
+  background: color-mix(in srgb, var(--paper) 90%, var(--coral));
+  border-color: color-mix(in srgb, var(--coral) 28%, var(--line));
+}
 
 /* 对话面板 · 选项按钮：悬停浮起 + 主色柔光描边，随皮肤取色 */
 .option-btn:hover {
@@ -1441,15 +1509,28 @@ html[data-romance][class] .phone-os :is(*, input, textarea, button, select) {
   color: var(--story-ink);
 }
 
-/* 功能注释：叙事相关文字统一走游戏字体（3.3）——旁白 / 气泡 / 心事 / 玩家行动条同一字形家族；
-   行动条只加粗字重，不换字形；界面 chrome（底栏 / 菜单）不在此列。 */
+/* 功能注释：叙事相关文字统一走游戏字体——旁白 / 气泡 / 心事 / 剧情选项 / 行动灵感；
+   顶栏 · 底栏走 --font-ui；主站 `*` 会打断 inherit，故用 !important 显式压过。
+   注意：option-btn 不在 action-capsule 内，旧选择器 .action-capsule .option-btn 从未命中。 */
 .story-prose, .story-prose *, .story-action, .story-speech, .story-narration-panel, .story-narration-panel *,
 .dlg-bubble, .dlg-bubble *, .dlg-bubble-me, .dlg-bubble-me *, .story-thought, .story-thought *,
-.action-capsule input, .action-capsule .option-btn {
-  font-family: var(--font-serif);
+.option-btn, .option-btn *,
+#action-ideas, #action-ideas :where(*),
+.npc-tab, .npc-tab :where(*) {
+  font-family: var(--font-serif) !important;
   font-style: normal;
 }
-.action-capsule input { font-weight: 500; }
+/* 功能注释：行动输入框也跟设置字体，避免灵感宋体、输入框黑体两套字 */
+.action-capsule input,
+.action-capsule textarea,
+.story-input {
+  font-family: var(--font-serif) !important;
+  font-weight: 500;
+  font-style: normal;
+}
+.option-btn {
+  font-size: calc(var(--story-font-size, 15px) * 0.9);
+}
 
 /* 功能注释：暗色可读（3.2）——底栏未选中字、在场人物名标不被浅底吞掉 */
 html[data-romance].dark .nav-txt:not(.nav-txt-on) { color: color-mix(in srgb, var(--ink) 82%, transparent); }
@@ -1803,7 +1884,7 @@ html[data-ibtnfill="outline"] .diy-btn { background: color-mix(in srgb, var(--pa
   .end-snap .end-rise, .end-snap .end-bob { animation: none; }
 }
 /* 按钮（不进层）：按压缩放与全局兜底同为 scale .98，不叠加 */
-.end-btn { position: relative; display: flex; align-items: center; justify-content: center; gap: .6rem; min-height: 64px; padding: .65rem 1rem; border-radius: 999px; color: #fff; background: linear-gradient(180deg, var(--b1) 0%, var(--b2) 100%); border: 3px solid var(--e-card); box-shadow: 0 0 0 1.5px var(--b3), 0 14px 24px -14px var(--b2), inset 0 3px 0 color-mix(in srgb, var(--e-card) 45%, transparent), inset 0 -4px 0 rgba(0, 0, 0, .08); text-shadow: 0 1px 2px rgba(0, 0, 0, .25); transition: transform .15s ease, filter .15s ease, scale .15s ease; }
+.end-btn { position: relative; display: flex; align-items: center; justify-content: center; gap: .55rem; min-height: 54px; padding: .5rem .9rem; border-radius: 999px; color: #fff; background: linear-gradient(180deg, var(--b1) 0%, var(--b2) 100%); border: 3px solid var(--e-card); box-shadow: 0 0 0 1.5px var(--b3), 0 12px 20px -14px var(--b2), inset 0 3px 0 color-mix(in srgb, var(--e-card) 45%, transparent), inset 0 -3px 0 rgba(0, 0, 0, .08); text-shadow: 0 1px 2px rgba(0, 0, 0, .25); transition: transform .15s ease, filter .15s ease, scale .15s ease; }
 .end-btn:hover { filter: brightness(1.05); transform: translateY(-1px); }
 .end-btn:active { transform: translateY(1px); scale: .98; }
 .end-btn:focus-visible { outline: 3px solid var(--b3); outline-offset: 3px; }
@@ -1870,30 +1951,31 @@ html[data-romance].skin-dream.dark, html[data-romance].skin-bloody.dark, html[da
 .ui-sheet [class*="bg-paper"] { backdrop-filter: none; -webkit-backdrop-filter: none; }
 
 /* ═══════════════════════════════════════════════════════════════
- * 平台创作壳：对齐 funloom 暗色酒红（GameSettingEditor / DocumentsPanel）
- * 生成世界两屏挂在 .romance-platform > .world-gen-shell，不跟局内可爱/宣纸浅色。
+ * 平台创作壳：跟主站皮肤变量（--color-*），与首页 / 创作者中心一致
+ * 生成世界两屏挂在 .romance-platform > .world-gen-shell
  * ═══════════════════════════════════════════════════════════════ */
 .romance-platform {
   min-height: 100%;
-  /* 功能注释：平台暗红创作壳唯一色板；弹窗 / toast / 表单一律吃这些变量，禁止再写死白绿 */
-  --fl-bg: #000000;
-  --fl-surface: #0A0A0A;
-  --fl-raised: #141416;
-  --fl-sheet: #1C1C1E;
-  --fl-input: #121214;
-  --fl-ink: #ffffff;
-  --fl-muted: rgba(255, 255, 255, 0.55);
-  --fl-faint: rgba(255, 255, 255, 0.12);
-  --fl-line: rgba(255, 255, 255, 0.16);
-  --fl-wine: #A8283C;
-  --fl-wine-deep: #8E2135;
-  --fl-rose: #FF8A9A;
-  --fl-gold: #C9A227;
-  --fl-danger: #FF6B7A;
-  --fl-glow: rgba(168, 40, 60, 0.35);
+  /* 功能注释：创作壳吃主站皮肤；缺省时回退到 funloom 浅色红主题 */
+  --fl-bg: var(--color-bg, #faf6f5);
+  --fl-surface: var(--color-surface, #ffffff);
+  --fl-raised: var(--color-surface-2, #f6eceb);
+  --fl-sheet: var(--color-surface, #ffffff);
+  --fl-input: var(--color-bg, #faf6f5);
+  --fl-ink: var(--color-text, #17171a);
+  --fl-muted: var(--color-text-secondary, #5c5c66);
+  --fl-faint: color-mix(in srgb, var(--color-text, #17171a) 10%, transparent);
+  --fl-line: var(--color-border, #ecdcdb);
+  --fl-wine: var(--color-primary, #d42a2a);
+  --fl-wine-deep: var(--color-primary-bold, var(--color-primary, #b01c1f));
+  --fl-rose: var(--color-primary-fg, #b01c1f);
+  --fl-gold: var(--color-warning, #c9a227);
+  --fl-danger: var(--color-danger, #e11d48);
+  --fl-glow: color-mix(in srgb, var(--color-primary, #d42a2a) 32%, transparent);
+  --fl-on-primary: var(--color-on-primary, #ffffff);
   color: var(--fl-ink);
   background: var(--fl-bg);
-  /* 功能注释：覆写 Romance token；须同时写 --color-*，否则 Tailwind bg-jade/bg-line 仍吃 :root 浅色 */
+  /* 功能注释：覆写 Romance token；须同时写 --color-*，否则 Tailwind bg-jade 仍吃宣纸绿 */
   --paper: var(--fl-surface);
   --paper-2: var(--fl-raised);
   --ink: var(--fl-ink);
@@ -1904,8 +1986,8 @@ html[data-romance].skin-dream.dark, html[data-romance].skin-bloody.dark, html[da
   --coral: var(--fl-rose);
   --gold: var(--fl-gold);
   --danger: var(--fl-danger);
-  --cute-glow: rgba(168, 40, 60, 0.28);
-  --dream-glow: rgba(168, 40, 60, 0.22);
+  --cute-glow: color-mix(in srgb, var(--fl-wine) 22%, transparent);
+  --dream-glow: color-mix(in srgb, var(--fl-wine) 18%, transparent);
   --color-paper: var(--fl-surface);
   --color-paper-2: var(--fl-raised);
   --color-ink: var(--fl-ink);
@@ -1916,14 +1998,13 @@ html[data-romance].skin-dream.dark, html[data-romance].skin-bloody.dark, html[da
   --color-coral: var(--fl-rose);
   --color-gold: var(--fl-gold);
   --color-danger: var(--fl-danger);
-  /* 功能注释：ui-sheet / 遮罩跟平台壳，避免 portal 弹窗仍是奶油白面 */
   --sheet-solid: var(--fl-sheet);
-  --sheet-bg: linear-gradient(180deg, var(--fl-sheet), color-mix(in srgb, var(--fl-wine) 8%, var(--fl-sheet)));
+  --sheet-bg: linear-gradient(180deg, var(--fl-sheet), color-mix(in srgb, var(--fl-wine) 4%, var(--fl-sheet)));
   --sheet-border: var(--fl-line);
-  --sheet-hi: rgba(255, 255, 255, 0.06);
-  --sheet-shadow: 0 28px 64px -24px rgba(0, 0, 0, 0.72), 0 0 0 1px color-mix(in srgb, var(--fl-wine) 22%, transparent);
-  --overlay-bg: color-mix(in srgb, var(--fl-bg) 72%, transparent);
-  --overlay-bg-heavy: color-mix(in srgb, var(--fl-bg) 82%, transparent);
+  --sheet-hi: color-mix(in srgb, var(--fl-ink) 4%, transparent);
+  --sheet-shadow: 0 24px 64px color-mix(in srgb, var(--color-shadow, #000) 18%, transparent);
+  --overlay-bg: color-mix(in srgb, var(--color-shadow, #000) 55%, transparent);
+  --overlay-bg-heavy: color-mix(in srgb, var(--color-shadow, #000) 70%, transparent);
 }
 
 /* 功能注释：平台壳内弹窗表单/主按钮统一走 token，覆盖宣纸默认浅色 */
@@ -1936,42 +2017,38 @@ html[data-romance].skin-dream.dark, html[data-romance].skin-bloody.dark, html[da
 }
 .romance-platform .ui-btn-primary {
   background: var(--jade);
-  color: var(--fl-ink);
+  color: var(--fl-on-primary, #fff);
   box-shadow: 0 6px 16px -10px var(--fl-glow);
 }
 .romance-platform .ui-btn-primary.tone-danger {
   background: var(--danger);
 }
 
-/* 功能注释：平台生成世界时宿主也压成黑底，避免四周露奶油纸 */
+/* 功能注释：平台生成世界时宿主跟主站底色，避免四周露宣纸奶油或纯黑 */
 .romance-host:has([data-platform-ui="1"]) {
-  background: var(--fl-bg, #000000) !important;
-  color: var(--fl-ink, #ffffff) !important;
+  background: var(--fl-bg, var(--color-bg, #faf6f5)) !important;
+  color: var(--fl-ink, var(--color-text, #17171a)) !important;
 }
 
 /*
- * 功能注释：平台壳打开时，主站 Toaster 仍挂在 body；用 :has 把 toast 收成暗红账本，
- * 禁止再露出白底绿成功条。色值走 --fl-*（无平台壳时不生效）。
+ * 功能注释：平台壳打开时，主站 Toaster 仍挂在 body；跟主站皮肤，避免暗壳白条冲突。
  */
 html:has([data-platform-ui="1"]) .funloom-toast {
-  --funloom-toast-accent: var(--fl-wine, #A8283C);
-  border-color: color-mix(in srgb, var(--fl-wine, #A8283C) 28%, transparent) !important;
-  background:
-    linear-gradient(180deg, var(--fl-sheet, #1C1C1E) 0%, var(--fl-raised, #141416) 100%) padding-box,
-    linear-gradient(135deg, color-mix(in srgb, var(--fl-wine, #A8283C) 55%, transparent), color-mix(in srgb, var(--fl-rose, #FF8A9A) 25%, transparent)) border-box !important;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.06) inset !important;
-  color: var(--fl-ink, #ffffff) !important;
+  --funloom-toast-accent: var(--fl-wine, var(--color-primary, #d42a2a));
+  border-color: color-mix(in srgb, var(--fl-wine, var(--color-primary, #d42a2a)) 22%, transparent) !important;
+  background: var(--fl-surface, var(--color-surface, #fff)) !important;
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--color-shadow, #000) 18%, transparent) !important;
+  color: var(--fl-ink, var(--color-text, #17171a)) !important;
 }
 html:has([data-platform-ui="1"]) .funloom-toast-success {
-  --funloom-toast-accent: var(--fl-wine, #A8283C);
-  border-color: color-mix(in srgb, var(--fl-wine, #A8283C) 32%, transparent) !important;
+  --funloom-toast-accent: var(--fl-wine, var(--color-primary, #d42a2a));
 }
 html:has([data-platform-ui="1"]) .funloom-toast-error {
-  --funloom-toast-accent: var(--fl-danger, #FF6B7A);
+  --funloom-toast-accent: var(--fl-danger, var(--color-danger, #e11d48));
 }
 html:has([data-platform-ui="1"]) .funloom-toast-blank,
 html:has([data-platform-ui="1"]) .funloom-toast-loading {
-  --funloom-toast-accent: var(--fl-gold, #C9A227);
+  --funloom-toast-accent: var(--fl-gold, var(--color-warning, #c9a227));
 }
 
 /*
@@ -2051,8 +2128,15 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
 .world-gen-editor .ui-btn-primary {
   background-color: var(--jade) !important;
   background-image: none !important;
-  color: var(--ink) !important;
+  color: var(--fl-on-primary, #fff) !important;
   border-color: transparent !important;
+}
+
+/* 功能注释：创作世界表单收敛——隐藏冗长说明 / AI 对话条，保留可操作字段 */
+.world-gen-editor .wg-ai-chat-banner,
+.world-gen-editor .wg-scope-banner,
+.world-gen-editor .wg-field-help {
+  display: none !important;
 }
 .world-gen-editor button[class*="border-jade"] {
   border-color: color-mix(in srgb, var(--jade) 55%, transparent) !important;
@@ -2136,6 +2220,101 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
 .world-gen-editor .codex-ui .codex-composer-send:disabled {
   opacity: 0.36;
 }
+
+/* 功能注释：对话生成玩法工坊——草稿卡 / 步骤芯片 / 聊天区 / 发送圆钮，对齐酒红暗壳 */
+.world-gen-editor .wg-draft-card {
+  background:
+    linear-gradient(155deg, color-mix(in srgb, var(--fl-wine, #A8283C) 10%, #161618) 0%, #121214 55%, #0e0e10 100%);
+  box-shadow: 0 16px 36px -28px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.world-gen-editor .wg-draft-mark {
+  color: var(--fl-rose, #FF8A9A);
+  background: color-mix(in srgb, var(--fl-wine, #A8283C) 22%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--fl-wine, #A8283C) 35%, transparent);
+}
+.world-gen-editor .wg-step-chip {
+  border-color: color-mix(in srgb, var(--line) 90%, transparent);
+  background: color-mix(in srgb, var(--fl-raised, #141416) 88%, transparent);
+  color: var(--ink-soft);
+}
+.world-gen-editor .wg-step-chip:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--fl-wine, #A8283C) 45%, transparent);
+  color: var(--ink);
+}
+.world-gen-editor .wg-step-chip.is-done {
+  border-color: color-mix(in srgb, var(--fl-wine, #A8283C) 55%, transparent);
+  background: color-mix(in srgb, var(--fl-wine, #A8283C) 16%, transparent);
+  color: var(--fl-rose, #FF8A9A);
+}
+.world-gen-editor .wg-step-index {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  background: color-mix(in srgb, var(--fl-wine, #A8283C) 78%, #000);
+}
+.world-gen-editor .wg-chat-panel {
+  background: linear-gradient(180deg, #121214, #0c0c0e);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+.world-gen-editor .wg-chat-hint {
+  border: 1px dashed color-mix(in srgb, var(--line) 80%, transparent);
+  background: color-mix(in srgb, var(--fl-wine, #A8283C) 7%, transparent);
+}
+.world-gen-editor .wg-composer {
+  background: var(--fl-input, var(--paper-2)) !important;
+}
+.world-gen-editor .wg-send-btn {
+  isolation: isolate;
+}
+.world-gen-editor .wg-send-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: conic-gradient(from 180deg, #ff8a9a, #a8283c, #c9a227, #a8283c, #ff8a9a);
+  opacity: 0.55;
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  animation: advance-spin 8s linear infinite;
+}
+.world-gen-editor .wg-send-core {
+  background: linear-gradient(160deg, #d47886 0%, #a8283c 72%, #8e2135 100%);
+  box-shadow:
+    0 8px 18px -8px rgba(168, 40, 60, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+.world-gen-editor .wg-send-btn:hover:not(:disabled) .wg-send-ring {
+  opacity: 0.9;
+}
+.world-gen-editor .wg-send-btn:hover:not(:disabled) .wg-send-core {
+  filter: brightness(1.06);
+}
+.world-gen-editor .wg-send-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.world-gen-editor .wg-send-btn:disabled .wg-send-ring {
+  opacity: 0.18;
+  animation: none;
+}
+.world-gen-editor .wg-send-btn:disabled .wg-send-core {
+  opacity: 0.42;
+  filter: grayscale(0.2);
+  box-shadow: none;
+}
+.world-gen-editor .wg-playtest-card {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--fl-wine, #A8283C) 12%, #161618), #101012);
+}
+.world-gen-editor .wg-playtest-btn {
+  box-shadow: 0 10px 22px -12px rgba(168, 40, 60, 0.7);
+}
+.world-gen-editor .wg-preview-tabs {
+  background: var(--fl-input, var(--paper-2)) !important;
+}
+
 .codex-chip { border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--ink-soft); background: transparent; transition: color .15s, border-color .15s, background .15s; }
 .codex-chip:hover { color: var(--ink); border-color: color-mix(in srgb, var(--ink) 30%, var(--line)); }
 .codex-chip.is-on { color: var(--paper-2); background: var(--ink); border-color: var(--ink); }
@@ -2163,45 +2342,89 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   生成世界向导 · funloom 暗色创作壳
-   记忆点：酒红序号章 + 预计耗时胶囊 + 流光进度带
+   生成世界向导 · 跟主站皮肤变量
    ═══════════════════════════════════════════════════════════════ */
 .world-gen-shell {
-  /* 功能注释：向导壳色板对齐 .romance-platform，避免两套硬编码分叉 */
-  --wg-bg: var(--fl-bg, #000000);
-  --wg-panel: var(--fl-surface, #0A0A0A);
-  --wg-sheet: var(--fl-sheet, #1C1C1E);
-  --wg-sheet-2: #222226;
-  --wg-ink: var(--fl-ink, #ffffff);
-  --wg-muted: var(--fl-muted, rgba(255, 255, 255, 0.55));
-  --wg-faint: var(--fl-faint, rgba(255, 255, 255, 0.12));
-  --wg-wine: var(--fl-wine, #A8283C);
-  --wg-wine-deep: var(--fl-wine-deep, #8E2135);
-  --wg-rose: var(--fl-rose, #FF8A9A);
-  --wg-glow: var(--fl-glow, rgba(168, 40, 60, 0.35));
+  /* 功能注释：向导壳色板对齐 .romance-platform / 主站 --color-* */
+  --wg-bg: var(--fl-bg, var(--color-bg, #faf6f5));
+  --wg-panel: var(--fl-surface, var(--color-surface, #ffffff));
+  --wg-sheet: var(--fl-sheet, var(--color-surface, #ffffff));
+  --wg-sheet-2: var(--fl-raised, var(--color-surface-2, #f6eceb));
+  --wg-ink: var(--fl-ink, var(--color-text, #17171a));
+  --wg-muted: var(--fl-muted, var(--color-text-secondary, #5c5c66));
+  --wg-faint: var(--fl-faint, color-mix(in srgb, var(--color-text, #17171a) 10%, transparent));
+  --wg-wine: var(--fl-wine, var(--color-primary, #d42a2a));
+  --wg-wine-deep: var(--fl-wine-deep, var(--color-primary-bold, #b01c1f));
+  --wg-rose: var(--fl-rose, var(--color-primary-fg, #b01c1f));
+  --wg-glow: var(--fl-glow, color-mix(in srgb, var(--color-primary, #d42a2a) 32%, transparent));
+  --wg-on-primary: var(--fl-on-primary, var(--color-on-primary, #ffffff));
   position: relative;
   isolation: isolate;
   min-height: 100vh;
   color: var(--wg-ink);
-  background:
-    radial-gradient(55% 40% at 0% 0%, rgba(168, 40, 60, 0.18), transparent 62%),
-    radial-gradient(45% 36% at 100% 8%, rgba(142, 33, 53, 0.14), transparent 65%),
-    linear-gradient(180deg, #050505, var(--wg-bg) 40%, #070707);
+  background: var(--wg-bg);
 }
 .world-gen-shell::before {
-  content: "";
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  opacity: 0.4;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.035) 0.6px, transparent 0.7px);
-  background-size: 3px 3px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), transparent 85%);
+  content: none;
 }
 .world-gen-shell > * {
   position: relative;
   z-index: 1;
+}
+
+.world-gen-back {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 0.65rem;
+  padding: 0.15rem 0;
+  border: 0;
+  background: transparent;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--wg-muted);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.world-gen-back:hover {
+  color: var(--wg-ink);
+}
+
+/* 功能注释：生成世界校验弹窗跟主站主色，避免默认黑钮 */
+.world-gen-err-dialog .ui-sheet-head-bar {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--fl-wine, var(--jade)) 8%, var(--fl-sheet, var(--paper))) 0%,
+    transparent 100%
+  );
+}
+.world-gen-err-tip {
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--fl-wine, var(--jade)) 20%, transparent);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--fl-wine, var(--jade)) 10%, transparent),
+      color-mix(in srgb, var(--fl-wine, var(--jade)) 4%, var(--fl-surface, var(--paper)))
+    );
+  padding: 0.95rem 1.05rem;
+}
+.world-gen-err-tip-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--fl-rose, var(--coral));
+}
+.world-gen-err-tip-text {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.65;
+  color: var(--fl-ink, var(--ink));
+}
+.world-gen-err-dialog .ui-sheet-foot {
+  border-top-color: color-mix(in srgb, var(--fl-wine, var(--jade)) 12%, transparent);
+  background: color-mix(in srgb, var(--fl-wine, var(--jade)) 4%, var(--fl-sheet, var(--paper)));
 }
 
 .world-gen-kicker {
@@ -2225,7 +2448,7 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
 
 .world-gen-title {
   margin-top: 0.45rem;
-  font-family: var(--font-sans), "Noto Sans SC", system-ui, sans-serif;
+  font-family: inherit;
   font-size: clamp(1.55rem, 3.6vw, 1.9rem);
   font-weight: 800;
   letter-spacing: 0.02em;
@@ -2245,8 +2468,8 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
 .world-gen-card {
   border-radius: 1rem;
   border: 1px solid var(--wg-faint);
-  background: linear-gradient(165deg, #161618, var(--wg-sheet));
-  box-shadow: 0 18px 40px -28px rgba(0, 0, 0, 0.9);
+  background: var(--wg-sheet);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--color-shadow, #000) 8%, transparent);
   padding: 1.05rem 1.05rem 1.15rem;
   animation: world-gen-rise 0.42s ease both;
 }
@@ -2318,7 +2541,7 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   width: 100%;
   border-radius: 0.9rem;
   border: 1px solid var(--wg-faint);
-  background: #121214;
+  background: var(--fl-input, var(--wg-bg));
   padding: 0.75rem 0.9rem;
   font-size: 0.95rem;
   color: var(--wg-ink);
@@ -2337,13 +2560,13 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
 }
 .world-gen-input::placeholder,
 .world-gen-textarea::placeholder {
-  color: rgba(255, 255, 255, 0.32);
+  color: color-mix(in srgb, var(--wg-ink) 38%, transparent);
 }
 .world-gen-input:focus,
 .world-gen-textarea:focus {
   border-color: var(--wg-wine);
-  background: #17171a;
-  box-shadow: 0 0 0 3px rgba(168, 40, 60, 0.28);
+  background: var(--wg-panel);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wg-wine) 22%, transparent);
 }
 
 .world-gen-choice {
@@ -2353,20 +2576,26 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   gap: 0.75rem;
   border-radius: 0.95rem;
   border: 1px solid var(--wg-faint);
-  background: rgba(255, 255, 255, 0.02);
-  padding: 0.85rem 0.9rem;
+  background: color-mix(in srgb, var(--wg-ink) 2.5%, transparent);
+  padding: 0.75rem 0.85rem;
   text-align: left;
   color: var(--wg-ink);
   transition: border-color 0.18s ease, background-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 .world-gen-choice:hover {
-  border-color: rgba(168, 40, 60, 0.45);
-  background: #222226;
+  border-color: color-mix(in srgb, var(--wg-wine) 45%, transparent);
+  background: color-mix(in srgb, var(--wg-ink) 5%, transparent);
 }
 .world-gen-choice.is-on {
   border-color: var(--wg-wine);
-  background: linear-gradient(145deg, rgba(168, 40, 60, 0.22), rgba(28, 28, 30, 0.95));
-  box-shadow: 0 0 0 3px rgba(168, 40, 60, 0.18);
+  background: var(--wg-wine);
+  color: var(--wg-on-primary);
+  box-shadow: none;
+}
+.world-gen-choice.is-on .text-ink,
+.world-gen-choice.is-on .text-ink-soft,
+.world-gen-choice.is-on [class*="text-ink"] {
+  color: var(--wg-on-primary) !important;
 }
 .world-gen-choice-mark {
   margin-top: 0.2rem;
@@ -2374,12 +2603,12 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   width: 1rem;
   height: 1rem;
   border-radius: 999px;
-  border: 2px solid rgba(255, 255, 255, 0.28);
+  border: 2px solid color-mix(in srgb, var(--wg-ink) 28%, transparent);
   background: transparent;
 }
 .world-gen-choice.is-on .world-gen-choice-mark {
-  border-color: var(--wg-wine);
-  background: radial-gradient(circle at 50% 50%, var(--wg-wine) 0 42%, transparent 44%);
+  border-color: var(--wg-on-primary);
+  background: radial-gradient(circle at 50% 50%, var(--wg-on-primary) 0 42%, transparent 44%);
 }
 .world-gen-choice-check {
   margin-top: 0.15rem;
@@ -2389,30 +2618,30 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   width: 1.05rem;
   height: 1.05rem;
   border-radius: 0.3rem;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: 1px solid color-mix(in srgb, var(--wg-ink) 28%, transparent);
   background: transparent;
   color: transparent;
 }
 .world-gen-choice.is-on .world-gen-choice-check {
-  border-color: var(--wg-wine);
-  background: var(--wg-wine);
-  color: #fff;
+  border-color: var(--wg-on-primary);
+  background: var(--wg-on-primary);
+  color: var(--wg-wine);
 }
 
 .world-gen-chip {
   border-radius: 999px;
   border: 1px solid var(--wg-faint);
-  background: #1C1C1E;
+  background: var(--wg-sheet-2);
   padding: 0.32rem 0.8rem;
   font-size: 11.5px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--wg-ink);
   transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
 }
 .world-gen-chip:hover {
-  border-color: rgba(168, 40, 60, 0.5);
-  color: #fff;
-  background: #222226;
+  border-color: color-mix(in srgb, var(--wg-wine) 45%, transparent);
+  color: var(--wg-wine);
+  background: color-mix(in srgb, var(--wg-wine) 8%, transparent);
 }
 
 .world-gen-dock {
@@ -2421,22 +2650,41 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   bottom: 0;
   z-index: 30;
   border-top: 1px solid var(--wg-faint);
-  background: rgba(10, 10, 10, 0.92);
+  background: color-mix(in srgb, var(--wg-panel) 92%, transparent);
   backdrop-filter: blur(14px) saturate(1.1);
   -webkit-backdrop-filter: blur(14px) saturate(1.1);
-  box-shadow: 0 -16px 36px -24px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 -12px 28px color-mix(in srgb, var(--color-shadow, #000) 10%, transparent);
+}
+.world-gen-dock-row {
+  margin-inline: auto;
+  display: flex;
+  max-width: 36rem;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.7rem 1rem;
+  white-space: nowrap;
+}
+.world-gen-dock-row--end {
+  justify-content: flex-end;
+}
+@media (min-width: 640px) {
+  .world-gen-dock-row {
+    padding-inline: 1.5rem;
+  }
 }
 .world-gen-cta {
-  border-radius: 999px;
+  border-radius: 12px;
   border: 1px solid transparent;
-  background: linear-gradient(180deg, var(--wg-wine), var(--wg-wine-deep));
-  color: #fff;
-  padding: 0.72rem 1.4rem;
-  font-size: 0.92rem;
+  background: var(--wg-wine);
+  color: var(--wg-on-primary);
+  padding: 0.65rem 1.1rem;
+  font-size: 0.88rem;
   font-weight: 700;
   letter-spacing: 0.01em;
-  box-shadow: 0 10px 24px -12px var(--wg-glow);
-  transition: filter 0.15s ease, transform 0.15s ease;
+  box-shadow: none;
+  transition: filter 0.15s ease, transform 0.15s ease, background 0.15s ease;
 }
 .world-gen-cta:hover:not(:disabled) {
   filter: brightness(1.08);
@@ -2446,7 +2694,7 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   opacity: 0.5;
 }
 .world-gen-ghost {
-  border-radius: 999px;
+  border-radius: 12px;
   padding: 0.65rem 0.9rem;
   font-size: 0.92rem;
   font-weight: 600;
@@ -2454,8 +2702,8 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   transition: color 0.15s ease, background-color 0.15s ease;
 }
 .world-gen-ghost:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.05);
+  color: var(--wg-ink);
+  background: color-mix(in srgb, var(--wg-ink) 6%, transparent);
 }
 
 .world-gen-progress-stage {
@@ -2470,8 +2718,8 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   max-width: 32rem;
   border-radius: 1.2rem;
   border: 1px solid var(--wg-faint);
-  background: linear-gradient(165deg, #151517, var(--wg-sheet));
-  box-shadow: 0 28px 56px -28px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(168, 40, 60, 0.08);
+  background: var(--wg-sheet);
+  box-shadow: 0 18px 40px color-mix(in srgb, var(--color-shadow, #000) 12%, transparent);
   padding: 1.3rem 1.2rem 1.2rem;
   animation: world-gen-rise 0.45s ease both;
 }
@@ -2479,11 +2727,11 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   flex-shrink: 0;
   min-width: 4.8rem;
   border-radius: 1rem;
-  border: 1px solid rgba(168, 40, 60, 0.45);
-  background: linear-gradient(165deg, rgba(168, 40, 60, 0.22), #1C1C1E);
+  border: 1px solid color-mix(in srgb, var(--wg-wine) 35%, transparent);
+  background: color-mix(in srgb, var(--wg-wine) 10%, var(--wg-sheet));
   padding: 0.55rem 0.7rem 0.6rem;
   text-align: center;
-  box-shadow: 0 0 0 4px rgba(168, 40, 60, 0.12);
+  box-shadow: none;
 }
 .world-gen-eta-label {
   font-size: 10px;
@@ -2500,7 +2748,7 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  color: #fff;
+  color: var(--wg-ink);
 }
 .world-gen-eta-num {
   font-size: 1.25rem;
@@ -2518,7 +2766,7 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   height: 0.5rem;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--wg-ink) 8%, transparent);
 }
 .world-gen-bar > i {
   display: block;
@@ -2562,14 +2810,20 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   gap: 0.55rem;
   border-radius: 0.85rem;
   border: 1px solid var(--wg-faint);
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in srgb, var(--wg-sheet-2) 70%, var(--wg-panel));
   padding: 0.55rem 0.7rem;
   transition: border-color 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease;
 }
 .world-gen-mod-row.is-running {
-  border-color: rgba(168, 40, 60, 0.55);
-  background: linear-gradient(120deg, rgba(168, 40, 60, 0.2), rgba(28, 28, 30, 0.95) 55%);
-  box-shadow: 0 0 0 1px rgba(168, 40, 60, 0.18), 0 10px 22px -16px rgba(168, 40, 60, 0.45);
+  border-color: color-mix(in srgb, var(--wg-wine) 42%, transparent);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--wg-wine) 14%, var(--wg-panel)),
+    color-mix(in srgb, var(--wg-wine) 6%, var(--wg-sheet-2)) 55%,
+    var(--wg-panel)
+  );
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--wg-wine) 12%, transparent),
+    0 10px 22px -16px color-mix(in srgb, var(--wg-wine) 35%, transparent);
   animation: world-gen-row-active 1.6s ease-in-out infinite;
 }
 .world-gen-mod-row.is-running::before,
@@ -2582,17 +2836,23 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   width: 3px;
   border-radius: 0 2px 2px 0;
   background: linear-gradient(180deg, var(--wg-rose), var(--wg-wine));
-  box-shadow: 0 0 10px rgba(168, 40, 60, 0.45);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--wg-wine) 28%, transparent);
 }
 /* 功能注释：生成结束滚到失败项时强调约 2.5s，让用户第一眼看到 */
 .world-gen-mod-row.is-failed {
-  border-color: rgba(255, 107, 122, 0.4);
-  background: rgba(255, 107, 122, 0.08);
+  border-color: color-mix(in srgb, var(--color-danger, #e11d48) 28%, transparent);
+  background: color-mix(in srgb, var(--color-danger, #e11d48) 7%, var(--wg-panel));
 }
 .world-gen-mod-row.is-failed.is-attention {
-  border-color: rgba(255, 107, 122, 0.7);
-  background: linear-gradient(120deg, rgba(255, 107, 122, 0.18), rgba(28, 28, 30, 0.95) 58%);
-  box-shadow: 0 0 0 2px rgba(255, 107, 122, 0.28), 0 14px 28px -14px rgba(255, 107, 122, 0.4);
+  border-color: color-mix(in srgb, var(--color-danger, #e11d48) 45%, transparent);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--color-danger, #e11d48) 12%, var(--wg-panel)),
+    color-mix(in srgb, var(--color-danger, #e11d48) 5%, var(--wg-sheet-2)) 58%,
+    var(--wg-panel)
+  );
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-danger, #e11d48) 18%, transparent),
+    0 14px 28px -14px color-mix(in srgb, var(--color-danger, #e11d48) 28%, transparent);
   animation: world-gen-fail-attention 0.85s ease-in-out 3;
   z-index: 1;
 }
@@ -2607,35 +2867,35 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--wg-muted);
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--wg-ink) 6%, transparent);
 }
 .world-gen-mod-status.is-running {
-  color: #fff;
-  background: rgba(168, 40, 60, 0.85);
-  box-shadow: 0 0 0 0 rgba(168, 40, 60, 0.35);
+  color: var(--wg-on-primary);
+  background: var(--wg-wine);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--wg-wine) 35%, transparent);
   animation: world-gen-pulse 1.4s ease infinite;
 }
-/* 功能注释：已完成 = 绿色胶囊，与失败红、进行中酒红区分 */
+/* 功能注释：已完成 = 浅绿胶囊，与失败红、进行中主色区分 */
 .world-gen-mod-status.is-done {
-  color: #0d2818;
-  background: #3dd68c;
-  box-shadow: 0 0 0 1px rgba(61, 214, 140, 0.35);
+  color: #166534;
+  background: color-mix(in srgb, #22c55e 22%, #fff);
+  box-shadow: 0 0 0 1px color-mix(in srgb, #22c55e 28%, transparent);
 }
 .world-gen-mod-row.is-done {
-  border-color: rgba(61, 214, 140, 0.28);
-  background: rgba(61, 214, 140, 0.06);
+  border-color: color-mix(in srgb, #22c55e 22%, transparent);
+  background: color-mix(in srgb, #22c55e 6%, var(--wg-panel));
 }
 /* 功能注释：失败 = 实心红胶囊，原因行另用 text-danger */
 .world-gen-mod-status.is-failed {
   color: #fff;
-  background: #e23d55;
-  box-shadow: 0 0 0 1px rgba(226, 61, 85, 0.45);
+  background: var(--color-danger, #e11d48);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-danger, #e11d48) 35%, transparent);
 }
 
 .world-gen-shell .text-ink { color: var(--wg-ink) !important; }
 .world-gen-shell .text-ink-soft { color: var(--wg-muted) !important; }
 .world-gen-shell .text-jade { color: var(--wg-rose) !important; }
-.world-gen-shell .text-danger { color: #FF8A9A !important; }
+.world-gen-shell .text-danger { color: var(--color-danger, #e11d48) !important; }
 .world-gen-shell [class*="border-line"] { border-color: var(--wg-faint) !important; }
 
 @keyframes world-gen-rise {
@@ -2647,25 +2907,29 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   100% { background-position: 200% 50%; }
 }
 @keyframes world-gen-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(168, 40, 60, 0.35); }
-  50% { box-shadow: 0 0 0 5px rgba(168, 40, 60, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--wg-wine) 35%, transparent); }
+  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--wg-wine) 0%, transparent); }
 }
 @keyframes world-gen-row-active {
   0%, 100% {
-    box-shadow: 0 0 0 1px rgba(168, 40, 60, 0.18), 0 10px 22px -16px rgba(168, 40, 60, 0.35);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--wg-wine) 12%, transparent),
+      0 10px 22px -16px color-mix(in srgb, var(--wg-wine) 28%, transparent);
   }
   50% {
-    box-shadow: 0 0 0 2px rgba(168, 40, 60, 0.35), 0 12px 26px -12px rgba(168, 40, 60, 0.45);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--wg-wine) 22%, transparent),
+      0 12px 26px -12px color-mix(in srgb, var(--wg-wine) 32%, transparent);
   }
 }
 @keyframes world-gen-fail-attention {
   0%, 100% {
     transform: translateX(0);
-    box-shadow: 0 0 0 2px rgba(255, 107, 122, 0.25), 0 14px 28px -14px rgba(255, 107, 122, 0.35);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-danger, #e11d48) 18%, transparent),
+      0 14px 28px -14px color-mix(in srgb, var(--color-danger, #e11d48) 22%, transparent);
   }
   35% {
     transform: translateX(-2px);
-    box-shadow: 0 0 0 3px rgba(255, 107, 122, 0.4), 0 16px 30px -12px rgba(255, 107, 122, 0.45);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger, #e11d48) 28%, transparent),
+      0 16px 30px -12px color-mix(in srgb, var(--color-danger, #e11d48) 28%, transparent);
   }
   70% {
     transform: translateX(2px);

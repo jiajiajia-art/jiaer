@@ -117,8 +117,8 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
     const disabled = isTempScene;
     const disabledMessage = disabled
         ? (isAddingNewSubscene
-            ? '请先确认新增子场景，然后再上传图片'
-            : '请先确认新增场景，然后再上传图片')
+            ? t('createGame.confirmAddSubSceneFirst')
+            : t('createGame.confirmAddSceneFirst'))
         : undefined;
 
     const showDisabledMessage = disabled && disabledMessage;

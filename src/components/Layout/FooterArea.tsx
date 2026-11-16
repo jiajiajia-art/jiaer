@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { resolvePrivacyPolicyUrl } from '../../lib/privacyPolicy';
+import { resolveMode, useThemeSettings } from '../../lib/theme';
 import { BusinessCoopModal, FeedbackModal } from './CustomerServiceModals';
 import styles from './FooterArea.module.css';
 
@@ -20,9 +21,12 @@ const BOSS_ZHIPIN_URL =
  */
 const FooterArea: React.FC = () => {
   const { t } = useTranslation();
+  const { mode: themeMode } = useThemeSettings();
+  const isDarkMode = resolveMode(themeMode) === 'dark';
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const privacyUrl = resolvePrivacyPolicyUrl({ darkMode: true });
+  const logoSrc = asset(isDarkMode ? 'data/assets/LOGO2.png' : 'data/assets/LOGO.png');
 
   return (
     <>
@@ -30,7 +34,7 @@ const FooterArea: React.FC = () => {
         <div className={styles.container}>
           <div className={styles.brandCol}>
             {/* 功能注释：Logo / 口号仅 PC；移动端 CSS 隐藏，避免底栏页再挂官网完整站脚 */}
-            <img src={asset('data/assets/LOGO2.png')} alt="funloom" className={styles.logo} />
+            <img key={logoSrc} src={logoSrc} alt="funloom" className={styles.logo} />
             <p className={styles.tagline}>{t('footer.tagline')}</p>
             <p className={styles.legal}>
               <span>{t('footer.copyright')}</span>

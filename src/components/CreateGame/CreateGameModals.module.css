@@ -83,8 +83,8 @@
 }
 
 .createTypeOptionThumb {
-    width: 60px;
-    height: 60px;
+    width: 56px;
+    height: 56px;
     flex-shrink: 0;
     border-radius: 12px;
     display: inline-flex;
@@ -96,42 +96,51 @@
 }
 
 .createTypeOptionIcon {
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
     flex-shrink: 0;
+    /* 功能注释：白图标加轻阴影，避免彩色底上看不清 */
+    filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--color-shadow) 45%, transparent));
 }
 
-/* 功能注释：各模式缩略图色调不同，扫一眼能区分，不靠同一灰块 */
+/* 功能注释：各模式缩略图色调不同；图标统一白字，保证对比清晰 */
 .createTypeOptionThumbTxt {
-    background: linear-gradient(145deg, color-mix(in srgb, var(--color-primary) 55%, transparent) 0%, color-mix(in srgb, var(--color-primary) 95%, transparent) 100%);
-    border-color: color-mix(in srgb, var(--color-primary-light) 22%, transparent);
-    color: var(--color-primary-lighter);
-    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent);
+    background: linear-gradient(145deg, color-mix(in srgb, var(--color-primary) 82%, #2a0a12) 0%, var(--color-primary) 100%);
+    border-color: color-mix(in srgb, var(--color-primary-light) 35%, transparent);
+    color: #fff;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 14%, transparent);
 }
 
 .createTypeOptionThumbAvg {
-    background: linear-gradient(145deg, color-mix(in srgb, var(--color-highlight) 45%, transparent) 0%, color-mix(in srgb, var(--color-highlight) 95%, transparent) 100%);
-    border-color: color-mix(in srgb, var(--color-highlight) 28%, transparent);
-    color: var(--color-highlight);
+    background: linear-gradient(145deg, color-mix(in srgb, var(--color-highlight) 78%, #3a2a08) 0%, var(--color-highlight) 100%);
+    border-color: color-mix(in srgb, var(--color-highlight) 40%, transparent);
+    color: #fff;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 14%, transparent);
 }
 
-/* 功能注释：创作游戏（Romance）入口色调，介于文游酒红与酒馆卡暖棕之间 */
+/* 功能注释：创作游戏入口——实色绿底 + 白实心星芒，避免浅绿描边发糊 */
 .createTypeOptionThumbRomance {
-    background: linear-gradient(145deg, color-mix(in srgb, var(--color-surface) 50%, transparent) 0%, color-mix(in srgb, var(--color-success) 98%, transparent) 100%);
-    border-color: color-mix(in srgb, var(--color-success) 28%, transparent);
-    color: var(--color-success);
+    background: linear-gradient(145deg, color-mix(in srgb, var(--color-success) 72%, #0c1a12) 0%, var(--color-success) 100%);
+    border-color: color-mix(in srgb, var(--color-success) 42%, transparent);
+    color: #fff;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 14%, transparent);
 }
 
 .createTypeOptionThumbIvg {
-    background: linear-gradient(145deg, color-mix(in srgb, var(--color-surface) 50%, transparent) 0%, color-mix(in srgb, var(--color-surface) 98%, transparent) 100%);
-    border-color: color-mix(in srgb, var(--color-info) 22%, transparent);
-    color: var(--color-info);
+    background: linear-gradient(145deg, color-mix(in srgb, var(--color-info) 72%, #0a1220) 0%, var(--color-info) 100%);
+    border-color: color-mix(in srgb, var(--color-info) 36%, transparent);
+    color: #fff;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 14%, transparent);
 }
 
 .createTypeOptionThumbCustom {
-    background: linear-gradient(145deg, color-mix(in srgb, var(--color-surface) 55%, transparent) 0%, color-mix(in srgb, var(--color-surface) 98%, transparent) 100%);
-    border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+    background: linear-gradient(145deg, color-mix(in srgb, var(--color-surface-2) 70%, transparent) 0%, var(--color-surface-2) 100%);
+    border-color: color-mix(in srgb, var(--color-text) 14%, transparent);
     color: var(--color-text);
+}
+
+.createTypeOptionThumbCustom .createTypeOptionIcon {
+    filter: none;
 }
 
 .createTypeOptionThumbRpg {
@@ -141,12 +150,16 @@
     color: var(--color-text-muted);
 }
 
+.createTypeOptionThumbRpg .createTypeOptionIcon {
+    filter: none;
+}
+
 .createTypeOptionBody {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
 }
 
 .createTypeOptionTitleRow {
@@ -158,14 +171,15 @@
 }
 
 .createTypeOptionName {
-    font-size: 15px;
-    font-weight: 700;
+    /* 功能注释：标题/副文/角标同一档，避免列表忽大忽小 */
+    font-size: 14px;
+    font-weight: 650;
     color: var(--color-text);
-    line-height: 1.3;
+    line-height: 1.35;
 }
 
 .createTypeOptionHint {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--color-text-muted);
     line-height: 1.4;
     white-space: nowrap;
@@ -196,32 +210,32 @@
 }
 
 .createTypeOptionRecommend {
-    font-size: 11px;
-    font-weight: 500;
+    font-size: 12px;
+    font-weight: 600;
     color: var(--color-text);
     background-color: color-mix(in srgb, var(--color-highlight) 50%, transparent);
-    padding: 2px 7px;
+    padding: 2px 8px;
     border-radius: 6px;
     line-height: 1.3;
 }
 
 .createTypeOptionLockedTag {
-    font-size: 11px;
-    font-weight: 500;
+    font-size: 12px;
+    font-weight: 600;
     color: var(--color-on-primary);
     background: var(--color-primary);
-    padding: 2px 7px;
+    padding: 2px 8px;
     border-radius: 6px;
     line-height: 1.3;
 }
 
 .createTypeOptionLocked {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--color-text-muted);
     background-color: color-mix(in srgb, var(--color-text) 8%, transparent);
-    padding: 2px 7px;
-    border-radius: 999px;
+    padding: 2px 8px;
+    border-radius: 6px;
     line-height: 1.3;
 }
 

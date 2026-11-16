@@ -1,0 +1,67 @@
+{
+  "warehouse": {
+    "forms": {
+      "labelName": "姓名",
+      "labelAgeGroup": "年龄段（头像匹配）",
+      "labelBackground": "背景（头像匹配）",
+      "avatarLockedHint": "已手动选定头像，自动匹配已锁定",
+      "defaultCardSuffix": " · 默认卡",
+      "aiGenerating": "生成中…",
+      "aiGenerateCost": "AI生成 · {{cost}}"
+    },
+    "persona": {
+      "avatarGenFailed": "生成图像失败",
+      "personaGenFailed": "人设生成失败",
+      "personaGenOk": "人设已生成（-{{cost}} 织梦豆）",
+      "form": {
+        "previewHint": "在右侧写下你的人设简介…",
+        "namePlaceholder": "你在故事里的名字",
+        "personaLabel": "人设简介",
+        "personaPlaceholder": "性格、口吻、经历…越具体越好",
+        "tagsPlaceholder": "校园, 恋爱（逗号分隔）",
+        "setDefaultCheckbox": "设为默认人设卡",
+        "savePersona": "保存人设",
+        "confirmGenerateTitle": "确认生成人设",
+        "confirmGenerateMessage": "将扣除 {{cost}} 织梦豆生成「人设简介」，是否继续？",
+        "confirmGenerate": "生成"
+      }
+    },
+    "characters": {
+      "form": {
+        "previewHint": "在右侧写下角色设定…",
+        "namePlaceholder": "角色名字",
+        "personaLabel": "角色设定",
+        "personaPlaceholder": "性格、口吻、与玩家的关系…越具体越好",
+        "tagsPlaceholder": "奇幻, 恋爱（逗号分隔）",
+        "setDefaultCheckbox": "设为默认角色卡",
+        "saveCharacter": "保存角色卡",
+        "confirmGenerateTitle": "确认生成角色设定",
+        "confirmGenerateMessage": "将扣除 {{cost}} 织梦豆生成「角色设定」，是否继续？",
+        "confirmGenerate": "生成"
+      }
+    },
+    "resource": {
+      "form": {
+        "dialogAriaEdit": "编辑",
+        "dialogAriaCreate": "新建",
+        "unnamed": "未命名",
+        "previewHint": "在右侧填写内容…",
+        "titleEdit": "编辑",
+        "titleCreate": "新建",
+        "typeWorldbook": "世界书",
+        "typePlugin": "插件",
+        "titleLabel": "标题",
+        "titlePlaceholder": "资源标题",
+        "descriptionLabel": "描述",
+        "descriptionPlaceholder": "简要说明用途",
+        "tagsPlaceholder": "奇幻, 校园（逗号分隔）",
+        "entriesJsonLabel": "条目 JSON",
+        "entriesJsonPlaceholder": "[{\"title\":\"设定名\",\"content\":\"...\",\"keywords\":[],\"constant\":false,\"enabled\":true}]",
+        "pluginTypeLabel": "插件类型",
+        "scriptLabel": "脚本 / 配置文本",
+        "scriptPlaceholder": "提示词、正则规则或工具说明…",
+        "enablePlugin": "启用该插件"
+      }
+    }
+  }
+}

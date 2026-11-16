@@ -20,6 +20,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import AdminShell from '../components/admin-shell/AdminShell';
+import AdminSectionTabs from '../components/admin-shell/AdminSectionTabs';
 import AnnouncementModal from '../components/AnnouncementModal';
 import AdminBannerManager from '../components/AdminBannerManager';
 import Pagination from '../components/Pagination';
@@ -1420,6 +1421,7 @@ const AdminPanel: React.FC = () => {
             <div className={styles.pageBody}>
                 <div className={styles.workspace}>
                     <div className={styles.contentArea}>
+                        <AdminSectionTabs badges={{ points: pendingPromotionRewardCount }} />
                         {activeTab === 'announcements' && (
                             <div className={styles.panelStack}>
                                     <button type="button" className={styles.primaryGhostButton} onClick={resetEditor}>新建草稿</button>
@@ -1810,7 +1812,7 @@ const AdminPanel: React.FC = () => {
                                     {/* 左侧：树形结构 */}
                                     <aside className={styles.documentTreePanel}>
                                         <div className={styles.documentTreeHeader}>
-                                            <span className={styles.documentTreeTitle}>文档导航</span>
+                                            <span className={styles.documentTreeTitle}>文档列表</span>
                                         </div>
                                         {isLoadingDocuments ? (
                                             <div className={styles.emptyState}>文档列表加载中...</div>
@@ -1975,9 +1977,9 @@ const AdminPanel: React.FC = () => {
                                         ) : (
                                             <div className={styles.documentEmptyState}>
                                                 <div className={styles.documentEmptyIcon}>📚</div>
-                                                <div className={styles.documentEmptyTitle}>选择文档查看详情</div>
+                                                <div className={styles.documentEmptyTitle}>在这里查看和修改</div>
                                                 <div className={styles.documentEmptyDesc}>
-                                                    点击左侧列表中的文档，然后点击编辑按钮进行编辑
+                                                    上面的列表是已经写好的说明。点开一篇，就能改内容或删除。列表是空的时候，先点「新增文档」。
                                                 </div>
                                             </div>
                                         )}

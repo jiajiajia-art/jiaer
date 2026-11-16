@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import AdminShell from '../../components/admin-shell/AdminShell';
+import AdminSectionTabs from '../../components/admin-shell/AdminSectionTabs';
 import PromotionAdminManager from '../../components/PromotionAdminManager';
 import CreatorIncentiveAdminManager from '../../components/CreatorIncentiveAdminManager';
 import CreatorBenefitsAdminManager from '../../components/CreatorBenefitsAdminManager';
@@ -253,6 +254,7 @@ const OperatorPanel: React.FC = () => {
       <div className={adminStyles.pageBody}>
         <div className={adminStyles.workspace}>
           <section className={adminStyles.contentArea}>
+            <AdminSectionTabs badges={{ promotions: promotionPendingReviewCount, platformWorks: appealPendingCount }} />
             {isLoading ? <div className={styles.emptyState}>{t('creatorStats.loading')}</div> : null}
             {activeTab === 'stats' ? <OperatorSiteStats /> : null}
             {!isLoading && activeTab === 'reports' ? <OperatorReports /> : null}

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import {
   applyPlayerCardImport,
@@ -71,19 +72,19 @@ interface PlayerArchiveSectionProps {
   onPlayerAvatarAbChange?: (enabled: boolean) => void;
 }
 
-const GENDER_LABEL: Record<PlayerCardGender, string> = {
-  female: '女',
-  male: '男',
-  other: '其他',
+const genderLabelKey: Record<PlayerCardGender, string> = {
+  female: 'galgameUi.playerArchive.gender.female',
+  male: 'galgameUi.playerArchive.gender.male',
+  other: 'galgameUi.playerArchive.gender.other',
 };
 
 /** UE 性别顺序：女 / 男 / 其他 */
 const GENDER_ORDER: PlayerCardGender[] = ['female', 'male', 'other'];
 
-function genderText(g?: string | null) {
-  if (g === 'male') return '男';
-  if (g === 'female') return '女';
-  return '其他';
+function genderText(g: string | null | undefined, translate: (key: string) => string) {
+  if (g === 'male') return translate('galgameUi.playerArchive.gender.male');
+  if (g === 'female') return translate('galgameUi.playerArchive.gender.female');
+  return translate('galgameUi.playerArchive.gender.other');
 }
 
 /**
@@ -104,6 +105,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
   playerAvatarAbOnChange = false,
   onPlayerAvatarAbChange,
 }) => {
+  const { t } = useTranslation();
   const { sessionId } = useGameStore();
   const {
     data: sessionAvatarPricing,
@@ -174,7 +176,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
     return previewPlayerCardImportDiff(profile, previewCard);
   }, [previewCard, profile]);
 
-  const displayName = resolvePlayerDisplayNameOrFallback([profile?.name, documentPlayerName]) || '未设置';
+  const displayName = resolvePlayerDisplayNameOrFallback([profile?.name, documentPlayerName]) || t('galgameUi.common.notSet');
   // 功能注释：方框 bust 裁切必须用原图；_150 小图再 bust 会裁成几十像素、脸被切碎
   const avatarFullPath = pickDisplayAvatarFullUrl([
     profile?.avatarUrl,
@@ -216,7 +218,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
       attributes: profile?.customAttributes || {},
     });
     if (!checked.ok) {
-      toast.error(checked.message || '档案无效');
+      toast.error(checked.message || t('galgameUi.playerArchive.toast.profileInvalid'));
       return;
     }
     const next: SessionPlayerProfile = {
@@ -234,7 +236,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
       if (sessionId && token) {
         const res = await sessionPlayerProfileApi.putPlayerProfile(token, sessionId, next);
         if (!res?.success) {
-          toast.error(res?.message || '保存失败');
+          toast.error(res?.message || t('galgameUi.common.saveFailed'));
           return;
         }
         if (typeof res.data?.ab?.generateOnChange === 'boolean') {
@@ -247,10 +249,10 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
         onProfileChange(saved);
         onViewChange('overview');
         if (change?.content) {
-          toast.success(`${change.content}（下一句起按新身份）`);
+          toast.success(t('galgameUi.playerArchive.toast.identityChangeNextLine', { content: change.content }));
           void onHistoryMaybeChanged?.();
         } else {
-          toast.success('档案已更新');
+          toast.success(t('galgameUi.playerArchive.toast.profileUpdated'));
         }
         if (playerAvatarAbOnChange || res.data?.ab?.generateOnChange) {
           if (saved.avatarNeedsRegen || !saved.avatarUrl) {
@@ -261,7 +263,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
       }
       onProfileChange(next);
       onViewChange('overview');
-      toast.success('档案已更新');
+      toast.success(t('galgameUi.playerArchive.toast.profileUpdated'));
     } finally {
       setSaving(false);
     }
@@ -290,11 +292,11 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
   const requestGenerateAvatar = async () => {
     const payload = avatarGenPayload();
     if (!payload.name) {
-      toast.error('请先填写姓名再生成头像');
+      toast.error(t('galgameUi.playerArchive.toast.nameRequiredAvatar'));
       return;
     }
     if (!authUser?.token || !sessionId) {
-      toast.error('请先登录并进入对局');
+      toast.error(t('galgameUi.common.loginAndEnterSession'));
       return;
     }
     if (avatarAiBusy || personaAiBusy || avatarUploading) return;
@@ -305,7 +307,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
     if (avatarBillingPreview.currency === 'points') {
       const latestPoints = await refreshAuthUserPoints();
       if (typeof latestPoints === 'number' && latestPoints < avatarBillingPreview.chargedUnits) {
-        toast.error(`织梦豆不足（需要 ${avatarBillingPreview.chargedUnits}，当前 ${latestPoints}）`);
+        toast.error(t('galgameUi.currency.insufficientDreamBeans', { need: avatarBillingPreview.chargedUnits, current: latestPoints }));
         return;
       }
     }
@@ -322,11 +324,11 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
     if (!token || !sessionId || isPlayerAvatarGenBusy(sessionId)) return;
     const payload = avatarGenPayload();
     if (!payload.name) {
-      toast.error('请先填写姓名再生成头像');
+      toast.error(t('galgameUi.playerArchive.toast.nameRequiredAvatar'));
       return;
     }
     // 功能注释：后台任务不绑组件生命周期；可保存/离开，完成后服务端已落盘，本地只合并头像
-    toast('头像生成中，可先保存或离开，完成后会自动写入');
+    toast(t('galgameUi.playerArchive.toast.avatarGenerating'));
     try {
       await startPlayerAvatarBackgroundGen({
         token,
@@ -341,13 +343,13 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
       setAvatarStyleId(DEFAULT_AVATAR_STYLE);
       // 成功由 Galgame 订阅写回档案并 toast，避免面板卸载后丢更新
     } catch (e) {
-      toast.error(getApiErrorMessage(e, '头像生成失败'));
+      toast.error(getApiErrorMessage(e, t('galgameUi.playerArchive.toast.avatarGenerateFailed')));
     }
   };
 
   const requestUploadAvatar = () => {
     if (!authUser?.token || !sessionId) {
-      toast.error('请先登录并进入对局');
+      toast.error(t('galgameUi.common.loginAndEnterSession'));
       return;
     }
     if (avatarAiBusy || avatarUploading) return;
@@ -360,7 +362,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
     if (!file) return;
     const token = authUser?.token;
     if (!token || !sessionId) {
-      toast.error('请先登录并进入对局');
+      toast.error(t('galgameUi.common.loginAndEnterSession'));
       return;
     }
     if (avatarUploading || avatarAiBusy) return;
@@ -377,7 +379,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
         { fileName: compressed.file.name },
       );
       if (!res?.success || !res.data?.avatarUrl) {
-        toast.error(res?.message || '头像上传失败');
+        toast.error(res?.message || t('galgameUi.playerArchive.toast.avatarUploadFailed'));
         return;
       }
       if (res.data.profile) {
@@ -388,9 +390,9 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
           avatarThumbUrl: res.data.avatarThumbUrl || '',
         }));
       }
-      toast.success('头像已上传');
+      toast.success(t('galgameUi.playerArchive.toast.avatarUploaded'));
     } catch (err) {
-      toast.error((err as Error)?.message || '头像上传失败');
+      toast.error((err as Error)?.message || t('galgameUi.playerArchive.toast.avatarUploadFailed'));
     } finally {
       setAvatarUploading(false);
     }
@@ -400,7 +402,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
     <GameConfirmModal
       isOpen={avatarAiConfirmOpen}
       variant="dossier"
-      title="确认生成头像"
+      title={t('galgameUi.playerArchive.confirm.avatarTitle')}
       message={(
         <div className={styles.confirmMsgStack}>
           <p className={styles.confirmMsgText}>
@@ -412,27 +414,27 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
             onClick={() => setAvatarPromptOpen((open) => !open)}
             aria-expanded={avatarPromptOpen}
           >
-            <span>{avatarPromptOpen ? '收起画风与提示词' : '画风与提示词'}</span>
+            <span>{avatarPromptOpen ? t('galgameUi.playerArchive.avatar.togglePrompt') : t('galgameUi.playerArchive.avatar.showPrompt')}</span>
             <span className={styles.promptCueChevron} aria-hidden>
               {avatarPromptOpen ? '▴' : '▾'}
             </span>
           </button>
         </div>
       )}
-      confirmText="确认生成"
-      cancelText="取消"
+      confirmText={t('galgameUi.common.confirmGenerate')}
+      cancelText={t('common.cancel')}
       overlayZIndex={overlayZIndex}
       onConfirm={() => { void runGenerateAvatar(); }}
       onCancel={closeAvatarConfirm}
     >
       {avatarPromptOpen ? (
-        <div className={styles.promptCuePanel} role="region" aria-label="画风与提示词">
+        <div className={styles.promptCuePanel} role="region" aria-label={t('galgameUi.playerArchive.avatar.showPrompt')}>
           <div className={styles.promptCueSection}>
             <div className={styles.promptCueLabelRow}>
               <span className={styles.promptCueLabel}>风格选择</span>
               <span className={styles.promptCueHint}>点选即可 · 默认 A</span>
             </div>
-            <div className={styles.styleChipRow} role="radiogroup" aria-label="立绘画风">
+            <div className={styles.styleChipRow} role="radiogroup" aria-label={t('galgameUi.playerArchive.avatar.styleAria')}>
               {AVATAR_STYLE_OPTIONS.map((opt) => (
                 <button
                   key={opt.id}
@@ -462,7 +464,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
               className={styles.promptCueInput}
               value={avatarPromptSupplement}
               onChange={(ev) => setAvatarPromptSupplement(ev.target.value.slice(0, 500))}
-              placeholder="短发、校服、冷白皮、侧分刘海…"
+              placeholder={t('galgameUi.playerArchive.avatar.appearancePlaceholder')}
               rows={3}
               maxLength={500}
             />
@@ -486,11 +488,11 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
 
   const requestGeneratePersona = async () => {
     if (!draft.name.trim()) {
-      toast.error('请先填写姓名再生成');
+      toast.error(t('galgameUi.playerArchive.toast.nameRequiredPersona'));
       return;
     }
     if (!authUser?.token || !sessionId) {
-      toast.error('请先登录并进入对局');
+      toast.error(t('galgameUi.common.loginAndEnterSession'));
       return;
     }
     if (personaAiBusy || saving) return;
@@ -502,7 +504,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
         && latestPoints < textBillingPreview.chargedUnits
       ) {
         toast.error(
-          `织梦豆不足（需要 ${textBillingPreview.chargedUnits}，当前 ${latestPoints}）`,
+          t('galgameUi.currency.insufficientDreamBeans', { need: textBillingPreview.chargedUnits, current: latestPoints }),
         );
         return;
       }
@@ -522,7 +524,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
         existingPersona: draft.persona,
       });
       if (!res?.success || !res.data?.text) {
-        toast.error(res?.message || '人设生成失败');
+        toast.error(res?.message || t('galgameUi.playerArchive.toast.personaGenerateFailed'));
         return;
       }
       setDraft((d) => ({
@@ -536,12 +538,12 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
         updateUser({ points: res.data.remainingPoints });
       }
       toast.success(
-        `人设已生成（-${res.data.billing
+        t('galgameUi.playerArchive.toast.personaGenerated', { billing: res.data.billing
           ? formatSessionProfileCharge(res.data.billing)
-          : textChargeText}）`,
+          : textChargeText }),
       );
     } catch (e) {
-      toast.error((e as Error)?.message || '人设生成失败');
+      toast.error((e as Error)?.message || t('galgameUi.playerArchive.toast.personaGenerateFailed'));
     } finally {
       setPersonaAiBusy(false);
     }
@@ -549,7 +551,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
 
   const openImport = async () => {
     if (!authUser?.token) {
-      toast.error('请先登录后再导入角色卡');
+      toast.error(t('galgameUi.playerArchive.toast.loginToImport'));
       return;
     }
     setImportLoading(true);
@@ -558,13 +560,13 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
     try {
       const res = await playerCharacterCardsApi.list(authUser.token, { kind: 'player' });
       if (!res?.success) {
-        toast.error(res?.message || '加载卡库失败');
+        toast.error(res?.message || t('galgameUi.playerArchive.toast.loadLibraryFailed'));
         onViewChange('overview');
         return;
       }
       setCards(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
-      toast.error((e as Error)?.message || '加载卡库失败');
+      toast.error((e as Error)?.message || t('galgameUi.playerArchive.toast.loadLibraryFailed'));
       onViewChange('overview');
     } finally {
       setImportLoading(false);
@@ -573,12 +575,12 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
 
   const selectCard = (card: PlayerCharacterCard) => {
     if (card.cardKind === 'npc') {
-      toast.error('请选择人设卡；角色卡请在角色档案中导入');
+      toast.error(t('galgameUi.playerArchive.toast.selectPersonaCard'));
       return;
     }
     const preview = previewPlayerCardImportDiff(profile, card);
     if (!preview.ok || !preview.next) {
-      toast.error(preview.message || '无法导入');
+      toast.error(preview.message || t('galgameUi.playerArchive.toast.cannotImport'));
       return;
     }
     setPreviewCard(card);
@@ -589,21 +591,21 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
     if (!previewCard) return;
     const token = authUser?.token;
     if (!token || !sessionId) {
-      toast.error('会话不可用');
+      toast.error(t('galgameUi.playerArchive.toast.sessionUnavailable'));
       return;
     }
     setSaving(true);
     try {
       const res = await playerCharacterCardsApi.importToSession(token, sessionId, previewCard.id);
       if (!res?.success) {
-        toast.error(res?.message || '导入失败');
+        toast.error(res?.message || t('galgameUi.common.importFailed'));
         return;
       }
       const applied = applyPlayerCardImport(previewCard, {
         currentUserId: authUser?.user?.userId,
       });
       if (!applied.ok) {
-        toast.error(applied.message || '导入失败');
+        toast.error(applied.message || t('galgameUi.common.importFailed'));
         return;
       }
       const serverProfile = (res.data as { profile?: SessionPlayerProfile; ab?: { generateOnChange?: boolean }; avatarNeedsRegen?: boolean } | undefined)?.profile;
@@ -620,10 +622,10 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
       const change = (res.data as { protagonistChange?: { content?: string } } | undefined)
         ?.protagonistChange;
       if (change?.content) {
-        toast.success(`${change.content}（下一句起按新身份）`);
+        toast.success(t('galgameUi.playerArchive.toast.identityChangeNextLine', { content: change.content }));
         void onHistoryMaybeChanged?.();
       } else {
-        toast.success('已覆盖当前局玩家档案');
+        toast.success(t('galgameUi.playerArchive.toast.profileOverwritten'));
       }
       if (
         (playerAvatarAbOnChange || (res.data as { ab?: { generateOnChange?: boolean } })?.ab?.generateOnChange)
@@ -653,7 +655,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
               className={styles.modalClose}
               onClick={closeToOverview}
               disabled={saving || personaAiBusy}
-              aria-label="关闭"
+              aria-label={t('galgameUi.gameConfirm.closeAria')}
             >
               ×
             </button>
@@ -667,7 +669,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
               onClick={() => {
                 if (avatarSrc) setAvatarPreviewOpen(true);
               }}
-              aria-label={avatarSrc ? '查看主角头像' : '暂无头像'}
+              aria-label={avatarSrc ? t('galgameUi.playerArchive.avatar.viewAvatarAria') : t('galgameUi.playerArchive.avatar.noAvatarAria')}
             >
               <span className={styles.avatarStageGlow} aria-hidden />
               {avatarSrc ? (
@@ -691,12 +693,12 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
               </div>
               <p className={styles.editAvatarHint}>
                 {avatarUploading
-                  ? '压缩上传中（≤1MB，不做背景处理）…'
+                  ? t('galgameUi.common.uploadCompressingDetail')
                   : avatarAiBusy
-                    ? '可先保存或离开，完成后自动写入'
+                    ? t('galgameUi.playerArchive.avatar.backgroundHint')
                     : (needsAvatar
-                      ? (avatarSrc ? '可重新生成或上传局内头像' : '生成或上传头像')
-                      : '点击立绘可放大预览')}
+                      ? (avatarSrc ? t('galgameUi.playerArchive.avatar.regenOrUpload') : t('galgameUi.playerArchive.avatar.genOrUpload'))
+                      : t('galgameUi.playerArchive.avatar.clickToPreview'))}
               </p>
               <div className={styles.avatarActionRow}>
                 <button
@@ -708,8 +710,8 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
                   }}
                 >
                   {avatarAiBusy
-                    ? '后台生成中…'
-                    : `${needsAvatar ? '生成头像' : '重新生成'} · ${sessionAvatarPrice == null ? '—' : avatarChargeText}`}
+                    ? t('galgameUi.playerArchive.avatar.backgroundGenerating')
+                    : `${needsAvatar ? t('galgameUi.playerArchive.avatar.generateAvatar') : t('galgameUi.playerArchive.avatar.regenerateAvatar')} · ${sessionAvatarPrice == null ? '—' : avatarChargeText}`}
                 </button>
                 <button
                   type="button"
@@ -717,7 +719,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
                   disabled={personaAiBusy || avatarAiBusy || avatarUploading || !authUser?.token}
                   onClick={() => requestUploadAvatar()}
                 >
-                  {avatarUploading ? '上传中…' : '上传图片'}
+                  {avatarUploading ? t('galgameUi.common.uploading') : t('galgameUi.common.uploadImage')}
                 </button>
               </div>
             </div>
@@ -726,7 +728,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
 
           <label className={styles.field}>
             <span className={styles.labelRow}>
-              姓名
+              {t('galgameUi.playerArchive.edit.name')}
               <span className={styles.counter}>
                 {draft.name.length}/{PLAYER_CARD_LIMITS.name.max}
               </span>
@@ -734,15 +736,15 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
             <input
               value={draft.name}
               maxLength={PLAYER_CARD_LIMITS.name.max}
-              placeholder="你的姓名"
+              placeholder={t('galgameUi.playerArchive.edit.namePlaceholder')}
               disabled={personaAiBusy}
               onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
             />
           </label>
 
           <div className={styles.field}>
-            <span className={styles.labelRow}>性别</span>
-            <div className={styles.chips} role="radiogroup" aria-label="性别">
+            <span className={styles.labelRow}>{t('galgameUi.playerArchive.edit.gender')}</span>
+            <div className={styles.chips} role="radiogroup" aria-label={t('galgameUi.playerArchive.edit.gender')}>
               {GENDER_ORDER.map((g) => (
                 <button
                   key={g}
@@ -753,7 +755,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
                   disabled={personaAiBusy}
                   onClick={() => setDraft((d) => ({ ...d, gender: g }))}
                 >
-                  {GENDER_LABEL[g]}
+                  {t(genderLabelKey[g])}
                 </button>
               ))}
             </div>
@@ -762,7 +764,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
           <div className={styles.field}>
             <div className={styles.labelRow}>
               <span className={styles.labelWithAiLeft}>
-                人设
+                {t('galgameUi.playerArchive.edit.persona')}
                 <button
                   type="button"
                   className={styles.fieldAiBtn}
@@ -772,8 +774,8 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
                   }}
                 >
                   {personaAiBusy
-                    ? '生成中…'
-                    : `AI生成 · ${textChargeText}`}
+                    ? t('galgameUi.common.generating')
+                    : t('galgameUi.common.aiGenerate', { charge: textChargeText })}
                 </button>
               </span>
               <span className={styles.counter}>
@@ -785,10 +787,10 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
                 className={styles.personaTextarea}
                 value={draft.persona}
                 maxLength={PLAYER_CARD_LIMITS.persona.max}
-                placeholder="性格、身份、经历…"
+                placeholder={t('galgameUi.playerArchive.edit.personaPlaceholder')}
                 disabled={personaAiBusy}
                 onChange={(e) => setDraft((d) => ({ ...d, persona: e.target.value }))}
-                aria-label="人设"
+                aria-label={t('galgameUi.playerArchive.edit.persona')}
               />
             </div>
           </div>
@@ -800,14 +802,14 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
               onClick={closeToOverview}
               disabled={saving || personaAiBusy}
             >
-              取消
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               className={styles.primaryBtn}
               disabled={saving || personaAiBusy}
             >
-              {saving ? '保存中…' : '保存'}
+              {saving ? t('createGame.saving') : t('common.save')}
             </button>
           </div>
         </form>
@@ -815,10 +817,10 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
         <GameConfirmModal
           isOpen={personaAiConfirmOpen}
           variant="dossier"
-          title="确认生成人设"
-          message={`将扣除 ${textChargeText} 生成「人设」，是否继续？`}
-          confirmText="确认生成"
-          cancelText="取消"
+          title={t('galgameUi.playerArchive.confirm.personaTitle')}
+          message={t('galgameUi.playerArchive.confirm.personaMessage', { charge: textChargeText })}
+          confirmText={t('galgameUi.common.confirmGenerate')}
+          cancelText={t('common.cancel')}
           overlayZIndex={3600}
           onConfirm={() => {
             void runGeneratePersona();
@@ -833,17 +835,17 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
             className={styles.avatarPreviewOverlay}
             role="dialog"
             aria-modal="true"
-            aria-label={`${displayName} 头像`}
+            aria-label={`${displayName} ${t('galgameUi.common.avatar')}`}
             onClick={() => setAvatarPreviewOpen(false)}
           >
             <div className={styles.avatarPreviewCard} onClick={(e) => e.stopPropagation()}>
               <div className={styles.avatarPreviewChrome}>
-                <span>我的档案</span>
+                <span>{t('galgameUi.playerArchive.overview.title')}</span>
                 <button
                   type="button"
                   className={styles.avatarPreviewClose}
                   onClick={() => setAvatarPreviewOpen(false)}
-                  aria-label="关闭"
+                  aria-label={t('galgameUi.gameConfirm.closeAria')}
                 >
                   ×
                 </button>
@@ -865,7 +867,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
         <input
           className={styles.search}
           value={query}
-          placeholder="按姓名、关键词搜索"
+          placeholder={t('galgameUi.playerArchive.import.searchPlaceholder')}
           onChange={(e) => setQuery(e.target.value)}
         />
         {importLoading ? (
@@ -887,15 +889,15 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
                     variant="bust"
                   />
                 ) : (
-                  card.name.slice(0, 1) || '卡'
+                  card.name.slice(0, 1) || t('galgameUi.common.cardInitial')
                 )}
               </div>
               <div className={styles.importBody}>
                 <div className={styles.importName}>
                   {card.name}
-                  <span className={styles.importMeta}> · {genderText(card.gender)}</span>
+                  <span className={styles.importMeta}> · {genderText(card.gender, t)}</span>
                 </div>
-                <p className={styles.importPersona}>{card.persona || '暂无人设'}</p>
+                <p className={styles.importPersona}>{card.persona || t('galgameUi.playerArchive.import.noPersona')}</p>
               </div>
               <button
                 type="button"
@@ -932,8 +934,8 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
             </div>
           ) : null}
           <div className={styles.previewName}>{next.name}</div>
-          <div className={styles.previewMeta}>{genderText(next.gender)}</div>
-          <p className={styles.previewPersona}>{next.persona || '暂无人设'}</p>
+          <div className={styles.previewMeta}>{genderText(next.gender, t)}</div>
+          <p className={styles.previewPersona}>{next.persona || t('galgameUi.playerArchive.import.noPersona')}</p>
         </section>
 
         <section className={styles.previewCard}>
@@ -965,8 +967,8 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
           <span className={styles.infoIcon} aria-hidden>i</span>
           <p>
             {previewAvatarSrc
-              ? '导入将覆盖当前玩家档案并带上卡库立绘，之后仍可在档案中重新生成头像。'
-              : '导入将填写或覆盖当前玩家档案；该卡暂无立绘，导入后可在档案中生成头像。'}
+              ? t('galgameUi.playerArchive.import.previewWithAvatar')
+              : t('galgameUi.playerArchive.import.previewNoAvatar')}
           </p>
         </div>
 
@@ -977,7 +979,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
             onClick={() => onViewChange('import')}
             disabled={saving}
           >
-            取消
+            {t('common.cancel')}
           </button>
           <button
             type="button"
@@ -985,7 +987,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
             onClick={() => void confirmImport()}
             disabled={saving}
           >
-            {saving ? '导入中…' : '确认导入'}
+            {saving ? t('galgameUi.common.importing') : t('galgameUi.common.importConfirm')}
           </button>
         </div>
       </div>
@@ -998,7 +1000,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
       <div className={styles.previewPanel}>
         <div className={shell.empty}>请先选择角色卡</div>
         <button type="button" className={styles.secondaryBtn} onClick={() => onViewChange('import')}>
-          返回列表
+          {t('galgameUi.playerArchive.import.backToList')}
         </button>
       </div>
     );
@@ -1007,13 +1009,13 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
   return (
     <section className={styles.section}>
       <div className={styles.head}>
-        <h3 className={styles.title}>我的档案</h3>
+        <h3 className={styles.title}>{t('galgameUi.playerArchive.overview.title')}</h3>
         <div className={styles.headActions}>
           <button type="button" className={shell.ghostButton} onClick={openEdit}>
-            编辑档案
+            {t('galgameUi.playerArchive.overview.editProfile')}
           </button>
           <button type="button" className={shell.primaryButton} onClick={() => void openImport()}>
-            导入角色卡
+            {t('galgameUi.playerArchive.overview.importCard')}
           </button>
         </div>
       </div>
@@ -1027,7 +1029,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
             onClick={() => {
               if (avatarSrc) setAvatarPreviewOpen(true);
             }}
-            aria-label={avatarSrc ? '查看主角头像' : '暂无头像'}
+            aria-label={avatarSrc ? t('galgameUi.playerArchive.avatar.viewAvatarAria') : t('galgameUi.playerArchive.avatar.noAvatarAria')}
           >
             <span className={styles.avatarStageGlow} aria-hidden />
             {avatarSrc ? (
@@ -1047,16 +1049,16 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
           <div className={styles.avatarMeta}>
             <div className={styles.identityLine}>
               <span className={styles.identityName}>{displayName}</span>
-              <span className={styles.identityGender}>{genderText(profile?.gender)}</span>
+              <span className={styles.identityGender}>{genderText(profile?.gender, t)}</span>
             </div>
             <p className={styles.avatarHint}>
               {avatarUploading
-                ? '压缩上传中…'
+                ? t('galgameUi.common.uploadCompressing')
                 : needsAvatar
                   ? (avatarSrc
-                    ? '可重新生成或上传局内头像'
-                    : '生成或上传头像')
-                  : '点击立绘可放大预览'}
+                    ? t('galgameUi.playerArchive.avatar.regenOrUpload')
+                    : t('galgameUi.playerArchive.avatar.genOrUpload'))
+                  : t('galgameUi.playerArchive.avatar.clickToPreview')}
             </p>
             <div className={styles.avatarActionRow}>
               <button
@@ -1066,8 +1068,8 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
                 onClick={() => void requestGenerateAvatar()}
               >
                 {avatarAiBusy
-                  ? '后台生成中…'
-                  : `${needsAvatar ? '生成头像' : '重新生成'} · ${sessionAvatarPrice == null ? '—' : avatarChargeText}`}
+                  ? t('galgameUi.playerArchive.avatar.backgroundGenerating')
+                  : `${needsAvatar ? t('galgameUi.playerArchive.avatar.generateAvatar') : t('galgameUi.playerArchive.avatar.regenerateAvatar')} · ${sessionAvatarPrice == null ? '—' : avatarChargeText}`}
               </button>
               <button
                 type="button"
@@ -1075,7 +1077,7 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
                 disabled={avatarAiBusy || avatarUploading || !authUser?.token}
                 onClick={() => requestUploadAvatar()}
               >
-                {avatarUploading ? '上传中…' : '上传图片'}
+                {avatarUploading ? t('galgameUi.common.uploading') : t('galgameUi.common.uploadImage')}
               </button>
             </div>
           </div>
@@ -1083,8 +1085,8 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
         {renderAvatarFileInput()}
         <div className={styles.dossierMeta}>
           <div className={styles.profileBlock}>
-            <span className={styles.profileKey}>人设</span>
-            <p className={styles.profilePersona}>{profile?.persona || '暂无人设'}</p>
+            <span className={styles.profileKey}>{t('galgameUi.playerArchive.edit.persona')}</span>
+            <p className={styles.profilePersona}>{profile?.persona || t('galgameUi.playerArchive.import.noPersona')}</p>
           </div>
           {profile?.customAttributes && Object.keys(profile.customAttributes).length > 0 ? (
             <div className={styles.profileBlock}>
@@ -1111,17 +1113,17 @@ const PlayerArchiveSection: React.FC<PlayerArchiveSectionProps> = ({
           className={styles.avatarPreviewOverlay}
           role="dialog"
           aria-modal="true"
-          aria-label={`${displayName} 头像`}
+          aria-label={`${displayName} ${t('galgameUi.common.avatar')}`}
           onClick={() => setAvatarPreviewOpen(false)}
         >
           <div className={styles.avatarPreviewCard} onClick={(e) => e.stopPropagation()}>
             <div className={styles.avatarPreviewChrome}>
-              <span>我的档案</span>
+              <span>{t('galgameUi.playerArchive.overview.title')}</span>
               <button
                 type="button"
                 className={styles.avatarPreviewClose}
                 onClick={() => setAvatarPreviewOpen(false)}
-                aria-label="关闭"
+                aria-label={t('galgameUi.gameConfirm.closeAria')}
               >
                 ×
               </button>

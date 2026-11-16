@@ -1,0 +1,317 @@
+{
+  "galgameLib": {
+    "common": {
+      "genericError": "An error occurred",
+      "player": "Player",
+      "you": "You",
+      "unknownNpc": "Unknown character",
+      "protagonist": "Protagonist",
+      "traveler": "Traveler",
+      "chooseAction": "Choose your action",
+      "formInvalid": "Invalid form",
+      "emDash": "—"
+    },
+    "avatar": {
+      "gender": {
+        "male": "Male",
+        "female": "Female",
+        "universal": "Universal"
+      },
+      "age": {
+        "child": "Child",
+        "adult": "Adult",
+        "elder": "Elder"
+      },
+      "background": {
+        "ancient": "Ancient",
+        "modern": "Modern",
+        "fantasy": "Western fantasy"
+      },
+      "kind": {
+        "private": "Private",
+        "public": "Public",
+        "system": "System"
+      },
+      "cardTitle": "Avatar {{n}}",
+      "matchPriorityDesc": "Manual lock always takes priority; library source order and universal fallback follow the current script settings (default: public library first with universal enabled); system default avatar is the final fallback."
+    },
+    "avatarStyle": {
+      "A": "Japanese visual novel style",
+      "B": "Otome style",
+      "C": "Dark style",
+      "D": "Chinese watercolor style"
+    },
+    "avatarGen": {
+      "sessionUnavailable": "Session unavailable",
+      "npcSessionUnavailable": "Session or character unavailable",
+      "timeout": "Avatar generation timed out ({{seconds}}s). Please try again later.",
+      "failed": "Avatar generation failed",
+      "cancelled": "Avatar generation cancelled"
+    },
+    "writingStyle": {
+      "group": {
+        "style": "Style",
+        "viewpoint": "Viewpoint",
+        "technique": "Technique",
+        "plot": "Plot guidance"
+      },
+      "pace": {
+        "slow": "Slow",
+        "medium": "Medium",
+        "fast": "Fast"
+      },
+      "preset": {
+        "vernacular": {
+          "label": "Plain style",
+          "hint": "Natural speech, less literary wording"
+        },
+        "female_oriented": {
+          "label": "Romance-oriented",
+          "hint": "Emotion and relationships first"
+        },
+        "literary": {
+          "label": "Literary",
+          "hint": "Stronger imagery and mood"
+        },
+        "wuxia_classic": {
+          "label": "Classic wuxia",
+          "hint": "Martial arts world tone"
+        },
+        "benevolent": {
+          "label": "Benevolent view",
+          "hint": "More tolerance, less extreme malice"
+        },
+        "neutral_observer": {
+          "label": "Neutral observer",
+          "hint": "Less moral judgment imposed"
+        },
+        "intimate_second": {
+          "label": "Intimate second person",
+          "hint": "Closer to \"you\""
+        },
+        "character_centric": {
+          "label": "Character-centric",
+          "hint": "Driven by character motives"
+        },
+        "character_molding": {
+          "label": "Character building",
+          "hint": "Strengthen traits and habits"
+        },
+        "sensory_detail": {
+          "label": "Sensory detail",
+          "hint": "Concrete sight, sound, touch, etc."
+        },
+        "dialogue_heavy": {
+          "label": "Dialogue-driven",
+          "hint": "Advance plot through dialogue"
+        },
+        "plot_push": {
+          "label": "Plot push",
+          "hint": "Clear progress each turn"
+        },
+        "slow_burn": {
+          "label": "Slow burn",
+          "hint": "Allow setup and breathing room"
+        },
+        "choice_consequence": {
+          "label": "Choices matter",
+          "hint": "Emphasize cause and effect"
+        }
+      }
+    },
+    "gameStart": {
+      "currentRouteSection": "Current opening route",
+      "currentRouteHint": "Shows the current opening route; switching constrains later narrative to the new route.",
+      "changeRouteConfirmTitle": "Change route",
+      "changeRouteConfirmMessage": "Switch to this opening route? Later narrative will follow the new route.",
+      "changeRouteConfirmOk": "Confirm change",
+      "fallbackRouteTitle": "Opening route",
+      "storylinePickLabel": "Storyline",
+      "fallbackPlayerName": "Traveler",
+      "selectStoryline": "Please select a storyline",
+      "configInvalid": "Invalid start configuration",
+      "nameRequired": "Please enter a character name",
+      "nameTooLong": "Name cannot exceed {{max}} characters",
+      "selectGender": "Please select gender",
+      "finishStorylineFirst": "Please complete storyline selection first",
+      "openingTooLong": "Opening monologue is too long",
+      "paceInvalid": "Invalid writing pace",
+      "storylineMissing": "Storyline not found",
+      "storylineIndexed": "Storyline {{n}}"
+    },
+    "worldBook": {
+      "titleRequired": "Please enter a title",
+      "titleTooLong": "Title cannot exceed 40 characters",
+      "contentTooLong": "Content is too long",
+      "keywordsTooLong": "Trigger keywords cannot exceed 100 characters",
+      "pasteRequired": "Please paste worldbook content",
+      "importUnrecognized": "No importable content recognized",
+      "jsonParseFailed": "JSON parse failed. Check the format.",
+      "jsonNoArray": "No entry array found in JSON",
+      "noValidEntries": "No valid entries to import",
+      "selectWorldBook": "Please select a worldbook",
+      "warehouseNoEntries": "This worldbook has no entries to import",
+      "warehouseNoValidEntries": "This worldbook has no valid entries to import",
+      "entryIndexed": "Entry {{n}}",
+      "importEntryIndexed": "Imported entry {{n}}",
+      "systemIndexed": "System {{n}}",
+      "defaultTitle": "Worldbook",
+      "template": {
+        "court_basic": {
+          "name": "Court basics",
+          "description": "Etiquette, titles, and palace rules"
+        },
+        "jianghu_basic": {
+          "name": "Martial world",
+          "description": "Sect rules and grudge tone"
+        }
+      }
+    },
+    "squareAvatar": {
+      "minSide": "Side length must be at least {{min}}px (current {{w}}×{{h}})",
+      "cannotReadSize": "Cannot read image dimensions",
+      "canvasUnavailable": "Canvas unavailable",
+      "exportFailed": "Failed to export avatar",
+      "requirements": "Recommended {{target}}×{{target}}px, minimum {{min}}×{{min}}px; PNG/JPG/WebP/GIF; non-1:1 images must be cropped first (no stretching).",
+      "status": {
+        "unqualified": "Unqualified",
+        "qualified": "Qualified",
+        "needsCrop": "Needs crop"
+      },
+      "cannotReadDimensions": "Cannot read dimensions",
+      "notSquareTooSmall": "Not 1:1 and shortest side {{minSide}}px < {{minRequired}}px; still too small after crop",
+      "notSquareCurrent": "Current {{w}}×{{h}}, not 1:1"
+    },
+    "streamError": {
+      "networkDisconnected": "Network interrupted. Generation disconnected—tap to retry.",
+      "generating": "Content is being generated. Please wait.",
+      "incomplete": "Generation incomplete. Please retry.",
+      "dirtyResidue": "Output contains unreadable residue. Please retry.",
+      "contentFilter": "Content triggered safety review. Retry, or try a different action or softer wording.",
+      "sessionBusy": "Content is generating. Please try again later."
+    },
+    "characterProfile": {
+      "nameRequired": "Please enter a name",
+      "nameTooLong": "Name cannot exceed {{max}} characters",
+      "genderRequired": "Please select gender (male/female)",
+      "relationshipRequired": "Please enter relationship",
+      "relationshipTooLong": "Relationship cannot exceed {{max}} characters",
+      "summaryRequired": "Please enter a summary",
+      "summaryTooLong": "Summary cannot exceed {{max}} characters",
+      "attitudeRequired": "Please enter attitude toward you",
+      "attitudeTooLong": "Attitude cannot exceed {{max}} characters",
+      "detailedBioTooLong": "Detailed bio cannot exceed {{max}} characters",
+      "importanceInvalid": "Invalid importance",
+      "survivalInvalid": "Invalid survival status",
+      "favorNotNumber": "Affection must be a number"
+    },
+    "playerCard": {
+      "attrsInvalid": "Invalid attribute format",
+      "attrsTooMany": "Cannot exceed {{max}} attributes",
+      "attrNameEmpty": "Attribute name cannot be empty",
+      "attrNameTooLong": "Attribute name cannot exceed {{max}} characters",
+      "attrMustBeNumber": "Attribute \"{{key}}\" must be a number",
+      "nameRequired": "Please enter a name",
+      "nameTooLong": "Name cannot exceed {{max}} characters",
+      "genderInvalid": "Please select a valid gender",
+      "personaTooLong": "Persona cannot exceed {{max}} characters",
+      "notFound": "Character card not found",
+      "forbidden": "Not allowed to import this card",
+      "invalid": "Invalid character card"
+    },
+    "privateChat": {
+      "contentRequired": "Please enter content",
+      "contentTooLong": "Message cannot exceed {{max}} characters",
+      "invalidMessage": "Invalid message",
+      "messageNotFound": "Message not found",
+      "replyGenerating": "Private chat reply generating. Please wait."
+    },
+    "ideaFullWork": {
+      "missingFileId": "Missing fileId",
+      "failPartial": "{{label}}: only {{completed}}/{{total}} succeeded",
+      "failIncomplete": "{{label}} incomplete",
+      "failStart": "{{label}}: failed to start task",
+      "failPoll": "{{label}} generation incomplete ({{status}})",
+      "failGeneric": "{{label}} generation failed",
+      "labelPortraits": "Character portraits",
+      "labelScenes": "Scene backgrounds",
+      "coverFailed": "Cover generation failed"
+    },
+    "compressImage": {
+      "cannotProcess": "Cannot process image",
+      "selectValid": "Please select a valid image",
+      "formatUnsupported": "Only common formats supported (JPEG/PNG/WebP/GIF)",
+      "webpUnsupported": "Browser cannot export WebP. Try another image or browser.",
+      "stillTooLarge": "Image still exceeds {{kb}}KB after compression. Use a smaller image."
+    },
+    "poster": {
+      "coverLoadFailed": "Failed to load cover image",
+      "coverExportFailed": "Failed to export cover",
+      "titleMissing": "Missing poster title",
+      "coverFetchFailed": "Failed to fetch cover ({{status}})",
+      "coverSizeInvalid": "Invalid cover dimensions",
+      "canvasUnavailable": "Canvas unavailable",
+      "titleProbe": "Title"
+    },
+    "novel": {
+      "opening": "Opening",
+      "chapterIndexed": "Chapter {{n}}"
+    },
+    "playChoice": {
+      "stayAndObserve": "{{player}} stays in {{scene}} and observes carefully",
+      "goSeekClue": "{{player}} heads to {{scene}} to find a clue",
+      "leaveScene": "{{player}} leaves {{scene}} to find another way",
+      "talkToNpc": "{{player}} talks to {{npc}} for information",
+      "followNpc": "{{player}} follows {{npc}} elsewhere",
+      "watchNpc": "{{player}} watches {{npc}} before deciding",
+      "steadyThenChoose": "{{player}} steadies the situation then picks a path",
+      "walkAround": "{{player}} looks around for a break",
+      "alternateRoute": "{{player}} finds another way ({{n}})",
+      "here": "here"
+    },
+    "utils": {
+      "applicableThemeMin": "Select at least 1 applicable theme",
+      "listing": {
+        "unpublished": "Not listed",
+        "pending_review": "Under review",
+        "rejected": "Rejected",
+        "delisted": "Delisted",
+        "taken_down": "Delisted",
+        "deleted": "Delisted"
+      },
+      "creatorLifecycle": {
+        "draft": "Draft",
+        "private_share": "Privately shared",
+        "pending": "Pending review",
+        "rejected": "Rejected",
+        "update_pending": "Update pending review",
+        "unpublished": "Unlisted",
+        "published": "Published"
+      },
+      "publishAppealDefault": "This work was delisted by ops. Revise and submit a republish appeal.",
+      "adminDiamond": {
+        "amountInvalid": "KK coins must be > 0 with at most 2 decimal places",
+        "amountTooLarge": "KK coin amount out of range",
+        "balanceOverflow": "Balance after change exceeds safe integer range",
+        "deductExceeds": "Deduction cannot exceed current balance {{balance}} KK coins",
+        "expiryInvalid": "Limited KK coin expiry must be 1–3650 days"
+      },
+      "activityBanner": {
+        "invalidFormat": "Invalid event time format",
+        "startBeforeEnd": "Start time must be before end time"
+      },
+      "profileCrypto": {
+        "missingKey": "Missing frontend key: VITE_CREATOR_PROFILE_AES_KEY_B64",
+        "badFormat": "Invalid encrypted data format",
+        "badIv": "Invalid encryption IV"
+      },
+      "miniProgram": {
+        "engineCustom": "Custom",
+        "engineSt": "Freeform",
+        "engineIvg": "Interactive video",
+        "currentModeFallback": "Current mode",
+        "pcOnly": "Mini program supports AI text games only. For {{label}}, use PC: {{url}}"
+      }
+    }
+  }
+}

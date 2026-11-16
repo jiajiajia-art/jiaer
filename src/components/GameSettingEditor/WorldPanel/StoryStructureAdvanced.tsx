@@ -130,7 +130,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
             await EditorApi.deleteStoryPhase(fileId, phaseId);
         } catch (e) {
             console.error('删除 phase 失败', e);
-            toast.error('删除章节失败，请稍后重试');
+            toast.error(t('gameSettingEditor.worldPanel.storyStructureAdvanced.sc5473fb3ae'));
         }
     };
 
@@ -243,7 +243,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
             await EditorApi.deleteDynamicEntry(fileId, id);
         } catch (e) {
             console.error('删除 dynamicEntry 失败', e);
-            toast.error('删除动态条目失败，请稍后重试');
+            toast.error(t('gameSettingEditor.worldPanel.storyStructureAdvanced.s2757c89da7'));
         }
     };
 
@@ -311,43 +311,43 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
 
     const handleSavePhase = async (phaseId: string) => {
         if (!fileId) {
-            toast.error('缺少文件ID，无法保存章节');
+            toast.error(t('gameSettingEditor.worldPanel.storyStructureAdvanced.s40936568fe'));
             return;
         }
         const phase = storyStructure?.phases.find(p => p.id === phaseId);
         if (!phase) return;
         try {
             await EditorApi.updateStoryPhase(fileId, phaseId, phase);
-            toast.success('章节已保存');
+            toast.success(t('gameSettingEditor.worldPanel.storyStructureAdvanced.s6fafc6d013'));
         } catch (e) {
             console.error('保存章节失败', e);
-            toast.error('保存章节失败，请稍后重试');
+            toast.error(t('gameSettingEditor.worldPanel.storyStructureAdvanced.s36511b4e63'));
         }
     };
 
     const handleSaveDynamicEntry = async (id: string) => {
         if (!fileId) {
-            toast.error('缺少文件ID，无法保存动态条目');
+            toast.error(t('gameSettingEditor.worldPanel.storyStructureAdvanced.s838f4bc32b'));
             return;
         }
         const entry = dynamicEntries.find(e => e.id === id);
         if (!entry) return;
         try {
             await EditorApi.updateDynamicEntry(fileId, id, entry);
-            toast.success('动态条目已保存');
+            toast.success(t('gameSettingEditor.worldPanel.storyStructureAdvanced.sa33f81b401'));
         } catch (e) {
             console.error('保存动态条目失败', e);
-            toast.error('保存动态条目失败，请稍后重试');
+            toast.error(t('gameSettingEditor.worldPanel.storyStructureAdvanced.s8c8e36dd30'));
         }
     };
 
     const handleAddPhase = async () => {
         if (!fileId) {
-            toast.error('缺少文件ID，无法新增章节');
+            toast.error(t('gameSettingEditor.worldPanel.storyStructureAdvanced.s99e869d638'));
             return;
         }
         if (!newPhase.name.trim()) {
-            toast.error('请填写章节名称');
+            toast.error(t('gameSettingEditor.worldPanel.storyStructureAdvanced.sa37ad8594e'));
             return;
         }
         const tempId = `tmp-${Date.now()}`;
@@ -380,7 +380,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
         });
         try {
             await EditorApi.addStoryPhase(fileId, phasePayload);
-            toast.success('章节已新增');
+            toast.success(t('gameSettingEditor.worldPanel.storyStructureAdvanced.s1434e84289'));
             setIsAddPhaseModalOpen(false);
             setNewPhase({
                 name: '',
@@ -392,17 +392,17 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
             });
         } catch (e) {
             console.error('新增章节失败', e);
-            toast.error('新增章节失败，请稍后重试');
+            toast.error(t('gameSettingEditor.worldPanel.storyStructureAdvanced.s0ac7330719'));
         }
     };
 
     const handleAddDynamicEntry = async () => {
         if (!fileId) {
-            toast.error('缺少文件ID，无法新增动态条目');
+            toast.error(t('gameSettingEditor.worldPanel.storyStructureAdvanced.s4538e16899'));
             return;
         }
         if (!newDynamic.content.trim()) {
-            toast.error('请填写动态条目内容');
+            toast.error(t('gameSettingEditor.worldPanel.storyStructureAdvanced.s7138eeef5c'));
             return;
         }
         const tempId = `tmp-${Date.now()}`;
@@ -425,7 +425,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
         setDynamicEntries(prev => [...prev, entryPayload]);
         try {
             await EditorApi.addDynamicEntry(fileId, entryPayload);
-            toast.success('动态条目已新增');
+            toast.success(t('gameSettingEditor.worldPanel.storyStructureAdvanced.s65580d5925'));
             setIsAddDynamicModalOpen(false);
             setNewDynamic({
                 category: '',
@@ -440,7 +440,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
             });
         } catch (e) {
             console.error('新增动态条目失败', e);
-            toast.error('新增动态条目失败，请稍后重试');
+            toast.error(t('gameSettingEditor.worldPanel.storyStructureAdvanced.s6d7cc48b29'));
         }
     };
 
@@ -461,7 +461,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                         onClick={onGenerate}
                         disabled={isGeneratingStory || !canGenerate}
                     >
-                        {isGeneratingStory ? '生成中...' : '生成故事结构'}
+                        {isGeneratingStory ? t('createGame.generating') : t('gameSettingEditor.worldPanel.storyStructureAdvanced.s3c637d273d')}
                     </button>
                 ) : (
                     <button
@@ -503,7 +503,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                     </div>
                     <div className={styles.progressInfo}>
                         <div className={styles.progressText}>
-                            {generationStage || '正在生成故事结构和动态条目...'}
+                            {generationStage || t('gameSettingEditor.worldPanel.storyStructureAdvanced.s73f8f54f4b')}
                         </div>
                         {generationProgress > 0 && (
                             <div className={styles.progressPercent}>
@@ -1082,10 +1082,10 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                     setPhaseToDelete(null);
                 }}
                 onCancel={() => setPhaseToDelete(null)}
-                title="删除章节"
-                message="确定要删除当前章节（phase）吗？此操作不可撤销。"
-                confirmButtonText="删除"
-                cancelButtonText="取消"
+                title={t('gameSettingEditor.worldPanel.storyStructureAdvanced.s7aa8aacf82')}
+                message={t('gameSettingEditor.worldPanel.storyStructureAdvanced.s10d3e6fa24')}
+                confirmButtonText={t('warehouse.cards.delete')}
+                cancelButtonText={t('warehouse.cards.cancel')}
             />
 
             {/* 删除 dynamicEntry 确认弹窗 */}
@@ -1098,10 +1098,10 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                     setDynamicToDelete(null);
                 }}
                 onCancel={() => setDynamicToDelete(null)}
-                title="删除动态条目"
-                message="确定要删除当前 dynamicEntry 吗？此操作不可撤销。"
-                confirmButtonText="删除"
-                cancelButtonText="取消"
+                title={t('gameSettingEditor.worldPanel.storyStructureAdvanced.s6244298e97')}
+                message={t('gameSettingEditor.worldPanel.storyStructureAdvanced.s85a112cf15')}
+                confirmButtonText={t('warehouse.cards.delete')}
+                cancelButtonText={t('warehouse.cards.cancel')}
             />
 
             {/* 新增 phase 弹窗 */}

@@ -1,14 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiCheckCircle, FiEdit2, FiPower } from 'react-icons/fi';
 import type { AiModelCatalogCard } from '../../lib/aiModelCatalog';
 import styles from './modelCatalog.module.css';
-
-const pricingLabels = {
-  active: '价格已生效',
-  scheduled: '价格待生效',
-  draft: '价格草稿',
-  unpriced: '未配置价格',
-} as const;
 
 interface Props {
   items: AiModelCatalogCard[];
@@ -31,6 +25,14 @@ const ModelCatalogCards: React.FC<Props> = ({
   deactivatingId,
   showRuntimeActive = true,
 }) => {
+  const { t } = useTranslation();
+  const pricingLabels = useMemo(() => ({
+    active: t('aiModelCenter.catalog.pricingActive'),
+    scheduled: t('aiModelCenter.catalog.pricingScheduled'),
+    draft: t('aiModelCenter.catalog.pricingDraft'),
+    unpriced: t('aiModelCenter.catalog.pricingUnpriced'),
+  }), [t]);
+
   if (items.length === 0) return <div className={styles.empty}>{emptyText}</div>;
   return (
     <div className={styles.cardGrid}>
@@ -40,14 +42,14 @@ const ModelCatalogCards: React.FC<Props> = ({
             <span className={styles.vendor}>{item.sourceGatewayLabel}</span>
             <div className={styles.cardActions}>
               {showRuntimeActive && item.active ? (
-                <span className={styles.activeBadge}><FiCheckCircle aria-hidden /> 已启用</span>
+                <span className={styles.activeBadge}><FiCheckCircle aria-hidden /> {t('aiModelCenter.catalog.enabled')}</span>
               ) : null}
               {onActivate ? (
                 <button
                   type="button"
                   className={styles.iconButton}
-                  aria-label={`启用模型 ${item.displayName}`}
-                  title={item.pricingStatus === 'active' ? '启用模型' : '需先发布并生效价格'}
+                  aria-label={t('aiModelCenter.catalog.enableModelAria', { name: item.displayName })}
+                  title={item.pricingStatus === 'active' ? t('aiModelCenter.catalog.enableModel') : t('aiModelCenter.catalog.needPricingFirst')}
                   onClick={() => onActivate(item)}
                   disabled={item.pricingStatus !== 'active' || activatingId === item.id}
                 >
@@ -58,8 +60,8 @@ const ModelCatalogCards: React.FC<Props> = ({
                 <button
                   type="button"
                   className={styles.iconButton}
-                  aria-label={`停用模型 ${item.displayName}`}
-                  title="停用模型"
+                  aria-label={t('aiModelCenter.catalog.disableModelAria', { name: item.displayName })}
+                  title={t('aiModelCenter.catalog.disableModel')}
                   onClick={() => onDeactivate(item)}
                   disabled={deactivatingId === item.id}
                 >
@@ -70,8 +72,8 @@ const ModelCatalogCards: React.FC<Props> = ({
                 <button
                   type="button"
                   className={styles.iconButton}
-                  aria-label={`编辑模型 ${item.displayName} 的计费配置`}
-                  title="编辑计费配置"
+                  aria-label={t('aiModelCenter.catalog.editBillingAria', { name: item.displayName })}
+                  title={t('aiModelCenter.catalog.editBilling')}
                   onClick={() => onEdit(item)}
                 >
                   <FiEdit2 aria-hidden />
@@ -82,7 +84,7 @@ const ModelCatalogCards: React.FC<Props> = ({
           <h4>{item.displayName}</h4>
           <code className={styles.modelId}>{item.modelId}</code>
           <div className={styles.cardMeta}>
-            <span>{item.sourceKind === 'preset' ? '预置模型' : '上游导入'}</span>
+            <span>{item.sourceKind === 'preset' ? t('aiModelCenter.catalog.presetModel') : t('aiModelCenter.catalog.upstreamImport')}</span>
             <span data-status={item.pricingStatus}>{pricingLabels[item.pricingStatus]}</span>
           </div>
         </article>

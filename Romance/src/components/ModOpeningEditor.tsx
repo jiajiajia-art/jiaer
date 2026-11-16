@@ -77,7 +77,7 @@ export function ModCoverEditor({
   const c = value ?? {};
   return (
     <div className="space-y-2.5">
-      <p className="text-[11px] leading-relaxed text-ink-soft">
+      <p className="wg-field-help text-[11px] leading-relaxed text-ink-soft">
         作品展示封面只用来展示，不做出开始界面。列表、详情、书架卡片会显示这张图；真正开局后不会再显示一次封面。本页只配背景，预览里没有「开始游戏 / 继续游戏 / 配置 AI」。
       </p>
       <CoverDiyEditor

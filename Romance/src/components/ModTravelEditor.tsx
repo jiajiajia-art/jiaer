@@ -34,21 +34,49 @@ export default function ModTravelEditor({ value, rooms, onChange, part }: { valu
 
   return (
     <div className="space-y-3">
-      {pace && <div className="space-y-1.5">
-        <label className="block text-[11px] text-ink-soft">每回合行动点（支线体力）
-          <input type="number" min={1} max={99} value={t.apPerTurn ?? 10} onChange={(e) => set({ apPerTurn: num(e.target.value, 1) })} className={`${inp} mt-0.5 max-w-[12rem]`} />
-        </label>
-        <div className="flex flex-wrap gap-3">
-          <label className="block text-[11px] text-ink-soft">剧情行动扣点
-            <input type="number" min={0} max={99} value={t.apPerAct ?? 1} onChange={(e) => set({ apPerAct: num(e.target.value, 0) })} className={`${inp} mt-0.5 w-24`} />
-          </label>
-          <label className="block text-[11px] text-ink-soft">当面对话扣点
-            <input type="number" min={0} max={99} value={t.apPerTalk ?? 1} onChange={(e) => set({ apPerTalk: num(e.target.value, 0) })} className={`${inp} mt-0.5 w-24`} />
-          </label>
+      {pace && (
+        <div className="space-y-2">
+          {/* 功能注释：三格并排，去掉大段扣点说明，只留一行短提示 */}
+          <div className="grid grid-cols-3 gap-2">
+            <label className="block text-[11px] text-ink-soft">
+              每回合行动点
+              <input
+                type="number"
+                min={1}
+                max={99}
+                value={t.apPerTurn ?? 10}
+                onChange={(e) => set({ apPerTurn: num(e.target.value, 1) })}
+                className={`${inp} mt-0.5`}
+              />
+            </label>
+            <label className="block text-[11px] text-ink-soft">
+              剧情扣点
+              <input
+                type="number"
+                min={0}
+                max={99}
+                value={t.apPerAct ?? 1}
+                onChange={(e) => set({ apPerAct: num(e.target.value, 0) })}
+                className={`${inp} mt-0.5`}
+              />
+            </label>
+            <label className="block text-[11px] text-ink-soft">
+              对话扣点
+              <input
+                type="number"
+                min={0}
+                max={99}
+                value={t.apPerTalk ?? 1}
+                onChange={(e) => set({ apPerTalk: num(e.target.value, 0) })}
+                className={`${inp} mt-0.5`}
+              />
+            </label>
+          </div>
+          <p className="text-[10.5px] leading-snug text-ink-soft">
+            点选项 / 开对话各扣对应点数（填 0 不扣）；支线用尽后需回主线推进。
+          </p>
         </div>
-        <p className="text-[10.5px] text-ink-soft">剧情行动：每次点选项或自己写行动扣一次；当面对话：每次打开对话、对方第一次回应时扣一次；填 0 不扣。地点里的行动按钮在地图编辑器里按项设置。</p>
-        <p className="text-[10.5px] text-ink-soft">主线：每次「推进」进入新回合、行动点回满；支线：换地点默认扣行动点，进入事件支线按各事件设定扣点，不推进日历。行动点用完就得回主线推进时间。</p>
-      </div>}
+      )}
 
       {/* 出行面板文案：模组自定义（如古风世界改成「如何前往 / 文 / 不费分文」） */}
       {transport && <div className="grid grid-cols-3 gap-1.5">
@@ -73,7 +101,10 @@ export default function ModTravelEditor({ value, rooms, onChange, part }: { valu
         const amountMax = isDay ? 30 : 12;
         return (
           <div className="space-y-1.5 rounded-xl border border-line bg-paper-2 p-2.5">
-            <p className="text-[12px] font-bold text-ink">默认推进节奏 <span className="font-normal text-ink-soft">开局默认值 · 玩家可在日程面板里自选</span></p>
+            <p className="text-[12px] font-bold text-ink">
+              默认推进节奏{" "}
+              <span className="font-normal text-ink-soft">局内可改</span>
+            </p>
             <div className="flex flex-wrap items-stretch gap-1">
               {([["day", "日"], ["week", "周"], ["month", "月"], ["year", "年"]] as const).map(([u, l]) => {
                 const on = unit === u;
@@ -102,10 +133,10 @@ export default function ModTravelEditor({ value, rooms, onChange, part }: { valu
                 <span className="shrink-0 text-[12px] font-semibold text-jade">{unitLabel}</span>
               </label>
             </div>
-            <p className="rounded-[6px] bg-paper px-2 py-1.5 text-[11px] text-ink">
-              玩家每点一次推进：<b className="text-jade">{isDay ? `${amount} 天` : `${amount} ${unitLabel}`}</b>
-              {isDay ? "，逐日结算当天日程，遇到周结算 / 结局即停。" : "，系统逐日结算、每周照常周结算，结束后弹出一张汇总报告；遇到结局即停。"}
-              {" "}推进后由 AI 生成日程叙事（未接入 AI 时只显示结算）。
+            <p className="text-[11px] leading-snug text-ink-soft">
+              每次推进{" "}
+              <b className="text-jade">{isDay ? `${amount} 天` : `${amount} ${unitLabel}`}</b>
+              ，逐日结算日程；遇到周结算 / 结局即停。
             </p>
           </div>
         );

@@ -478,6 +478,40 @@ const normalizeMakeupCardReward = (payload: DailyTaskPayload): DailyTaskMakeupCa
     };
 };
 
+/** 用固定四项任务进度推算补签卡进度，避免时长上报等局部同步把 current 冲成 0 */
+export const deriveMakeupCardReward = (
+    tasks: DailyTaskItem[],
+    options: { claimed?: boolean; previous?: DailyTaskMakeupCardReward | null } = {},
+): DailyTaskMakeupCardReward => {
+    const taskMap = new Map(
+        tasks
+            .filter((task) => !task.isDynamic)
+            .map((task) => [String(task.code), task] as const),
+    );
+    const target = DAILY_TASK_ORDER.length;
+    const current = DAILY_TASK_ORDER.reduce((count, code) => {
+        const task = taskMap.get(code);
+        if (!task) return count;
+        return count + (task.completed || task.claimed || task.claimable ? 1 : 0);
+    }, 0);
+    const claimed = typeof options.claimed === 'boolean'
+        ? options.claimed
+        : Boolean(options.previous?.claimed);
+    const completed = current >= target;
+    return {
+        current: Math.min(target, current),
+        target,
+        completed,
+        claimable: completed && !claimed,
+        claimed,
+    };
+};
+
+export const hasMakeupCardRewardInPayload = (payload: DailyTaskPayload | null | undefined): boolean => {
+    if (!payload || typeof payload !== 'object') return false;
+    return toRecord(payload.makeupCardReward) != null;
+};
+
 export const createDefaultDailyTaskList = (): DailyTaskItem[] =>
     DAILY_TASK_TEMPLATES.map((template) => buildDefaultTask(template));
 
@@ -693,7 +727,14 @@ export const normalizeDailyTaskPayload = (payload: DailyTaskPayload | null | und
         updatedTaskKeySet.add(canonicalCode);
     });
 
-    const fixedTasks = DAILY_TASK_ORDER.map((code) => fixedTaskMap.get(code) || buildDefaultTask(getTemplateByCode(code)));
+    // 仅当 payload 带完整 tasks 数组时，用默认项补齐缺失固定任务；
+    // 时长上报等局部同步（只有 durationTasks）不要把未出现的固定任务冲成默认未完成。
+    const hasFullTasksArray = Array.isArray(payload.tasks) && payload.tasks.length > 0;
+    const fixedTasks = hasFullTasksArray
+        ? DAILY_TASK_ORDER.map((code) => fixedTaskMap.get(code) || buildDefaultTask(getTemplateByCode(code)))
+        : DAILY_TASK_ORDER
+            .filter((code) => fixedTaskMap.has(code))
+            .map((code) => fixedTaskMap.get(code)!);
     const dynamicTasks = dynamicTaskOrder
         .map((key) => dynamicTaskMap.get(key))
         .filter((task): task is DailyTaskItem => Boolean(task));

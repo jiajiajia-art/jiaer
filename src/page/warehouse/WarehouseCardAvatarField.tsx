@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import TrimmedTransparentImg from '../../components/TrimmedTransparentImg';
 import { playerCharacterCardsApi } from '../../api/galgame/playerCharacterCards';
 import {
@@ -40,9 +41,12 @@ const WarehouseCardAvatarField: React.FC<Props> = ({
   onGenerate,
   onAvatarUrl,
   cardId = null,
-  fallbackChar = '我',
+  fallbackChar,
   children,
 }) => {
+  const { t } = useTranslation();
+  const resolvedFallback = fallbackChar ?? t('warehouse.cards.avatarFallbackMe');
+  const pointsUnit = t('common.points');
   const { estimatedPoints } = useImageBusinessPrice('warehouse_card');
   const priceLabel = estimatedPoints == null ? '—' : String(estimatedPoints);
   const token = useAuthStore((s) => s.user?.token);
@@ -50,7 +54,8 @@ const WarehouseCardAvatarField: React.FC<Props> = ({
   const previewRef = useRef<HTMLDivElement>(null);
   const [uploading, setUploading] = useState(false);
   const preview = avatarUrl ? getImageUrl(avatarUrl) : '';
-  const label = (name || fallbackChar).trim().slice(0, 1) || '角';
+  const label = (name || resolvedFallback).trim().slice(0, 1)
+    || t('warehouse.cards.avatarFallbackNpc').slice(0, 1);
   const busy = Boolean(generating);
   // 功能注释：生图/上传互斥；姓名性别仍可改
   const locked = Boolean(disabled || generating || uploading || estimatedPoints == null);
@@ -63,7 +68,7 @@ const WarehouseCardAvatarField: React.FC<Props> = ({
 
   const requestUpload = () => {
     if (!token) {
-      toast.error('请先登录');
+      toast.error(t('warehouse.cards.loginRequired'));
       return;
     }
     if (locked) return;
@@ -75,7 +80,7 @@ const WarehouseCardAvatarField: React.FC<Props> = ({
     e.target.value = '';
     if (!file) return;
     if (!token) {
-      toast.error('请先登录');
+      toast.error(t('warehouse.cards.loginRequired'));
       return;
     }
     if (uploading || generating) return;
@@ -89,20 +94,26 @@ const WarehouseCardAvatarField: React.FC<Props> = ({
         cardId,
       });
       if (!res?.success || !res.data?.avatarUrl) {
-        toast.error(res?.message || '图片上传失败');
+        toast.error(res?.message || t('warehouse.cards.avatarUploadFailed'));
         return;
       }
       onAvatarUrl(res.data.avatarUrl);
-      toast.success('图片已上传');
+      toast.success(t('warehouse.cards.avatarUploadOk'));
     } catch (err) {
-      toast.error((err as Error)?.message || '图片上传失败');
+      toast.error((err as Error)?.message || t('warehouse.cards.avatarUploadFailed'));
     } finally {
       setUploading(false);
     }
   };
 
+  const genBtnLabel = busy
+    ? t('warehouse.cards.avatarGeneratingBackground')
+    : avatarUrl
+      ? t('warehouse.cards.avatarRegenerate', { cost: priceLabel, pointsUnit })
+      : t('warehouse.cards.avatarAiGenerate', { cost: priceLabel, pointsUnit });
+
   return (
-    <section className={panel.avatarField} aria-label="角色图像">
+    <section className={panel.avatarField} aria-label={t('warehouse.cards.avatarSectionAria')}>
       <div className={panel.avatarIdentityRow}>
         <div
           ref={previewRef}
@@ -127,7 +138,7 @@ const WarehouseCardAvatarField: React.FC<Props> = ({
               onClick={requestUpload}
             >
               <MdOutlineFileUpload className={panel.avatarUploadBtnIcon} aria-hidden />
-              {uploading ? '上传中…' : '上传图片'}
+              {uploading ? t('warehouse.cards.avatarUploading') : t('warehouse.cards.avatarUploadImage')}
             </button>
             <button
               type="button"
@@ -135,14 +146,10 @@ const WarehouseCardAvatarField: React.FC<Props> = ({
               disabled={locked}
               onClick={onGenerate}
             >
-              {busy
-                ? '后台生成中…'
-                : avatarUrl
-                  ? `重新生成图像 · ${priceLabel} 织梦豆`
-                  : `AI 生成图像 · ${priceLabel} 织梦豆`}
+              {genBtnLabel}
             </button>
             <p className={panel.avatarUploadHint}>
-              上传转 WebP（质量 100）；超过 1MB 等比缩小。不做抠图。
+              {t('warehouse.cards.avatarUploadHint')}
             </p>
           </div>
           {children}

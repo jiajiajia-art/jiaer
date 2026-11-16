@@ -30,6 +30,8 @@ interface Props {
   onRatingChange?: (summary: RatingSummary) => void;
   /** 功能注释：把 userRating 回传给详情页评分入口，避免详情页再打一遍 ratings */
   onUserRatingChange?: (userRating: UserRating) => void;
+  /** 详情页用外层标签切换时，标题由标签承担，这里只留排序 */
+  hideSectionTitle?: boolean;
 }
 
 const DEFAULT_AVATAR_PATH = 'data/assets/defaultAvatar.png';
@@ -348,7 +350,7 @@ const CommentCard: React.FC<{
   );
 };
 
-const GameRating: React.FC<Props> = ({ fileId, mode = 'full', onRatingChange, onUserRatingChange }) => {
+const GameRating: React.FC<Props> = ({ fileId, mode = 'full', onRatingChange, onUserRatingChange, hideSectionTitle = false }) => {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const { setIsAuthModalOpen } = authModalStore();
@@ -711,7 +713,7 @@ const GameRating: React.FC<Props> = ({ fileId, mode = 'full', onRatingChange, on
       {/* 功能注释：效果图评论区顺序 = 标题 → 输入 → 列表；全量评分模式仍先写后列 */}
       {isCommentsMode ? (
         <div className={styles.commentsHeader}>
-          <h3>{t('gameRating.commentsSection')}</h3>
+          {hideSectionTitle ? null : <h3>{t('gameRating.commentsSection')}</h3>}
           <div className={styles.sortMenuWrap} ref={sortMenuRef}>
             <button
               type="button"

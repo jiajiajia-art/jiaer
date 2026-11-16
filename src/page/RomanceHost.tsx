@@ -44,14 +44,25 @@ function clearRomanceHtmlClasses() {
 
 export default function RomanceHost() {
   const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
-  // 功能注释：只在玩家游玩（?play=1&fileId=）时显示 AI 线路悬浮球；创作 / 编辑器里线路在各自面板选
+  // 功能注释：玩家进局 / 审核预览显示 AI 线路悬浮球；创作编辑器本体不显示，Studio 预览靠 romance:screen
   const { search } = useLocation();
   const q = new URLSearchParams(search);
-  const isPlayerPlay = q.get('play') === '1' && !!q.get('fileId');
-  // 功能注释：Romance 内部进入游戏画面（含编辑器 Studio 预览）时广播 romance:screen，宿主据此显示 AI 线路悬浮球
-  const [inGame, setInGame] = useState(() => (window as unknown as { __romanceScreen?: string }).__romanceScreen === 'game');
+  const fileId = String(q.get('fileId') || '').trim();
+  const isPlayerPlay = !!fileId && (q.get('play') === '1' || q.get('reviewPreview') === '1');
+  // 功能注释：对话生成玩法 / 生成世界创作壳默认不挂悬浮球；进入试玩（screen=game）时仍显示
+  const isCreatorShell = q.get('createPlayMod') === '1' || q.get('createPlayMod') === 'true'
+    || q.get('createWorld') === '1' || q.get('createWorld') === 'true'
+    || q.get('worldGen') === '1' || q.get('worldGen') === 'true';
+  // 功能注释：局内 game / opening 都要用 AI，开幕页也挂悬浮球；含编辑器 Studio 预览
+  const [inGame, setInGame] = useState(() => {
+    const s = (window as unknown as { __romanceScreen?: string }).__romanceScreen;
+    return s === 'game' || s === 'opening';
+  });
   useEffect(() => {
-    const h = (e: Event) => setInGame((e as CustomEvent<string>).detail === 'game');
+    const h = (e: Event) => {
+      const s = (e as CustomEvent<string>).detail;
+      setInGame(s === 'game' || s === 'opening');
+    };
     window.addEventListener('romance:screen', h);
     return () => window.removeEventListener('romance:screen', h);
   }, []);
@@ -92,7 +103,7 @@ export default function RomanceHost() {
       >
         <RomanceApp />
       </Suspense>
-      {(isPlayerPlay || inGame) && <AiRouteFab />}
+      {(isPlayerPlay || inGame) && (!isCreatorShell || inGame) && <AiRouteFab />}
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </div>
   );

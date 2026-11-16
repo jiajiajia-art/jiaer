@@ -125,9 +125,10 @@
 
 .title {
     margin: 0;
-    font-size: 25px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
+    font-size: var(--modal-fs-title);
+    font-weight: var(--modal-fw-title);
+    line-height: var(--modal-lh-title);
+    letter-spacing: 0.01em;
 }
 
 .headerReward {
@@ -135,13 +136,13 @@
     align-items: baseline;
     gap: 10px;
     color: var(--color-text-secondary);
-    font-size: 12px;
+    font-size: var(--modal-fs-caption);
     white-space: nowrap;
 }
 
 .headerReward strong {
     color: var(--color-primary-fg);
-    font-size: 28px;
+    font-size: var(--modal-fs-stat);
     font-variant-numeric: tabular-nums;
 }
 
@@ -213,10 +214,11 @@
     font-weight: 650;
 }
 
-.sectionHeading p {
+.sectionHeading p,
+.monthHeading p {
     margin: 4px 0 0;
     color: var(--color-text-muted);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .makeupCardBalance {
@@ -285,7 +287,7 @@
 .weekDate {
     margin-top: 3px;
     color: var(--color-text-muted);
-    font-size: 10px;
+    font-size: 11px;
     font-variant-numeric: tabular-nums;
 }
 
@@ -299,6 +301,29 @@
     border-radius: 50%;
     background: linear-gradient(145deg, var(--color-highlight), var(--color-highlight));
     box-shadow: 0 4px 12px color-mix(in srgb, var(--color-highlight) 20%, transparent), inset 0 0 0 3px color-mix(in srgb, var(--color-text) 32%, transparent);
+}
+
+.coinImgClip,
+.rewardCoinClip {
+    display: block;
+    overflow: hidden;
+    border-radius: 50%;
+}
+
+.coinImg,
+.rewardCoinImg {
+    display: block;
+    width: 28px;
+    height: 28px;
+    object-fit: cover;
+    pointer-events: none;
+    user-select: none;
+}
+
+.coinImgClip .coinImg,
+.rewardCoinClip .rewardCoinImg {
+    width: 100%;
+    height: 100%;
 }
 
 .coinMark::after {
@@ -319,7 +344,8 @@
     min-height: 14px;
     margin-top: 3px;
     color: var(--color-text-muted);
-    font-size: 9px;
+    font-size: 11px;
+    font-weight: 500;
     white-space: nowrap;
 }
 
@@ -338,7 +364,8 @@
 }
 
 .dayMadeUp .dayState,
-.monthDay.dayMadeUp small {
+.monthDay.dayMadeUp small,
+.monthDay.dayMadeUp .monthDayMark {
     color: var(--color-primary-fg);
 }
 
@@ -360,6 +387,16 @@
 
 .dayMissed[data-can-makeup="true"] {
     opacity: 1;
+}
+
+/* 月历不用整体透明度压字号观感，改用文字色区分漏签 */
+.monthDay.dayMissed {
+    opacity: 1;
+    color: color-mix(in srgb, var(--color-text) 58%, transparent);
+}
+
+.monthDay.dayMissed[data-can-makeup="true"] {
+    color: var(--color-text);
 }
 
 .dayMissed .coinMark {
@@ -454,13 +491,21 @@
 
 .monthWeekdays span {
     color: var(--color-text-muted);
-    font-size: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
     text-align: center;
 }
 
 .monthDay,
 .monthEmpty {
+    /* 功能注释：空位与日期格同盒模型，避免 button 默认 padding 把首行「1」撑得比后面大 */
     aspect-ratio: 1;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .monthDay {
@@ -469,24 +514,66 @@
     align-items: center;
     justify-content: center;
     gap: 2px;
-    min-width: 0;
+    padding: 2px 0;
+    margin: 0;
     border: 1px solid color-mix(in srgb, var(--color-text) 7%, transparent);
     border-radius: 9px;
     background: color-mix(in srgb, var(--color-text) 3.5%, transparent);
-    color: inherit;
-    font: inherit;
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1;
+    opacity: 1;
+    appearance: none;
+    -webkit-appearance: none;
+    -webkit-text-fill-color: currentColor;
     cursor: default;
 }
 
-.monthDay > span {
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
+.monthDay:disabled {
+    opacity: 1;
+    color: var(--color-text);
+    -webkit-text-fill-color: currentColor;
 }
 
-.monthDay small {
-    min-height: 10px;
+.monthDay > span,
+.monthDayNum {
+    display: grid;
+    place-items: center;
+    width: 1.35em;
+    height: 15px;
+    margin: 0 auto;
+    color: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 15px;
+    text-align: center;
+    -webkit-text-fill-color: currentColor;
+}
+
+.monthDay small,
+.monthDayMark {
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    height: 14px;
+    min-height: 14px;
+    padding: 0 2px;
+    border-radius: 999px;
     color: var(--color-text-muted);
-    font-size: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip;
+    -webkit-text-fill-color: currentColor;
 }
 
 .monthDay.dayToday {
@@ -494,7 +581,8 @@
     box-shadow: none;
 }
 
-.monthDay.daySigned small {
+.monthDay.daySigned small,
+.monthDay.daySigned .monthDayMark {
     color: var(--color-primary-fg);
 }
 
@@ -511,9 +599,10 @@
 }
 
 .embeddedSummary span {
-    padding: 4px 8px;
+    padding: 5px 10px;
     color: var(--color-text-secondary);
     font-size: 12px;
+    font-weight: 500;
     line-height: 1.4;
     border-radius: 999px;
     background: color-mix(in srgb, var(--color-text) 5.5%, transparent);
@@ -564,12 +653,12 @@
 .rewardProgressTop p {
     margin: 4px 0 0;
     color: var(--color-text-muted);
-    font-size: 10px;
+    font-size: 12px;
 }
 
 .rewardProgressTop > span {
     color: var(--color-text-secondary);
-    font-size: 11px;
+    font-size: 12px;
     font-variant-numeric: tabular-nums;
 }
 
@@ -608,10 +697,11 @@
 
 .signInButton.embeddedSignInButton {
     width: auto;
-    min-width: 144px;
-    min-height: 44px;
-    padding: 0 16px;
+    min-width: 132px;
+    min-height: 40px;
+    padding: 0 14px;
     font-size: 13px;
+    font-weight: 650;
     border-radius: 8px;
     box-shadow: none;
 }
@@ -626,13 +716,13 @@
 .embeddedRewardInfo strong {
     display: block;
     margin-bottom: 4px;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .embeddedRewardInfo p {
     margin: 0;
     color: var(--color-text-muted);
-    font-size: 10px;
+    font-size: 12px;
     line-height: 1.45;
 }
 
@@ -649,7 +739,7 @@
 .breakdown span {
     padding: 5px 8px;
     color: var(--color-text-secondary);
-    font-size: 10px;
+    font-size: 12px;
     border-radius: 999px;
     background: color-mix(in srgb, var(--color-text) 5%, transparent);
 }
@@ -864,7 +954,7 @@
     }
 
     .embeddedContent .monthHeading h3 {
-        font-size: 13px;
+        font-size: 15px;
     }
 
     .sectionHeading {
@@ -883,11 +973,11 @@
     }
 
     .weekday {
-        font-size: 10px;
+        font-size: 11px;
     }
 
     .weekDate {
-        font-size: 8px;
+        font-size: 11px;
     }
 
     .coinMark {
@@ -905,13 +995,13 @@
     }
 
     .dayState {
-        font-size: 7px;
-        letter-spacing: -0.02em;
+        font-size: 11px;
+        letter-spacing: 0;
     }
 
     .weekRule {
         margin-top: 10px;
-        font-size: 9px;
+        font-size: 11px;
     }
 
     .monthWeekdays,
@@ -919,12 +1009,25 @@
         gap: 4px;
     }
 
-    .monthDay {
+    .monthDay,
+    .monthEmpty {
         border-radius: 7px;
     }
 
-    .monthDay > span {
-        font-size: 10px;
+    .monthDay > span,
+    .monthDayNum {
+        width: 1.35em;
+        height: 15px;
+        font-size: 12px;
+        line-height: 15px;
+    }
+
+    .monthDay small,
+    .monthDayMark {
+        height: 14px;
+        min-height: 14px;
+        font-size: 11px;
+        line-height: 1;
     }
 
     .embeddedContent .monthDay {
@@ -937,8 +1040,8 @@
     }
 
     .embeddedSummary span {
-        padding: 3px 7px;
-        font-size: 11px;
+        padding: 5px 9px;
+        font-size: 12px;
     }
 
     .monthReward {
@@ -957,7 +1060,7 @@
 
     .rewardProgressTop p {
         max-width: 190px;
-        font-size: 9px;
+        font-size: 12px;
     }
 
     .footer {
@@ -982,18 +1085,18 @@
 
     .embeddedSignInButton {
         width: auto;
-        min-width: 132px;
-        min-height: 44px;
+        min-width: 120px;
+        min-height: 40px;
         padding: 0 12px;
-        font-size: 12px;
+        font-size: 13px;
     }
 
     .embeddedRewardInfo strong {
-        font-size: 11px;
+        font-size: 13px;
     }
 
     .embeddedRewardInfo p {
-        font-size: 10px;
+        font-size: 12px;
     }
 }
 
@@ -1012,9 +1115,9 @@
     }
 }
 
-/* 功能注释：紧凑版签到弹窗 —— 缩小尺寸、奖励数字置于金币右上角、连续签到奖励高亮 */
+/* 功能注释：紧凑版签到弹窗 —— 宽度由下方设计稿块统一控制，避免 480px 再撑大 */
 .content:not(.embeddedContent) {
-    width: min(480px, calc(100vw - 32px));
+    width: var(--modal-shell-width, min(360px, calc(100vw - 40px)));
 }
 
 .header {
@@ -1070,8 +1173,14 @@
     margin: 8px 0 0;
 }
 
-.coinWrap .coinMark {
+.coinWrap .coinMark,
+.coinWrap .coinImg {
     margin: 0;
+}
+
+.coinWrap .coinImg {
+    width: 26px;
+    height: 26px;
 }
 
 .coinWrap .dayReward {
@@ -1097,7 +1206,7 @@
 .dayState {
     min-height: 0;
     margin-top: 4px;
-    font-size: 10px;
+    font-size: 11px;
 }
 
 .bonusDay::after {
@@ -1178,7 +1287,7 @@
 
 @media (max-width: 600px) {
     .content:not(.embeddedContent) {
-        width: calc(100vw - 16px);
+        width: min(360px, calc(100vw - 28px));
     }
 
     .scrollArea {
@@ -1233,220 +1342,750 @@
 .secondaryButton { border-radius: 12px; border-color: transparent; background: color-mix(in srgb, var(--color-text) 7%, transparent); }
 .makeupDialog { border-color: color-mix(in srgb, var(--color-text) 8%, transparent); background: var(--color-surface); }
 
-/* ================= 功能注释：签到弹窗视觉精修（最终层，覆盖以上叠加样式） ================= */
+/* ================= 风格化：暗色 Romance 每日签到（仅 modal） ================= */
+/* 功能注释：深遮罩偏冷黑，弹窗本体用酒红光晕 + 细金边感，避免外缘脏边 */
+.overlay:has(.content:not(.embeddedContent)) {
+    background: rgba(6, 2, 8, 0.78);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
 .content:not(.embeddedContent) {
-    width: min(460px, calc(100vw - 24px));
-    border-radius: 22px;
+    --ci-panel: #140e13;
+    --ci-card: linear-gradient(165deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025));
+    --ci-border: rgba(255, 180, 196, 0.16);
+    --ci-text: #fff7f9;
+    --ci-muted: rgba(255, 230, 236, 0.55);
+    --ci-pink: #ff3d66;
+    --ci-pink-soft: #ff6b8a;
+    --ci-gold: #f0c35a;
+    width: var(--modal-shell-width, min(360px, calc(100vw - 40px)));
+    max-height: min(640px, calc(100dvh - 48px));
+    color: var(--ci-text);
+    border: 1px solid rgba(255, 120, 150, 0.18);
+    outline: none;
+    border-radius: 20px;
     background:
-        radial-gradient(120% 60% at 50% -10%, color-mix(in srgb, var(--color-primary) 22%, transparent), transparent 60%),
-        var(--color-surface);
+        radial-gradient(120% 70% at 50% -18%, rgba(255, 55, 95, 0.42), transparent 55%),
+        radial-gradient(70% 40% at 100% 0%, rgba(255, 150, 90, 0.12), transparent 50%),
+        radial-gradient(60% 45% at 0% 100%, rgba(120, 40, 70, 0.35), transparent 55%),
+        linear-gradient(180deg, #1c1218 0%, var(--ci-panel) 48%, #100b0f 100%);
+    box-shadow:
+        0 18px 48px rgba(0, 0, 0, 0.55),
+        inset 0 1px 0 rgba(255, 210, 220, 0.12);
 }
-.header { padding: 22px 60px 6px 22px; }
-.title { font-size: 20px; font-weight: 800; letter-spacing: 0.01em; }
-.closeButton { top: 12px; right: 12px; width: 40px; height: 40px; font-size: 26px; border-radius: 50%; }
-.closeButton:hover { background: color-mix(in srgb, var(--color-text) 8%, transparent); transform: none; }
-.scrollArea { padding: 10px 20px 16px; }
 
-/* 月度进度卡：柔和主色卡片，代替整块红色渐变 */
-.monthReward {
-    gap: 14px;
-    margin-top: 0;
-    padding: 14px 16px;
-    border: 1px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
-    border-radius: 16px;
-    background:
-        linear-gradient(120deg, color-mix(in srgb, var(--color-primary) 20%, transparent), color-mix(in srgb, var(--color-highlight) 10%, transparent));
-    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 8%, transparent);
+.content:not(.embeddedContent):focus,
+.content:not(.embeddedContent):focus-visible {
+    outline: none;
 }
-.rewardProgressTop strong { font-size: 14px; font-weight: 700; color: var(--color-text); }
-.rewardProgressTop > span { color: var(--color-text-secondary); font-size: 12px; }
-.rewardProgressTop > span b { color: var(--color-text); font-size: 18px; font-weight: 800; margin-right: 1px; }
-.monthReward .progressTrack {
-    height: 8px;
+
+.content:not(.embeddedContent) .header {
+    padding: 18px 48px 6px 18px;
+    border-bottom: 0;
+}
+
+.content:not(.embeddedContent) .title {
+    color: #fff;
+    font-size: var(--modal-fs-title, 16px);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 18px rgba(255, 80, 120, 0.28);
+}
+
+.content:not(.embeddedContent) .closeButton {
+    top: 8px;
+    right: 8px;
+    width: 30px;
+    height: 30px;
+    color: rgba(255, 230, 236, 0.62);
+    font-size: 20px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.content:not(.embeddedContent) .closeButton:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    transform: none;
+}
+
+.content:not(.embeddedContent) .scrollArea {
+    padding: 10px 16px 12px;
+}
+
+/* —— 连续签到进度卡 —— */
+.content:not(.embeddedContent) .monthReward {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    padding: 14px 14px 13px;
+    border: 1px solid var(--ci-border);
+    border-radius: 16px;
+    background: var(--ci-card);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 8px 20px rgba(0, 0, 0, 0.18);
+}
+
+.content:not(.embeddedContent) .rewardProgress {
+    flex: 1;
+    min-width: 0;
+}
+
+.content:not(.embeddedContent) .rewardProgressTop {
+    display: block;
+}
+
+.content:not(.embeddedContent) .rewardProgressTop strong {
+    color: rgba(255, 248, 250, 0.92);
+    font-size: var(--modal-fs-body, 14px);
+    font-weight: 650;
+}
+
+.content:not(.embeddedContent) .rewardProgressTop b {
+    margin: 0 2px;
+    color: var(--ci-pink-soft);
+    font-size: var(--modal-fs-stat, 18px);
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 12px rgba(255, 70, 110, 0.45);
+}
+
+.content:not(.embeddedContent) .progressTrack {
+    height: 6px;
     margin-top: 10px;
-    background: color-mix(in srgb, var(--color-text) 10%, transparent);
-}
-.monthReward .progressTrack span {
-    background: linear-gradient(90deg, var(--color-primary), var(--color-highlight));
-    box-shadow: 0 0 10px color-mix(in srgb, var(--color-primary) 50%, transparent);
-}
-.monthReward .rewardBadge {
-    gap: 6px;
-    padding: 6px 12px 6px 6px;
-    border: 1px solid color-mix(in srgb, var(--color-highlight) 40%, transparent);
-    background: color-mix(in srgb, var(--color-highlight) 14%, transparent);
-}
-.monthReward .rewardBadge strong { color: var(--color-text); font-size: 18px; text-shadow: none; }
-
-/* 本周签到区 */
-.weekSection {
-    margin-top: 14px;
-    padding: 14px 12px 12px;
-    border: 1px solid color-mix(in srgb, var(--color-text) 7%, transparent);
-    border-radius: 16px;
-    background: color-mix(in srgb, var(--color-text) 3%, transparent);
-}
-.sectionHeading { margin-bottom: 12px; padding: 0 2px; }
-.sectionHeading h3 { font-size: 15px; font-weight: 700; }
-.sectionHeading p { color: var(--color-text-secondary); font-size: 12px; }
-.makeupCardBalance { padding: 4px 10px; font-size: 11px; }
-.weekGrid { gap: 6px; }
-
-/* 日卡：统一结构 —— 星期 / 日期 / 金币 / 奖励，状态角标在右上 */
-.weekDay {
-    position: relative;
-    gap: 0;
-    min-height: 112px;
-    padding: 10px 2px 10px;
     overflow: visible;
-    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
-    border-radius: 12px;
-    background: color-mix(in srgb, var(--color-text) 4%, transparent);
-    color: var(--color-text);
-    transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.45);
+    box-shadow:
+        inset 0 1px 2px rgba(0, 0, 0, 0.55),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
-.weekday { font-size: 12px; font-weight: 700; color: var(--color-text); }
-.weekDate { margin-top: 2px; font-size: 10px; color: var(--color-text-muted); }
-.coinWrap {
+
+.content:not(.embeddedContent) .progressTrack span {
+    position: relative;
+    display: block;
+    min-width: 10px;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #ff1f4b 0%, #ff5a78 55%, #ff9a6a 100%);
+    box-shadow: 0 0 12px rgba(255, 70, 110, 0.7);
+}
+
+.content:not(.embeddedContent) .progressTrack span::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 35% 30%, #fff 0%, #ffd0da 28%, #ff5a78 70%, #e81e4a 100%);
+    box-shadow:
+        0 0 0 2px rgba(20, 10, 14, 0.85),
+        0 0 14px 2px rgba(255, 70, 110, 0.75);
+    transform: translateY(-50%);
+}
+
+.content:not(.embeddedContent) .monthExtraHint {
+    margin: 8px 0 0;
+    color: var(--ci-muted);
+    font-size: var(--modal-fs-caption, 12px);
+    line-height: 1.3;
+}
+
+.content:not(.embeddedContent) .rewardBadge {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    height: auto;
+    padding: 8px 10px 8px 12px;
+    line-height: 1;
+    border: 1px solid rgba(255, 190, 120, 0.22);
+    border-radius: 14px;
+    background:
+        linear-gradient(145deg, rgba(255, 200, 120, 0.1), rgba(255, 80, 110, 0.08));
+}
+
+.content:not(.embeddedContent) .rewardBadgeText {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    margin: 10px 0 0;
-}
-.coinWrap .coinMark { width: 26px; height: 26px; margin: 0; }
-.coinWrap .dayReward {
-    position: static;
-    padding: 0;
-    background: none;
-    box-shadow: none;
-    color: var(--color-text);
-    font-size: 13px;
-    font-weight: 800;
-    line-height: 1;
-}
-.dayState {
-    position: absolute;
-    top: -6px;
-    right: -4px;
-    display: grid;
-    place-items: center;
-    min-width: 18px;
-    height: 18px;
-    margin: 0;
-    padding: 0 4px;
-    border-radius: 999px;
-    background: var(--color-primary);
-    color: var(--color-on-primary);
-    font-size: 10px;
-    font-weight: 800;
-    line-height: 1;
-    box-shadow: 0 2px 6px color-mix(in srgb, var(--color-primary) 40%, transparent);
-}
-
-/* 已签 / 已补签：浅主色底 + 对勾角标 */
-.weekDay.daySigned,
-.weekDay.dayMadeUp {
-    border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
-    background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 16%, transparent), color-mix(in srgb, var(--color-primary) 5%, transparent));
-}
-.weekDay.daySigned .dayState,
-.weekDay.dayMadeUp .dayState { color: var(--color-on-primary); }
-.weekDay.dayMadeUp .dayState { background: color-mix(in srgb, var(--color-primary) 70%, var(--color-text)); }
-
-/* 今天：主色描边 + 光晕，不再整块填红 */
-.weekDay.dayToday {
-    border: 1.5px solid var(--color-primary);
-    background:
-        radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--color-primary) 30%, transparent), transparent 75%),
-        color-mix(in srgb, var(--color-primary) 8%, transparent);
-    box-shadow: 0 6px 18px color-mix(in srgb, var(--color-primary) 28%, transparent);
-    color: var(--color-text);
-}
-.weekDay.dayToday .weekDate { color: var(--color-primary-fg); }
-.weekDay.dayToday .coinWrap .dayReward { background: none; color: var(--color-primary-fg); }
-.todayTag {
-    position: absolute;
-    top: -8px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 1px 7px;
-    border-radius: 999px;
-    background: var(--color-primary);
-    color: var(--color-on-primary);
-    font-size: 10px;
-    font-weight: 800;
-    line-height: 15px;
+    align-items: flex-end;
+    gap: 3px;
+    text-align: right;
     white-space: nowrap;
 }
 
-/* 漏签：虚线 + 降低存在感；可补签时恢复并给「补签」角标 */
-.weekDay.dayMissed { border-style: dashed; opacity: 0.55; }
-.weekDay.dayMissed[data-can-makeup="true"] {
-    opacity: 1;
-    border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
-    cursor: pointer;
-}
-.weekDay[data-can-makeup="true"] .dayState {
-    background: var(--color-surface);
-    color: var(--color-primary-fg);
-    border: 1px solid var(--color-primary);
-    box-shadow: none;
-}
-.weekDay[data-can-makeup="true"]:hover { transform: translateY(-1px); }
-.weekDay.dayUpcoming { background: color-mix(in srgb, var(--color-text) 2.5%, transparent); }
-.weekDay.dayUpcoming .coinMark { opacity: 0.7; }
-
-/* 连续签到加赠日：奖励数字金色 */
-.bonusDay .coinWrap .dayReward {
-    background: linear-gradient(100deg, var(--color-highlight), var(--color-primary-fg));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+.content:not(.embeddedContent) .rewardBadgeText span {
+    margin: 0;
+    color: rgba(255, 210, 170, 0.88);
+    font-size: var(--modal-fs-caption, 12px);
+    font-weight: 650;
+    line-height: 1.2;
 }
 
-/* 底部按钮 */
-.footer { padding: 4px 20px 20px; }
-.footer:not(.embeddedFooter) .signInButton {
-    width: 100%;
-    min-height: 50px;
-    border-radius: 14px;
-    background: linear-gradient(100deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 70%, var(--color-highlight)));
-    box-shadow: 0 10px 26px color-mix(in srgb, var(--color-primary) 35%, transparent);
-    font-size: 16px;
-    font-weight: 800;
+.content:not(.embeddedContent) .rewardBadgeText strong {
+    color: #ffd27a;
+    font-size: var(--modal-fs-stat, 18px);
+    font-weight: 750;
+    line-height: 1;
+    text-shadow: 0 0 10px rgba(255, 180, 80, 0.35);
+    font-variant-numeric: tabular-nums;
+}
+
+/* 功能注释：弹窗金币用 CSS 绘制，避免 webp 缩小后发糊/发脏 */
+.content:not(.embeddedContent) .rewardCoinGlyph,
+.content:not(.embeddedContent) .coinGlyph {
+    position: relative;
+    display: block;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 32% 28%, #fff8d8 0%, #ffe08a 26%, #f0b422 58%, #c8880e 100%);
+    box-shadow:
+        inset 0 1px 2px rgba(255, 255, 255, 0.65),
+        inset 0 -2px 3px rgba(120, 70, 0, 0.35),
+        0 0 0 1px rgba(255, 220, 140, 0.35),
+        0 3px 8px rgba(0, 0, 0, 0.35);
+}
+
+.content:not(.embeddedContent) .rewardCoinGlyph {
+    width: 36px;
+    height: 36px;
+}
+
+.content:not(.embeddedContent) .rewardCoinGlyph::before,
+.content:not(.embeddedContent) .coinGlyph::before {
+    content: '★';
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: #fff4c8;
+    font-size: 15px;
+    line-height: 1;
+    text-shadow: 0 1px 1px rgba(140, 80, 0, 0.45);
+}
+
+.content:not(.embeddedContent) .coinGlyph {
+    width: 26px;
+    height: 26px;
+}
+
+.content:not(.embeddedContent) .coinGlyph::before {
+    font-size: 12px;
+}
+
+/* —— 本周签到区 —— */
+.content:not(.embeddedContent) .weekSection {
+    margin-top: 14px;
+    padding: 14px 12px 12px;
+    border: 1px solid var(--ci-border);
+    border-radius: 16px;
+    background: var(--ci-card);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 8px 20px rgba(0, 0, 0, 0.16);
+}
+
+.content:not(.embeddedContent) .sectionHeading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 0 2px;
+}
+
+.content:not(.embeddedContent) .headingInline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+}
+
+.content:not(.embeddedContent) .sectionHeading h3 {
+    color: #fff;
+    font-size: var(--modal-fs-body, 14px);
+    font-weight: 700;
     letter-spacing: 0.02em;
 }
-.footer:not(.embeddedFooter) .signInButton:disabled {
-    background: color-mix(in srgb, var(--color-text) 8%, transparent);
-    color: var(--color-text-secondary);
+
+.content:not(.embeddedContent) .sectionHeading p {
+    margin: 0;
+    color: var(--ci-muted);
+    font-size: var(--modal-fs-caption, 12px);
+}
+
+.content:not(.embeddedContent) .makeupCardBalance {
+    flex: 0 0 auto;
+    padding: 5px 12px;
+    color: #ffd0da;
+    font-size: var(--modal-fs-caption, 12px);
+    font-weight: 700;
+    border: 1px solid rgba(255, 90, 120, 0.45);
+    border-radius: 999px;
+    background:
+        linear-gradient(180deg, rgba(255, 70, 110, 0.22), rgba(0, 0, 0, 0.28));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.content:not(.embeddedContent) .weekGrid {
+    gap: 8px;
+}
+
+/* —— 日卡：胶囊签到格 —— */
+.content:not(.embeddedContent) .weekDay {
+    position: relative;
+    gap: 0;
+    min-height: 94px;
+    padding: 10px 2px 12px;
+    overflow: visible;
+    color: rgba(255, 230, 236, 0.58);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    opacity: 1;
+    transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.content:not(.embeddedContent) .weekDay.dayMissed {
+    border-style: solid;
+    opacity: 0.78;
+}
+
+.content:not(.embeddedContent) .todayTag,
+.content:not(.embeddedContent) .dayState {
+    display: none;
+}
+
+.content:not(.embeddedContent) .weekday {
+    color: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.content:not(.embeddedContent) .weekDate {
+    margin-top: 2px;
+    color: inherit;
+    font-size: 10px;
+    opacity: 0.88;
+}
+
+.content:not(.embeddedContent) .coinWrap {
+    position: relative;
+    display: block;
+    width: 26px;
+    height: 26px;
+    margin: 12px auto 0;
+    overflow: visible;
+}
+
+.content:not(.embeddedContent) .coinWrap .dayReward {
+    position: absolute;
+    top: -7px;
+    left: 14px;
+    z-index: 2;
+    padding: 1px 5px;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 13px;
+    white-space: nowrap;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #ff6b88, #ff2d55);
+    box-shadow: 0 2px 6px rgba(255, 45, 85, 0.4);
+    -webkit-background-clip: border-box;
+    background-clip: border-box;
+}
+
+/* 今日：宝石粉渐变 + 轻呼吸光 */
+.content:not(.embeddedContent) .weekDay.dayToday {
+    color: #fff;
+    border: 1px solid rgba(255, 200, 210, 0.35);
+    background:
+        linear-gradient(180deg, #ff7a94 0%, #ff3d66 48%, #e81e4a 100%);
+    box-shadow:
+        0 10px 22px rgba(255, 45, 85, 0.38),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    animation: ciTodayPulse 2.4s ease-in-out infinite;
+}
+
+.content:not(.embeddedContent) .weekDay.dayToday .weekday,
+.content:not(.embeddedContent) .weekDay.dayToday .weekDate {
+    color: #fff;
+    opacity: 1;
+}
+
+.content:not(.embeddedContent) .weekDay.dayToday .coinWrap .dayReward {
+    color: #ff2d55;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+/* 已签但非今日：玫瑰雾面 */
+.content:not(.embeddedContent) .weekDay.daySigned:not(.dayToday),
+.content:not(.embeddedContent) .weekDay.dayMadeUp:not(.dayToday) {
+    color: rgba(255, 230, 236, 0.82);
+    border-color: rgba(255, 90, 120, 0.28);
+    background:
+        linear-gradient(180deg, rgba(255, 70, 110, 0.18), rgba(255, 70, 110, 0.08));
+}
+
+/* 可补签：细粉描边提示可点 */
+.content:not(.embeddedContent) .weekDay[data-can-makeup='true'] {
+    color: rgba(255, 230, 236, 0.58);
+    border-color: rgba(255, 255, 255, 0.1);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
+}
+
+.content:not(.embeddedContent) .weekDay[data-can-makeup='true']:hover {
+    border-color: color-mix(in srgb, var(--ci-pink) 55%, transparent);
+    background: rgba(255, 45, 85, 0.1);
+    transform: translateY(-1px);
+}
+
+.content:not(.embeddedContent) .weekDay.dayUpcoming {
+    color: rgba(255, 230, 236, 0.5);
+}
+
+.content:not(.embeddedContent) .weekDay.dayMissed .coinImg,
+.content:not(.embeddedContent) .weekDay.dayUpcoming .coinImg {
+    filter: none;
+    opacity: 1;
+}
+
+/* 周日加赠：轻金色外圈 */
+.content:not(.embeddedContent) .bonusDay .coinWrap {
+    width: 26px;
+    height: 26px;
+    filter: none;
+}
+
+.content:not(.embeddedContent) .bonusDay .coinGlyph {
+    width: 26px;
+    height: 26px;
+    box-shadow:
+        inset 0 1px 2px rgba(255, 255, 255, 0.55),
+        inset 0 -2px 3px rgba(120, 70, 0, 0.35),
+        0 0 0 2px rgba(255, 210, 100, 0.4),
+        0 2px 8px rgba(255, 190, 60, 0.35);
+}
+
+.content:not(.embeddedContent) .bonusDay .coinGlyph::before {
+    font-size: 11px;
+}
+
+.content:not(.embeddedContent) .bonusDay .coinWrap .dayReward {
+    left: 13px;
+    padding: 1px 5px;
+    font-size: 9px;
+    background: linear-gradient(180deg, #ffb347, #ff6a3d);
+    color: #fff;
+}
+
+/* —— 底部签到按钮 —— */
+.content:not(.embeddedContent) .footer {
+    padding: 10px 16px 18px;
+    border-top: 0;
+    background: transparent;
+}
+
+.content:not(.embeddedContent) .footer .signInButton {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    overflow: hidden;
+    color: #fff;
+    font-size: var(--modal-fs-button, 14px);
+    font-weight: 750;
+    letter-spacing: 0.12em;
+    border: 1px solid rgba(255, 210, 220, 0.28);
+    border-radius: 14px;
+    background: linear-gradient(100deg, #ff6b88 0%, #ff2d55 52%, #e81e4a 100%);
+    box-shadow:
+        0 10px 22px rgba(255, 45, 85, 0.34),
+        inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.content:not(.embeddedContent) .footer .signInButton::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 -40%;
+    width: 36%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+    transform: skewX(-18deg);
+    animation: ciBtnSheen 3.2s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.content:not(.embeddedContent) .footer .signInButton:hover:not(:disabled) {
+    background: linear-gradient(100deg, #ff7a94 0%, #ff3a60 52%, #f02854 100%);
+    transform: translateY(-1px);
+}
+
+.content:not(.embeddedContent) .footer .signInButton:disabled {
+    color: rgba(255, 255, 255, 0.78);
+    opacity: 0.48;
+    background: linear-gradient(100deg, #9a4a5c 0%, #7a2e42 55%, #5c2234 100%);
+    border-color: rgba(255, 180, 196, 0.12);
     box-shadow: none;
 }
 
-/* 补签弹窗 */
-.makeupDialog { border-radius: 18px; padding: 22px 20px 18px; }
-.makeupDialog h3 { font-size: 17px; font-weight: 800; }
-.makeupDialog button { border-radius: 12px; min-height: 44px; }
+.content:not(.embeddedContent) .footer .signInButton:disabled::before {
+    animation: none;
+    opacity: 0;
+}
+
+@keyframes ciTodayPulse {
+    0%, 100% { box-shadow: 0 10px 22px rgba(255, 45, 85, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.32); }
+    50% { box-shadow: 0 12px 26px rgba(255, 45, 85, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4); }
+}
+
+@keyframes ciBtnSheen {
+    0%, 55% { left: -40%; opacity: 0; }
+    60% { opacity: 1; }
+    85%, 100% { left: 120%; opacity: 0; }
+}
+
+/* 功能注释：弹窗态补签确认 — 全屏 portal + 自包含卡片，不依赖父级后代选择器 */
+.makeupPortal {
+    position: fixed;
+    inset: 0;
+    z-index: 2100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.78);
+}
+
+.makeupCard {
+    width: min(320px, 100%);
+    padding: 24px 20px 18px;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    background: #24191e;
+    color: #fff;
+    text-align: center;
+    outline: none;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+.makeupCard:focus,
+.makeupCard:focus-visible {
+    outline: none;
+}
+
+.makeupTitle {
+    margin: 0;
+    color: var(--color-text);
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.35;
+    letter-spacing: 0.02em;
+}
+
+.makeupDesc {
+    margin: 12px 0 20px;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    line-height: 1.65;
+}
+
+.makeupActions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+}
+
+.makeupBtnGhost,
+.makeupBtnPrimary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 46px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.makeupBtnGhost {
+    color: var(--color-text);
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
+}
+
+.makeupBtnGhost:hover {
+    background: color-mix(in srgb, var(--color-text) 16%, transparent);
+}
+
+.makeupBtnPrimary {
+    color: #fff;
+    background: linear-gradient(100deg, #ff5a78 0%, #ff2d55 55%, #e81e4a 100%);
+    box-shadow: 0 8px 20px rgba(255, 45, 85, 0.28);
+}
+
+.makeupBtnPrimary:hover:not(:disabled) {
+    background: linear-gradient(100deg, #ff6b88 0%, #ff3a60 55%, #f02854 100%);
+}
+
+.makeupBtnPrimary:disabled {
+    cursor: wait;
+    opacity: 0.62;
+    box-shadow: none;
+}
+
+.makeupCard .makeupTitle {
+    color: #fff;
+}
+
+.makeupCard .makeupDesc {
+    color: rgba(255, 255, 255, 0.68);
+}
+
+.makeupCard .makeupBtnGhost {
+    color: rgba(255, 255, 255, 0.92);
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.makeupCard .makeupBtnGhost:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.makeupCard .makeupRewardList {
+    margin: 0 0 18px;
+}
+
+.makeupCard .makeupRewardList span {
+    color: rgba(255, 255, 255, 0.88);
+    background: rgba(255, 45, 85, 0.18);
+}
 
 @media (max-width: 600px) {
-    .content:not(.embeddedContent) { width: calc(100vw - 16px); }
-    .header { padding: 18px 56px 4px 16px; }
-    .scrollArea { padding: 8px 12px 12px; }
-    .monthReward { padding: 12px; gap: 10px; }
-    .weekSection { padding: 14px 8px 10px; }
-    .weekGrid { gap: 4px; }
-    .weekDay { min-height: 98px; padding: 9px 0 8px; border-radius: 10px; }
-    .weekday { font-size: 11px; }
-    .weekDate { font-size: 10px; }
-    .coinWrap { gap: 5px; margin-top: 8px; }
-    .coinWrap .coinMark { width: 22px; height: 22px; }
-    .coinWrap .coinMark::after { inset: 6px; }
-    .coinWrap .dayReward { font-size: 12px; left: auto; padding: 0; }
-    .dayState { min-width: 16px; height: 16px; top: -5px; right: -3px; font-size: 9px; padding: 0 3px; letter-spacing: 0; }
-    .todayTag { font-size: 9px; padding: 0 5px; line-height: 14px; top: -7px; }
-    .footer { padding: 4px 12px calc(14px + env(safe-area-inset-bottom)); }
+    .overlay:has(.content:not(.embeddedContent)) {
+        padding: 18px 14px;
+    }
+
+    .content:not(.embeddedContent) {
+        width: min(380px, calc(100vw - 24px));
+        max-height: min(640px, calc(100dvh - 36px - env(safe-area-inset-bottom)));
+        border-radius: 20px;
+    }
+
+    .content:not(.embeddedContent) .header {
+        padding: 16px 44px 6px 16px;
+    }
+
+    .content:not(.embeddedContent) .scrollArea {
+        padding: 8px 14px 10px;
+    }
+
+    .content:not(.embeddedContent) .monthReward {
+        padding: 12px 12px;
+        gap: 10px;
+        border-radius: 14px;
+    }
+
+    .content:not(.embeddedContent) .rewardCoinGlyph {
+        width: 36px;
+        height: 36px;
+    }
+
+    .content:not(.embeddedContent) .rewardCoinGlyph::before {
+        font-size: 14px;
+    }
+
+    .content:not(.embeddedContent) .rewardBadgeText strong {
+        font-size: var(--modal-fs-stat, 18px);
+    }
+
+    .content:not(.embeddedContent) .weekSection {
+        margin-top: 12px;
+        padding: 12px 10px 10px;
+        border-radius: 14px;
+    }
+
+    .content:not(.embeddedContent) .weekGrid {
+        gap: 7px;
+    }
+
+    .content:not(.embeddedContent) .weekDay {
+        min-height: 90px;
+        padding: 10px 1px 11px;
+        border-radius: 13px;
+    }
+
+    .content:not(.embeddedContent) .weekday {
+        font-size: 11px;
+    }
+
+    .content:not(.embeddedContent) .coinWrap {
+        width: 24px;
+        height: 24px;
+        margin-top: 10px;
+    }
+
+    .content:not(.embeddedContent) .coinGlyph {
+        width: 24px;
+        height: 24px;
+    }
+
+    .content:not(.embeddedContent) .bonusDay .coinWrap,
+    .content:not(.embeddedContent) .bonusDay .coinGlyph {
+        width: 26px;
+        height: 26px;
+    }
+
+    .content:not(.embeddedContent) .coinWrap .dayReward {
+        left: 12px;
+        font-size: 10px;
+        padding: 0 4px;
+    }
+
+    .content:not(.embeddedContent) .footer {
+        padding: 8px 14px calc(16px + env(safe-area-inset-bottom));
+    }
+
+    .content:not(.embeddedContent) .footer .signInButton {
+        min-height: 46px;
+        font-size: 15px;
+    }
 }
+
 @media (prefers-reduced-motion: reduce) {
-    .weekDay { transition: none; }
-    .weekDay[data-can-makeup="true"]:hover { transform: none; }
+    .content:not(.embeddedContent) .weekDay {
+        transition: none;
+        animation: none;
+    }
+
+    .content:not(.embeddedContent) .weekDay[data-can-makeup='true']:hover {
+        transform: none;
+    }
+
+    .content:not(.embeddedContent) .footer .signInButton::before {
+        animation: none;
+        opacity: 0;
+    }
 }
+

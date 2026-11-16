@@ -807,7 +807,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
         const onStage = new Set([...stepNpcIds, ...next.npcs.filter((n) => speakers.has(n.name)).map((n) => n.id)]);
         const mobs = { ...beat.mobs };
         const stayNames: string[] = [];
-        for (const id of onStage) if (prevMobs[id]) { mobs[id] = prevMobs[id]; stayNames.push(next.npcs.find((n) => n.id === id)?.name ?? ""); }
+        const here = next.sim.room;
+        for (const id of onStage) {
+          if (prevMobs[id]) {
+            // 本回合在说话 / 有互动：留在原位，避免正聊着人就被漫游带走
+            mobs[id] = prevMobs[id];
+            stayNames.push(next.npcs.find((n) => n.id === id)?.name ?? "");
+          } else if (here) {
+            // 功能注释：新登场人物原先不进 prevMobs，会既不在在场条、又和正文对不上——落到当前房间
+            mobs[id] = here;
+            const npc = next.npcs.find((n) => n.id === id);
+            if (npc && !npc.home) npc.home = here;
+          }
+        }
         next = { ...next, sim: { ...next.sim, mobs, tick: beat.tick } };
         changes.push(...beat.events.map((e) => e.text).filter((t) => !stayNames.some((nm) => nm && t.startsWith(nm))));
         next = gossipTick(next, mobs, beat.tick, next.world.time).g;

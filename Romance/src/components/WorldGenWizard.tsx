@@ -136,8 +136,6 @@ type Props = {
   onComplete: (mod: Mod, draft: WorldGenDraft, savedName?: string) => void;
 };
 
-const hint = "text-[11.5px] leading-relaxed text-ink-soft";
-
 /** 功能注释：进度态文案——完成用「已完成」（绿）；进行中不单写「进行中」，具体产出见 detail 行 */
 function moduleStatusLabel(status: string) {
   if (status === "done") return "已完成";
@@ -591,7 +589,6 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
                 </span>
                 <span className="min-w-0">
                   <span className="block text-[13px] font-bold text-ink">{s.name}</span>
-                  <span className={`block ${hint}`}>{s.desc}</span>
                 </span>
               </button>
             );
@@ -859,19 +856,22 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
 
   /** 功能注释：校验失败用居中弹窗，避免底栏旁小字条被挡住、难发现。 */
   const errModal = err ? (
-    <Modal title="还差一步" onClose={() => setErr("")} heavyBackdrop>
-      <p className="text-[14px] leading-relaxed text-ink" role="alert">
-        {err}
-      </p>
-      <div className="mt-5 flex justify-end">
-        <button
-          type="button"
-          autoFocus
-          onClick={dismissErr}
-          className="rounded-full bg-ink px-5 py-2 text-[13.5px] font-bold text-paper transition hover:brightness-110"
-        >
-          知道了
-        </button>
+    <Modal
+      title="还差一步"
+      onClose={dismissErr}
+      heavyBackdrop
+      panelClassName="ui-dialog-compact world-gen-err-dialog"
+      footer={
+        <div className="ui-sheet-foot flex justify-end">
+          <button type="button" autoFocus onClick={dismissErr} className="ui-btn ui-btn-primary ui-btn-lg min-w-[7.5rem]">
+            知道了
+          </button>
+        </div>
+      }
+    >
+      <div className="world-gen-err-tip" role="alert">
+        <p className="world-gen-err-tip-label">还差一点点</p>
+        <p className="world-gen-err-tip-text">{err}</p>
       </div>
     </Modal>
   ) : null;
@@ -1183,13 +1183,12 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
   return (
     <div className="world-gen-shell">
       <div className="mx-auto flex min-h-screen w-full max-w-xl flex-col px-4 pb-28 pt-7 sm:px-6">
-        <header className="mb-6">
-          <p className="world-gen-kicker">创作游戏 · 第 1/2 步</p>
+        <header className="mb-5">
+          <button type="button" onClick={onBack} className="world-gen-back">
+            ← 返回
+          </button>
+          <p className="world-gen-kicker">创作游戏</p>
           <h1 className="world-gen-title">生成世界</h1>
-          <p className="world-gen-lead">
-            填写作品名称、故事设定并选择创作引擎，勾选本次需要 AI 生成的模组；进入完整编辑器时会调用平台 AI（按模组扣 KK
-            币），无需单独配置密钥。
-          </p>
         </header>
 
         <div className="space-y-4">
@@ -1253,10 +1252,6 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
                 }}
               />
             </label>
-            <p className={`mt-2 ${hint}`}>
-              这段内容将作为 AI 创作的主要依据。你可以补充玩法、角色关系与世界规则。上限 {WORLD_SETTING_MAX}{" "}
-              字；超出后计数标红，未勾选 AI 整理时提交会先确认截断。
-            </p>
             <label className="mt-4 block">
               <div className="world-gen-field-label">
                 <span>禁止生成</span>
@@ -1272,17 +1267,13 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
                 className="world-gen-textarea"
                 value={s1.forbidGen}
                 rows={2}
-                placeholder="例如：不要出现现代娱乐圈通告；不要生成未成年恋爱；不要出现血腥虐杀。"
+                placeholder="例如：不要出现血腥虐杀；不要生成未成年恋爱。"
                 onChange={(e) => {
                   patch1({ forbidGen: e.target.value });
                   fitWorldGenSettingTextarea(e.currentTarget);
                 }}
               />
             </label>
-            <p className={`mt-2 ${hint}`}>
-              写清楚不要出现的内容、不要生成的设定。生成世界与后续 AI 补全都会遵守；不会被「由 AI
-              整理设定」改写。
-            </p>
             <button
               type="button"
               role="checkbox"
@@ -1293,10 +1284,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
               <span className="world-gen-choice-check" aria-hidden>
                 {s1.aiPolish ? <IconCheck size={12} /> : null}
               </span>
-              <span>
-                <span className="block text-[13px] font-bold text-ink">由 AI 整理设定</span>
-                <span className={hint}>保留原意，补全结构并优化表达（作品名称也可润色）</span>
-              </span>
+              <span className="block text-[13px] font-bold text-ink">由 AI 整理设定</span>
             </button>
           </section>
 
@@ -1304,10 +1292,9 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
             <div className="world-gen-card-head">
               <h2 className="world-gen-card-title">
                 <span className="world-gen-card-index">02</span>
-                选择创作引擎
+                创作引擎
               </h2>
             </div>
-            <p className={`mb-3 ${hint}`}>每种引擎的擅长方向与消耗倍率不同，最终按实际生成用量扣除 KK 币。</p>
             {/* 后台配了线路就用后台线路与倍率；接口未上线时沿用内置三档 */}
             {platformRoutes.routes.length > 0 ? <AiRoutePicker capability="text" title="平台线路" /> : (
             <div className="space-y-2">
@@ -1326,10 +1313,6 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
                         <span className="text-[14px] font-bold text-ink">{e.name}</span>
                         <span className="world-gen-chip !px-2 !py-0.5 text-[10.5px]">{e.tag}</span>
                       </span>
-                      <span className={`mt-0.5 block ${hint}`}>{e.desc}</span>
-                      <span className="mt-1 block text-[11.5px] font-semibold text-jade">
-                        KK 币倍率 {e.rate.toFixed(1)}x
-                      </span>
                     </span>
                   </button>
                 );
@@ -1342,7 +1325,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
             <div className="world-gen-card-head">
               <h2 className="world-gen-card-title">
                 <span className="world-gen-card-index">03</span>
-                本次需要 AI 生成的模组
+                AI 生成模组
               </h2>
               <span className="world-gen-field-count">
                 已选 {selectedCount}/{allCount}
@@ -1350,14 +1333,13 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
             </div>
             <div className="mb-3 flex flex-wrap gap-2">
               <button type="button" onClick={selectAllModules} className="world-gen-chip">
-                全选基础
+                全选
               </button>
               <button type="button" onClick={clearAllModules} className="world-gen-chip">
-                取消全选
+                清空
               </button>
             </div>
             <div className="max-h-72 space-y-3 overflow-y-auto pr-0.5">
-              <p className="text-[11px] font-bold text-jade">基础世界（默认）</p>
               {renderModuleGroup(tieredModules.core)}
             </div>
           </section>
@@ -1365,20 +1347,15 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
       </div>
 
       <div className="world-gen-dock">
-        <div className="mx-auto flex max-w-xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <button type="button" onClick={onBack} className="world-gen-ghost">
-            ← 上一步
-          </button>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {mod && draft ? (
-              <button type="button" onClick={continueExistingWork} disabled={generating} className="world-gen-ghost">
-                继续编辑已有内容
-              </button>
-            ) : null}
-            <button type="button" onClick={() => void goEditor()} disabled={generating} className="world-gen-cta">
-              {mod && draft ? "重新生成并进入编辑器 →" : "进入完整编辑器 →"}
+        <div className="world-gen-dock-row world-gen-dock-row--end">
+          {mod && draft ? (
+            <button type="button" onClick={continueExistingWork} disabled={generating} className="world-gen-ghost shrink-0">
+              继续编辑
             </button>
-          </div>
+          ) : null}
+          <button type="button" onClick={() => void goEditor()} disabled={generating} className="world-gen-cta shrink-0">
+            {mod && draft ? "重新生成" : "下一步"}
+          </button>
         </div>
       </div>
       {entranceDraftGate ? (

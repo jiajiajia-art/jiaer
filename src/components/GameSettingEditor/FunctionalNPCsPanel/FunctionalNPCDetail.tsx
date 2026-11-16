@@ -225,7 +225,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
     const handleAddAction = () => {
         const currentActions = formData.actions || [];
         if (currentActions.length >= 5) {
-            toast.error('最多只能添加5个功能');
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.sf6d999a894'));
             return;
         }
         const newAction: Action = {
@@ -242,7 +242,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
     const handleRemoveAction = (actionId: string) => {
         const currentActions = formData.actions || [];
         if (currentActions.length <= 1) {
-            toast.error('至少需要保留1个功能事件');
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.sa4a2236f2f'));
             return;
         }
         // 打开确认弹窗
@@ -255,7 +255,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
         
         const currentActions = formData.actions || [];
         if (currentActions.length <= 1) {
-            toast.error('至少需要保留1个功能事件，无法删除');
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s29d7ee0b5f'));
             setDeleteActionModalOpen(false);
             setActionToDelete(null);
             return;
@@ -272,16 +272,16 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                 if (action) {
                     const response = await worldEditor.deleteFunctionalEvent(currentFileId, node.node_id, actionToDelete);
                     if (response.data?.success === false) {
-                        toast.error(response.data.message || '删除失败，请稍后重试');
+                        toast.error(response.data.message || t('gameRating.deleteFailed'));
                         setDeleteActionModalOpen(false);
                         setActionToDelete(null);
                         return;
                     }
-                    toast.success('功能事件删除成功');
+                    toast.success(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s73373ad202'));
                 }
             } catch (error: any) {
                 console.error('删除功能事件失败:', error);
-                toast.error('删除失败：' + (error.message || '请检查网络连接'));
+                toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s2b5829a325') + (error.message || t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s73a13d2b99')));
                 setDeleteActionModalOpen(false);
                 setActionToDelete(null);
                 return;
@@ -322,7 +322,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
         const file = e.target.files?.[0];
         if (file) {
             if (!file.type.startsWith('image/')) {
-                toast.error('请选择图片文件');
+                toast.error(t('createGame.pleaseSelectImageFile'));
                 return;
             }
 
@@ -331,7 +331,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
             // 创建本地预览URL
             const imageUrl = URL.createObjectURL(file);
             setFormData(prev => ({ ...prev, imagePath: imageUrl }));
-            toast.success('图片已选择');
+            toast.success(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s1c247ff2a3'));
         }
         // 清空input，允许重复选择同一文件
         e.target.value = '';
@@ -339,7 +339,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
 
     const handleGenerateImageClick = () => {
         if (!formData.imagePrompt?.trim()) {
-            toast.error('请先输入图片提示词');
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s10e4fb5a13'));
             return;
         }
         setSingleGenerateModalOpen(true);
@@ -347,7 +347,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
 
     const handleConfirmGenerateImage = async () => {
         if (!currentFileId || !formData.imagePrompt?.trim()) {
-            toast.error('请先输入图片提示词');
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s10e4fb5a13'));
             setSingleGenerateModalOpen(false);
             return;
         }
@@ -365,12 +365,12 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                     setLocalFile(null);
                     const imagePath = responseData.result.url;
                     setFormData(prev => ({ ...prev, imagePath }));
-                    toast.success('图片生成成功');
+                    toast.success(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.sdcf637aa28'));
                 }
             }
         } catch (error: any) {
             console.error('生成图片失败:', error);
-            toast.error('图片生成失败：' + (error.message || '请检查网络连接'));
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.sc7bc5c639f') + (error.message || t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s73a13d2b99')));
         } finally {
             setIsGenerating(false);
         }
@@ -383,38 +383,38 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
     const handleSave = async () => {
         // 验证必填字段
         if (!formData.authorNote?.trim()) {
-            toast.error('请输入NPC名称');
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.sd990035695'));
             return;
         }
 
         // illustration 型需要验证图片
         if (formData.type === 'illustration' && !formData.imagePath && !localFile && !tempImageId) {
-            toast.error('请上传或生成图片');
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.sb01d5e3975'));
             return;
         }
         // button 型需要校验按钮文字
         if (formData.type === 'button' && !formData.name?.trim()) {
-            toast.error('请输入按钮文字');
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s2813844cc5'));
             return;
         }
 
         if (!formData.actions || formData.actions.length === 0) {
-            toast.error('至少需要添加1个功能');
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s08971528f0'));
             return;
         }
         if (formData.actions.length > 5) {
-            toast.error('最多只能添加5个功能');
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.sf6d999a894'));
             return;
         }
         for (const action of formData.actions) {
             if (!action.name.trim()) {
-                toast.error('请填写完整的功能信息');
+                toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s06d1c3f407'));
                 return;
             }
         }
 
         if (!currentFileId) {
-            toast.error('缺少必要数据，无法保存');
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s9038ee0f24'));
             return;
         }
 
@@ -445,7 +445,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                     response = await worldEditor.addFunctionalNpc(currentFileId, formDataToSend);
                 } else {
                     if (!node?.node_id) {
-                        toast.error('缺少节点ID，无法更新');
+                        toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s0d792194e1'));
                         setIsSaving(false);
                         return;
                     }
@@ -470,7 +470,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                     response = await worldEditor.addFunctionalNpc(currentFileId, nodeData);
                 } else {
                     if (!node?.node_id) {
-                        toast.error('缺少节点ID，无法更新');
+                        toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s0d792194e1'));
                         setIsSaving(false);
                         return;
                     }
@@ -507,7 +507,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                     }
                 }
             } else {
-                toast.error(response.data?.message || '保存失败');
+                toast.error(response.data?.message || t('warehouse.cards.saveFailed'));
                 setIsSaving(false);
                 return;
             }
@@ -517,7 +517,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
             setLocalFile(null);
         } catch (error: any) {
             console.error('保存失败:', error);
-            toast.error('保存失败：' + (error.message || '请检查网络连接'));
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.sb12163000c') + (error.message || t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s73a13d2b99')));
         } finally {
             setIsSaving(false);
         }
@@ -575,7 +575,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                                 type="text"
                                 value={formData.authorNote}
                                 {...authorNoteLimit}
-                                placeholder="输入NPC名称"
+                                placeholder={t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.sd8135f1ebf')}
                             />
                         </label>
                     </div>
@@ -592,7 +592,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                                                 rows={4}
                                                 value={formData.imagePrompt || ''}
                                                 onChange={(e) => handleFieldChange('imagePrompt', e.target.value)}
-                                                placeholder="用于AI生成图片的提示词"
+                                                placeholder={t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s749657ce9a')}
                                             />
                                         </div>
                                         <button
@@ -602,7 +602,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                                             disabled={isGenerating}
                                         >
                                             <CurrencyIcon currency="points" style={{ width: '16px', height: '16px' }} />
-                                            {isGenerating ? '生成中...' : `${LEGACY_WORLD_ABILITY_NODE_GENERATION_COST} AI生成`}
+                                            {isGenerating ? t('createGame.generating') : `${LEGACY_WORLD_ABILITY_NODE_GENERATION_COST} AI生成`}
                                         </button>
                                     </div>
                                     {/* 右侧：图片预览 + 上传按钮 */}
@@ -612,7 +612,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                                                 <div className={styles.imagePreview}>
                                                     <img
                                                         src={formData.imagePath.startsWith('blob:') ? formData.imagePath : addImageTimestamp(getImageUrl(formData.imagePath))}
-                                                        alt="NPC预览"
+                                                        alt={t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s22ba41bef6')}
                                                         onError={(e) => {
                                                             (e.target as HTMLImageElement).src = DEFAULT_NPC_IMAGE;
                                                         }}
@@ -659,7 +659,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                                     type="text"
                                     value={formData.name || ''}
                                     onChange={(e) => handleFieldChange('name', e.target.value)}
-                                    placeholder="输入按钮显示的文字"
+                                    placeholder={t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s7a836d4bb1')}
                                 />
                             </label>
                         </div>
@@ -695,16 +695,16 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                                             <ActionField
                                                 action={action}
                                                 field="name"
-                                                label="功能名称"
-                                                placeholder="游戏端展示的功能名称"
+                                                label={t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s785d1756ea')}
+                                                placeholder={t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s4b14970209')}
                                                 limit={FUNCTIONAL_NPC_WORD_LIMITS.actionName}
                                                 onChange={(value) => handleActionChange(action.id, 'name', value)}
                                             />
                                             <ActionField
                                                 action={action}
                                                 field="description"
-                                                label="描述"
-                                                placeholder="给大模型用的提示词"
+                                                label={t('warehouse.resource.labelDescription')}
+                                                placeholder={t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s9d7cc2d489')}
                                                 limit={FUNCTIONAL_NPC_WORD_LIMITS.actionDescription}
                                                 onChange={(value) => handleActionChange(action.id, 'description', value)}
                                                 isTextarea
@@ -714,7 +714,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                                 ))
                             ) : (
                                 <div className={styles.emptyOptions}>
-                                    <p>暂无功能，点击"新增功能"添加</p>
+                                    <p>暂无功能，点击t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s4258f4bdd7')添加</p>
                                 </div>
                             )}
                         </div>
@@ -727,7 +727,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                             onClick={handleSave}
                             disabled={isSaving}
                         >
-                            {isSaving ? '保存中...' : '确认修改'}
+                            {isSaving ? t('creatorBenefitsAdmin.saving') : t('createGame.confirmEdit')}
                         </button>
                     </div>
                 </div>
@@ -738,10 +738,10 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                 isOpen={singleGenerateModalOpen}
                 onConfirm={handleConfirmGenerateImage}
                 onCancel={handleCancelGenerateImage}
-                title="织梦豆扣除确认"
+                title={t('common.pointsDeductionConfirm')}
                 message={`本次生成图片将扣除 ${LEGACY_WORLD_ABILITY_NODE_GENERATION_COST} 织梦豆，是否继续？`}
-                confirmButtonText="确认生成"
-                cancelButtonText="取消"
+                confirmButtonText={t('warehouse.avatars.generateConfirm')}
+                cancelButtonText={t('warehouse.cards.cancel')}
             />
 
             {/* 删除功能事件确认弹窗 */}
@@ -749,17 +749,17 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                 isOpen={deleteActionModalOpen}
                 onConfirm={handleConfirmDeleteAction}
                 onCancel={handleCancelDeleteAction}
-                title="删除功能事件"
+                title={t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s98cffd1db2')}
                 message={
                     (() => {
                         const action = formData.actions?.find(a => a.id === actionToDelete);
-                        const actionName = action?.name || '该功能事件';
+                        const actionName = action?.name || t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s150654946b');
                         const remainingCount = (formData.actions?.length || 0) - 1;
                         return `确定要删除功能事件 "${actionName}" 吗？${remainingCount === 1 ? '删除后将只剩1个功能事件。' : ''}删除后不可恢复。`;
                     })()
                 }
-                confirmButtonText="确认删除"
-                cancelButtonText="取消"
+                confirmButtonText={t('createGame.confirmDelete')}
+                cancelButtonText={t('warehouse.cards.cancel')}
             />
         </div>
     );

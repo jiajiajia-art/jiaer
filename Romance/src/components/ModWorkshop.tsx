@@ -9,7 +9,7 @@ import { healModBeforeSave } from "../lib/modSaveHeal";
 import { healNpcListNames } from "../lib/personName";
 import { assessAuthorPreview, requestAuthorPreview } from "../lib/authorPreview";
 import { useConfirm } from "./EditorKit";
-import { IconCheck, IconSpark, StatusMark } from "../lib/icons";
+import { IconCheck, IconSend, IconSpark, StatusMark } from "../lib/icons";
 import { PLAY_STEP_KEY, WORLD_STEP_KEY, stepDoneFlag } from "../lib/modWorkshopSteps";
 import { attrPromptSpec, auditAttrRefs, auditOk, collectAttrSpecs, describeAudit, copyBaseFile, diffModFiles, filesPromptSpec, materializeOverrides, removeModFile, type FileChange } from "../mods/kkmod/sdk";
 import ModAssetsPanel, { FileBadge, fileTitle } from "./ModAssetsPanel";
@@ -59,7 +59,8 @@ function draftContext(d: Mod): string {
 
 const parseJson = (t: string) => { try { return JSON.parse(t); } catch { return JSON.parse(t.replace(/,\s*([}\]])/g, "$1")); } };
 
-const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
+const btn = "wg-chip rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
+const stepChip = "wg-step-chip inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold transition disabled:opacity-40";
 
 const STEPS = [
   { label: "剧本基调与世界书", ask: "先帮我写一段完整剧本基调（包含世界设定与叙事口吻），再补几条常驻世界书。" },
@@ -473,17 +474,23 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
         </select>
       </label>}
 
-      <div className="grid min-h-0 gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="flex min-w-0 flex-col gap-2">
-      <div className="rounded-2xl border border-line bg-paper/60 px-3 py-2">
-        <p className="flex items-center gap-2 text-[13px] font-bold"><span className="truncate">{draft.name}</span><span className="text-[10.5px] font-normal text-ink-soft">{draft.id}</span></p>
-        {draft.description && <p className="mt-0.5 text-[11.5px] text-ink-soft">{draft.description}</p>}
-        <p className="mt-1 text-[10.5px] text-ink-soft">{play ? playTally(draft).map(([k, v]) => `${k} ${v}`).join(" · ") : counts(draft)}</p>
+      <div className="grid min-h-0 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,340px)]">
+      <div className="flex min-w-0 flex-col gap-2.5">
+      <div className="wg-draft-card rounded-2xl border border-line px-3.5 py-3">
+        <p className="flex items-center gap-2 text-[13.5px] font-bold tracking-wide">
+          <span className="wg-draft-mark grid size-7 shrink-0 place-items-center rounded-full" aria-hidden>
+            <IconSpark size={14} />
+          </span>
+          <span className="min-w-0 truncate">{draft.name}</span>
+          <span className="shrink-0 rounded-full bg-ink/[0.06] px-2 py-0.5 font-mono text-[10px] font-normal text-ink-soft">{draft.id}</span>
+        </p>
+        {draft.description && <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink-soft">{draft.description}</p>}
+        <p className="mt-1.5 text-[10.5px] leading-relaxed text-ink-soft">{play ? playTally(draft).map(([k, v]) => `${k} ${v}`).join(" · ") : counts(draft)}</p>
         {play && (
-          <label className="mt-1.5 flex items-center gap-2 text-[11px] text-ink-soft">
+          <label className="mt-2 flex items-center gap-2 text-[11px] text-ink-soft">
             叠加在
             <select
-              className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-2 py-0.5 text-[11.5px] text-ink outline-none focus:border-jade"
+              className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-2 py-1 text-[11.5px] text-ink outline-none focus:border-jade"
               value={depId}
               onChange={(e) => {
                 const v = e.target.value;
@@ -499,9 +506,9 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
             </select>
           </label>
         )}
-        {problems.length > 0 && <p className="mt-1 text-[11px] text-danger">待修正：{problems.slice(0, 3).join("；")}</p>}
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          <button className={`${btn} !border-transparent bg-jade !text-white`} disabled={problems.length > 0} onClick={save}>{target && !target.isNew ? "保存修改" : "保存为我的模组"}</button>
+        {problems.length > 0 && <p className="mt-1.5 text-[11px] text-danger">待修正：{problems.slice(0, 3).join("；")}</p>}
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          <button className={`${btn} !border-transparent bg-jade !text-white shadow-[0_8px_18px_-12px_var(--cute-glow)]`} disabled={problems.length > 0} onClick={save}>{target && !target.isNew ? "保存修改" : "保存为我的模组"}</button>
           {(livePreview || embedInShell) ? (
             <button type="button" className={btn} disabled={busy} onClick={() => pushLivePreview(draft)}>刷新预览</button>
           ) : null}
@@ -511,21 +518,37 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1.5" aria-label="引导步骤">
         {steps.map((s, i) => {
           // 功能注释：用 stepDoneFlag，避免 PLAY_STEPS 比 key 表长时读 undefined[1] 整页崩
           const ok = stepDoneFlag(done, stepKey[i]);
-          return <button key={s.label} className={`${btn} ${ok ? "!border-jade/60 !text-jade" : ""}`} disabled={busy || !ai} title={s.ask} onClick={() => send(ok ? `${s.ask}（已有部分内容，请在此基础上补充完善，不要重复已有条目）` : s.ask)}>{ok ? <IconCheck size={12} className="mr-0.5 inline" /> : `${i + 1}. `}{s.label}</button>;
+          return (
+            <button
+              key={s.label}
+              type="button"
+              className={`${stepChip} ${ok ? "is-done" : ""}`}
+              disabled={busy || !ai}
+              title={s.ask}
+              onClick={() => send(ok ? `${s.ask}（已有部分内容，请在此基础上补充完善，不要重复已有条目）` : s.ask)}
+            >
+              {ok ? <IconCheck size={12} className="shrink-0" /> : <span className="wg-step-index">{i + 1}</span>}
+              {s.label}
+            </button>
+          );
         })}
       </div>
 
-      <div className="max-h-[50vh] min-h-[160px] space-y-2 overflow-y-auto rounded-2xl border border-line bg-paper-2/60 p-3">
-        {turns.length === 0 && <p className="text-[12px] leading-relaxed text-ink-soft">{play
-          ? "例如：「加一个『心理值』属性，压力太大会掉；心理值低于 20 触发崩溃事件链；新增心理咨询课程，上满 5 次解锁进阶疗程。」或「改成求生玩法：加饥饿和体温属性，每周自动下降，归零就进入坏结局。」"
-          : "例如：「做一个民国上海的歌女世界，女主从百乐门伴舞起步，想要权谋和情感线并重。」"}</p>}
+      <div className="wg-chat-panel max-h-[50vh] min-h-[168px] space-y-2.5 overflow-y-auto rounded-2xl border border-line p-3.5">
+        {turns.length === 0 && (
+          <div className="wg-chat-hint rounded-xl px-3 py-2.5 text-[12px] leading-relaxed text-ink-soft">
+            {play
+              ? "例如：「加一个『心理值』属性，压力太大会掉；心理值低于 20 触发崩溃事件链；新增心理咨询课程，上满 5 次解锁进阶疗程。」或「改成求生玩法：加饥饿和体温属性，每周自动下降，归零就进入坏结局。」"
+              : "例如：「做一个民国上海的歌女世界，女主从百乐门伴舞起步，想要权谋和情感线并重。」"}
+          </div>
+        )}
         {turns.map((t, i) => (
           <div key={i} className={`flex ${t.role === "user" ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-[12.5px] leading-relaxed ${t.role === "user" ? "bg-jade text-white" : "border border-line bg-paper text-ink"}`}>
+            <div className={`max-w-[88%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-[12.5px] leading-relaxed ${t.role === "user" ? "bg-jade text-white shadow-[0_10px_24px_-16px_var(--cute-glow)]" : "border border-line bg-paper text-ink"}`}>
               {t.role === "user" ? t.text : visible(t.text) || "（已更新草稿）"}
               {t.patch && <p className="mt-1 text-[10.5px] text-jade"><StatusMark kind="ok">已合并进草稿：{t.diff}</StatusMark></p>}
               {t.files && t.files.length > 0 && (
@@ -547,7 +570,7 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
             </div>
           </div>
         ))}
-        {busy && <p className="text-[12px] text-ink-soft">正在构思…</p>}
+        {busy && <p className="text-[12px] text-ink-soft"><span className="animate-pulse">▍</span> 正在构思…</p>}
         <div ref={endRef} />
       </div>
 
@@ -558,28 +581,40 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
         </div>
       )}
 
-      <div className="flex gap-2">
+      {/* 功能注释：一体输入条 + 酒红发送圆钮，替代原先突兀的渐变胶囊 */}
+      <div className="wg-composer flex items-end gap-2 rounded-2xl border border-line bg-paper p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] focus-within:border-jade focus-within:ring-2 focus-within:ring-jade/20">
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(input); } }}
           rows={2}
           disabled={!ai}
           placeholder={ai ? (play ? "描述想要的玩法改变…（Enter 发送）" : "描述你的世界，或要修改的地方…（Enter 发送）") : "需要接入 AI"}
-          className="min-w-0 flex-1 rounded-xl border border-line bg-paper px-3 py-2 text-[12.5px] text-ink outline-none focus:border-jade"
+          className="min-h-[44px] min-w-0 flex-1 resize-none bg-transparent px-2.5 py-2 text-[12.5px] leading-relaxed text-ink outline-none placeholder:text-ink-soft/70"
         />
-        <button className="shrink-0 self-end rounded-full bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] px-4 py-2 text-[12px] font-bold text-white disabled:opacity-40" disabled={busy || !ai || !input.trim()} onClick={() => send(input)}>发送</button>
+        <button
+          type="button"
+          className="wg-send-btn relative grid size-11 shrink-0 place-items-center rounded-full disabled:cursor-not-allowed"
+          disabled={busy || !ai || !input.trim()}
+          aria-label="发送"
+          onClick={() => void send(input)}
+        >
+          <span className="wg-send-ring" aria-hidden />
+          <span className="wg-send-core relative grid size-9 place-items-center rounded-full text-white">
+            <IconSend size={15} />
+          </span>
+        </button>
       </div>
       </div>
-      <div className="flex min-h-0 flex-col gap-2 lg:sticky lg:top-2 lg:self-start">
-        <div className="inline-flex self-start rounded-full border border-line bg-paper-2 p-0.5 text-[12px] font-bold" role="tablist">
+      <div className="flex min-h-0 flex-col gap-2.5 lg:sticky lg:top-2 lg:self-start">
+        <div className="wg-preview-tabs inline-flex self-start rounded-full border border-line p-1 text-[12px] font-bold" role="tablist">
           {([["preview", "实时预览"], ["assets", "资产文件"]] as const).map(([k, l]) => (
             <button key={k} type="button" role="tab" aria-selected={sideTab === k} onClick={() => setSideTab(k)}
-              className={`rounded-full px-3 py-1 transition ${sideTab === k ? "bg-jade text-white" : "text-ink-soft hover:text-ink"}`}>{l}</button>
+              className={`rounded-full px-3.5 py-1.5 transition ${sideTab === k ? "bg-jade text-white shadow-[0_6px_14px_-10px_var(--cute-glow)]" : "text-ink-soft hover:text-ink"}`}>{l}</button>
           ))}
         </div>
         {sideTab === "preview" ? (
-          <div className="rounded-2xl border border-line bg-paper-2/60 p-3">
+          <div className="wg-draft-card rounded-2xl border border-line p-3">
             <ModPreviewPanel modContent={draft.content as Content} baseContent={baseContent} onPlaytest={play ? playtest : undefined} playtestIssues={playtestIssues} />
           </div>
         ) : (

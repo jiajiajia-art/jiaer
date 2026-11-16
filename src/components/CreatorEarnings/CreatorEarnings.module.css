@@ -1,8 +1,8 @@
 .panel {
     min-width: 0;
-    padding: 24px;
+    padding: 18px;
     border: 1px solid color-mix(in srgb, var(--color-text) 11%, transparent);
-    border-radius: 16px;
+    border-radius: 14px;
     background: var(--color-surface);
     color: var(--color-text);
     box-sizing: border-box;
@@ -14,16 +14,16 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 18px;
+    gap: 12px;
+    margin-bottom: 12px;
 }
 
 .overviewHeading h2,
 .trendHeading h2,
 .workHeading h2 {
     margin: 0;
-    font-size: 22px;
-    line-height: 1.35;
+    font-size: 18px;
+    line-height: 1.3;
 }
 
 .rulesButton,
@@ -63,14 +63,14 @@
 }
 
 .overviewHero {
-    min-height: 150px;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    gap: 18px;
-    padding: 22px;
-    border: 2px solid var(--color-success);
-    border-radius: 15px;
+    gap: 10px;
+    padding: 14px 14px 12px;
+    border: 1.5px solid var(--color-success);
+    border-radius: 12px;
     background: var(--color-bg);
     box-sizing: border-box;
 }
@@ -79,22 +79,24 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 14px;
+    gap: 10px;
 }
 
 .heroMeta span {
     color: var(--color-text-secondary);
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .heroMeta strong {
     color: var(--color-success);
-    font-size: 13px;
+    font-size: 11px;
+    font-weight: 650;
+    line-height: 1.35;
 }
 
 .overviewHero b {
     color: var(--color-success);
-    font-size: clamp(40px, 6vw, 56px);
+    font-size: clamp(26px, 5vw, 34px);
     line-height: 1;
     font-variant-numeric: tabular-nums;
 }
@@ -102,25 +104,25 @@
 .overviewMetrics {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 22px 30px;
-    margin-top: 25px;
+    gap: 12px 14px;
+    margin-top: 14px;
 }
 
 .overviewMetrics > div {
     min-width: 0;
     display: grid;
-    gap: 7px;
+    gap: 4px;
 }
 
 .overviewMetrics span {
     color: var(--color-text-muted);
-    font-size: 13px;
-    line-height: 1.35;
+    font-size: 11px;
+    line-height: 1.3;
 }
 
 .overviewMetrics strong {
     color: var(--color-text);
-    font-size: clamp(20px, 2.5vw, 26px);
+    font-size: clamp(15px, 2.2vw, 18px);
     line-height: 1.15;
     font-variant-numeric: tabular-nums;
 }
@@ -128,16 +130,16 @@
 .overviewActions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-    margin-top: 28px;
+    gap: 10px;
+    margin-top: 14px;
 }
 
 .profileAction,
 .withdrawAction {
-    min-height: 58px;
+    min-height: 42px;
     border-radius: 999px;
     color: var(--color-text);
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 700;
     cursor: pointer;
 }
@@ -163,9 +165,10 @@
     align-items: center;
     justify-content: center;
     gap: 3px;
-    margin: 18px auto -4px;
+    margin: 10px auto -2px;
     padding: 0 12px;
-    font-size: 14px;
+    min-height: 36px;
+    font-size: 13px;
     font-weight: 700;
 }
 
@@ -177,14 +180,14 @@
 
 .workFilter {
     width: 100%;
-    min-height: 58px;
+    min-height: 44px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 14px;
-    padding: 0 16px;
+    gap: 12px;
+    padding: 0 12px;
     border: 0;
-    border-radius: 12px;
+    border-radius: 10px;
     background: var(--color-bg);
     color: var(--color-text);
     box-sizing: border-box;
@@ -247,13 +250,13 @@
 
 .segmented button,
 .recordTabs button {
-    min-height: 44px;
-    padding: 0 16px;
+    min-height: 36px;
+    padding: 0 12px;
     border: 0;
-    border-radius: 9px;
+    border-radius: 8px;
     background: transparent;
     color: var(--color-text-muted);
-    font-size: 13px;
+    font-size: 12px;
     cursor: pointer;
 }
 
@@ -269,8 +272,8 @@
 
 .chartWrap {
     position: relative;
-    min-height: 340px;
-    height: 340px;
+    min-height: 220px;
+    height: 220px;
     margin-top: 4px;
 }
 
@@ -450,26 +453,30 @@
     z-index: 1100;
     display: grid;
     place-items: center;
-    padding: 24px;
-    background: color-mix(in srgb, var(--color-surface) 76%, transparent);
-    backdrop-filter: blur(8px);
+    padding: 20px;
+    box-sizing: border-box;
+    /* 功能注释：与 ConfirmModal 统一——深色遮罩 + 轻模糊，避免粉白半透明漂浮感 */
+    background: color-mix(in srgb, var(--color-shadow) 70%, transparent);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
 }
 
 .modalCard {
-    width: min(560px, 100%);
+    width: min(420px, calc(100vw - 40px));
     max-height: min(86vh, 820px);
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
-    border-radius: 20px;
-    background: var(--color-surface-2);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: var(--modal-shell-radius, 16px);
+    background: var(--color-surface);
     color: var(--color-text);
-    box-shadow: 0 30px 90px color-mix(in srgb, var(--color-shadow) 55%, transparent);
+    box-shadow: 0 24px 64px color-mix(in srgb, var(--color-shadow) 50%, transparent);
+    box-sizing: border-box;
 }
 
 .modalWide {
-    width: min(1040px, 100%);
+    width: min(1040px, calc(100vw - 40px));
 }
 
 .modalHeader {
@@ -477,24 +484,37 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 18px 22px;
-    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    gap: 12px;
+    padding: 18px 18px 0;
 }
 
 .modalHeader h2 {
     margin: 0;
-    font-size: 20px;
+    padding-right: 8px;
+    font-size: var(--modal-fs-title, 18px);
+    font-weight: var(--modal-fw-title, 700);
+    line-height: var(--modal-lh-title, 1.35);
 }
 
 .modalHeader button {
-    width: 44px;
-    height: 44px;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
     border: 0;
     border-radius: 50%;
-    background: transparent;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
     color: var(--color-text-secondary);
     cursor: pointer;
-    font-size: 24px;
+    font-size: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.modalHeader button:hover {
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: var(--color-text);
 }
 
 .modalHeader button:disabled {
@@ -504,7 +524,7 @@
 
 .modalBody {
     min-height: 0;
-    padding: 22px;
+    padding: 14px 18px 8px;
     overflow-y: auto;
     overscroll-behavior: contain;
 }
@@ -516,9 +536,9 @@
     display: flex;
     justify-content: flex-end;
     gap: 10px;
-    padding: 15px 22px calc(15px + env(safe-area-inset-bottom));
-    border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
-    background: var(--color-surface-2);
+    padding: 12px 18px calc(18px + env(safe-area-inset-bottom));
+    border-top: 0;
+    background: var(--color-surface);
 }
 
 .selectorActions,
@@ -543,71 +563,106 @@
 }
 
 .selectorCurrent {
-    margin: 0 0 16px;
+    margin: 0 0 14px;
+    color: var(--color-text-secondary);
+    font-size: var(--modal-fs-body, 14px);
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.selectorCurrent strong,
+.selectorCurrent em {
     color: var(--color-primary-fg);
-    font-size: 13px;
+    font-style: normal;
     font-weight: 700;
 }
 
 .workSelectorList {
     display: grid;
-    gap: 6px;
+    gap: 8px;
 }
 
 .workSelectorOption {
     width: 100%;
-    min-height: 56px;
+    min-height: 48px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 0 16px;
-    border: 1px solid transparent;
-    border-radius: 11px;
-    background: transparent;
-    color: var(--color-text-secondary);
+    padding: 0 14px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--color-text) 3%, transparent);
+    color: var(--color-text);
     cursor: pointer;
     font-size: 15px;
     text-align: left;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.workSelectorOption:hover {
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .workSelectorOption svg {
     flex: 0 0 auto;
-    width: 23px;
-    height: 23px;
+    width: 22px;
+    height: 22px;
     color: var(--color-text-muted);
 }
 
+/* 功能注释：选中态对齐创作者中心时间筛选——主色实底 + 白字，避免粉底白字发虚 */
 .workSelectorOptionActive {
     border-color: var(--color-primary);
-    background: color-mix(in srgb, var(--color-primary) 13%, transparent);
+    background: var(--color-primary);
     color: var(--color-on-primary);
     font-weight: 700;
 }
 
+.workSelectorOptionActive:hover {
+    background: var(--color-primary-bold, var(--color-primary));
+}
+
 .workSelectorOptionActive svg {
-    color: var(--color-primary-fg);
+    color: var(--color-on-primary);
 }
 
 .primaryButton,
 .secondaryButton {
     min-height: 44px;
     padding: 0 20px;
-    border-radius: 10px;
+    border-radius: 12px;
     cursor: pointer;
-    font-weight: 700;
+    font-size: var(--modal-fs-button, 15px);
+    font-weight: var(--modal-fw-button, 700);
+    transition: background 0.15s ease, transform 0.1s ease;
 }
 
 .primaryButton {
     border: 0;
-    background: linear-gradient(135deg, var(--color-primary-light), var(--color-accent));
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+}
+
+.primaryButton:hover {
+    background: var(--color-primary-bold, var(--color-primary));
     color: var(--color-on-primary);
 }
 
 .secondaryButton {
-    border: 1px solid var(--color-border);
-    background: transparent;
+    border: 0;
+    background: color-mix(in srgb, var(--color-text) 7%, transparent);
+    color: color-mix(in srgb, var(--color-text) 85%, transparent);
+}
+
+.secondaryButton:hover {
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
     color: var(--color-text);
+}
+
+.primaryButton:active,
+.secondaryButton:active {
+    transform: scale(0.98);
 }
 
 .primaryButton:disabled,
@@ -978,73 +1033,84 @@
 
 @media (max-width: 768px) {
     .panel {
-        padding: 16px;
-        border-radius: 14px;
+        padding: 12px;
+        border-radius: 12px;
     }
 
     .overviewHeading,
     .trendHeading,
     .workHeading {
-        margin-bottom: 15px;
+        margin-bottom: 10px;
     }
 
     .overviewHeading h2,
     .trendHeading h2,
     .workHeading h2 {
-        font-size: 19px;
+        font-size: 16px;
     }
 
     .rulesButton {
-        gap: 5px;
-        font-size: 12px;
+        gap: 4px;
+        font-size: 11px;
+        min-height: 32px;
         flex-wrap: wrap;
         justify-content: flex-end;
     }
 
     .overviewHero {
-        min-height: 132px;
-        padding: 18px;
+        min-height: 0;
+        gap: 8px;
+        padding: 12px;
+        border-radius: 10px;
     }
 
     .heroMeta {
         align-items: flex-start;
+        gap: 8px;
     }
 
-    .heroMeta strong {
-        max-width: 55%;
-        text-align: right;
-    }
-
-    .overviewHero b {
-        font-size: 40px;
-    }
-
-    .overviewMetrics {
-        gap: 20px 12px;
-        margin-top: 22px;
-    }
-
-    .overviewMetrics span {
+    .heroMeta span {
         font-size: 11px;
     }
 
+    .heroMeta strong {
+        max-width: 58%;
+        text-align: right;
+        font-size: 10px;
+    }
+
+    .overviewHero b {
+        font-size: 28px;
+    }
+
+    .overviewMetrics {
+        gap: 10px 8px;
+        margin-top: 12px;
+    }
+
+    .overviewMetrics span {
+        font-size: 10px;
+    }
+
     .overviewMetrics strong {
-        font-size: 19px;
+        font-size: 14px;
     }
 
     .overviewActions {
-        gap: 10px;
-        margin-top: 24px;
+        gap: 8px;
+        margin-top: 12px;
     }
 
     .profileAction,
     .withdrawAction {
-        min-height: 52px;
-        font-size: 14px;
+        min-height: 40px;
+        font-size: 13px;
     }
 
     .recordsLink {
-        margin-top: 14px;
+        margin-top: 8px;
+        min-height: 32px;
+        font-size: 12px;
     }
 
     .trendHeading > span {
@@ -1052,18 +1118,20 @@
     }
 
     .workFilter {
-        min-height: 54px;
-        padding: 0 13px;
+        min-height: 40px;
+        padding: 0 10px;
+        border-radius: 8px;
     }
 
     .workFilter > strong {
         max-width: 65%;
+        font-size: 13px;
     }
 
     .trendControls {
         display: grid;
-        gap: 10px;
-        margin: 14px 0 8px;
+        gap: 8px;
+        margin: 10px 0 6px;
     }
 
     .periodControl {
@@ -1071,13 +1139,14 @@
     }
 
     .segmented button {
-        min-height: 44px;
-        padding: 0 13px;
+        min-height: 34px;
+        padding: 0 10px;
+        font-size: 11px;
     }
 
     .chartWrap {
-        min-height: 300px;
-        height: 300px;
+        min-height: 180px;
+        height: 180px;
     }
 
     .workColumns {
@@ -1149,21 +1218,21 @@
     .modalWide {
         width: 100%;
         max-height: 91vh;
-        border-radius: 18px 18px 14px 14px;
+        border-radius: var(--modal-shell-radius, 16px);
     }
 
     .modalHeader {
-        padding: 13px 15px;
+        padding: 16px 16px 0;
     }
 
     .modalBody {
-        padding: 16px;
+        padding: 12px 16px 6px;
     }
 
     .modalActions {
         display: grid;
         grid-template-columns: 1fr;
-        padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+        padding: 10px 16px calc(16px + env(safe-area-inset-bottom));
     }
 
     .modalActions button {

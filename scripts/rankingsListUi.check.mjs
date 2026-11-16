@@ -167,16 +167,17 @@ test('移动端名次徽标高度缩小约20%', () => {
   assert.match(desktopBadge, /height:\s*24px/);
 });
 
-test('单榜卡简介贴齐封面底边_信息列与封面同高', () => {
+test('单榜卡简介紧跟标签_不再贴齐封面底边', () => {
   const cardBlock = rankingsCss.match(/\.horizontalCard\s*\{[^}]*\}/)?.[0] ?? '';
   assert.match(cardBlock, /align-items:\s*stretch/);
   const infoBlock = rankingsCss.match(/\.horizontalCardInfo\s*\{[^}]*\}/)?.[0] ?? '';
   assert.match(infoBlock, /align-self:\s*stretch/);
   const descBlock = rankingsCss.match(/\.horizontalCardDesc\s*\{[^}]*\}/)?.[0] ?? '';
-  assert.match(descBlock, /margin-top:\s*auto/);
+  assert.match(descBlock, /margin-top:\s*6px/);
+  assert.doesNotMatch(descBlock, /margin-top:\s*auto/);
 });
 
-test('全部页分区卡无题材标签也不占位_简介贴齐封面底边', () => {
+test('全部页分区卡简介紧跟题材标签_不再贴齐封面底边', () => {
   const itemBlock = rankingsCss.match(/\.categoryBoxItem\s*\{[^}]*\}/)?.[0] ?? '';
   assert.match(itemBlock, /align-items:\s*stretch/);
   const coverWrap = rankingsCss.match(/\.categoryBoxCoverWrap\s*\{[^}]*\}/)?.[0] ?? '';
@@ -185,7 +186,8 @@ test('全部页分区卡无题材标签也不占位_简介贴齐封面底边', (
   assert.match(infoBlock, /align-self:\s*stretch/);
   assert.match(infoBlock, /gap:\s*0/);
   const descBlock = rankingsCss.match(/\.categoryBoxDesc\s*\{[^}]*\}/)?.[0] ?? '';
-  assert.match(descBlock, /margin-top:\s*auto/);
+  assert.match(descBlock, /margin-top:\s*6px/);
+  assert.doesNotMatch(descBlock, /margin-top:\s*auto/);
   /* 功能注释：题材 pill 仅有数据时渲染，禁止空占位壳 */
   assert.match(rankingsPage, /themeTags\.length\s*>\s*0\s*\?/);
   const metaBlock = rankingsCss.match(/\.categoryBoxMeta\s*\{[^}]*\}/)?.[0] ?? '';

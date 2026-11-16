@@ -1,0 +1,27 @@
+{
+  "dailyTask": {
+    "errors": {
+      "invalidTaskCode": "任务类型无效",
+      "alreadyRewarded": "今日该任务奖励已领取",
+      "notCompleted": "任务未达成，暂不可领取",
+      "notAccepted": "请先领取任务",
+      "notFound": "任务不存在或未发布",
+      "notActive": "任务当前不在有效期内",
+      "loadFailed": "任务数据加载失败",
+      "missingParams": "任务参数缺失",
+      "processing": "任务处理中，请稍候",
+      "acceptFailed": "任务领取失败",
+      "acceptSuccess": "任务领取成功",
+      "claimFailed": "奖励领取失败",
+      "claimSuccess": "奖励领取成功",
+      "claimingReward": "任务奖励领取中，请稍候",
+      "claimRewardFailed": "任务奖励领取失败",
+      "claimRewardSuccess": "奖励领取成功",
+      "makeupBusy": "补签卡领取中，请稍候",
+      "makeupFailed": "补签卡领取失败",
+      "makeupPlusOne": "补签卡 +1",
+      "makeupSuccess": "补签卡领取成功",
+      "makeupIncomplete": "完成今日全部四项每日任务后才可领取"
+    }
+  }
+}

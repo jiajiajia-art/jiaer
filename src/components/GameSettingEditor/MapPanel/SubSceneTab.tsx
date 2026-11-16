@@ -110,12 +110,12 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
 
     const handleConfirm = React.useCallback(async () => {
         if (!currentSceneIdRef.current || !currentSubSceneIdRef.current || !currentSubScene) {
-            toast.error('请先选择子场景');
+            toast.error(t('gameSettingEditor.mapPanel.subSceneTab.s77c358affd'));
             return;
         }
 
         if (!fileId) {
-            toast.error('文件ID不存在，请先上传文件');
+            toast.error(t('gameSettingEditor.mapPanel.mapTab.s6feba82bdd'));
             return;
         }
 
@@ -146,7 +146,7 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
             );
 
             if (!responseSub.data?.success) {
-                toast.error('保存场景信息失败');
+                toast.error(t('gameSettingEditor.mapPanel.subSceneTab.s758b873022'));
                 return;
             }
 
@@ -169,14 +169,14 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
                 await worldEditor.moveFunctionalNpc(fileId, patchData);
             }
 
-            toast.success('NPC位置和层级已保存');
+            toast.success(t('gameSettingEditor.mapPanel.subSceneTab.s6be5f26a4f'));
             resetInitialState();
             if (onDataChange) {
                 onDataChange();
             }
         } catch (error: any) {
             console.error('保存失败:', error);
-            toast.error('保存失败：' + (error.message || '请检查网络连接'));
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.sb12163000c') + (error.message || t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s73a13d2b99')));
         }
     }, [placedNormalNPCs, placedFunctionalNPCs, fileId, onDataChange, currentSceneIdRef, currentSubSceneIdRef, currentSubScene, resetInitialState]);
 
@@ -228,7 +228,7 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
                 >
                     <img
                         src={previewImageUrl}
-                        alt="子场景预览"
+                        alt={t('gameSettingEditor.mapPanel.subSceneTab.sfc7ba9fc5f')}
                         className={sharedStyles.sceneImage}
                         draggable={false}
                         onLoad={() => {
@@ -316,7 +316,7 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
                                                 return (
                                                     <img
                                                         src={getImageUrl(npc.imagePath)}
-                                                        alt={npc.authorNote || '功能性NPC'}
+                                                        alt={npc.authorNote || t('gameSettingEditor.functionalNPCsPanel.functionalNPCList.sf99e3f1430')}
                                                         draggable={false}
                                                         className={styles.npcImage}
                                                         onError={(e) => {
@@ -329,7 +329,7 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
                                             return (
                                                 <img
                                                     src={DEFAULT_NPC_IMAGE}
-                                                    alt="NPC 立绘"
+                                                    alt={t('createGame.npcPortrait')}
                                                     draggable={false}
                                                     className={styles.npcImage}
                                                 />
@@ -366,7 +366,7 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
                                                                 handleChangeZIndex(npc.id, -1);
                                                             }}
                                                             disabled={(npc.zIndex ?? DEFAULT_Z_INDEX) <= MIN_Z_INDEX}
-                                                            title="降低层级"
+                                                            title={t('gameSettingEditor.mapPanel.subSceneTab.s28813bb662')}
                                                         >
                                                             -
                                                         </button>
@@ -391,7 +391,7 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
                                                                 handleChangeZIndex(npc.id, 1);
                                                             }}
                                                             disabled={(npc.zIndex ?? DEFAULT_Z_INDEX) >= MAX_Z_INDEX}
-                                                            title="提高层级"
+                                                            title={t('gameSettingEditor.mapPanel.subSceneTab.s986cc61637')}
                                                         >
                                                             +
                                                         </button>
@@ -508,7 +508,7 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
                         >
                             <img
                                 src={DEFAULT_NPC_IMAGE}
-                                alt="NPC 立绘"
+                                alt={t('createGame.npcPortrait')}
                                 className={styles.defaultNpcImage}
                                 draggable={false}
                             />
@@ -532,7 +532,7 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
                     </button>
                     <div className={sharedStyles.confirmHint}>
                         {(placedNormalNPCs.length === 0 && placedFunctionalNPCs.length === 0)
-                            ? '请先放置NPC到场景中'
+                            ? t('gameSettingEditor.mapPanel.subSceneTab.s96218591fc')
                             : `将保存 ${placedNormalNPCs.length} 个普通NPC和 ${placedFunctionalNPCs.length} 个功能性NPC的位置和层级信息`}
                     </div>
                 </div>
@@ -561,10 +561,10 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
                     setSaveConfirmModalOpen(false);
                     setPendingSubSceneId(null);
                 }}
-                title="未保存的修改"
-                message="您有未保存的NPC位置修改，是否要保存？"
-                saveButtonText="保存"
-                discardButtonText="不保存"
+                title={t('createGame.unsavedChanges')}
+                message={t('gameSettingEditor.mapPanel.mapPanel.s058f2b7965')}
+                saveButtonText={t('warehouse.cards.save')}
+                discardButtonText={t('common.discard')}
             />
         </>
     );

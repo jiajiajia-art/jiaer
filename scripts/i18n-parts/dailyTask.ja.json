@@ -1,0 +1,27 @@
+{
+  "dailyTask": {
+    "errors": {
+      "invalidTaskCode": "タスク種別が無効です",
+      "alreadyRewarded": "本日の報酬は受取済みです",
+      "notCompleted": "タスク未達成のため受取れません",
+      "notAccepted": "先にタスクを受注してください",
+      "notFound": "タスクが存在しないか未公開です",
+      "notActive": "タスクの有効期間外です",
+      "loadFailed": "タスクの読み込みに失敗しました",
+      "missingParams": "タスクパラメータが不足しています",
+      "processing": "処理中です。しばらくお待ちください",
+      "acceptFailed": "タスク受注に失敗しました",
+      "acceptSuccess": "タスクを受注しました",
+      "claimFailed": "報酬の受取に失敗しました",
+      "claimSuccess": "報酬を受取りました",
+      "claimingReward": "報酬受取処理中です。しばらくお待ちください",
+      "claimRewardFailed": "報酬の受取に失敗しました",
+      "claimRewardSuccess": "報酬を受取りました",
+      "makeupBusy": "補填カード受取処理中です",
+      "makeupFailed": "補填カードの受取に失敗しました",
+      "makeupPlusOne": "補填カード +1",
+      "makeupSuccess": "補填カードを受取りました",
+      "makeupIncomplete": "本日のデイリータスク4つをすべて完了してから受取れます"
+    }
+  }
+}

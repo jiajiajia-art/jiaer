@@ -99,7 +99,7 @@ function App() {
     void initializeAuth();
   }, [initializeAuth]);
 
-  // 功能注释：每次进站按 IP 强制语言与支付区域（覆盖本地语言偏好）
+  // 功能注释：进站按 IP 决定支付区域；语言只在用户还没亲手选过时跟随 IP
   useEffect(() => {
     void hydrateFromIp();
   }, [hydrateFromIp]);
@@ -233,7 +233,7 @@ function App() {
           <Route path="/operator/art-styles" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/components" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/play-mods" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
-          <Route path="/operator/ai-model-center" element={<Navigate to="/operator/ai-model-center/models" replace />} />
+          <Route path="/operator/ai-model-center" element={<Navigate to="/operator/ai-model-center/usage" replace />} />
           <Route path="/operator/ai-model-center/models" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/ai-model-center/usage" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/platform-benefits" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
@@ -299,7 +299,7 @@ function App() {
           <Route path="/admin/image-gen" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/text-llm" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/ai-model-pricing" element={<AdminRoute><AdminPanel /></AdminRoute>} />
-          <Route path="/admin/ai-model-center" element={<AdminRoute><Navigate to="/admin/ai-model-center/models" replace /></AdminRoute>} />
+          <Route path="/admin/ai-model-center" element={<AdminRoute><Navigate to="/admin/ai-model-center/usage" replace /></AdminRoute>} />
           <Route path="/admin/ai-model-center/models" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/ai-model-center/usage" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/ai-model-center/runtime" element={<AdminRoute><AdminPanel /></AdminRoute>} />
@@ -326,6 +326,9 @@ function App() {
           <Route path="/st/create" element={<StGameCreate />} />
           <Route path="/st/:appId" element={<StGame />} />
         </Route>
+        {/* 兼容误写路径，避免无匹配路由整页白屏 */}
+        <Route path="/earn-points" element={<Navigate to="/points/earn" replace />} />
+        <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
       <ScrollToTop />
       <UploadProgressModal />

@@ -1,7 +1,8 @@
 import React, { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import styles from './PrizePreviewModal.module.css';
-import { PRIZE_CLAIM_INFO, PRIZE_DISPLAY, type PrizeKey } from '../lib/lotteryClient';
+import { PRIZE_CLAIM_INFO, type PrizeKey } from '../lib/lotteryClient';
 import { PRIZE_IMAGES } from './LotteryWheel';
 
 interface PrizePreviewModalProps {
@@ -11,6 +12,18 @@ interface PrizePreviewModalProps {
   onsiteHint?: string;
   onClose: () => void;
 }
+
+const claimMethodKey = (fulfillment: string) => {
+  if (fulfillment === 'shipping') return 'lottery.claim.methodShipping';
+  if (fulfillment === 'onsite') return 'lottery.claim.methodOnsite';
+  return 'lottery.claim.methodPoints';
+};
+
+const claimDetailKey = (fulfillment: string) => {
+  if (fulfillment === 'shipping') return 'lottery.claim.detailShipping';
+  if (fulfillment === 'onsite') return 'lottery.claim.detailOnsite';
+  return 'lottery.claim.detailPoints';
+};
 
 /**
  * 功能注释：奖池卡片点击放大预览（挂 body）。
@@ -22,6 +35,7 @@ const PrizePreviewModal: React.FC<PrizePreviewModalProps> = ({
   onsiteHint,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -42,14 +56,13 @@ const PrizePreviewModal: React.FC<PrizePreviewModalProps> = ({
 
   if (!open || !prizeKey) return null;
 
-  const meta = PRIZE_DISPLAY[prizeKey];
   const claim = PRIZE_CLAIM_INFO[prizeKey];
   const img = PRIZE_IMAGES[prizeKey];
-  const label = meta?.label || '';
+  const label = t(`lottery.prizes.${prizeKey}.label`);
   const claimDetail =
     claim.fulfillment === 'onsite' && onsiteHint?.trim()
       ? onsiteHint.trim()
-      : claim.detail;
+      : t(claimDetailKey(claim.fulfillment));
 
   const modal = (
     <div
@@ -68,7 +81,7 @@ const PrizePreviewModal: React.FC<PrizePreviewModalProps> = ({
           type="button"
           className={styles.close}
           onClick={onClose}
-          aria-label="关闭预览"
+          aria-label={t('lottery.prizePreview.closeAria')}
         >
           ×
         </button>
@@ -79,16 +92,16 @@ const PrizePreviewModal: React.FC<PrizePreviewModalProps> = ({
           {label}
         </p>
         <div className={styles.claimBox}>
-          <p className={styles.claimLabel}>领取方式</p>
-          <p className={styles.claimMethod}>{claim.method}</p>
+          <p className={styles.claimLabel}>{t('lottery.prizePreview.claimLabel')}</p>
+          <p className={styles.claimMethod}>{t(claimMethodKey(claim.fulfillment))}</p>
           <p className={styles.claimDetail}>{claimDetail}</p>
           {claim.fulfillment === 'shipping' ? (
             <p className={styles.claimLinkNote}>
-              中奖后弹窗内会出现「填写收货信息」入口
+              {t('lottery.prizePreview.shippingEntryNote')}
             </p>
           ) : null}
         </div>
-        <p className={styles.hint}>点击空白处关闭</p>
+        <p className={styles.hint}>{t('lottery.prizePreview.tapToClose')}</p>
       </div>
     </div>
   );

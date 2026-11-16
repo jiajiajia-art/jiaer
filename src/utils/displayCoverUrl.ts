@@ -22,10 +22,19 @@ export const toDisplayCoverUrl = (coverUrl: string | null | undefined): string =
  * 无论来源，一律再跑 toDisplayCoverUrl，避免预览态误把原图路径塞进 display_cover_url 后仍请求 cover.png。
  */
 export const resolveGameCoverUrl = (
-  game: { display_cover_url?: string | null; cover_url?: string | null } | null | undefined,
+  game: {
+    display_cover_url?: string | null;
+    displayCoverUrl?: string | null;
+    cover_url?: string | null;
+    coverUrl?: string | null;
+  } | null | undefined,
 ): string => {
-  const display = typeof game?.display_cover_url === 'string' ? game.display_cover_url.trim() : '';
-  const cover = typeof game?.cover_url === 'string' ? game.cover_url.trim() : '';
+  const display =
+    (typeof game?.display_cover_url === 'string' ? game.display_cover_url.trim() : '')
+    || (typeof game?.displayCoverUrl === 'string' ? game.displayCoverUrl.trim() : '');
+  const cover =
+    (typeof game?.cover_url === 'string' ? game.cover_url.trim() : '')
+    || (typeof game?.coverUrl === 'string' ? game.coverUrl.trim() : '');
   const preferred = display || cover;
   if (!preferred) return '';
   return toDisplayCoverUrl(preferred);
@@ -64,7 +73,9 @@ export const resolveGameListCoverUrl = (
     portrait_cover_url?: string | null;
     portraitCoverUrl?: string | null;
     display_cover_url?: string | null;
+    displayCoverUrl?: string | null;
     cover_url?: string | null;
+    coverUrl?: string | null;
   } | null | undefined,
 ): string => {
   const portrait = portraitCoverUrl(game);

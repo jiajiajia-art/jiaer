@@ -15,11 +15,11 @@
 }
 
 .mainContent {
-    display: flex;
-    /* 功能注释：壳层 .main 是 flex-column；顶对齐，禁止垂直居中以免顶栏下大块空白 */
-    justify-content: flex-start;
-    /* 功能注释：列布局下用 align-items 水平居中单列内容 */
-    align-items: center;
+    /* 功能注释：本 class 挂在 AppPageShell 的滚动 main 上，必须保持 display:block。
+       改成 flex 且不写 flex-direction:column 时，align-items:center 会变成垂直居中；
+       列表高出中间滚动区后，标题被顶栏裁切，顶部溢出滚不回来，表现为上滑不动。
+       水平居中交给 .content 的 margin:auto。 */
+    display: block;
     /* 功能注释：壳层已用 --app-navbar-offset 避让顶栏，这里只留内容边距，禁止再叠一层 navbar 高度 */
     padding: 8px 20px 32px;
     /* 功能注释：禁止 min-height:100%——与壳层 absolute top/bottom 叠加后会按壳高撑开，压穿底栏导致看起来「滑不动」且末项被挡 */

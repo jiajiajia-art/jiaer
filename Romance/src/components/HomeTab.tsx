@@ -1151,7 +1151,8 @@ export default function HomeTab() {
                     }`}
                   >
                     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-ui-sm)] bg-jade/10 text-[11px] font-semibold tabular-nums text-jade transition group-hover:bg-jade group-hover:text-paper">
-                      {hasOpts ? <kbd className="font-sans">{i + 1}</kbd> : <IconSparkle width={11} height={11} />}
+                      {/* 功能注释：序号也跟游戏字体，避免 option 正文宋体、数字黑体两套字 */}
+                      {hasOpts ? <kbd>{i + 1}</kbd> : <IconSparkle width={11} height={11} />}
                     </span>
                     <span className="min-w-0 flex-1 leading-snug">{o.label}</span>
                     {eventIdx.has(i) && <span className="shrink-0 rounded-full bg-coral px-1.5 py-px text-[10px] font-bold leading-snug text-white">事件</span>}
@@ -1337,7 +1338,7 @@ export default function HomeTab() {
                 ref={inputRef}
                 placeholder="写下你的行动，或说一句台词……"
                 disabled={busy}
-                className="w-full bg-transparent text-[13px] text-ink placeholder:text-ink-soft/55 outline-none"
+                className="story-input w-full bg-transparent text-[13px] text-ink placeholder:text-ink-soft/55 outline-none"
               />
             </div>
             <button

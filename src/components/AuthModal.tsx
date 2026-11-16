@@ -63,8 +63,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         (state) => state.pendingAuthErrorCode,
     );
     const requestedAuthMode = authModalStore.getState().authModalMode;
-    // 功能注释：按运行时语言决定 Google-only（IP 英文区），不用编译期 LANGUAGE
-    const isGoogleOnly = String(i18n.language || '').toLowerCase().startsWith('en');
+    // 功能注释：按运行时语言决定 Google-only（海外语种：英文/日文），不用编译期 LANGUAGE
+    const runtimeLang = String(i18n.language || '').toLowerCase();
+    const isGoogleOnly = runtimeLang.startsWith('en') || runtimeLang.startsWith('ja');
     // 在微信小程序环境中不渲染
     if (isWebViewEnv()) {
         return null;

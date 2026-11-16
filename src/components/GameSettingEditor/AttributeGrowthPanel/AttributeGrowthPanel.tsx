@@ -162,13 +162,13 @@ const AttributeGrowthPanel = React.forwardRef<AttributeGrowthPanelRef, Attribute
     // 保存方法
     const handleSave = async () => {
         if (!fileId || !formState) {
-            toast.error('缺少必要数据');
+            toast.error(t('gameSettingEditor.attributeGrowthPanel.attributeGrowthPanel.s2f396374b7'));
             return;
         }
 
         // 验证必填字段
         if (!formState.key || !formState.displayName || !formState.target) {
-            toast.error('请填写所有必填字段');
+            toast.error(t('gameSettingEditor.attributeGrowthPanel.attributeGrowthPanel.s61d4e1beb6'));
             return;
         }
 
@@ -191,13 +191,13 @@ const AttributeGrowthPanel = React.forwardRef<AttributeGrowthPanelRef, Attribute
                     type: formState.target,
                     attributes,
                 });
-                toast.success('属性添加成功');
+                toast.success(t('gameSettingEditor.attributeGrowthPanel.attributeGrowthPanel.sd381b876c0'));
             } else {
                 await worldEditor.updateAttributeDefinitions(fileId, {
                     type: formState.target,
                     attributes,
                 });
-                toast.success('属性更新成功');
+                toast.success(t('gameSettingEditor.attributeGrowthPanel.attributeGrowthPanel.se688830f8c'));
             }
 
             setIsCreatingNew(false);
@@ -207,7 +207,7 @@ const AttributeGrowthPanel = React.forwardRef<AttributeGrowthPanelRef, Attribute
             onDataChange?.();
         } catch (error) {
             console.error('保存属性失败:', error);
-            toast.error('保存属性失败，请稍后重试');
+            toast.error(t('gameSettingEditor.attributeGrowthPanel.attributeGrowthPanel.s53f9426d0b'));
             throw error; // 重新抛出错误，让 useUnsavedChanges 知道保存失败
         }
     };
@@ -272,10 +272,10 @@ const AttributeGrowthPanel = React.forwardRef<AttributeGrowthPanelRef, Attribute
             
             setDeleteModalOpen(false);
             setAttributeToDelete(null);
-            toast.success('属性删除成功');
+            toast.success(t('createGame.attributeDeleted'));
         } catch (error) {
             console.error('删除属性失败:', error);
-            toast.error('删除属性失败，请稍后重试');
+            toast.error(t('gameSettingEditor.attributeGrowthPanel.attributeGrowthPanel.s98ef0566f0'));
             setDeleteModalOpen(false);
             setAttributeToDelete(null);
         }
@@ -370,10 +370,10 @@ const AttributeGrowthPanel = React.forwardRef<AttributeGrowthPanelRef, Attribute
                 isOpen={deleteModalOpen}
                 onConfirm={handleConfirmDelete}
                 onCancel={handleCancelDelete}
-                title="删除属性"
+                title={t('gameSettingEditor.attributeGrowthPanel.attributeGrowthPanel.sf49294e6c8')}
                 message={`确定要删除属性「${attributeToDelete?.displayName || attributeToDelete?.name}」吗？删除后不可恢复。`}
-                confirmButtonText="确认删除"
-                cancelButtonText="取消"
+                confirmButtonText={t('createGame.confirmDelete')}
+                cancelButtonText={t('warehouse.cards.cancel')}
             />
             
             {/* 未保存修改确认弹窗 */}

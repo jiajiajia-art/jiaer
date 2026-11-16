@@ -267,14 +267,14 @@ export default function PlayModCreateShell({ onClose }: { onClose: () => void })
 
   return (
     <div className="world-gen-shell world-gen-editor mx-auto min-h-screen max-w-6xl overflow-x-hidden px-3 py-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-5">
-      <header className="mb-3">
-        <button type="button" className="mb-2 text-[13px] font-semibold text-ink-soft" onClick={leave}>
+      <header className="mb-4">
+        <button type="button" className="mb-3 inline-flex items-center gap-1 text-[13px] font-semibold text-ink-soft transition hover:text-ink" onClick={leave}>
           ← 返回
         </button>
         <p className="world-gen-kicker">创作游戏 · 玩法 Mod</p>
         <h1 className="world-gen-title">对话生成玩法</h1>
         <p className="world-gen-lead">
-          用自然语言生成玩法叠加包。包只扩展玩法，不替换原有人物、地点和时代；可绑多个游戏世界，也可分多次安装。能力都来自平台 SDK。默认从空白底叠加；也可选自己的世界草稿。
+          用自然语言生成玩法叠加包。只扩展玩法，不替换人物、地点和时代；可绑多个世界，也可分次安装。默认空白底叠加，也可挂到自己的世界草稿上。
         </p>
       </header>
       {notice ? (

@@ -228,6 +228,8 @@
     height: 14px;
     object-fit: contain;
     image-rendering: -webkit-optimize-contrast;
+    /* 功能注释：assetsv2 白描边图标按深浅模式染成正文色，避免浅底上看不见 */
+    filter: var(--icon-invert-filter);
 }
 
 .searchInput {
@@ -317,14 +319,10 @@
 .messageButton {
     width: 42px;
     height: 42px;
-    border: none;
+    border: 1px solid var(--navbar-action-border);
     border-radius: 50%;
-    /* 功能注释：圆形按钮底来自 assetsv2/home/nav_btn_bg.webp */
-    background-color: transparent;
-    background-image: var(--navbar-btn-circle-bg);
-    background-size: 100% 100%;
-    background-position: center;
-    background-repeat: no-repeat;
+    /* 功能注释：不用 nav_btn_bg.webp——该切图几乎全透明白圈，浅色顶栏上等于没底 */
+    background: var(--navbar-action-bg);
     color: var(--navbar-action-text);
     font-size: 20px;
     display: flex;
@@ -332,14 +330,12 @@
     justify-content: center;
     cursor: pointer;
     position: relative;
-    transition: transform 0.2s ease, filter 0.2s ease;
+    transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .messageButton:hover {
     transform: translateY(-1px);
-    filter: brightness(1.12);
-    background-color: transparent;
-    background-image: var(--navbar-btn-circle-bg);
+    background: var(--navbar-action-bg-hover);
 }
 
 .messageBadge {
@@ -551,7 +547,8 @@
         /* 功能注释：移动端顶栏对齐暗色 funloom，禁止回退浅色白底 */
         --navbar-surface: #000000;
         --navbar-border: color-mix(in srgb, var(--color-text) 8%, transparent);
-        --navbar-shadow: 0 8px 20px color-mix(in srgb, var(--color-shadow) 35%, transparent);
+        /* 功能注释：浅色页禁止大块墨黑投影，否则顶栏下方整片发黑；只用细底边分层 */
+        --navbar-shadow: none;
         --navbar-text: color-mix(in srgb, var(--color-text) 78%, transparent);
         --navbar-text-strong: var(--color-text);
         --navbar-search-bg: var(--color-surface);
@@ -589,27 +586,28 @@
         width: 100vw;
         height: var(--app-navbar-offset);
         padding-top: env(safe-area-inset-top, 0px);
-        padding-left: 12px;
-        padding-right: 12px;
+        padding-left: 8px;
+        padding-right: 8px;
         left: 0;
         transform: none;
     }
 
     .navbar {
         width: 100%;
-        gap: 8px;
+        gap: 6px;
         min-width: 0;
     }
 
     .logo {
-        width: 86px;
-        height: 54px;
+        width: 105px;
+        height: 44px;
         flex-shrink: 0;
     }
 
     .logo img {
-        width: 86px;
-        height: 70%;
+        width: 105px;
+        height: 22px;
+        margin-top: 0;
     }
 
     .navLinks {
@@ -617,7 +615,7 @@
     }
 
     .navRight {
-        gap: 6px;
+        gap: 4px;
         margin-right: 0;
         flex: 1;
         min-width: 0;
@@ -629,7 +627,7 @@
         min-width: 0;
         /* 功能注释：取消 62% 上限，把剩余宽度留给输入，避免搜索键挤掉「查询游戏」 */
         max-width: none;
-        height: 32px;
+        height: 40px;
         padding-left: 10px;
         padding-right: 3px;
         gap: 4px;
@@ -645,9 +643,9 @@
 
     .searchIcon {
         flex-shrink: 0;
-        height: 26px;
-        width: 26px;
-        min-width: 26px;
+        height: 32px;
+        width: 32px;
+        min-width: 32px;
         font-size: 14px;
         border-radius: 50%;
     }
@@ -678,12 +676,12 @@
     }
 
     .userActions {
-        gap: 8px;
+        gap: 6px;
     }
 
     .messageButton {
-        width: 36px;
-        height: 36px;
+        width: 40px;
+        height: 40px;
         font-size: 17px;
         flex-shrink: 0;
         box-shadow: none;
@@ -699,14 +697,14 @@
     }
 
     .avatar {
-        width: 36px;
-        height: 36px;
+        width: 40px;
+        height: 40px;
         flex-shrink: 0;
     }
 
     .settingIcon {
-        width: 36px;
-        height: 36px;
+        width: 40px;
+        height: 40px;
         flex-shrink: 0;
     }
 
@@ -724,7 +722,7 @@
     }
 
     .langTrigger {
-        height: 30px;
+        height: 36px;
         min-width: 40px;
         padding: 0 10px;
         font-size: 12px;
@@ -734,7 +732,7 @@
         display: none;
     }
 
-    /* 功能注释：首页 banner 叠加态下导航压在图上，语言按钮跟随压图文字色 */
+    /* 功能注释：首页 banner 叠加态 — 顶栏轻量压暗/不铺实底，避免挡住大片头图 */
     .navbarContainerMobileHomeOverlayActive .langTrigger {
         border-color: color-mix(in srgb, var(--color-on-media) 28%, transparent);
         background: color-mix(in srgb, var(--color-on-media) 12%, transparent);
@@ -742,18 +740,18 @@
     }
 
     .navbarContainerMobileHomeOverlayActive {
-        --navbar-surface: color-mix(in srgb, var(--color-shadow) 72%, transparent);
-        --navbar-border: color-mix(in srgb, var(--color-text) 8%, transparent);
+        --navbar-surface: transparent;
+        --navbar-border: transparent;
         --navbar-shadow: none;
-        --navbar-text: color-mix(in srgb, var(--color-on-media) 88%, transparent);
+        --navbar-text: color-mix(in srgb, var(--color-on-media) 92%, transparent);
         --navbar-text-strong: var(--color-on-media);
-        --navbar-search-bg: color-mix(in srgb, var(--color-surface) 92%, transparent);
-        --navbar-search-border: color-mix(in srgb, var(--color-text) 14%, transparent);
-        --navbar-search-input: var(--color-text);
-        --navbar-search-placeholder: var(--color-text-muted);
+        --navbar-search-bg: color-mix(in srgb, #000 28%, transparent);
+        --navbar-search-border: color-mix(in srgb, var(--color-on-media) 22%, transparent);
+        --navbar-search-input: #fff;
+        --navbar-search-placeholder: color-mix(in srgb, #fff 72%, transparent);
         /* 功能注释：首页压图态同样用暗底圆钮，避免搜索提交键浅色渐变抢视觉 */
-        --navbar-search-icon-bg: color-mix(in srgb, var(--color-text) 16%, transparent);
-        --navbar-search-icon-color: var(--color-text);
+        --navbar-search-icon-bg: color-mix(in srgb, #000 32%, transparent);
+        --navbar-search-icon-color: #fff;
         --navbar-search-panel-bg: var(--color-surface);
         --navbar-search-panel-border: color-mix(in srgb, var(--color-text) 10%, transparent);
         --navbar-search-panel-shadow: 0 14px 28px color-mix(in srgb, var(--color-shadow) 45%, transparent);
@@ -761,22 +759,24 @@
         --navbar-search-panel-title: var(--color-text);
         --navbar-search-panel-meta: var(--color-text-muted);
         --navbar-search-panel-empty: var(--color-text-muted);
-        --navbar-action-bg: color-mix(in srgb, var(--color-surface) 92%, transparent);
-        --navbar-action-bg-hover: var(--color-surface-2);
-        --navbar-action-border: color-mix(in srgb, var(--color-text) 14%, transparent);
-        --navbar-action-text: var(--color-text);
+        --navbar-action-bg: color-mix(in srgb, #000 28%, transparent);
+        --navbar-action-bg-hover: color-mix(in srgb, #000 40%, transparent);
+        --navbar-action-border: color-mix(in srgb, var(--color-on-media) 22%, transparent);
+        --navbar-action-text: #fff;
         --navbar-login-bg: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
         --navbar-login-bg-hover: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
         --navbar-login-border: transparent;
         --navbar-login-text: var(--color-on-primary);
         --navbar-login-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent);
         --navbar-login-shadow-hover: inset 0 1px 0 color-mix(in srgb, var(--color-text) 16%, transparent);
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.38) 0%, rgba(0, 0, 0, 0.12) 55%, transparent 100%);
+        border-bottom-color: transparent;
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
     }
 
     .navbarContainerMobileHomeOverlayActive .logo img {
-        filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--color-shadow) 38%, transparent));
+        filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
     }
 
     .navbarContainerMobileHomeOverlayActive .searchBox,
@@ -788,23 +788,30 @@
         box-shadow: var(--navbar-login-shadow);
     }
 
-    /* 功能注释：明色模式下压图顶栏改为浅色毛玻璃，不再用深色遮罩；文字/搜索框回到常规浅色配色 */
+    /* 功能注释：明色模式同样保持高透，只用极淡白雾保证控件可读，不再铺大块白底挡头图 */
     :global([data-theme]:not([data-mode="dark"])) .navbarContainerMobileHomeOverlayActive {
-        --navbar-surface: color-mix(in srgb, var(--color-surface) 78%, transparent);
-        --navbar-text: color-mix(in srgb, var(--color-text) 78%, transparent);
+        --navbar-surface: transparent;
+        --navbar-text: color-mix(in srgb, var(--color-text) 88%, transparent);
         --navbar-text-strong: var(--color-text);
-        --navbar-search-bg: color-mix(in srgb, var(--color-surface) 92%, transparent);
+        --navbar-search-bg: color-mix(in srgb, #fff 55%, transparent);
         --navbar-search-input: var(--color-text);
         --navbar-search-placeholder: var(--color-text-muted);
+        --navbar-search-icon-bg: color-mix(in srgb, #fff 62%, transparent);
+        --navbar-search-icon-color: var(--color-text);
         --navbar-search-panel-meta: var(--color-text-muted);
         --navbar-search-panel-empty: var(--color-text-muted);
-        backdrop-filter: blur(14px) saturate(1.2);
-        -webkit-backdrop-filter: blur(14px) saturate(1.2);
+        --navbar-action-bg: color-mix(in srgb, #fff 55%, transparent);
+        --navbar-action-bg-hover: color-mix(in srgb, #fff 70%, transparent);
+        --navbar-action-border: color-mix(in srgb, var(--color-text) 12%, transparent);
+        --navbar-action-text: var(--color-text);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.08) 60%, transparent 100%);
+        backdrop-filter: blur(8px) saturate(1.1);
+        -webkit-backdrop-filter: blur(8px) saturate(1.1);
     }
 
     :global([data-theme]:not([data-mode="dark"])) .navbarContainerMobileHomeOverlayActive .langTrigger {
         border-color: color-mix(in srgb, var(--color-text) 14%, transparent);
-        background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+        background: color-mix(in srgb, #fff 55%, transparent);
         color: var(--color-text);
     }
 }

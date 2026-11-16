@@ -1,0 +1,27 @@
+{
+  "dailyTask": {
+    "errors": {
+      "invalidTaskCode": "Invalid task type",
+      "alreadyRewarded": "Reward already claimed today",
+      "notCompleted": "Task not completed yet",
+      "notAccepted": "Accept the task first",
+      "notFound": "Task not found or unpublished",
+      "notActive": "Task is outside its valid period",
+      "loadFailed": "Failed to load tasks",
+      "missingParams": "Missing task parameters",
+      "processing": "Task is processing, please wait",
+      "acceptFailed": "Failed to accept task",
+      "acceptSuccess": "Task accepted",
+      "claimFailed": "Failed to claim reward",
+      "claimSuccess": "Reward claimed",
+      "claimingReward": "Claiming reward, please wait",
+      "claimRewardFailed": "Failed to claim reward",
+      "claimRewardSuccess": "Reward claimed",
+      "makeupBusy": "Claiming makeup card, please wait",
+      "makeupFailed": "Failed to claim makeup card",
+      "makeupPlusOne": "Makeup card +1",
+      "makeupSuccess": "Makeup card claimed",
+      "makeupIncomplete": "Complete all four daily tasks today before claiming"
+    }
+  }
+}

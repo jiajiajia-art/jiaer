@@ -48,9 +48,6 @@ export default function ModEconomyRulesPanel({
     <div className="space-y-3" data-author-section="economy-rules">
       <div className="rounded-xl border border-line bg-paper p-3">
         <p className="mb-2 text-[12px] font-bold text-ink">经济规则</p>
-        <p className="mb-2 text-[11.5px] leading-relaxed text-ink-soft">
-          本作品写了账单或生活开销时，可配置破产线、透支压力与新手缓冲。开局资金在「① 基础 → 建角」。
-        </p>
         <label className="mb-2 flex items-center gap-2 text-[12px] text-ink">
           <input
             type="checkbox"

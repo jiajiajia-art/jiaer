@@ -603,11 +603,11 @@ export default function NpcTab() {
     );
 
     return (
-      <>
+      <div className="npc-tab">
       {card}
         {resumeOpen && <ResumeModal name={npc.name} pid={pid} onClose={() => setResumeOpen(false)} npc={npc} extra={star ? starResume(star) : undefined} />}
         {exchange && (
-          <Modal panelClassName="ui-dialog-game" title="交换联系方式" onClose={() => setExchange(null)}>
+          <Modal panelClassName="ui-dialog-game npc-tab" title="交换联系方式" onClose={() => setExchange(null)}>
             {exchange === "ok" ? (
               <p className="text-[14px] leading-relaxed text-ink">
                 {npc.name}把联系方式给了你。到底部「<span className="font-semibold text-jade">手机</span>」里，就能随时用微信、短信或电话找 TA 了。
@@ -619,7 +619,7 @@ export default function NpcTab() {
             )}
           </Modal>
         )}
-      </>
+      </div>
     );
   }
 
@@ -678,7 +678,7 @@ export default function NpcTab() {
   };
 
   return (
-    <div className="w-full pb-5">
+    <div className="npc-tab w-full pb-5">
       <IndustryPageHeader
         title={contactsTitle()}
         subtitle={cfg.subtitle ?? ""}
@@ -750,7 +750,7 @@ function ResumeModal({ name, pid, onClose, npc, extra }: { name: string; pid: st
   const selCls = "rounded-sm border border-dashed border-line bg-paper px-2 py-1 text-[12px] text-ink transition hover:border-jade/60";
 
   return (
-    <Modal panelClassName="ui-dialog-game" title={`${name} · 履历与互动`} onClose={onClose}>
+    <Modal panelClassName="ui-dialog-game npc-tab" title={`${name} · 履历与互动`} onClose={onClose}>
       <ProfileGroup title={`生平履历 · ${filtered.length} 条`}>
         {all.length === 0 ? <ResumeTimeline items={[]} /> : (
           <>

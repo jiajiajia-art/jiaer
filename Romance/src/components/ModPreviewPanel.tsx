@@ -78,20 +78,20 @@ export default function ModPreviewPanel({ modContent, baseContent, onPlaytest, p
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="flex min-h-0 flex-col gap-2">
+    <div className="flex min-h-0 flex-col gap-2.5">
       {onPlaytest && (
-        <div className="rounded-xl border border-line bg-paper px-2.5 py-2">
-          <button type="button" onClick={onPlaytest} className="inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-jade px-3 py-1.5 text-[12.5px] font-bold text-white">
+        <div className="wg-playtest-card rounded-2xl border border-line px-3 py-2.5">
+          <button type="button" onClick={onPlaytest} className="wg-playtest-btn inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-jade px-3 py-2 text-[12.5px] font-bold text-white">
             <IconPlay size={13} />进入试玩（叠加到世界真实开一局）
           </button>
-          {playtestIssues?.length ? <p className="mt-1.5 text-[11px] text-danger">{playtestIssues.slice(0, 3).join("；")}</p> : <p className="mt-1 text-center text-[10.5px] text-ink-soft">试玩存档与正式存档隔离，退出试玩回到工坊</p>}
+          {playtestIssues?.length ? <p className="mt-1.5 text-[11px] text-danger">{playtestIssues.slice(0, 3).join("；")}</p> : <p className="mt-1.5 text-center text-[10.5px] leading-relaxed text-ink-soft">试玩存档与正式存档隔离，退出试玩回到工坊</p>}
         </div>
       )}
 
-      <div className="flex gap-1 rounded-full border border-line bg-paper p-0.5 text-[11.5px] font-semibold" role="tablist">
+      <div className="wg-preview-tabs flex gap-1 rounded-full border border-line bg-paper-2 p-1 text-[11.5px] font-semibold" role="tablist">
         {TABS.map((t) => (
           <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
-            className={`flex-1 rounded-full px-2 py-1 transition ${tab === t.id ? "bg-jade text-white" : "text-ink-soft hover:text-ink"}`}>
+            className={`flex-1 rounded-full px-2 py-1.5 transition ${tab === t.id ? "bg-jade text-white shadow-[0_6px_14px_-10px_var(--cute-glow)]" : "text-ink-soft hover:text-ink"}`}>
             {t.label}{counts[t.id] ? <span className="ml-0.5 opacity-75">{counts[t.id]}</span> : null}
           </button>
         ))}

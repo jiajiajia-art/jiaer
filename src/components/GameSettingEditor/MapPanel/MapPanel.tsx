@@ -56,7 +56,7 @@ const MapPanel = React.forwardRef<MapPanelRef, MapPanelProps>(({ sceneSetting: p
                     }
                 } catch (error) {
                     console.error('获取地图数据失败:', error);
-                    toast.error('获取地图数据失败，请刷新重试');
+                    toast.error(t('gameSettingEditor.mapPanel.mapPanel.s93809bea27'));
                     // 如果请求失败，使用 prop 值作为降级方案
                     setLocalSceneSetting(propSceneSetting);
                     setLocalWorldMapImage(propWorldMapImage);
@@ -224,9 +224,9 @@ const MapPanel = React.forwardRef<MapPanelRef, MapPanelProps>(({ sceneSetting: p
             </div>
             <div className={styles.mapTabs}>
                 {[
-                    { id: 'subScene', label: '子场景' },
-                    { id: 'scene', label: '场景' },
-                    { id: 'map', label: '地图' },
+                    { id: 'subScene', label: t('createGame.subScene') },
+                    { id: 'scene', label: t('createGame.circleNav.scene') },
+                    { id: 'map', label: t('createGame.sidebar.mapEditShort') },
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -299,7 +299,7 @@ const MapPanel = React.forwardRef<MapPanelRef, MapPanelProps>(({ sceneSetting: p
                             saveSuccess = true;
                         } catch (error) {
                             console.error('保存失败:', error);
-                            toast.error('保存失败，请重试');
+                            toast.error(t('createGame.saveFailedRetry'));
                         }
                     } else if (mapTab === 'scene' && sceneTabRef.current?.save) {
                         try {
@@ -307,7 +307,7 @@ const MapPanel = React.forwardRef<MapPanelRef, MapPanelProps>(({ sceneSetting: p
                             saveSuccess = true;
                         } catch (error) {
                             console.error('保存失败:', error);
-                            toast.error('保存失败，请重试');
+                            toast.error(t('createGame.saveFailedRetry'));
                         }
                     } else if (mapTab === 'map' && mapTabRef.current?.save) {
                         try {
@@ -315,7 +315,7 @@ const MapPanel = React.forwardRef<MapPanelRef, MapPanelProps>(({ sceneSetting: p
                             saveSuccess = true;
                         } catch (error) {
                             console.error('保存失败:', error);
-                            toast.error('保存失败，请重试');
+                            toast.error(t('createGame.saveFailedRetry'));
                         }
                     } else {
                         saveSuccess = true; // 没有保存方法，直接允许切换
@@ -338,10 +338,10 @@ const MapPanel = React.forwardRef<MapPanelRef, MapPanelProps>(({ sceneSetting: p
                     setPendingAction(null);
                     setIsBlockingSwitch(false);
                 }}
-                title="未保存的修改"
-                message="您有未保存的NPC位置修改，是否要保存？"
-                saveButtonText="保存"
-                discardButtonText="不保存"
+                title={t('createGame.unsavedChanges')}
+                message={t('gameSettingEditor.mapPanel.mapPanel.s058f2b7965')}
+                saveButtonText={t('warehouse.cards.save')}
+                discardButtonText={t('common.discard')}
             />
         </div>
     );

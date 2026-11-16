@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import GameGrid from '../../components/GameGrid';
 import libraryDataApi from '../../api/home/getGameData';
 import type { UserGameData } from '../../api/home/getGameData.type';
@@ -10,6 +11,7 @@ const PAGE_SIZE = 20;
 
 /** 原仓库游玩历史（方案 B：挂在仓库侧栏） */
 const WarehousePlayHistory: React.FC = () => {
+  const { t } = useTranslation();
   const [games, setGames] = useState<UserGameData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -76,8 +78,8 @@ const WarehousePlayHistory: React.FC = () => {
   return (
     <div ref={scrollContainerRef} className={panel.panelRoot}>
       <header className={panel.header}>
-        <h1 className={panel.title}>游玩历史</h1>
-        <p className={panel.sub}>你玩过的游戏记录，可继续游玩</p>
+        <h1 className={panel.title}>{t('warehouse.history.title')}</h1>
+        <p className={panel.sub}>{t('warehouse.history.sub')}</p>
       </header>
       {isLoading ? (
         <GameGridSkeleton count={8} />
@@ -86,7 +88,7 @@ const WarehousePlayHistory: React.FC = () => {
           <GameGrid games={games} />
           {isLoadingMore ? <GameGridSkeleton count={4} /> : null}
           {!isLoading && games.length === 0 ? (
-            <p className={panel.empty}>暂无游玩记录</p>
+            <p className={panel.empty}>{t('warehouse.history.empty')}</p>
           ) : null}
         </>
       )}

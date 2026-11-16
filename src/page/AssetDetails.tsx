@@ -42,25 +42,76 @@ const EMPTY_KK_BALANCE: KkBalance = {
     nextExpiryAmount: 0,
 };
 
-const KK_VALIDITY_OPTIONS: Array<{ key: KkValidityFilter; label: string }> = [
-    { key: 'all', label: '全部' },
-    { key: 'permanent', label: '永久币' },
-    { key: 'limited', label: '限时币' },
+const KK_VALIDITY_OPTIONS: Array<{ key: KkValidityFilter; labelKey: string }> = [
+    { key: 'all', labelKey: 'filterAll' },
+    { key: 'permanent', labelKey: 'kkPermanent' },
+    { key: 'limited', labelKey: 'kkLimited' },
 ];
 
-const KK_ASSET_CATEGORY_OPTIONS: Array<{ key: KkAssetCategoryFilter; label: string }> = [
-    { key: 'all', label: '全部' },
-    { key: 'recharge', label: '充值币' },
-    { key: 'gift', label: '赠币' },
+const KK_ASSET_CATEGORY_OPTIONS: Array<{ key: KkAssetCategoryFilter; labelKey: string }> = [
+    { key: 'all', labelKey: 'filterAll' },
+    { key: 'recharge', labelKey: 'kkRecharge' },
+    { key: 'gift', labelKey: 'kkGift' },
 ];
 
-const KK_EVENT_TYPE_OPTIONS: Array<{ key: KkEventTypeFilter; label: string }> = [
-    { key: 'all', label: '全部' },
-    { key: 'income', label: '收入' },
-    { key: 'consume', label: '消费' },
-    { key: 'expired', label: '已过期' },
-    { key: 'refund', label: '退款' },
+const KK_EVENT_TYPE_OPTIONS: Array<{ key: KkEventTypeFilter; labelKey: string }> = [
+    { key: 'all', labelKey: 'filterAll' },
+    { key: 'income', labelKey: 'eventIncome' },
+    { key: 'consume', labelKey: 'eventConsume' },
+    { key: 'expired', labelKey: 'eventExpired' },
+    { key: 'refund', labelKey: 'eventRefund' },
 ];
+
+const LEDGER_PHRASES: Record<string, string> = {
+    '钻石收入': 'assetDetails.ledgerIncome',
+    'KK币收入': 'assetDetails.ledgerIncome',
+    '钻石支出': 'assetDetails.ledgerExpense',
+    'KK币支出': 'assetDetails.ledgerExpense',
+    '钻石变动': 'assetDetails.ledgerChange',
+    'KK币变动': 'assetDetails.ledgerChange',
+    '钻石充值': 'assetDetails.ledgerRecharge',
+    'KK币充值': 'assetDetails.ledgerRecharge',
+    '充值获得KK币': 'assetDetails.ledgerRechargeSub',
+    '充值获得钻石': 'assetDetails.ledgerRechargeSub',
+    '充值赠送KK币': 'assetDetails.ledgerRechargeBonus',
+    '充值赠送钻石': 'assetDetails.ledgerRechargeBonus',
+    '活动赠送': 'assetDetails.ledgerBonusGift',
+    '购买付费游戏': 'assetDetails.ledgerGamePurchase',
+    '付费内容消费': 'assetDetails.ledgerPaidContent',
+    '会员订阅': 'assetDetails.ledgerMembership',
+    '会员功能订阅': 'assetDetails.ledgerMembershipSub',
+    '创作者收益': 'assetDetails.ledgerCreatorRevenue',
+    '作品KK币分成': 'assetDetails.ledgerRevenueShare',
+    '首次注册福利': 'assetDetails.ledgerRegisterReward',
+    '邀请好友福利': 'assetDetails.ledgerInviteInviter',
+    '好友邀请福利': 'assetDetails.ledgerInviteInvitee',
+    '兑换织梦豆': 'assetDetails.ledgerExchangePoints',
+    'KK币兑换织梦豆': 'assetDetails.ledgerExchangePointsSub',
+    '钻石兑换织梦豆': 'assetDetails.ledgerExchangePointsSub',
+    '凤华录新人赠送': 'assetDetails.ledgerFenghuaGift',
+    '首次进入凤华录获得': 'assetDetails.ledgerFenghuaGiftSub',
+    '限时KK币已过期': 'assetDetails.ledgerExpired',
+    '退款KK币已过期': 'assetDetails.ledgerRefundExpired',
+    '创作者分成KK币提取': 'assetDetails.ledgerCreatorWithdraw',
+    'AI文游消费': 'assetDetails.ledgerAiPlay',
+    '织梦豆兑换退款': 'assetDetails.ledgerPointsRefund',
+    '兑换凤华': 'assetDetails.ledgerFenghuaExchange',
+    '凤华兑换退款': 'assetDetails.ledgerFenghuaRefund',
+    '互动影游消费退款': 'assetDetails.ledgerIvgRefund',
+    '系统补发KK币': 'assetDetails.ledgerSystemGrant',
+    '系统扣减KK币': 'assetDetails.ledgerSystemDeduct',
+    '账户KK币清零': 'assetDetails.ledgerForfeit',
+    'Funloom官方增加KK币': 'assetDetails.ledgerOfficialGrant',
+    'Funloom官方扣减KK币': 'assetDetails.ledgerOfficialDeduct',
+    '活动KK币福利': 'assetDetails.ledgerPromo',
+    '外部游戏退款': 'assetDetails.ledgerExternalRefund',
+    '外部游戏消费': 'assetDetails.ledgerExternalSpend',
+};
+
+function localizeLedgerPhrase(text: string, translate: (key: string) => string) {
+    const key = LEDGER_PHRASES[String(text || '').trim()];
+    return key ? translate(key) : text;
+}
 
 function formatActivityTime(value: string) {
     const normalizedValue = String(value || '').trim();
@@ -293,12 +344,14 @@ const AssetDetails: React.FC = () => {
             : t('assetDetails.directionExpense');
     const activeKkFilterCount = [kkValidity, kkAssetCategory, kkEventType]
         .filter((value) => value !== 'all').length;
-    const kkFilterLabel = activeKkFilterCount === 0 ? '全部' : `筛选 ${activeKkFilterCount}`;
+    const kkFilterLabel = activeKkFilterCount === 0
+        ? t('assetDetails.filterAll')
+        : t('assetDetails.filterCount', { count: activeKkFilterCount });
     const activeKkFilterLabels = [
-        KK_VALIDITY_OPTIONS.find((option) => option.key === kkValidity)?.label,
-        KK_ASSET_CATEGORY_OPTIONS.find((option) => option.key === kkAssetCategory)?.label,
-        KK_EVENT_TYPE_OPTIONS.find((option) => option.key === kkEventType)?.label,
-    ].filter((label) => label && label !== '全部');
+        kkValidity === 'all' ? '' : t(`assetDetails.${KK_VALIDITY_OPTIONS.find((option) => option.key === kkValidity)?.labelKey}`),
+        kkAssetCategory === 'all' ? '' : t(`assetDetails.${KK_ASSET_CATEGORY_OPTIONS.find((option) => option.key === kkAssetCategory)?.labelKey}`),
+        kkEventType === 'all' ? '' : t(`assetDetails.${KK_EVENT_TYPE_OPTIONS.find((option) => option.key === kkEventType)?.labelKey}`),
+    ].filter(Boolean);
     const selectKkValidity = (value: Exclude<KkValidityFilter, 'all'>) => {
         setCurrencyTab('diamonds');
         setKkValidity((current) => current === value ? 'all' : value);
@@ -428,9 +481,9 @@ const AssetDetails: React.FC = () => {
                                             onClick={() => setDirectionOpen(false)}
                                         />
                                         {currencyTab === 'diamonds' ? (
-                                            <div className={`${styles.selectPopup} ${styles.kkFilterPopup}`} role="dialog" aria-label="KK币组合筛选">
+                                            <div className={`${styles.selectPopup} ${styles.kkFilterPopup}`} role="dialog" aria-label={t('assetDetails.kkFilterAria')}>
                                                 <div className={styles.kkFilterSection}>
-                                                    <h3>有效期</h3>
+                                                    <h3>{t('assetDetails.kkValidity')}</h3>
                                                     <div className={styles.kkFilterOptions}>
                                                         {KK_VALIDITY_OPTIONS.map((option) => (
                                                             <button
@@ -440,13 +493,13 @@ const AssetDetails: React.FC = () => {
                                                                 className={`${styles.kkFilterOption} ${kkValidity === option.key ? styles.kkFilterOptionActive : ''}`}
                                                                 onClick={() => setKkValidity(option.key)}
                                                             >
-                                                                {option.label}
+                                                                {t(`assetDetails.${option.labelKey}`)}
                                                             </button>
                                                         ))}
                                                     </div>
                                                 </div>
                                                 <div className={styles.kkFilterSection}>
-                                                    <h3>来源</h3>
+                                                    <h3>{t('assetDetails.kkSource')}</h3>
                                                     <div className={styles.kkFilterOptions}>
                                                         {KK_ASSET_CATEGORY_OPTIONS.map((option) => (
                                                             <button
@@ -456,13 +509,13 @@ const AssetDetails: React.FC = () => {
                                                                 className={`${styles.kkFilterOption} ${kkAssetCategory === option.key ? styles.kkFilterOptionActive : ''}`}
                                                                 onClick={() => setKkAssetCategory(option.key)}
                                                             >
-                                                                {option.label}
+                                                                {t(`assetDetails.${option.labelKey}`)}
                                                             </button>
                                                         ))}
                                                     </div>
                                                 </div>
                                                 <div className={styles.kkFilterSection}>
-                                                    <h3>流水类型</h3>
+                                                    <h3>{t('assetDetails.kkEventType')}</h3>
                                                     <div className={styles.kkFilterOptions}>
                                                         {KK_EVENT_TYPE_OPTIONS.map((option) => (
                                                             <button
@@ -472,15 +525,19 @@ const AssetDetails: React.FC = () => {
                                                                 className={`${styles.kkFilterOption} ${kkEventType === option.key ? styles.kkFilterOptionActive : ''}`}
                                                                 onClick={() => setKkEventType(option.key)}
                                                             >
-                                                                {option.label}
+                                                                {t(`assetDetails.${option.labelKey}`)}
                                                             </button>
                                                         ))}
                                                     </div>
                                                 </div>
                                                 <div className={styles.kkFilterFooter}>
-                                                    <span>{activeKkFilterLabels.length > 0 ? `当前：${activeKkFilterLabels.join(' · ')}` : '当前：全部流水'}</span>
+                                                    <span>
+                                                        {activeKkFilterLabels.length > 0
+                                                            ? t('assetDetails.filterCurrent', { value: activeKkFilterLabels.join(' · ') })
+                                                            : t('assetDetails.filterCurrentAll')}
+                                                    </span>
                                                     <button type="button" onClick={clearKkFilters} disabled={activeKkFilterCount === 0}>
-                                                        一键清除
+                                                        {t('assetDetails.clearAll')}
                                                     </button>
                                                 </div>
                                             </div>
@@ -605,59 +662,54 @@ const AssetDetails: React.FC = () => {
                     </section>
 
                     {currencyTab === 'diamonds' ? (
-                        <section className={styles.kkBreakdownSection} aria-label="KK币余额构成">
-                            <h2 className={styles.kkBreakdownTitle}>KK币构成</h2>
-                            <div className={styles.kkBreakdownGroups}>
-                                <section className={styles.kkBreakdownGroup} aria-labelledby="kk-validity-heading">
-                                    <h3 id="kk-validity-heading" className={styles.kkBreakdownHeading}>按有效期</h3>
-                                    <div className={styles.kkBreakdownGrid}>
-                                        <button
-                                            type="button"
-                                            className={`${styles.kkBreakdownButton} ${kkValidity === 'permanent' ? styles.kkBreakdownButtonActive : ''}`}
-                                            aria-pressed={kkValidity === 'permanent'}
-                                            onClick={() => selectKkValidity('permanent')}
-                                        >
-                                            <span>永久币</span>
-                                            <strong>{formatKk(kkBalance.permanent)}</strong>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className={`${styles.kkBreakdownButton} ${kkValidity === 'limited' ? styles.kkBreakdownButtonActive : ''}`}
-                                            aria-pressed={kkValidity === 'limited'}
-                                            onClick={() => selectKkValidity('limited')}
-                                        >
-                                            <span>限时币</span>
-                                            <strong>{formatKk(kkBalance.limited)}</strong>
-                                        </button>
-                                    </div>
-                                </section>
-                                <section className={styles.kkBreakdownGroup} aria-labelledby="kk-source-heading">
-                                    <h3 id="kk-source-heading" className={styles.kkBreakdownHeading}>按来源</h3>
-                                    <div className={styles.kkBreakdownGrid}>
-                                        <button
-                                            type="button"
-                                            className={`${styles.kkBreakdownButton} ${kkAssetCategory === 'recharge' ? styles.kkBreakdownButtonActive : ''}`}
-                                            aria-pressed={kkAssetCategory === 'recharge'}
-                                            onClick={() => selectKkAssetCategory('recharge')}
-                                        >
-                                            <span>充值币</span>
-                                            <strong>{formatKk(kkBalance.recharge)}</strong>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className={`${styles.kkBreakdownButton} ${kkAssetCategory === 'gift' ? styles.kkBreakdownButtonActive : ''}`}
-                                            aria-pressed={kkAssetCategory === 'gift'}
-                                            onClick={() => selectKkAssetCategory('gift')}
-                                        >
-                                            <span>赠币</span>
-                                            <strong>{formatKk(kkBalance.gift)}</strong>
-                                        </button>
-                                    </div>
-                                </section>
+                        <section className={styles.kkBreakdownSection} aria-label={t('assetDetails.kkBreakdownAria')}>
+                            <h2 className={styles.kkBreakdownTitle}>{t('assetDetails.kkBreakdownTitle')}</h2>
+                            <div className={styles.kkBreakdownGroup}>
+                                <div className={styles.kkBreakdownGrid}>
+                                    <button
+                                        type="button"
+                                        className={`${styles.kkBreakdownButton} ${kkValidity === 'permanent' ? styles.kkBreakdownButtonActive : ''}`}
+                                        aria-pressed={kkValidity === 'permanent'}
+                                        onClick={() => selectKkValidity('permanent')}
+                                    >
+                                        <span>{t('assetDetails.kkPermanent')}</span>
+                                        <strong>{formatKk(kkBalance.permanent)}</strong>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`${styles.kkBreakdownButton} ${kkValidity === 'limited' ? styles.kkBreakdownButtonActive : ''}`}
+                                        aria-pressed={kkValidity === 'limited'}
+                                        onClick={() => selectKkValidity('limited')}
+                                    >
+                                        <span>{t('assetDetails.kkLimited')}</span>
+                                        <strong>{formatKk(kkBalance.limited)}</strong>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`${styles.kkBreakdownButton} ${kkAssetCategory === 'recharge' ? styles.kkBreakdownButtonActive : ''}`}
+                                        aria-pressed={kkAssetCategory === 'recharge'}
+                                        onClick={() => selectKkAssetCategory('recharge')}
+                                    >
+                                        <span>{t('assetDetails.kkRecharge')}</span>
+                                        <strong>{formatKk(kkBalance.recharge)}</strong>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`${styles.kkBreakdownButton} ${kkAssetCategory === 'gift' ? styles.kkBreakdownButtonActive : ''}`}
+                                        aria-pressed={kkAssetCategory === 'gift'}
+                                        onClick={() => selectKkAssetCategory('gift')}
+                                    >
+                                        <span>{t('assetDetails.kkGift')}</span>
+                                        <strong>{formatKk(kkBalance.gift)}</strong>
+                                    </button>
+                                </div>
                             </div>
                             {kkBalance.nextExpiryAt && kkBalance.nextExpiryAmount > 0 ? (
                                 <p className={styles.expiryHint}>
-                                    {formatExpiry(kkBalance.nextExpiryAt)} 将有 {formatKk(kkBalance.nextExpiryAmount)} 限时币到期
+                                    {t('assetDetails.kkExpiry', {
+                                        time: formatExpiry(kkBalance.nextExpiryAt),
+                                        amount: formatKk(kkBalance.nextExpiryAmount),
+                                    })}
                                 </p>
                             ) : null}
                         </section>
@@ -697,9 +749,9 @@ const AssetDetails: React.FC = () => {
                                             <div className={styles.itemMain}>
                                                 <div className={styles.itemTypeRow}>
                                                     <span className={`${styles.itemTypeBadge} ${item.currency === 'points' ? styles.itemTypeBadgePoints : ''}`}>{t(`assetDetails.${typeLabel}`)}</span>
-                                                    <h2 className={styles.itemTitle}>{item.title}</h2>
+                                                    <h2 className={styles.itemTitle}>{localizeLedgerPhrase(item.title, t)}</h2>
                                                 </div>
-                                                {item.subtitle ? <p className={styles.itemSubtitle}>{item.subtitle}</p> : null}
+                                                {item.subtitle ? <p className={styles.itemSubtitle}>{localizeLedgerPhrase(item.subtitle, t)}</p> : null}
                                             </div>
                                             {hasMembershipDiscount ? (
                                                 <div className={styles.itemAmountStack}>
@@ -709,7 +761,7 @@ const AssetDetails: React.FC = () => {
                                                     <span className={`${styles.itemAmount} ${styles.itemAmountExpense} ${styles.itemActualAmount}`}>
                                                         -{formatKk(displayValue)}
                                                     </span>
-                                                    <span className={styles.itemDiscountBadge}>会员{item.discountPercent}折</span>
+                                                    <span className={styles.itemDiscountBadge}>{t('assetDetails.memberDiscount', { percent: item.discountPercent })}</span>
                                                 </div>
                                             ) : (
                                                 <div

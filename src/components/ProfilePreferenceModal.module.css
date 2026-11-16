@@ -5,10 +5,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100vw;
+    width: 100%;
     min-height: 100vh;
     min-height: 100dvh;
-    padding: 18px;
+    padding: 16px;
     overflow-y: auto;
     box-sizing: border-box;
     background: color-mix(in srgb, var(--color-shadow) 78%, transparent);
@@ -17,18 +17,19 @@
 
 .modal {
     position: relative;
-    width: min(560px, calc(100vw - 28px));
-    max-height: calc(100dvh - 36px);
+    /* 功能注释：居中小卡，别吃满屏；题材区内部再滚 */
+    width: min(400px, calc(100vw - 32px));
+    max-height: min(560px, calc(100dvh - 48px));
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    padding: 26px;
-    border-radius: 12px;
+    padding: 18px 16px 14px;
+    border-radius: 16px;
     border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
-    background:
-        linear-gradient(180deg, color-mix(in srgb, var(--color-surface) 98%, transparent) 0%, color-mix(in srgb, var(--color-surface) 98%, transparent) 100%);
-    box-shadow: 0 28px 80px color-mix(in srgb, var(--color-shadow) 58%, transparent);
+    background: var(--color-surface);
+    box-shadow: 0 24px 64px color-mix(in srgb, var(--color-shadow) 50%, transparent);
     color: var(--color-text);
+    margin: auto;
 }
 
 .closeButton {
@@ -73,27 +74,28 @@
 }
 
 .header {
-    padding-right: 34px;
-    margin-bottom: 18px;
+    padding-right: 36px;
+    margin-bottom: 12px;
+    flex-shrink: 0;
 }
 
 .eyebrow {
     display: inline-flex;
     align-items: center;
-    height: 24px;
-    padding: 0 10px;
+    height: 22px;
+    padding: 0 9px;
     border-radius: 999px;
     background: color-mix(in srgb, var(--color-primary) 16%, transparent);
     color: var(--color-primary-fg);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     line-height: 1;
 }
 
 .title {
-    margin: 12px 0 8px;
+    margin: 8px 0 6px;
     color: var(--color-text);
-    font-size: 24px;
+    font-size: 18px;
     line-height: 1.25;
     font-weight: 800;
     letter-spacing: 0;
@@ -102,15 +104,16 @@
 .subtitle {
     margin: 0;
     color: var(--color-text-secondary);
-    font-size: 14px;
-    line-height: 1.55;
+    font-size: 12px;
+    line-height: 1.45;
 }
 
 .section {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-top: 14px;
+    gap: 8px;
+    margin-top: 10px;
+    min-height: 0;
 }
 
 .sectionHeader {
@@ -142,7 +145,7 @@
 }
 
 .genderCard {
-    min-height: 76px;
+    min-height: 56px;
     border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     border-radius: 10px;
     background: color-mix(in srgb, var(--color-text) 6%, transparent);
@@ -150,7 +153,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 8px;
     cursor: pointer;
     transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
@@ -173,8 +176,8 @@
 .genderCardActive,
 .genderCardFemale.genderCardActive {
     border-color: color-mix(in srgb, var(--color-primary) 88%, transparent);
-    background: color-mix(in srgb, var(--color-primary) 20%, transparent);
-    color: var(--color-on-primary);
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+    color: var(--color-primary-fg);
 }
 
 .genderCardMale.genderCardActive {
@@ -186,12 +189,12 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 34px;
+    width: 28px;
+    height: 28px;
     border-radius: 999px;
     background: color-mix(in srgb, var(--color-text) 10%, transparent);
     color: var(--color-primary-fg);
-    font-size: 24px;
+    font-size: 18px;
     line-height: 1;
     font-weight: 800;
 }
@@ -214,20 +217,24 @@
 }
 
 .tagPanel {
-    max-height: min(260px, 34dvh);
+    flex: 1 1 auto;
+    min-height: 120px;
+    max-height: min(200px, 28dvh);
     overflow-y: auto;
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     align-content: flex-start;
     gap: 8px;
-    padding: 12px;
+    padding: 10px;
     border-radius: 10px;
     border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     background: color-mix(in srgb, var(--color-text) 4.5%, transparent);
 }
 
 .tagChip {
-    min-height: 36px;
+    min-height: 32px;
+    min-width: 5.5em;
     max-width: 100%;
     padding: 0 12px;
     border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
@@ -235,7 +242,7 @@
     background: color-mix(in srgb, var(--color-text) 7%, transparent);
     color: var(--color-text-secondary);
     cursor: pointer;
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.2;
     font-weight: 650;
     white-space: nowrap;
@@ -250,9 +257,9 @@
 }
 
 .tagChipActive {
-    border-color: color-mix(in srgb, var(--color-primary) 86%, transparent);
-    background: var(--color-primary-light);
-    color: var(--color-on-primary);
+    border-color: color-mix(in srgb, var(--color-primary) 70%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+    color: var(--color-primary-fg);
 }
 
 .loading {
@@ -317,21 +324,22 @@
 
 .submitButton {
     width: 100%;
-    min-height: 46px;
+    min-height: 42px;
     margin-top: 10px;
+    flex-shrink: 0;
     border: none;
     border-radius: 10px;
-    background: var(--color-primary-light);
+    background: var(--color-primary);
     color: var(--color-on-primary);
     cursor: pointer;
-    font-size: 15px;
+    font-size: 14px;
     line-height: 1.2;
     font-weight: 800;
-    transition: background-color 0.18s ease, opacity 0.18s ease;
+    transition: background-color 0.18s ease, opacity 0.18s ease, filter 0.18s ease;
 }
 
 .submitButton:hover:not(:disabled) {
-    background: var(--color-primary-light);
+    filter: brightness(1.06);
 }
 
 .submitButton:disabled {
@@ -341,30 +349,37 @@
 
 @media (max-width: 560px) {
     .overlay {
-        align-items: flex-end;
-        padding: 12px;
+        align-items: center;
+        justify-content: center;
+        padding: 14px;
     }
 
     .modal {
-        width: 100%;
-        max-height: calc(100dvh - 24px);
-        padding: 22px 18px 18px;
-        border-radius: 12px;
+        width: min(360px, calc(100vw - 28px));
+        max-height: min(520px, calc(100dvh - 56px));
+        padding: 16px 14px 12px;
+        border-radius: 16px;
     }
 
     .header {
-        padding-right: 0;
+        padding-right: 32px;
+        margin-bottom: 8px;
     }
 
     .title {
-        font-size: 21px;
+        font-size: 17px;
+    }
+
+    .subtitle {
+        font-size: 12px;
     }
 
     .genderCard {
-        min-height: 68px;
+        min-height: 52px;
     }
 
     .tagPanel {
-        max-height: 32dvh;
+        max-height: min(180px, 26dvh);
+        justify-content: center;
     }
 }

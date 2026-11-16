@@ -439,7 +439,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
             if (stage === 'generate_done' || stage === 'item_done') return '已完成';
             if (stage === 'generate_fail' || stage === 'rembg_fail') return '生图失败';
             if (stage === 'pending') return '排队中';
-            return stage || '排队中';
+            return stage || t('createGame.ideaStageQueued');
         };
         const mapped = items.map((item, index) => {
             const stageUpdatedAtMs = Date.parse(String(item?.stageUpdatedAt || item?.updatedAt || ''));
@@ -554,7 +554,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         if (stage === 'generate_done' || stage === 'item_done') return '完成';
         if (stage === 'generate_fail' || stage === 'rembg_fail' || stage === 'fail') return '失败';
         if (stage === 'batch_start') return '启动';
-        return '进度';
+        return t('galgame.progress');
     };
     const batchSceneLogStageClass = (stage: string, isActive: boolean) => {
         const base = isActive ? styles.plusLoadingLogRowActive : styles.plusLoadingLogRow;
@@ -771,7 +771,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
             (name) => sceneData.find((s) => s.name === name && !s.id.startsWith('temp-'))?.id,
         );
         if (uniqueIds.length === 0) {
-            toast.error(t('createGame.selectScenesToGenerate') || '请先选择要重试的场景');
+            toast.error(t('createGame.selectScenesToGenerate'));
             return;
         }
         // 积分确认打开时隐藏进度遮罩，避免 ConfirmModal 被压住
@@ -1371,7 +1371,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
 
     const handleOpenSceneCostModal = useCallback(() => {
         if (scenePrice == null) {
-            toast.error('生图价格暂不可用，请联系管理员检查业务模型与计费配置');
+            toast.error(t('gameSettingEditor.charactersPanel.charactersPanel.s4ec0acb9cf'));
             return;
         }
         handlers.openSceneCostModal();
@@ -1449,13 +1449,13 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                     : `${HOST_ADDRESS}${finalImagePath}`;
                 const response = await authFetch(fullUrl);
                 if (!response.ok) {
-                    throw new Error('获取图片数据失败');
+                    throw new Error(t('gameSettingEditor.scenesPanel.scenesPanel.sa7d0c8ef26'));
                 }
                 blob = await response.blob();
             } else if (finalImagePath.startsWith('blob:') || finalImagePath.startsWith('data:')) {
                 const response = await fetch(finalImagePath);
                 if (!response.ok) {
-                    throw new Error('获取图片数据失败');
+                    throw new Error(t('gameSettingEditor.scenesPanel.scenesPanel.sa7d0c8ef26'));
                 }
                 blob = await response.blob();
             } else {
@@ -1840,10 +1840,10 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                             <div id="batch-scene-gen-title" className={styles.plusLoadingText}>
                                 {showSceneContinueFailed
                                     ? (batchSceneStageBoard.stuckItems.length > 0
-                                        ? '部分场景背景卡住'
-                                        : '场景背景生成结束')
+                                        ? t('gameSettingEditor.scenesPanel.scenesPanel.sbf77ae7d45')
+                                        : t('gameSettingEditor.scenesPanel.scenesPanel.s56795abd92'))
                                     : sceneBoardAllSuccess
-                                        ? '场景背景已全部生成'
+                                        ? t('gameSettingEditor.scenesPanel.scenesPanel.sa25606ff00')
                                         : t('createGame.generatingScenePortraits')}
                             </div>
                             {isBatchSceneJobRunning && batchSceneEtaText && (
@@ -1858,7 +1858,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                             )}
                             {sceneBoardAllSuccess && !showSceneContinueFailed && (
                                 <div className={styles.plusLoadingHint}>
-                                    {isGeneratingAllSceneImages ? '正在同步结果与织梦豆…' : '生成完成'}
+                                    {isGeneratingAllSceneImages ? t('gameSettingEditor.scenesPanel.scenesPanel.s2d7d349fc4') : t('createGame.ideaStageDone')}
                                 </div>
                             )}
                         </div>
@@ -1916,7 +1916,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                                         {item.stage === 'generate_start' && (
                                             <div className={styles.plusLoadingBoardElapsed}>
                                                 本阶段已 {item.stageElapsedSeconds}s
-                                                {item.stageElapsedSeconds >= 150 ? ' · 疑似卡住' : ''}
+                                                {item.stageElapsedSeconds >= 150 ? t('gameSettingEditor.charactersPanel.charactersPanel.s2c7ab20eb6') : ''}
                                             </div>
                                         )}
                                     </div>
@@ -1982,7 +1982,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                                     }}
                                 >
                                     {(showSceneContinueFailed || sceneBoardAllSuccess)
-                                        ? '关闭'
+                                        ? t('warehouse.cards.close')
                                         : t('common.cancel')}
                                 </button>
                             </div>

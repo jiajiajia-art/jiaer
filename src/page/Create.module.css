@@ -31,15 +31,14 @@
 /* 功能注释：上/下避让由 AppPageShell 负责；纵向堆叠让页脚落底部，主内容占满壳宽 */
 .mainContent {
     color: var(--color-text);
-    display: flex;
-    flex-direction: column;
     margin: 0;
     padding: 0;
     background: var(--creator-bg);
 }
 
 .main {
-    flex: 1 1 auto;
+    /* 功能注释：高度随内容，禁止 flex-grow 把滚动区撑出「版权下方空白」 */
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
@@ -51,6 +50,7 @@
     position: relative;
     min-width: 0;
 }
+
 
 /* --- User Profile Section --- */
 .userProfileSection {
@@ -128,10 +128,10 @@
 /* 功能注释：壳已从顶栏下起排，hero 不再加 navbar 高度 margin */
 .creatorHeroSection {
     width: 100%;
-    margin: 12px 0 16px;
+    margin: 12px 0 12px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 10px;
 }
 
 .creatorHeroCard {
@@ -187,15 +187,15 @@
 .accountActionIcon {
     width: 36px;
     height: 36px;
-    border-radius: 4px;
+    border-radius: 8px;
     opacity: 1;
-    background: color-mix(in srgb, var(--color-text) 20%, transparent);
-    border: none;
+    background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-2));
+    border: 1px solid color-mix(in srgb, var(--color-primary) 16%, transparent);
     box-shadow: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: var(--color-primary);
+    color: var(--color-primary-fg);
 }
 
 .accountActionIcon img {
@@ -345,7 +345,8 @@
 .creatorHeroNameGroup {
     display: inline-flex;
     align-items: center;
-    gap: 2px;
+    flex-wrap: wrap;
+    gap: 6px;
     min-width: 0;
     max-width: 100%;
 }
@@ -372,8 +373,7 @@
     cursor: pointer;
     flex-shrink: 0;
     padding: 0;
-    margin-left: -2px;
-    margin-top: 4px;
+    margin: 0;
     transition: color 0.15s ease, background-color 0.15s ease;
 }
 
@@ -387,74 +387,54 @@
     background: color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
+/* 功能注释：性别标贴在昵称前，小圆点轻量配色，去掉厚投影 */
 .creatorGenderBadge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
-    margin-left: 4px;
-    margin-top: 2px;
-    border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+    width: 22px;
+    height: 22px;
+    margin: 0 4px 0 0;
+    border: none;
     border-radius: 999px;
-    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent), 0 8px 18px color-mix(in srgb, var(--color-shadow) 18%, transparent);
+    box-shadow: none;
     cursor: pointer;
     flex-shrink: 0;
     padding: 0;
-    font-size: 18px;
+    font-size: 13px;
     line-height: 1;
-    font-weight: 800;
-    transition: color 0.16s ease, border-color 0.16s ease, background-color 0.16s ease, transform 0.16s ease;
+    font-weight: 700;
+    transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
 }
 
 .creatorGenderBadgeFemale {
-    background:
-        linear-gradient(180deg, color-mix(in srgb, var(--color-text) 12%, transparent) 0%, color-mix(in srgb, var(--color-text) 5%, transparent) 100%),
-        color-mix(in srgb, var(--color-primary) 20%, transparent);
-    color: var(--color-primary-fg);
+    background: color-mix(in srgb, #ff5a8a 16%, var(--color-surface));
+    color: #e23d7a;
 }
 
 .creatorGenderBadgeMale {
-    background:
-        linear-gradient(180deg, color-mix(in srgb, var(--color-text) 12%, transparent) 0%, color-mix(in srgb, var(--color-text) 5%, transparent) 100%),
-        color-mix(in srgb, var(--color-info) 18%, transparent);
-    color: var(--color-info);
+    background: color-mix(in srgb, #4d9fff 16%, var(--color-surface));
+    color: #2f7fe0;
 }
 
 .creatorGenderBadge:hover,
 .creatorGenderBadge:focus-visible {
-    color: var(--color-text);
     outline: none;
-    transform: translateY(-1px);
+    transform: scale(1.06);
 }
 
 .creatorGenderBadgeFemale:hover,
 .creatorGenderBadgeFemale:focus-visible {
-    border-color: color-mix(in srgb, var(--color-primary-light) 68%, transparent);
-    background:
-        linear-gradient(180deg, color-mix(in srgb, var(--color-primary-light) 18%, transparent) 0%, color-mix(in srgb, var(--color-primary) 16%, transparent) 100%),
-        color-mix(in srgb, var(--color-primary) 24%, transparent);
+    background: color-mix(in srgb, #ff5a8a 24%, var(--color-surface));
+    color: #d12968;
 }
 
 .creatorGenderBadgeMale:hover,
 .creatorGenderBadgeMale:focus-visible {
-    border-color: color-mix(in srgb, var(--color-info) 70%, transparent);
-    background:
-        linear-gradient(180deg, color-mix(in srgb, var(--color-info) 20%, transparent) 0%, color-mix(in srgb, var(--color-info) 16%, transparent) 100%),
-        color-mix(in srgb, var(--color-info) 22%, transparent);
+    background: color-mix(in srgb, #4d9fff 24%, var(--color-surface));
+    color: #1f6fd0;
 }
 
-.creatorStreakBadge {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 10px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--color-text) 12%, transparent);
-    color: color-mix(in srgb, var(--color-text) 88%, transparent);
-    font-size: 12px;
-    font-weight: 500;
-    white-space: nowrap;
-}
 
 .creatorHeroBadgeRow {
     display: flex;
@@ -631,7 +611,7 @@
 .creatorRoleBadge,
 .creatorVipBadge,
 .creatorLevelBadge {
-    min-height: 28px;
+    min-height: 20px;
     box-sizing: border-box;
 }
 
@@ -640,35 +620,55 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 2px 9px;
-    border: 1px solid color-mix(in srgb, var(--color-primary-light) 48%, transparent);
+    align-self: center;
+    flex-shrink: 0;
+    padding: 0 8px;
+    min-height: 22px;
+    height: 22px;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 50%, transparent);
     border-radius: 6px;
-    background: var(--creator-accent);
-    color: var(--color-on-primary);
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--color-highlight) 92%, #fff) 0%,
+        var(--color-highlight) 48%,
+        color-mix(in srgb, var(--color-highlight) 70%, var(--color-primary)) 100%
+    );
+    color: #2a1808;
     font-size: 12px;
     font-weight: 800;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.05em;
+    line-height: 1;
     white-space: nowrap;
     cursor: pointer;
+    box-shadow: none;
 }
 
 .creatorVipBadgeInactive {
-    border-color: var(--color-border);
-    background: var(--color-text-muted);
-    color: var(--color-text);
+    border-color: color-mix(in srgb, var(--color-highlight) 40%, transparent);
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--color-highlight) 38%, var(--color-surface)) 0%,
+        color-mix(in srgb, var(--color-highlight) 22%, var(--color-surface-2)) 100%
+    );
+    color: color-mix(in srgb, var(--color-highlight) 55%, var(--color-text));
+    box-shadow: none;
 }
 
 .creatorVipBadgeInactive:hover,
 .creatorVipBadgeInactive:focus-visible {
-    border-color: var(--color-border);
-    background: var(--color-text-muted);
-    color: var(--color-text);
+    border-color: color-mix(in srgb, var(--color-highlight) 58%, transparent);
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--color-highlight) 48%, var(--color-surface)) 0%,
+        color-mix(in srgb, var(--color-highlight) 30%, var(--color-surface-2)) 100%
+    );
+    color: color-mix(in srgb, var(--color-highlight) 70%, var(--color-text));
 }
 
 .creatorVipBadge:hover,
 .creatorVipBadge:focus-visible {
-    border-color: color-mix(in srgb, var(--color-primary-lighter) 86%, transparent);
-    background: var(--creator-accent-soft);
+    border-color: color-mix(in srgb, var(--color-highlight) 75%, transparent);
+    filter: brightness(1.06);
     outline: none;
 }
 
@@ -1203,15 +1203,15 @@
     justify-content: flex-start;
     gap: 12px;
     width: 100%;
-    margin: 0 0 18px;
-    min-height: 52px;
-    padding: 0 16px;
+    margin: 0 0 16px;
+    min-height: 48px;
+    padding: 0 4px;
     box-sizing: border-box;
-    /* 功能注释：Tab 条圆角略小于卡片，避免显得过圆 */
-    border-radius: 10px;
-    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
-    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
-    background: color-mix(in srgb, var(--color-text) 10%, transparent);
+    /* 功能注释：轻量底边分隔，去掉灰底盒子感 */
+    border-radius: 0;
+    border: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    background: transparent;
 }
 
 /* 功能注释：栏目常驻左侧；草稿「管理」/「全部」靠右占位，切 Tab 不左右跳动 */
@@ -1219,7 +1219,7 @@
     display: flex;
     align-items: stretch;
     justify-content: flex-start;
-    gap: 28px;
+    gap: 22px;
     flex: 1 1 auto;
     min-width: 0;
     max-width: 100%;
@@ -1277,25 +1277,32 @@
     font-size: 15px;
     font-weight: 600;
     line-height: 1.2;
-    padding: 14px 12px;
+    padding: 12px 4px 14px;
     cursor: pointer;
     white-space: nowrap;
     position: relative;
+    transition: color 0.15s ease;
+}
+
+.worksTab:hover {
+    color: var(--color-text);
 }
 
 .worksTabActive {
-    color: var(--color-text);
+    color: var(--color-primary);
+    font-weight: 700;
 }
 
 .worksTabActive::after {
     content: '';
     position: absolute;
-    left: 12px;
-    right: 12px;
+    left: 50%;
     bottom: 0;
+    width: 28px;
     height: 3px;
     border-radius: 999px;
-    background: var(--color-surface);
+    background: var(--color-primary);
+    transform: translateX(-50%);
 }
 
 .appealBanner {
@@ -1475,6 +1482,7 @@
 }
 
 .draftManageTip {
+    margin: 0 0 14px;
     padding: 10px 14px;
     border-radius: 14px;
     background: color-mix(in srgb, var(--color-primary) 22%, transparent);
@@ -1507,8 +1515,8 @@
     }
 
     .creatorHeroSection {
-        margin: 8px 0 12px;
-        gap: 12px;
+        margin: 8px 0 10px;
+        gap: 8px;
     }
 
     .creatorHeroCard {
@@ -1517,6 +1525,8 @@
         margin-right: -12px;
         padding: 10px 14px 8px;
         border-radius: 0;
+        /* 功能注释：通栏贴顶时去掉描边，避免顶栏下再多一条灰横线 */
+        border: none;
         max-width: none;
         gap: 10px;
     }
@@ -1687,14 +1697,17 @@
         flex-wrap: nowrap;
         align-items: center;
         justify-content: flex-start;
-        gap: 10px;
+        gap: 8px;
         width: 100%;
-        margin: 0 0 14px;
-        min-height: 52px;
-        padding: 0 12px;
-        border-radius: 10px;
+        margin: 0 0 12px;
+        min-height: 44px;
+        padding: 0 2px;
+        border-radius: 0;
         box-sizing: border-box;
         overflow: visible;
+        background: transparent;
+        border: none;
+        border-bottom: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
     }
 
     .worksTabs {
@@ -1703,7 +1716,7 @@
         max-width: 100%;
         min-width: 0;
         justify-content: flex-start;
-        gap: 16px;
+        gap: 14px;
         transform: none;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
@@ -1715,13 +1728,12 @@
         min-width: 0;
         text-align: center;
         font-size: 13px;
-        padding: 14px 6px;
+        padding: 10px 2px 12px;
     }
 
     .worksTabActive::after {
-        left: 8px;
-        right: 8px;
-        height: 2px;
+        width: 22px;
+        height: 2.5px;
     }
 
     .worksViewAllSlot {
@@ -1922,6 +1934,7 @@
     }
 
     .draftManageTip {
+        margin: 0 0 12px;
         padding: 8px 12px;
         font-size: 12px;
         border-radius: 12px;

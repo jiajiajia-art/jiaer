@@ -102,24 +102,22 @@ const ROMAJI: Record<string, string> = {
   works: "ZUOPIN", bag: "XINGNANG", finance: "MOD", theme: "MODE",
 };
 
-/* 设置里的「小分支」：一行摘要，点开才展开选项 */
-function SettingBranch({ title, en, desc, current, swatch, children, defaultOpen = false }: { title: string; en: string; desc: string; current: string; swatch?: ReactNode; children: ReactNode; defaultOpen?: boolean }) {
+/* 设置里的「小分支」：一行摘要，点开才展开选项；配色跟当前皮肤美化 */
+function SettingBranch({ title, en: _en, desc, current, swatch, children, defaultOpen = false }: { title: string; en?: string; desc?: string; current: string; swatch?: ReactNode; children: ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-paper">
-      <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-paper-2">
+    <div className="settings-card overflow-hidden rounded-2xl border bg-paper transition">
+      <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center gap-3 px-3.5 py-3 text-left transition hover:bg-paper-2/60">
         <div className="min-w-0 flex-1">
-          <span className="flex items-baseline gap-1.5">
-            <span className="text-[14px] font-bold tracking-[0.06em] text-ink">{title}</span>
-          </span>
-          <span className="block truncate text-[11px] text-ink-soft">{desc}</span>
+          <span className="block text-[14px] font-bold text-ink">{title}</span>
+          {desc ? <span className="mt-0.5 block truncate text-[11px] text-ink-soft">{desc}</span> : null}
         </div>
-        <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-paper-2 px-2.5 py-1 text-[11.5px] font-semibold text-ink">
-          {swatch}{current}
+        <span className="settings-chip flex max-w-[42%] shrink-0 items-center gap-1 truncate rounded-full border px-2.5 py-1 text-[11.5px] font-semibold">
+          {swatch}<span className="truncate">{current}</span>
         </span>
-        <span className={`shrink-0 text-[18px] leading-none text-ink-soft transition-transform ${open ? "rotate-90" : ""}`}>›</span>
+        <span className={`shrink-0 text-[16px] leading-none text-jade transition-transform ${open ? "rotate-90" : ""}`}>›</span>
       </button>
-      {open && <div className="border-t border-line bg-paper-2/40 p-3">{children}</div>}
+      {open && <div className="settings-card-body border-t p-3">{children}</div>}
     </div>
   );
 }
@@ -154,15 +152,12 @@ function PlayerSkinPicker({ skin, onPick }: { skin: string; onPick: (id: (typeof
             onClick={() => onPick(sk.id)}
             className={`flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition ${
               cur
-                ? "border-white/80 bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] text-white shadow-lg ring-2 ring-fuchsia-300/50"
+                ? "border-white/80 bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] text-white shadow-lg ring-2 ring-[color-mix(in_srgb,var(--jade)_45%,transparent)]"
                 : "border-line bg-paper text-ink-soft hover:border-jade/60 hover:bg-paper-2"
             }`}
           >
             <span className="shrink-0 leading-none">{sk.glyph}</span>
-            <div className="flex min-w-0 flex-col">
-              <span className={`text-[12.5px] font-bold ${cur ? "text-white" : "text-ink"}`}>{sk.label}</span>
-              <span className={`truncate text-[10px] ${cur ? "text-white/85" : "text-ink-soft"}`}>{sk.desc}</span>
-            </div>
+            <span className={`min-w-0 truncate text-[12.5px] font-bold ${cur ? "text-white" : "text-ink"}`}>{sk.label}</span>
           </button>
         );
       })}
@@ -193,9 +188,9 @@ function SubTabs({ tabs }: { tabs: [string, ReactNode][] }) {
 function BeautyGroup({ no, title, en, desc }: { no: string; title: string; en: string; desc: string }) {
   return (
     <div className="flex items-end gap-3 px-1 pt-4 first:pt-0">
-      <span className="font-serif text-[26px] font-black leading-none text-jade/30 tabular-nums">{no}</span>
-      <div className="min-w-0 flex-1 border-b border-line pb-1.5">
-        <p className="flex items-baseline gap-2"><span className="text-[15px] font-bold tracking-[0.08em] text-ink">{title}</span><span className="text-[9.5px] font-bold tracking-[0.25em] text-ink-soft/70">{en}</span></p>
+      <span className="font-serif text-[26px] font-black leading-none text-jade/35 tabular-nums">{no}</span>
+      <div className="min-w-0 flex-1 border-b pb-1.5" style={{ borderColor: "color-mix(in srgb, var(--jade) 22%, var(--line))" }}>
+        <p className="flex items-baseline gap-2"><span className="text-[15px] font-bold tracking-[0.08em] text-ink">{title}</span><span className="text-[9.5px] font-bold tracking-[0.25em] text-jade/55">{en}</span></p>
         <p className="mt-0.5 text-[11px] text-ink-soft">{desc}</p>
       </div>
     </div>
@@ -211,11 +206,17 @@ type BeautyKey = (typeof BEAUTY_GROUPS)[number][0];
 function BeautyNav({ cur, onPick }: { cur: BeautyKey; onPick: (k: BeautyKey) => void }) {
   const i = BEAUTY_GROUPS.findIndex(([k]) => k === cur);
   return (
-    <div className="sticky top-0 z-20 -mx-4 border-b border-line bg-paper-2/90 px-4 py-2 backdrop-blur-md">
+    <div
+      className="sticky top-0 z-20 -mx-4 border-b px-4 py-2 backdrop-blur-md"
+      style={{
+        borderColor: "color-mix(in srgb, var(--jade) 18%, var(--line))",
+        background: "color-mix(in srgb, var(--paper-2) 82%, var(--jade))",
+      }}
+    >
       <div role="tablist" aria-label="美化分组" className="flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
         {BEAUTY_GROUPS.map(([k, l], n) => (
           <button key={k} role="tab" aria-selected={cur === k} onClick={() => onPick(k)}
-            className={`flex shrink-0 items-center gap-1 rounded-full border px-3 py-1 text-[12px] font-bold transition ${cur === k ? "border-jade bg-jade text-white shadow-[0_6px_14px_-8px_var(--jade)]" : "border-line bg-paper text-ink-soft hover:border-jade hover:text-jade"}`}>
+            className={`flex shrink-0 items-center gap-1 rounded-full border px-3 py-1 text-[12px] font-bold transition ${cur === k ? "border-jade bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] text-white shadow-[0_6px_14px_-8px_var(--jade)]" : "border-line bg-paper text-ink-soft hover:border-jade hover:text-jade"}`}>
             {n > 0 && <span className={`font-serif text-[10px] tabular-nums ${cur === k ? "text-white/75" : "text-jade/50"}`}>{String(n).padStart(2, "0")}</span>}{l}
           </button>
         ))}
@@ -250,12 +251,12 @@ function BeautySummary() {
     (theme.lookRules?.length ?? 0) > 0 ? `剧情美化 ${theme.lookRules!.length} 条` : "",
   ].filter(Boolean);
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-line bg-gradient-to-r from-jade/10 via-paper to-coral/10 px-4 py-3">
+    <div className="settings-card flex items-center gap-3 rounded-2xl border bg-gradient-to-r from-jade/10 via-paper to-coral/10 px-4 py-3">
       {confirmEl}
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-bold tracking-[0.2em] text-ink-soft">当前外观</p>
+        <p className="text-[11px] font-bold tracking-[0.2em] text-jade">当前外观</p>
         <div className="mt-1 flex flex-wrap gap-1">
-          {tags.map((t) => <span key={t} className="rounded-full border border-line bg-paper px-2 py-0.5 text-[11px] text-ink">{t}</span>)}
+          {tags.map((t) => <span key={t} className="settings-chip rounded-full border px-2 py-0.5 text-[11px]">{t}</span>)}
         </div>
         {activeLooks.length > 0 && (
           <p className="mt-1.5 text-[11px] text-jade">剧情美化生效中：{activeLooks.map((a) => a.rule.name || "未命名").join("、")} · 部分外观暂时被覆盖，条件不满足后恢复</p>
@@ -287,8 +288,8 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
       {!bare && (
         <IndustryPageHeader
           title={beauty ? "美化" : "设置"}
-          subtitle={beauty ? "主题包 · 风格 · 对话 · 场景 · 图标 · 封面" : "偏好与设定"}
-          eyebrow="STAR CITY"
+          subtitle={beauty ? "外观与主题" : "偏好"}
+          eyebrow={undefined}
           icon={
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="4" />
@@ -298,10 +299,10 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
         />
       )}
       {/* 功能注释：弹窗内（bare）不再叠一层左右内边距——弹窗本体已有，双层会把卡片挤窄 */}
-      <div className={bare ? "space-y-3 pt-1" : "mx-auto max-w-3xl px-4 py-5 space-y-4"}>
+      <div className={bare ? "space-y-2.5 pt-1" : "mx-auto max-w-3xl space-y-2.5 px-4 py-4"}>
         {/* 功能注释：玩家「游戏设置」只留皮肤风格选择；主题包/对话框/图标等仍在编辑器·美化 */}
         {!beauty && (
-        <SettingBranch title="美化" en="SKIN STYLE" desc="选择界面皮肤风格" current={(SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.dream)[0]} swatch={<span>{(SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.dream)[1]}</span>}>
+        <SettingBranch title="皮肤" current={(SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.dream)[0]} swatch={<span>{(SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.dream)[1]}</span>}>
           {/* 功能注释：默认收起——标题行已显示当前皮肤，点开再选，避免一打开设置就是一大片皮肤卡 */}
           <PlayerSkinPicker skin={theme.skin ?? "cute"} onPick={(skin) => setTheme({ ...theme, skin })} />
         </SettingBranch>
@@ -313,16 +314,10 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
           data-dark-toggle="1"
           onClick={toggleDarkMode}
           aria-pressed={isDark}
-          className="flex w-full items-center gap-3 overflow-hidden rounded-2xl border border-line bg-paper px-4 py-3 text-left transition hover:bg-paper-2"
+          className="settings-card flex w-full items-center gap-3 overflow-hidden rounded-2xl border bg-paper px-3.5 py-3 text-left transition hover:bg-paper-2/60"
         >
-          <span className="min-w-0 flex-1">
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-[14px] font-bold tracking-[0.06em] text-ink">暗色模式</span>
-              <span className="text-[9.5px] font-semibold tracking-[0.2em] text-ink-soft">DARK MODE</span>
-            </span>
-            <span className="block truncate text-[11px] text-ink-soft">点一下立即切换界面明暗，护眼夜读</span>
-          </span>
-          <span className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold ${isDark ? "border-jade bg-jade/10 text-jade" : "border-line bg-paper-2 text-ink"}`}>
+          <span className="min-w-0 flex-1 text-[14px] font-bold text-ink">暗色模式</span>
+          <span className={`settings-chip flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold ${isDark ? "!border-jade !bg-jade/15 !text-jade" : ""}`}>
             {isDark ? <IconMoon size={16} /> : <IconSun size={16} />}{isDark ? "已开启" : "已关闭"}
           </span>
         </button>
@@ -374,7 +369,7 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
           <SubTitle t="自定义取色" d="覆盖皮肤与主色，留空跟随" />
           <FreeColors />
         </SettingBranch>
-        <SettingBranch title="字体" en="FONT" desc="预设 8 款游戏字体，或上传自定义字体文件（TTF / OTF / WOFF2）" current={theme.free?.font?.url ? "自定义字体" : (FONT_LABEL[theme.font ?? "song"] ?? "典雅宋体")} swatch={<span className="font-serif text-[12px]">字</span>}>
+        <SettingBranch title="字体" en="FONT" desc="预设 8 款字体：剧情正文、气泡与编辑器一并跟随；也可上传自定义字体" current={theme.free?.font?.url ? "自定义字体" : (FONT_LABEL[theme.font ?? "song"] ?? "典雅宋体")} swatch={<span className="font-serif text-[12px]">字</span>}>
           <SubTitle t="预设字体（8 款可选）" />
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
             {FONTS.map((ft) => {
@@ -514,7 +509,7 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
 
         {/* 游戏字体：常规设置页也能直接切换 8 款预设字体或上传字体文件 */}
         {!beauty && (
-        <SettingBranch title="游戏字体" en="GAME FONT" desc="切换全站剧情、对话与界面的字体风格，或上传本地字体文件" current={theme.free?.font?.url ? "自定义字体" : (FONT_LABEL[theme.font ?? "song"] ?? "典雅宋体")} swatch={<span className="font-serif text-[12px]">字</span>}>
+        <SettingBranch title="剧情字体" current={theme.free?.font?.url ? "自定义字体" : (FONT_LABEL[theme.font ?? "song"] ?? "典雅宋体")} swatch={<span className="font-serif text-[12px]">字</span>}>
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
             {FONTS.map((ft) => {
               const cur = (theme.font ?? "song") === ft.id && !theme.free?.font?.url;
@@ -527,7 +522,6 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
                 >
                   <span className="text-[18px] leading-snug" style={{ fontFamily: ft.family }}>{ft.sample ?? "星"}</span>
                   <span className="text-[12px] font-semibold">{ft.label}</span>
-                  <span className={`text-[10px] ${cur ? "text-white/80" : "opacity-70"}`}>{ft.desc}</span>
                 </button>
               );
             })}
@@ -539,10 +533,8 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
 
         {/* 功能注释：叙事段落浅色底透明度；叠图旁白与小说内容卡共用，字色固定近黑 */}
         {!beauty && (
-        <div>
-          <span className="text-[14px] font-bold leading-tight tracking-[0.06em] text-ink">叙事底透明度</span>
-          <span className="mb-2 mt-0.5 block text-[11px] text-ink-soft">剧情正文底下的半透明底 · 调高更易读 · 普通段落保持黑色</span>
-          <div className="flex items-center gap-2 rounded-xl border border-line bg-paper px-3 py-2.5">
+        <SettingBranch title="叙事底透明度" current={`${theme.storyBgAlpha ?? 88}%`}>
+          <div className="flex items-center gap-2">
             <input
               type="range"
               min={40}
@@ -556,17 +548,17 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
             <span className="w-10 shrink-0 text-right text-[12px] tabular-nums text-ink-soft">{theme.storyBgAlpha ?? 88}%</span>
           </div>
           <p
-            className="story-prose story-narration-panel mt-2 rounded-xl px-3 py-2 text-[13px] leading-relaxed"
+            className="story-prose story-narration-panel mt-2 rounded-xl px-3 py-2 text-[12.5px] leading-relaxed"
             style={{ ["--story-panel-a" as string]: String((theme.storyBgAlpha ?? 88) / 100) }}
           >
-            预览：永和九年，岁在癸丑。天色将晚，街灯初上。
+            预览：天色将晚，街灯初上。
           </p>
-        </div>
+        </SettingBranch>
         )}
 
         {/* 背景音乐：上传 / 点播 */}
         {!beauty && (
-        <SettingBranch title="背景音乐" en="MUSIC" desc="上传本地音乐，点歌单即可播放；切换页面不中断" current="歌单" swatch={<IconMusic size={16} />}>
+        <SettingBranch title="背景音乐" current="歌单" swatch={<IconMusic size={16} />}>
           <BgmPanel />
         </SettingBranch>
         )}
@@ -600,13 +592,12 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
         )}
         {/* 本局游玩偏好：开局时按世界观默认 / 建角所选，之后随时可改，下一回合起生效 */}
         {!beauty && game && (
-        <div>
-          <span className="flex items-baseline gap-1.5">
-            <span className="text-[14px] font-bold leading-tight tracking-[0.06em] text-ink">游玩偏好</span>
-          </span>
-          <span className="mb-2 block text-[11px] text-ink-soft">只影响本局，下一回合起生效</span>
+        <SettingBranch
+          title="游玩偏好"
+          current={playPrefsOf(game).mode === "novel" ? "剧情模式" : "游戏模式"}
+        >
           <PlayPrefsPicker value={playPrefsOf(game)} onChange={(playPrefs) => patchGame((g) => ({ ...g, playPrefs }))} />
-        </div>
+        </SettingBranch>
         )}
       </div>
     </div>

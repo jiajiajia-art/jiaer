@@ -137,11 +137,12 @@ test('GameGrid_封面角标应使用下载切图火焰心形且正文含作者�
   assert.match(tsx, /goodsAuthorAvatar/);
   assert.match(tsx, /goodsAuthorName/);
   assert.match(tsx, /goodsTagPill/);
+  assert.match(tsx, /goodsCoverTags/);
   assert.doesNotMatch(tsx, /goodsTitleRow/);
   assert.doesNotMatch(tsx, /icon_flame\.webp|icon_heart\.svg/);
   // 功能注释：简介行仍用 goodsDesc；无简介时用 nbsp 占位保持等高
   assert.match(tsx, /className=\{styles\.goodsDesc\}/);
-  assert.match(tsx, /body\.subtitle \|\| '\\u00a0'/);
+  assert.match(tsx, /showSubtitle \? subtitleText : ['"]\\u00a0['"]/);
   assert.doesNotMatch(tsx, /icon_download\.webp|AiOutlineLike|IoGameControllerOutline/);
   assert.ok(existsSync(join(root, 'public/data/assetsv2/home/icon_flame_pink.webp')));
   assert.ok(existsSync(join(root, 'public/data/assetsv2/home/icon_heart.webp')));
@@ -151,7 +152,7 @@ test('GameGrid_封面角标应使用下载切图火焰心形且正文含作者�
   assert.match(css, /\.goodsCard[\s\S]*background:\s*(?:#1C1C1E|#1A1A1A|var\(--|color-mix\()/);
   assert.match(css, /\.goodsCard[\s\S]*border-radius:\s*16px/);
   assert.match(css, /\.goodsImgPlaceholder/);
-  assert.doesNotMatch(tsx, /welcome\.png/);
+  assert.match(css, /\.goodsCoverTags[\s\S]*position:\s*absolute/);
   assert.match(css, /\.goodsMetaRow[\s\S]*justify-content:\s*space-between/);
   assert.match(css, /\.goodsMetaRow[\s\S]*flex-wrap:\s*nowrap/);
   assert.match(css, /\.goodsCollectBadge[\s\S]*margin-left:\s*auto/);

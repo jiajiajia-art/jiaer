@@ -1,0 +1,67 @@
+{
+  "warehouse": {
+    "forms": {
+      "labelName": "名前",
+      "labelAgeGroup": "年齢層（アバター照合）",
+      "labelBackground": "背景（アバター照合）",
+      "avatarLockedHint": "アバターを手動選択済み—自動照合はロックされています",
+      "defaultCardSuffix": " · デフォルト",
+      "aiGenerating": "生成中…",
+      "aiGenerateCost": "AI生成 · {{cost}}"
+    },
+    "persona": {
+      "avatarGenFailed": "画像の生成に失敗しました",
+      "personaGenFailed": "ペルソナの生成に失敗しました",
+      "personaGenOk": "ペルソナを生成しました（−{{cost}} ポイント）",
+      "form": {
+        "previewHint": "右側にペルソナ概要を書いてください…",
+        "namePlaceholder": "物語でのあなたの名前",
+        "personaLabel": "ペルソナ概要",
+        "personaPlaceholder": "性格・口調・経歴など、具体的ほど良い",
+        "tagsPlaceholder": "学園, 恋愛（カンマ区切り）",
+        "setDefaultCheckbox": "デフォルトペルソナカードに設定",
+        "savePersona": "ペルソナを保存",
+        "confirmGenerateTitle": "ペルソナ生成の確認",
+        "confirmGenerateMessage": "{{cost}} ポイントを消費して「ペルソナ概要」を生成します。続行しますか？",
+        "confirmGenerate": "生成"
+      }
+    },
+    "characters": {
+      "form": {
+        "previewHint": "右側にキャラクター設定を書いてください…",
+        "namePlaceholder": "キャラクター名",
+        "personaLabel": "キャラクター設定",
+        "personaPlaceholder": "性格・口調・プレイヤーとの関係など、具体的ほど良い",
+        "tagsPlaceholder": "ファンタジー, 恋愛（カンマ区切り）",
+        "setDefaultCheckbox": "デフォルトキャラクターカードに設定",
+        "saveCharacter": "キャラクターカードを保存",
+        "confirmGenerateTitle": "キャラクター設定生成の確認",
+        "confirmGenerateMessage": "{{cost}} ポイントを消費して「キャラクター設定」を生成します。続行しますか？",
+        "confirmGenerate": "生成"
+      }
+    },
+    "resource": {
+      "form": {
+        "dialogAriaEdit": "編集",
+        "dialogAriaCreate": "新規作成",
+        "unnamed": "無題",
+        "previewHint": "右側に内容を入力してください…",
+        "titleEdit": "編集",
+        "titleCreate": "新規",
+        "typeWorldbook": "世界書",
+        "typePlugin": "プラグイン",
+        "titleLabel": "タイトル",
+        "titlePlaceholder": "リソースタイトル",
+        "descriptionLabel": "説明",
+        "descriptionPlaceholder": "用途の簡単な説明",
+        "tagsPlaceholder": "ファンタジー, 学園（カンマ区切り）",
+        "entriesJsonLabel": "エントリー JSON",
+        "entriesJsonPlaceholder": "[{\"title\":\"設定名\",\"content\":\"...\",\"keywords\":[],\"constant\":false,\"enabled\":true}]",
+        "pluginTypeLabel": "プラグイン種別",
+        "scriptLabel": "スクリプト / 設定テキスト",
+        "scriptPlaceholder": "プロンプト、正規表現、ツール説明など…",
+        "enablePlugin": "このプラグインを有効化"
+      }
+    }
+  }
+}

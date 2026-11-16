@@ -252,6 +252,14 @@ const Document: React.FC = () => {
         setMobileSidebarOpen(false);
     }, [navigate]);
 
+    const handleBack = useCallback(() => {
+        if (window.history.length > 1) {
+            navigate(-1);
+            return;
+        }
+        navigate('/home');
+    }, [navigate]);
+
     useEffect(() => {
         if (!activeGuide || docState.guides.length === 0) return;
 
@@ -643,9 +651,17 @@ const Document: React.FC = () => {
 
     const renderTopNav = () => (
         <header className={styles.topNav}>
-            {/* 功能注释：顶栏对齐效果图 — 左汉堡/品牌，右描边「模板下载」，分组只在侧栏 */}
+            {/* 功能注释：顶栏左返回 + 汉堡/品牌，右「模板下载」；返回键此前被 display:none 且未渲染 */}
             <div className={styles.topNavInner}>
                 <div className={styles.topNavLeft}>
+                    <button
+                        type="button"
+                        className={styles.topNavBackButton}
+                        onClick={handleBack}
+                        aria-label="返回"
+                    >
+                        <ArrowLeftIcon />
+                    </button>
                     <button
                         type="button"
                         className={styles.mobileMenuButton}

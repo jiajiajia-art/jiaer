@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import GameConfirmModal from '../../components/Galgame/GameConfirmModal';
 import {
   AVATAR_STYLE_OPTIONS,
@@ -28,11 +29,16 @@ type Props = {
 const WarehouseAvatarGenerateConfirm: React.FC<Props> = ({
   isOpen,
   cost,
-  title = '确认生成图像',
-  subjectLabel = '立绘',
+  title,
+  subjectLabel,
   onCancel,
   onConfirm,
 }) => {
+  const { t } = useTranslation();
+  const resolvedTitle = title ?? t('warehouse.avatars.generateTitle');
+  const resolvedSubject = subjectLabel ?? t('warehouse.avatars.generateSubjectDefault');
+  const pointsUnit = t('common.points');
+
   const [promptOpen, setPromptOpen] = useState(true);
   const [avatarStyleId, setAvatarStyleId] = useState<AvatarStyleId>(DEFAULT_AVATAR_STYLE);
   const [promptSupplement, setPromptSupplement] = useState('');
@@ -46,18 +52,24 @@ const WarehouseAvatarGenerateConfirm: React.FC<Props> = ({
 
   if (!isOpen) return null;
 
+  const promptCueLabel = t('warehouse.avatars.generatePromptCue');
+
   const modal = (
     <GameConfirmModal
       isOpen={isOpen}
       variant="dossier"
       overlayZIndex={1300}
-      title={title}
-      confirmText="确认生成"
-      cancelText="取消"
+      title={resolvedTitle}
+      confirmText={t('warehouse.avatars.generateConfirm')}
+      cancelText={t('warehouse.cards.cancel')}
       message={(
         <div className={styles.confirmMsgStack}>
           <p className={styles.confirmMsgText}>
-            {`将扣除 ${cost} 织梦豆生成 ${subjectLabel}，是否继续？`}
+            {t('warehouse.avatars.generateDeductMessage', {
+              cost,
+              pointsUnit,
+              subject: resolvedSubject,
+            })}
           </p>
           <button
             type="button"
@@ -65,7 +77,11 @@ const WarehouseAvatarGenerateConfirm: React.FC<Props> = ({
             onClick={() => setPromptOpen((open) => !open)}
             aria-expanded={promptOpen}
           >
-            <span>{promptOpen ? '收起画风与提示词' : '画风与提示词'}</span>
+            <span>
+              {promptOpen
+                ? t('warehouse.avatars.generatePromptCueCollapse')
+                : promptCueLabel}
+            </span>
             <span className={styles.promptCueChevron} aria-hidden>
               {promptOpen ? '▴' : '▾'}
             </span>
@@ -79,13 +95,17 @@ const WarehouseAvatarGenerateConfirm: React.FC<Props> = ({
       })}
     >
       {promptOpen ? (
-        <div className={styles.promptCuePanel} role="region" aria-label="画风与提示词">
+        <div className={styles.promptCuePanel} role="region" aria-label={promptCueLabel}>
           <div className={styles.promptCueSection}>
             <div className={styles.promptCueLabelRow}>
-              <span className={styles.promptCueLabel}>风格选择</span>
-              <span className={styles.promptCueHint}>点选即可 · 默认 A</span>
+              <span className={styles.promptCueLabel}>{t('warehouse.avatars.generateStylePickLabel')}</span>
+              <span className={styles.promptCueHint}>{t('warehouse.avatars.generateStylePickHint')}</span>
             </div>
-            <div className={styles.styleChipRow} role="radiogroup" aria-label="立绘画风">
+            <div
+              className={styles.styleChipRow}
+              role="radiogroup"
+              aria-label={t('warehouse.avatars.generateStyleRadioAria')}
+            >
               {AVATAR_STYLE_OPTIONS.map((opt) => (
                 <button
                   key={opt.id}
@@ -103,7 +123,7 @@ const WarehouseAvatarGenerateConfirm: React.FC<Props> = ({
           </div>
           <div className={styles.promptCueSection}>
             <div className={styles.promptCueLabelRow}>
-              <span className={styles.promptCueLabel}>外貌补充（可选）</span>
+              <span className={styles.promptCueLabel}>{t('warehouse.avatars.generateAppearanceLabel')}</span>
               <span className={styles.promptCueHint}>{promptSupplement.trim().length}/500</span>
             </div>
             <textarea
@@ -111,7 +131,7 @@ const WarehouseAvatarGenerateConfirm: React.FC<Props> = ({
               value={promptSupplement}
               maxLength={500}
               rows={3}
-              placeholder="短发、校服、冷白皮、侧分刘海…"
+              placeholder={t('warehouse.avatars.generateAppearancePlaceholder')}
               onChange={(e) => setPromptSupplement(e.target.value)}
             />
           </div>

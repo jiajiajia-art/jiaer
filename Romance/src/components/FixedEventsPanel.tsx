@@ -452,10 +452,6 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
       {confirmEl}
       <ModeSwitch mode={mode} setMode={setMode} />
       {!modMode && <ScopeBanner scope="save">固定事件只作用于当前存档，修改即时保存。模组预设剧本只在新开局时写入。</ScopeBanner>}
-      <p className="text-[12.5px] leading-relaxed text-ink-soft">
-        固定事件是可选的：不配置任何事件时，玩家可一直自由游玩。除「事件名称」「事件提示词」外，其余字段皆可留空。
-        所有条件默认需要<strong className="text-ink">同时满足</strong>；满足后由代码结算数值，再把提示词交 AI 演绎剧情与对白。
-      </p>
 
       {tpls.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-line bg-paper-2/40 px-3 py-2">
@@ -477,8 +473,8 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
       />
 
       {events.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-line bg-paper-2/50 px-4 py-6 text-center text-[13px] text-ink-soft">
-          还没有固定事件。点下方「＋ 新增固定事件」开始编排剧本。
+        <div className="rounded-2xl border border-dashed border-line/80 bg-paper-2/40 px-4 py-5 text-center text-[12.5px] text-ink-soft">
+          还没有固定事件
         </div>
       )}
 

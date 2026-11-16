@@ -29,10 +29,12 @@
 
 .title {
   margin: 0;
-  font-family: var(--wh-display);
-  font-size: clamp(22px, 2.2vw, 28px);
-  font-weight: 700;
+  /* 功能注释：与全站/仓库顶栏同一无衬线字族，不再用宋体和眉题打架 */
+  font-family: inherit;
+  font-size: clamp(20px, 2.2vw, 26px);
+  font-weight: 750;
   color: var(--wh-ink);
+  letter-spacing: 0.01em;
 }
 
 .sub {
@@ -139,6 +141,17 @@
   grid-template-columns: minmax(0, 1fr) 292px;
   gap: 16px;
   align-items: start;
+}
+
+/* 功能注释：中等宽度侧栏还在，右侧详情收起，把位置让给卡面 */
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .preview {
+    display: none;
+  }
 }
 
 .grid {
@@ -408,7 +421,9 @@
 
 .emptyStage {
   margin: 40px auto;
-  max-width: 340px;
+  max-width: 420px;
+  width: 100%;
+  box-sizing: border-box;
   text-align: center;
   padding: 32px 20px;
   border-radius: 16px;
@@ -437,8 +452,9 @@
 
 .emptyStage h2 {
   margin: 0 0 8px;
-  font-family: var(--wh-display);
+  font-family: inherit;
   font-size: 18px;
+  font-weight: 750;
 }
 
 .emptyStage p {
@@ -701,7 +717,7 @@
   margin: 0;
 }
 
-@media (max-width: 980px) {
+@media (max-width: 768px) {
   .avatarIdentityRow {
     grid-template-columns: 1fr;
   }
@@ -1402,7 +1418,7 @@
   padding-top: 8px;
 }
 
-@media (max-width: 980px) {
+@media (max-width: 768px) {
   .layout { grid-template-columns: 1fr; }
   /* 效果图手机仅双列卡面，详情预览收起避免叠在网格下 */
   .preview { display: none; }
@@ -1413,15 +1429,9 @@
   }
 
   .toolbar {
-    /* 手机：搜索/导入/新建为墨面工具卡，对齐首页表面色 */
+    /* 功能注释：具体手机工具卡样式见文末「手机端视觉精修」媒体查询，此处只兜底拉伸 */
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
-    padding: 14px;
-    border-radius: 16px;
-    border: 1px solid var(--wh-line);
-    background: var(--wh-paper);
-    box-shadow: 0 4px 16px color-mix(in srgb, var(--color-shadow) 35%, transparent);
   }
 
   /* 头像库控件：不走 toolbar 竖排卡，保持横向芯片 */
@@ -1646,74 +1656,101 @@
   min-width: 110px;
 }
 
-/* ===== 功能注释：手机端视觉精修（暗夜织梦）=====
-   工具区去掉外框卡片：搜索独占一行，导入/新建并排；
-   题材筛选更轻；空状态去虚线框改为柔光插画式 */
-@media (max-width: 980px) {
+/* ===== 功能注释：手机端视觉精修 =====
+   工具区并入一张紧凑操作卡：搜索独占一行，导入/新建并排；题材芯片更轻 */
+@media (max-width: 768px) {
+  .panelRoot {
+    gap: 12px;
+  }
+
   .toolbar {
     display: grid;
-    grid-template-columns: 1fr 1.4fr;
-    gap: 10px;
-    padding: 0;
-    background: none;
-    border: none;
-    box-shadow: none;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid var(--wh-line);
+    background: var(--wh-paper);
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--color-shadow) 18%, transparent);
   }
   .toolbar > .search { grid-column: 1 / -1; }
   .search {
-    height: 44px;
-    border-radius: 999px;
-    padding-left: 18px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
+    height: 42px;
+    border-radius: 12px;
+    padding-left: 14px;
+    font-family: inherit;
+    background: var(--color-bg);
+    border: 1px solid var(--wh-line);
   }
   .search:focus {
-    border-color: color-mix(in srgb, var(--color-primary) 60%, transparent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 14%, transparent);
   }
   .primaryBtn,
   .ghostBtn {
-    height: 44px;
-    border-radius: 999px;
-    font-size: 14px;
+    height: 42px;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
   }
   .ghostBtn {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    border: 1px solid var(--wh-line);
     color: var(--color-text);
   }
   .primaryBtn {
-    background-image: var(--main-background);
-    box-shadow: 0 6px 18px color-mix(in srgb, var(--color-primary) 32%, transparent);
+    background: var(--wh-coral);
+    background-image: none;
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--color-primary) 28%, transparent);
   }
-  .tags { gap: 8px; margin-top: 4px; }
+  .tags {
+    gap: 6px;
+    margin-top: 0;
+    padding: 0 2px;
+  }
   .tag,
   .tagActive {
-    min-height: 32px;
-    padding: 0 14px;
+    min-height: 30px;
+    padding: 0 12px;
     border-radius: 999px;
-    font-size: 13px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
   }
   .tag {
-    background: transparent;
-    border: 1px solid var(--color-border);
+    background: var(--wh-paper);
+    border: 1px solid var(--wh-line);
     color: var(--color-text-secondary);
   }
   .tagActive {
-    background: color-mix(in srgb, var(--color-primary) 16%, transparent);
-    border: 1px solid color-mix(in srgb, var(--color-primary) 55%, transparent);
-    color: var(--color-primary-fg);
+    background: var(--wh-coral);
+    border: 1px solid transparent;
+    color: var(--color-on-primary);
     font-weight: 700;
+    box-shadow: 0 3px 10px color-mix(in srgb, var(--color-primary) 28%, transparent);
   }
+  /* 功能注释：空状态必须通栏居中；勿再限宽 340px + 左边距 0，否则右侧会留出一条空白带 */
   .emptyStage {
     width: 100%;
-    margin: 32px 0 0;
-    padding: 40px 20px;
+    max-width: none;
+    margin: 24px 0 0;
+    padding: 48px 20px 56px;
     border: none;
-    border-radius: 20px;
+    border-radius: 16px;
     background:
-      radial-gradient(260px 160px at 50% 30%, color-mix(in srgb, var(--color-primary) 14%, transparent), transparent 70%);
+      radial-gradient(260px 160px at 50% 36%, color-mix(in srgb, var(--color-primary) 14%, transparent), transparent 70%),
+      var(--wh-paper);
   }
-  .emptyStage h2 { font-size: 18px; margin-top: 4px; }
-  .emptyStage p { font-size: 13px; color: var(--color-text-muted); max-width: 260px; margin-inline: auto; }
+  .emptyStage h2 {
+    font-family: inherit;
+    font-size: 17px;
+    margin-top: 4px;
+  }
+  .emptyStage p {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    max-width: 280px;
+    margin-inline: auto;
+  }
 }

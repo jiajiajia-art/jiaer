@@ -347,7 +347,7 @@ export default function TalkPanel({ pid, name, role, onClose }: { pid: string; n
               }}
               placeholder={`对${name}当面说点什么…`}
               disabled={busy}
-              className="min-w-0 flex-1 border-0 bg-transparent py-1.5 text-[13.5px] text-ink placeholder:text-ink-soft/60 outline-none focus:outline-none focus:ring-0 disabled:opacity-50"
+              className="story-input min-w-0 flex-1 border-0 bg-transparent py-1.5 text-[13.5px] text-ink placeholder:text-ink-soft/60 outline-none focus:outline-none focus:ring-0 disabled:opacity-50"
             />
             <button
               type="button"

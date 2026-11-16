@@ -27,10 +27,7 @@
     background: var(--rank-bg);
 }
 
-/* 功能注释：短内容时把页脚沉到滚动区底（贴底栏上方），避免版权下方再空出一大块黑底 */
-.page > :global(footer[data-site-footer]) {
-    margin-top: auto;
-}
+/* 功能注释：页脚沉底改由 AppPageShell .mainInner 统一处理（main 已不再是 flex 直出 footer） */
 
 .pageInner {
     /* 功能注释：定位上下文留给 sticky Tab；勿写到壳层 main 上 */
@@ -319,7 +316,8 @@
     animation: fadeSlideUp 0.5s ease-out 0.2s both;
 }
 
-@media (min-width: 501px) {
+/* 功能注释：手机/中屏保持单列横卡（封面左+信息右），避免两列把横向信息挤扁；宽屏再双列 */
+@media (min-width: 900px) {
     .horizontalSection {
         grid-template-columns: repeat(2, 1fr);
     }
@@ -533,12 +531,12 @@
 }
 
 .horizontalCardDesc {
-    /* 功能注释：简介单行省略，并 margin-top:auto 贴齐封面底边 */
+    /* 功能注释：简介紧跟题材标签，单行省略，不再撑到封面底边 */
     font-size: 13px;
     color: var(--rank-muted);
     line-height: 1.4;
     min-width: 0;
-    margin-top: auto;
+    margin-top: 6px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -758,7 +756,7 @@
 
 .categoryBoxItem {
     display: flex;
-    /* 功能注释：信息列与封面同高，无题材标签时也不预留空位，简介靠 margin-top:auto 贴底 */
+    /* 功能注释：信息列与封面同高，文案从上往下排，简介不贴底 */
     align-items: stretch;
     gap: 14px;
     cursor: pointer;
@@ -889,8 +887,8 @@
 }
 
 .categoryBoxDesc {
-    /* 功能注释：无标签不占位；有空余高度时贴齐封面底边 */
-    margin-top: auto;
+    /* 功能注释：紧跟题材标签，只留一行间距 */
+    margin-top: 6px;
     font-size: 12px;
     color: var(--rank-muted);
     line-height: 1.4;
@@ -958,13 +956,13 @@
 /* ─── Responsive ─────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .pageInner {
-        /* 功能注释：底栏避让已由 AppPageShell 负责；底距只留列表与页脚呼吸，勿再垫半屏空白 */
-        padding: 0 16px 20px;
+        /* 功能注释：底栏避让已由 AppPageShell 负责；略增左右边距，列表不贴边显得挤 */
+        padding: 0 14px 24px;
     }
 
     .tabBar {
-        /* 功能注释：去掉 Tab 与内容区间距，标题紧贴 Tab 底部分割线 */
-        margin: 8px -16px 0;
+        /* 功能注释：Tab 与榜单列表之间留一点空隙，避免贴死 */
+        margin: 8px -14px 14px;
         padding: 0 8px;
         gap: 2px;
         top: 0;
@@ -1051,12 +1049,12 @@
     }
 
     .categoryBoxList {
-        gap: 16px;
+        gap: 18px;
     }
 
     .categoryBoxItem {
-        gap: 10px;
-        padding: 4px 0;
+        gap: 12px;
+        padding: 8px 0;
         align-items: stretch;
     }
 
@@ -1141,24 +1139,26 @@
     }
 
     .categoryBoxList {
-        gap: 10px;
+        gap: 16px;
     }
 
     .categoryBoxItem {
-        gap: 8px;
-        padding: 2px 0;
+        gap: 10px;
+        padding: 8px 0;
     }
 
     .horizontalSection {
-        gap: 8px;
+        grid-template-columns: 1fr;
+        gap: 12px;
     }
 
-    /* 功能注释：移动端榜单卡更紧凑——缩小内边距、行距与封面占比 */
+    /* 功能注释：移动端单列横卡——封面左、文案右铺满整行 */
     .horizontalCard {
-        gap: 8px;
-        padding: 8px;
+        gap: 12px;
+        padding: 12px;
         min-height: 0;
-        border-radius: 8px;
+        border-radius: 12px;
+        width: 100%;
     }
 
     .horizontalCardInfo {
@@ -1166,8 +1166,13 @@
     }
 
     .authorStatsRow {
-        margin-top: 5px;
-        margin-bottom: 5px;
+        margin-top: 8px;
+        margin-bottom: 8px;
+    }
+
+    .horizontalCardTags {
+        margin-top: 2px;
+        gap: 8px;
     }
 
     /* 功能注释：移动端作者头像+昵称整体高度缩小约 20%（18→14、字号≈原 80%） */
@@ -1202,7 +1207,7 @@
 
     .horizontalCardTitle {
         font-size: 14px;
-        line-height: 1.3;
+        line-height: 1.4;
     }
 
     .horizontalCardAuthor {
@@ -1210,7 +1215,7 @@
     }
 
     .horizontalCardTagPill {
-        padding: 1px 6px;
+        padding: 3px 8px;
         font-size: 10px;
     }
 
@@ -1223,14 +1228,16 @@
     }
 
     .horizontalCardCoverWrap {
-        max-width: 30%;
+        max-width: 38%;
+        flex: 0 0 auto;
     }
 
     .horizontalCardCover {
-        width: 100%;
+        width: min(132px, 38vw);
         max-width: none;
         height: auto;
-        border-radius: 6px;
+        aspect-ratio: 4 / 3;
+        border-radius: 8px;
     }
 
     .categoryBoxStats,

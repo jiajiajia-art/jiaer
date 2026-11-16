@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../store/useAuthStore';
 import {
@@ -10,7 +11,7 @@ import {
 } from '../../api/galgame/warehouseResources';
 import ConfirmModal from '../../components/CommonModal/ConfirmModal';
 import { MdCheck } from 'react-icons/md';
-import { PERSONA_TAGS } from './warehouseNav';
+import { PERSONA_TAG_ALL, PERSONA_TAGS, WORLDBOOK_DEFAULT_ENTRY_TITLE, personaTagLabel } from './warehouseNav';
 import WarehouseEmptyIcon from './WarehouseEmptyIcon';
 import panel from './WarehousePanel.module.css';
 
@@ -29,38 +30,6 @@ type Draft = {
   /** plugin */
   pluginKind: string;
   scriptText: string;
-};
-
-const META: Record<WarehouseResourceType, {
-  titleMine: string;
-  titlePublic: string;
-  subMine: string;
-  subPublic: string;
-  emptyMine: string;
-  emptyPublic: string;
-  createLabel: string;
-  minePath: string;
-}> = {
-  worldbook: {
-    titleMine: '我的世界书',
-    titlePublic: '公共世界书',
-    subMine: '管理世界观与设定条目，可发布到公共库',
-    subPublic: '浏览并导入他人分享的世界书',
-    emptyMine: '还没有世界书',
-    emptyPublic: '公共世界书还是空的',
-    createLabel: '+ 新建世界书',
-    minePath: '/warehouse/worldbooks',
-  },
-  plugin: {
-    titleMine: '我的插件',
-    titlePublic: '公共插件',
-    subMine: '管理提示词 / 正则等能力插件，可发布到公共库',
-    subPublic: '浏览并导入他人分享的插件',
-    emptyMine: '还没有插件',
-    emptyPublic: '公共插件还是空的',
-    createLabel: '+ 新建插件',
-    minePath: '/warehouse/plugins',
-  },
 };
 
 function emptyDraft(_type: WarehouseResourceType): Draft {
@@ -85,16 +54,16 @@ function resourceFromDraft(type: WarehouseResourceType, draft: Draft) {
     try {
       const parsed = JSON.parse(draft.entriesJson || '[]');
       if (!Array.isArray(parsed)) {
-        return { ok: false as const, message: '条目必须是 JSON 数组' };
+        return { ok: false as const, i18nKey: 'warehouse.resource.entriesNotArray' };
       }
       entries = parsed;
     } catch {
-      return { ok: false as const, message: '条目 JSON 无法解析' };
+      return { ok: false as const, i18nKey: 'warehouse.resource.entriesParseFailed' };
     }
     // 功能注释：条目为空但写了描述时，自动生成一条，避免局内导入报「无可导入条目」
     if (entries.length === 0 && (draft.title.trim() || draft.description.trim())) {
       entries = [{
-        title: draft.title.trim() || '世界书',
+        title: draft.title.trim() || WORLDBOOK_DEFAULT_ENTRY_TITLE,
         content: draft.description.trim() || draft.title.trim(),
         keywords: tags,
         constant: true,
@@ -141,28 +110,45 @@ function draftFromResource(item: WarehouseResource): Draft {
   };
 }
 
-function summaryLine(item: WarehouseResource, type: WarehouseResourceType): string {
+function summaryLine(
+  item: WarehouseResource,
+  type: WarehouseResourceType,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): string {
   if (item.description) return item.description;
   if (type === 'worldbook') {
     const n = Array.isArray((item.payload as { entries?: unknown[] })?.entries)
       ? (item.payload as { entries: unknown[] }).entries.length
       : 0;
-    return `${n} 条设定`;
+    return t('warehouse.resource.summaryEntries', { count: n });
   }
   const kind = String((item.payload as { kind?: string })?.kind || 'prompt');
-  return `类型：${kind}`;
+  return t('warehouse.resource.summaryKind', { kind });
 }
 
 const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
+  const { t } = useTranslation();
   const token = useAuthStore((s) => s.user?.token);
   const navigate = useNavigate();
-  const meta = META[resourceType];
+  const meta = useMemo(
+    () => ({
+      titleMine: t(`warehouse.resource.${resourceType}.titleMine`),
+      titlePublic: t(`warehouse.resource.${resourceType}.titlePublic`),
+      subMine: t(`warehouse.resource.${resourceType}.subMine`),
+      subPublic: t(`warehouse.resource.${resourceType}.subPublic`),
+      emptyMine: t(`warehouse.resource.${resourceType}.emptyMine`),
+      emptyPublic: t(`warehouse.resource.${resourceType}.emptyPublic`),
+      createLabel: t(`warehouse.resource.${resourceType}.createLabel`),
+      minePath: resourceType === 'worldbook' ? '/warehouse/worldbooks' : '/warehouse/plugins',
+    }),
+    [resourceType, t],
+  );
   const isPublic = mode === 'public';
 
   const [items, setItems] = useState<WarehouseResource[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
-  const [tag, setTag] = useState('全部');
+  const [tag, setTag] = useState<(typeof PERSONA_TAGS)[number]>(PERSONA_TAG_ALL);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -189,7 +175,7 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
         ? await warehouseResourcesApi.listPublic(token, { type: resourceType, q: query })
         : await warehouseResourcesApi.list(token, { type: resourceType, q: query });
       if (!res?.success) {
-        toast.error(res?.message || '加载失败');
+        toast.error(res?.message || t('warehouse.cards.loadFailed'));
         setItems([]);
         return;
       }
@@ -200,18 +186,18 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
         return list[0]?.id || null;
       });
     } catch (e) {
-      toast.error((e as Error)?.message || '加载失败');
+      toast.error((e as Error)?.message || t('warehouse.cards.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [token, query, resourceType, isPublic]);
+  }, [token, query, resourceType, isPublic, t]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   const filtered = useMemo(() => {
-    if (tag === '全部') return items;
+    if (tag === PERSONA_TAG_ALL) return items;
     return items.filter((c) => (c.tags || []).some((t) => t === tag));
   }, [items, tag]);
 
@@ -231,16 +217,16 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
 
   const saveForm = async () => {
     if (!token) {
-      toast.error('请先登录');
+      toast.error(t('warehouse.cards.loginRequired'));
       return;
     }
     if (!draft.title.trim()) {
-      toast.error('请填写标题');
+      toast.error(t('warehouse.resource.titleRequired'));
       return;
     }
     const packed = resourceFromDraft(resourceType, draft);
     if (!packed.ok) {
-      toast.error(packed.message);
+      toast.error('i18nKey' in packed && packed.i18nKey ? t(packed.i18nKey) : String((packed as { message?: string }).message || ''));
       return;
     }
     setSaving(true);
@@ -249,15 +235,15 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
         ? await warehouseResourcesApi.update(token, editingId, packed.body)
         : await warehouseResourcesApi.create(token, { type: resourceType, ...packed.body });
       if (!res?.success) {
-        toast.error(res?.message || '保存失败');
+        toast.error(res?.message || t('warehouse.cards.saveFailed'));
         return;
       }
-      toast.success(editingId ? '已更新' : '已创建');
+      toast.success(editingId ? t('warehouse.resource.updatedOk') : t('warehouse.resource.createdOk'));
       setFormOpen(false);
       await load();
       if (res.data?.id) setSelectedId(String(res.data.id));
     } catch (e) {
-      toast.error((e as Error)?.message || '保存失败');
+      toast.error((e as Error)?.message || t('warehouse.cards.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -267,10 +253,10 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
     if (!token) return;
     const res = await warehouseResourcesApi.publish(token, item.id, nextPublic);
     if (!res?.success) {
-      toast.error(res?.message || '操作失败');
+      toast.error(res?.message || t('warehouse.cards.operationFailed'));
       return;
     }
-    toast.success(nextPublic ? '已发布到公共库' : '已取消公开');
+    toast.success(nextPublic ? t('warehouse.resource.publishOk') : t('warehouse.resource.unpublishOk'));
     await load();
   };
 
@@ -282,7 +268,7 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
     a.download = `${resourceType}-${item.title || item.id}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('已导出 JSON');
+    toast.success(t('warehouse.cards.exportJsonOk'));
   };
 
   const importFile = async (file: File) => {
@@ -292,7 +278,7 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
       const json = JSON.parse(text);
       const title = String(json.title || '').trim();
       if (!title) {
-        toast.error('导入文件缺少 title');
+        toast.error(t('warehouse.resource.importMissingTitle'));
         return;
       }
       const draftLike: Draft = {
@@ -312,7 +298,7 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
       };
       const packed = resourceFromDraft(resourceType, draftLike);
       if (!packed.ok) {
-        toast.error(packed.message);
+        toast.error('i18nKey' in packed && packed.i18nKey ? t(packed.i18nKey) : String((packed as { message?: string }).message || ''));
         return;
       }
       const res = await warehouseResourcesApi.create(token, {
@@ -320,32 +306,32 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
         ...packed.body,
       });
       if (!res?.success) {
-        toast.error(res?.message || '导入失败');
+        toast.error(res?.message || t('warehouse.cards.importFailed'));
         return;
       }
-      toast.success('已导入');
+      toast.success(t('warehouse.resource.importOk'));
       await load();
     } catch {
-      toast.error('无法解析导入文件');
+      toast.error(t('warehouse.cards.importParseFailed'));
     }
   };
 
   const importFromPublic = async (item: WarehouseResource) => {
     if (!token) {
-      toast.error('请先登录');
+      toast.error(t('warehouse.cards.loginRequired'));
       return;
     }
     setImporting(true);
     try {
       const res = await warehouseResourcesApi.importFromPublic(token, item.id);
       if (!res?.success) {
-        toast.error(res?.message || '导入失败');
+        toast.error(res?.message || t('warehouse.cards.importFailed'));
         return;
       }
-      toast.success('已导入到我的资源库（私人副本）');
+      toast.success(t('warehouse.resource.importToMineOk'));
       navigate(meta.minePath);
     } catch (e) {
-      toast.error((e as Error)?.message || '导入失败');
+      toast.error((e as Error)?.message || t('warehouse.cards.importFailed'));
     } finally {
       setImporting(false);
     }
@@ -355,10 +341,10 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
     if (!token || !deleteId) return;
     const res = await warehouseResourcesApi.remove(token, deleteId);
     if (!res?.success) {
-      toast.error(res?.message || '删除失败');
+      toast.error(res?.message || t('warehouse.cards.deleteFailed'));
       return;
     }
-    toast.success('已删除');
+    toast.success(t('warehouse.cards.deleted'));
     setDeleteId(null);
     await load();
   };
@@ -375,12 +361,12 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
           className={panel.search}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="搜索标题 / 描述 / 标签"
+          placeholder={t('warehouse.resource.searchPlaceholder')}
         />
         {!isPublic ? (
           <>
             <button type="button" className={panel.ghostBtn} onClick={() => fileRef.current?.click()}>
-              导入 JSON
+              {t('warehouse.cards.importJson')}
             </button>
             <input
               ref={fileRef}
@@ -403,31 +389,31 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
             className={panel.primaryBtn}
             onClick={() => navigate(meta.minePath)}
           >
-            去我的库发布
+            {t('warehouse.resource.goPublishMine')}
           </button>
         )}
       </div>
 
       <div className={panel.tags}>
-        {PERSONA_TAGS.map((t) => (
+        {PERSONA_TAGS.map((tg) => (
           <button
-            key={t}
+            key={tg}
             type="button"
-            className={tag === t ? panel.tagActive : panel.tag}
-            onClick={() => setTag(t)}
+            className={tag === tg ? panel.tagActive : panel.tag}
+            onClick={() => setTag(tg)}
           >
-            {t}
+            {personaTagLabel(tg, t)}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <p className={panel.empty}>加载中…</p>
+        <p className={panel.empty}>{t('common.loading')}</p>
       ) : filtered.length === 0 ? (
         <div className={panel.emptyStage}>
           <WarehouseEmptyIcon kind={resourceType === 'plugin' ? 'plugin' : 'worldbook'} />
           <h2>{isPublic ? meta.emptyPublic : meta.emptyMine}</h2>
-          <p>{isPublic ? '去「我的」发布第一份资源吧' : '新建或导入一份资源开始整理'}</p>
+          <p>{isPublic ? t('warehouse.resource.emptyHintPublic') : t('warehouse.resource.emptyHintMine')}</p>
         </div>
       ) : (
         <div className={panel.layout}>
@@ -445,7 +431,7 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
                       {(item.title || '?').slice(0, 1)}
                     </div>
                     {item.isPublic && !isPublic ? (
-                      <span className={panel.portraitBadge}>公开</span>
+                      <span className={panel.portraitBadge}>{t('warehouse.resource.publicBadge')}</span>
                     ) : null}
                     {active ? <span className={panel.checkMark}>✓</span> : null}
                   </div>
@@ -455,17 +441,19 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
                     </div>
                     <p className={panel.cardMeta}>
                       {isPublic
-                        ? `by ${item.authorName || '匿名'}`
-                        : (item.enabled === false ? '已停用' : '已启用')}
+                        ? t('warehouse.resource.byAuthor', {
+                          author: item.authorName || t('warehouse.publicCards.anonymous'),
+                        })
+                        : (item.enabled === false ? t('warehouse.resource.disabled') : t('warehouse.resource.enabled'))}
                     </p>
                     {(item.tags || []).length > 0 ? (
                       <div className={panel.chipRow}>
-                        {(item.tags || []).slice(0, 3).map((t) => (
-                          <span key={t} className={panel.chip}>{t}</span>
+                        {(item.tags || []).slice(0, 3).map((tagItem) => (
+                          <span key={tagItem} className={panel.chip}>{personaTagLabel(tagItem, t)}</span>
                         ))}
                       </div>
                     ) : null}
-                    <p className={panel.cardPersona}>{summaryLine(item, resourceType)}</p>
+                    <p className={panel.cardPersona}>{summaryLine(item, resourceType, t)}</p>
                     <div className={panel.cardActions}>
                       {!isPublic ? (
                         <button
@@ -476,7 +464,7 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
                             openEdit(item);
                           }}
                         >
-                          编辑
+                          {t('warehouse.cards.edit')}
                         </button>
                       ) : (
                         <button
@@ -488,7 +476,7 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
                             void importFromPublic(item);
                           }}
                         >
-                          导入到我的
+                          {t('warehouse.cards.importToMine')}
                         </button>
                       )}
                     </div>
@@ -501,21 +489,21 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
           <aside className={panel.preview}>
             {selected ? (
               <div className={panel.previewInner}>
-                <p className={panel.previewTitle}>{isPublic ? '资源详情' : '当前预览'}</p>
+                <p className={panel.previewTitle}>{isPublic ? t('warehouse.resource.previewDetail') : t('warehouse.resource.previewCurrent')}</p>
                 <h3 className={panel.previewName}>{selected.title}</h3>
                 {isPublic ? (
                   <p className={panel.previewRow}>
-                    <strong>作者</strong>{selected.authorName || '匿名'}
+                    <strong>{t('warehouse.resource.labelAuthor')}</strong>{selected.authorName || t('warehouse.publicCards.anonymous')}
                   </p>
                 ) : null}
                 <p className={panel.previewRow}>
-                  <strong>描述</strong>{selected.description || '—'}
+                  <strong>{t('warehouse.resource.labelDescription')}</strong>{selected.description || '—'}
                 </p>
                 <p className={panel.previewRow}>
-                  <strong>标签</strong>{(selected.tags || []).join('、') || '—'}
+                  <strong>{t('warehouse.resource.labelTags')}</strong>{(selected.tags || []).join('、') || '—'}
                 </p>
                 <p className={panel.previewRow}>
-                  <strong>内容</strong>{summaryLine(selected, resourceType)}
+                  <strong>{t('warehouse.resource.labelContent')}</strong>{summaryLine(selected, resourceType, t)}
                 </p>
                 <div className={panel.previewActions}>
                   {!isPublic ? (
@@ -525,28 +513,28 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
                         className={panel.primaryBtn}
                         onClick={() => openEdit(selected)}
                       >
-                        编辑
+                        {t('warehouse.cards.edit')}
                       </button>
                       <button
                         type="button"
                         className={panel.ghostBtn}
                         onClick={() => exportItem(selected)}
                       >
-                        导出
+                        {t('warehouse.cards.export')}
                       </button>
                       <button
                         type="button"
                         className={panel.ghostBtn}
                         onClick={() => void publish(selected, !selected.isPublic)}
                       >
-                        {selected.isPublic ? '取消公开' : '发布到公共库'}
+                        {selected.isPublic ? t('warehouse.resource.unpublishAction') : t('warehouse.resource.publishAction')}
                       </button>
                       <button
                         type="button"
                         className={panel.dangerBtn}
                         onClick={() => setDeleteId(selected.id)}
                       >
-                        删除
+                        {t('warehouse.cards.delete')}
                       </button>
                     </>
                   ) : (
@@ -556,14 +544,14 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
                       disabled={importing}
                       onClick={() => void importFromPublic(selected)}
                     >
-                      {importing ? '导入中…' : '导入到我的'}
+                      {importing ? t('warehouse.cards.importing') : t('warehouse.cards.importToMine')}
                     </button>
                   )}
                 </div>
               </div>
             ) : (
               <div className={panel.previewInner}>
-                <p className={panel.empty}>选择一项查看详情</p>
+                <p className={panel.empty}>{t('warehouse.resource.selectHint')}</p>
               </div>
             )}
           </aside>
@@ -577,7 +565,7 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
               className={panel.formCard}
               role="dialog"
               aria-modal="true"
-              aria-label={editingId ? '编辑' : '新建'}
+              aria-label={editingId ? t('warehouse.resource.form.dialogAriaEdit') : t('warehouse.resource.form.dialogAriaCreate')}
               onClick={(e) => e.stopPropagation()}
             >
               <aside className={panel.formPreview}>
@@ -589,19 +577,22 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
                     {(draft.title || '?').slice(0, 1)}
                   </div>
                 </div>
-                <h4 className={panel.formPreviewName}>{draft.title.trim() || '未命名'}</h4>
+                <h4 className={panel.formPreviewName}>{draft.title.trim() || t('warehouse.resource.form.unnamed')}</h4>
                 <p className={panel.formPreviewMeta}>
-                  {(draft.description || '在右侧填写内容…').slice(0, 80)}
+                  {(draft.description || t('warehouse.resource.form.previewHint')).slice(0, 80)}
                 </p>
               </aside>
 
               <div className={panel.formBody}>
                 <div className={panel.formBodyHead}>
-                  <h3>{editingId ? '编辑' : '新建'}{resourceType === 'worldbook' ? '世界书' : '插件'}</h3>
+                  <h3>
+                    {editingId ? t('warehouse.resource.form.titleEdit') : t('warehouse.resource.form.titleCreate')}
+                    {resourceType === 'worldbook' ? t('warehouse.resource.form.typeWorldbook') : t('warehouse.resource.form.typePlugin')}
+                  </h3>
                   <button
                     type="button"
                     className={panel.formClose}
-                    aria-label="关闭"
+                    aria-label={t('warehouse.cards.close')}
                     disabled={saving}
                     onClick={() => setFormOpen(false)}
                   >
@@ -610,53 +601,53 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
                 </div>
 
                 <div className={panel.field}>
-                  <label htmlFor="wh-res-title">标题</label>
+                  <label htmlFor="wh-res-title">{t('warehouse.resource.form.titleLabel')}</label>
                   <input
                     id="wh-res-title"
                     value={draft.title}
                     onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
                     maxLength={80}
-                    placeholder="资源标题"
+                    placeholder={t('warehouse.resource.form.titlePlaceholder')}
                     autoFocus
                   />
                 </div>
 
                 <div className={panel.field}>
-                  <label htmlFor="wh-res-desc">描述</label>
+                  <label htmlFor="wh-res-desc">{t('warehouse.resource.form.descriptionLabel')}</label>
                   <textarea
                     id="wh-res-desc"
                     value={draft.description}
                     onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
                     maxLength={2000}
-                    placeholder="简要说明用途"
+                    placeholder={t('warehouse.resource.form.descriptionPlaceholder')}
                   />
                 </div>
 
                 <div className={panel.field}>
-                  <label htmlFor="wh-res-tags">标签</label>
+                  <label htmlFor="wh-res-tags">{t('warehouse.cards.labelTags')}</label>
                   <input
                     id="wh-res-tags"
                     value={draft.tagsText}
                     onChange={(e) => setDraft((d) => ({ ...d, tagsText: e.target.value }))}
-                    placeholder="奇幻, 校园（逗号分隔）"
+                    placeholder={t('warehouse.resource.form.tagsPlaceholder')}
                   />
                 </div>
 
                 {resourceType === 'worldbook' ? (
                   <div className={panel.field}>
-                    <label htmlFor="wh-res-entries">条目 JSON</label>
+                    <label htmlFor="wh-res-entries">{t('warehouse.resource.form.entriesJsonLabel')}</label>
                     <textarea
                       id="wh-res-entries"
                       value={draft.entriesJson}
                       onChange={(e) => setDraft((d) => ({ ...d, entriesJson: e.target.value }))}
-                      placeholder={'[{"title":"设定名","content":"...","keywords":[],"constant":false,"enabled":true}]'}
+                      placeholder={t('warehouse.resource.form.entriesJsonPlaceholder')}
                       style={{ minHeight: 160, fontFamily: 'ui-monospace, monospace', fontSize: 12 }}
                     />
                   </div>
                 ) : (
                   <>
                     <div className={panel.field}>
-                      <span id="wh-plugin-kind-label">插件类型</span>
+                      <span id="wh-plugin-kind-label">{t('warehouse.resource.form.pluginTypeLabel')}</span>
                       <div className={panel.segRow} role="group" aria-labelledby="wh-plugin-kind-label">
                         {['prompt', 'regex', 'tool'].map((k) => (
                           <button
@@ -674,12 +665,12 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
                       </div>
                     </div>
                     <div className={panel.field}>
-                      <label htmlFor="wh-plugin-script">脚本 / 配置文本</label>
+                      <label htmlFor="wh-plugin-script">{t('warehouse.resource.form.scriptLabel')}</label>
                       <textarea
                         id="wh-plugin-script"
                         value={draft.scriptText}
                         onChange={(e) => setDraft((d) => ({ ...d, scriptText: e.target.value }))}
-                        placeholder="提示词、正则规则或工具说明…"
+                        placeholder={t('warehouse.resource.form.scriptPlaceholder')}
                         style={{ minHeight: 140 }}
                       />
                     </div>
@@ -689,7 +680,7 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
                         checked={draft.enabled}
                         onChange={(e) => setDraft((d) => ({ ...d, enabled: e.target.checked }))}
                       />
-                      启用该插件
+                      {t('warehouse.resource.form.enablePlugin')}
                     </label>
                   </>
                 )}
@@ -701,7 +692,7 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
                     disabled={saving}
                     onClick={() => setFormOpen(false)}
                   >
-                    取消
+                    {t('warehouse.cards.cancel')}
                   </button>
                   <button
                     type="button"
@@ -709,7 +700,7 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
                     disabled={saving}
                     onClick={() => void saveForm()}
                   >
-                    {saving ? '保存中…' : '保存'}
+                    {saving ? t('warehouse.cards.saving') : t('warehouse.cards.save')}
                   </button>
                 </div>
               </div>
@@ -723,10 +714,10 @@ const WarehouseResourceLibrary: React.FC<Props> = ({ resourceType, mode }) => {
         isOpen={Boolean(deleteId)}
         onCancel={() => setDeleteId(null)}
         onConfirm={() => void confirmDelete()}
-        title="删除资源"
-        message="删除后不可恢复，确认删除吗？"
-        confirmButtonText="删除"
-        cancelButtonText="取消"
+        title={t('warehouse.resource.deleteTitle')}
+        message={t('warehouse.cards.deleteConfirm')}
+        confirmButtonText={t('warehouse.cards.delete')}
+        cancelButtonText={t('warehouse.cards.cancel')}
       />
     </div>
   );

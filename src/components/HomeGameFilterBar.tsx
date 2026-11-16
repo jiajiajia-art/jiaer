@@ -209,7 +209,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                     className={getTriggerClassName('sort')}
                     aria-haspopup="menu"
                     aria-expanded={openDropdown === 'sort'}
-                    aria-label={`${t('gameBrowse.sort')}，${t('common.currently')}${selectedSortLabel}`}
+                    aria-label={t('gameBrowse.filterCurrent', { label: t('gameBrowse.sort'), value: selectedSortLabel })}
                     onClick={() => toggleDropdown('sort')}
                 >
                     <span className={styles.triggerText}>{selectedSortLabel}</span>
@@ -246,7 +246,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                     className={getTriggerClassName('mode')}
                     aria-haspopup="menu"
                     aria-expanded={openDropdown === 'mode'}
-                    aria-label={`${t('gameBrowse.mode')}，${t('common.currently')}${selectedModeValueLabel}`}
+                    aria-label={t('gameBrowse.filterCurrent', { label: t('gameBrowse.mode'), value: selectedModeValueLabel })}
                     onClick={() => toggleDropdown('mode')}
                 >
                     <span className={styles.triggerText}>{selectedModeTriggerLabel}</span>
@@ -284,7 +284,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                     className={getTriggerClassName('tag')}
                     aria-haspopup="menu"
                     aria-expanded={openDropdown === 'tag'}
-                    aria-label={`${t('gameBrowse.theme')}，${t('common.currently')}${selectedTagValueLabel}`}
+                    aria-label={t('gameBrowse.filterCurrent', { label: t('gameBrowse.theme'), value: selectedTagValueLabel })}
                     onClick={() => toggleDropdown('tag')}
                 >
                     <span className={styles.triggerText}>{selectedTagTriggerLabel}</span>

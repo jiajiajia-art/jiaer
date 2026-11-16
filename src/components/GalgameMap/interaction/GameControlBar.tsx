@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { BiHistory } from 'react-icons/bi';
 import { LuFileText } from 'react-icons/lu';
 import { MdOutlineAutoStories, MdSettings, MdOutlinePerson } from 'react-icons/md';
@@ -55,12 +56,15 @@ const GameControlBar: React.FC<GameControlBarProps> = ({
   isSettingsOpen,
   onSettingsToggle,
 }) => {
+  const { t } = useTranslation();
   const autoPlayDisabled = disableAutoPlay || isTextMode;
   const account = useAuthStore((state) => state.user?.user);
   const creatorTest = new URLSearchParams(window.location.search).get('testMode') === 'creator';
   const currencyType = creatorTest ? 'points' : 'diamonds';
   const displayedBalance = creatorTest ? userPoints : account?.diamonds;
-  const currencyName = creatorTest ? '织梦豆' : 'KK币';
+  const currencyName = creatorTest
+    ? t('galgameUi.currency.dreamBeans')
+    : t('galgameUi.currency.kkCoins');
 
   return (
     <div className={styles.buttonContainer}>
@@ -88,7 +92,7 @@ const GameControlBar: React.FC<GameControlBarProps> = ({
         >
           <div className={styles.buttonInner}>
             <MdOutlinePerson />
-            <span>玩家</span>
+            <span>{t('galgameUi.map.controlBar.player')}</span>
           </div>
         </div>
       )}
@@ -107,7 +111,7 @@ const GameControlBar: React.FC<GameControlBarProps> = ({
         >
           <div className={styles.buttonInner}>
             <BiHistory />
-            <span>历史</span>
+            <span>{t('galgameUi.map.controlBar.history')}</span>
           </div>
         </div>
       )}
@@ -126,7 +130,7 @@ const GameControlBar: React.FC<GameControlBarProps> = ({
         >
           <div className={styles.buttonInner}>
             <LuFileText />
-            <span>文本</span>
+            <span>{t('galgameUi.map.controlBar.text')}</span>
           </div>
         </div>
       )}
@@ -149,7 +153,7 @@ const GameControlBar: React.FC<GameControlBarProps> = ({
         >
           <div className={styles.buttonInner}>
             <MdOutlineAutoStories />
-            <span>自动</span>
+            <span>{t('galgameUi.map.controlBar.auto')}</span>
           </div>
         </div>
       )}
@@ -163,7 +167,7 @@ const GameControlBar: React.FC<GameControlBarProps> = ({
       >
         <div className={styles.buttonInner}>
           <MdSettings />
-          <span>设置</span>
+          <span>{t('galgameUi.map.controlBar.settings')}</span>
         </div>
       </div>
 

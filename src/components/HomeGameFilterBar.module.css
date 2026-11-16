@@ -241,11 +241,12 @@
     }
 
     .trigger {
-        min-height: 38px;
+        min-height: 40px;
         max-width: 100%;
-        padding: 0 8px;
+        padding: 0 10px;
         color: var(--color-text);
-        font-size: 14px;
+        font-size: 15px;
+        font-weight: 650;
         background: transparent;
     }
 

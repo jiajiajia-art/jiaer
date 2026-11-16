@@ -3,6 +3,7 @@ import { initReactI18next } from 'react-i18next';
 
 import zhTranslation from './locales/zh.json';
 import enTranslation from './locales/en.json';
+import jaTranslation from './locales/ja.json';
 import { LANGUAGE } from '../config';
 import {
   DEFAULT_APP_LANGUAGE,
@@ -26,6 +27,9 @@ const resources = {
   en: {
     translation: enTranslation,
   },
+  ja: {
+    translation: jaTranslation,
+  },
 };
 
 const initialLanguage: AppLanguageCode =
@@ -33,19 +37,29 @@ const initialLanguage: AppLanguageCode =
   ?? normalizeAppLanguage(LANGUAGE)
   ?? DEFAULT_APP_LANGUAGE;
 
+function syncDocumentLanguage(code: string) {
+  if (typeof document === 'undefined') return;
+  const normalized = normalizeAppLanguage(code);
+  document.documentElement.lang = normalized === 'zh-TW' ? 'zh-Hant' : (normalized || 'zh');
+}
+
 i18n.use(initReactI18next).init({
   resources,
   lng: initialLanguage,
   fallbackLng: {
     'zh-TW': ['zh'],
+    ja: ['en', 'zh'],
     default: [DEFAULT_APP_LANGUAGE],
   },
-  supportedLngs: ['zh', 'zh-TW', 'en'],
+  supportedLngs: ['zh', 'zh-TW', 'en', 'ja'],
   nonExplicitSupportedLngs: false,
   debug: false,
   interpolation: {
     escapeValue: false,
   },
 });
+
+i18n.on('languageChanged', syncDocumentLanguage);
+syncDocumentLanguage(initialLanguage);
 
 export default i18n;

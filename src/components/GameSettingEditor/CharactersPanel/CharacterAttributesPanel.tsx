@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useImperativeHandle, forwardRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './CharacterAttributesPanel.module.css';
 import type { AttributeSetting } from '../../../api/worldInteraction/worldInteractionApi.type';
 import { getCharacterAttributes, getAvailableAttributes } from './characterAttributeUtils';
@@ -43,6 +44,7 @@ const CharacterAttributesPanel = forwardRef<CharacterAttributesPanelRef, Charact
     fileId,
     onHasUnsavedChanges,
 }, ref) => {
+    const { t } = useTranslation();
     const [isExpanded, setIsExpanded] = useState<boolean>(false);
     const [showSelector, setShowSelector] = useState<boolean>(false);
     const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
@@ -201,7 +203,7 @@ const CharacterAttributesPanel = forwardRef<CharacterAttributesPanelRef, Charact
             : attributeSetting?.attributeDefinitions.npc;
 
         if (!definitions) {
-            toast.error('无法获取属性定义');
+            toast.error(t('createGame.cannotGetAttributeDefinition'));
             return;
         }
 
@@ -275,7 +277,7 @@ const CharacterAttributesPanel = forwardRef<CharacterAttributesPanelRef, Charact
             setShowSelector(false);
         } catch (error) {
             console.error('[CharacterAttributesPanel] 添加属性时发生错误:', error);
-            toast.error('添加属性失败，请查看控制台日志');
+            toast.error(t('createGame.addAttributeFailed'));
             // 即使失败也关闭选择器
             setSelectedKeys(new Set());
             setShowSelector(false);
@@ -363,7 +365,7 @@ const CharacterAttributesPanel = forwardRef<CharacterAttributesPanelRef, Charact
             });
             setDeleteModalOpen(false);
             setAttributeToDelete(null);
-            toast.success('属性已移除');
+            toast.success(t('createGame.attributeRemoved'));
             return;
         }
 
@@ -382,7 +384,7 @@ const CharacterAttributesPanel = forwardRef<CharacterAttributesPanelRef, Charact
                 response,
             });
 
-            toast.success('属性删除成功');
+            toast.success(t('createGame.attributeDeleted'));
             // 软删除：标记为已删除，不触发整体数据刷新
             setLocalAttributes(prev => {
                 const newMap = new Map(prev);
@@ -415,7 +417,7 @@ const CharacterAttributesPanel = forwardRef<CharacterAttributesPanelRef, Charact
             setDeleteModalOpen(false);
             setAttributeToDelete(null);
         } catch (error) {
-            toast.error('删除属性失败，请查看控制台日志');
+            toast.error(t('createGame.deleteAttributeFailed'));
             setDeleteModalOpen(false);
             setAttributeToDelete(null);
         }
@@ -619,7 +621,7 @@ const CharacterAttributesPanel = forwardRef<CharacterAttributesPanelRef, Charact
                         {/* 属性列表 */}
                         {displayAttributes.length === 0 ? (
                             <p className={styles.mutedSmall}>
-                                暂无属性。{availableAttributes.length > 0 ? '点击上方按钮添加属性。' : '请先在属性设置面板中定义属性。'}
+                                暂无属性。{availableAttributes.length > 0 ? t('gameSettingEditor.charactersPanel.characterAttributesPanel.s1708efa7df') : t('gameSettingEditor.charactersPanel.characterAttributesPanel.s089fb49214')}
                             </p>
                         ) : (
                             displayAttributes.map((attr) => {
@@ -670,7 +672,7 @@ const CharacterAttributesPanel = forwardRef<CharacterAttributesPanelRef, Charact
                                                         type="text"
                                                         value={attr.formula}
                                                         onChange={(e) => handleFormulaChange(attr.key, e.target.value)}
-                                                        placeholder="输入公式..."
+                                                        placeholder={t('gameSettingEditor.charactersPanel.characterAttributesPanel.s35da5cc742')}
                                                     />
                                                 </label>
                                             </div>
@@ -688,10 +690,10 @@ const CharacterAttributesPanel = forwardRef<CharacterAttributesPanelRef, Charact
                 isOpen={deleteModalOpen}
                 onConfirm={handleConfirmDelete}
                 onCancel={handleCancelDelete}
-                title="删除属性"
+                title={t('gameSettingEditor.attributeGrowthPanel.attributeGrowthPanel.sf49294e6c8')}
                 message={`确定要删除属性「${displayAttributes.find(a => a.key === attributeToDelete)?.displayName}」吗？删除后不可恢复。`}
-                confirmButtonText="确认删除"
-                cancelButtonText="取消"
+                confirmButtonText={t('createGame.confirmDelete')}
+                cancelButtonText={t('warehouse.cards.cancel')}
             />
         </>
     );

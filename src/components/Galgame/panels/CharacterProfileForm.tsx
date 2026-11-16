@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import {
   CHARACTER_PROFILE_LIMITS,
@@ -70,11 +71,11 @@ type ProfileTextField = 'relationship' | 'summary' | 'attitudeToPlayer' | 'detai
 type ConfirmKind = 'avatar' | ProfileTextField;
 type AiBusyKey = ConfirmKind;
 
-const PROFILE_FIELD_LABEL: Record<ProfileTextField, string> = {
-  relationship: '关系',
-  summary: '简介',
-  attitudeToPlayer: '对你的态度',
-  detailedBio: '详细简介',
+const PROFILE_FIELD_LABEL_KEY: Record<ProfileTextField, string> = {
+  relationship: 'galgameUi.npcProfile.fields.relationship',
+  summary: 'galgameUi.npcProfile.fields.summary',
+  attitudeToPlayer: 'galgameUi.npcProfile.fields.attitudeToPlayer',
+  detailedBio: 'galgameUi.npcProfile.fields.detailedBio',
 };
 
 const emptyValues = (): CharacterProfileFormValues => ({
@@ -123,23 +124,23 @@ interface CharacterProfileFormProps {
   onSubmit: (profile: Omit<PlayerEditableNpc, 'id' | 'source' | 'encountered'> & { id?: string }) => void | Promise<void>;
 }
 
-const GENDER_LABEL: Record<NpcGender, string> = {
-  male: '男',
-  female: '女',
-  other: '其他',
-  unknown: '未知',
+const GENDER_LABEL_KEY: Record<NpcGender, string> = {
+  male: 'galgameUi.npcProfile.gender.male',
+  female: 'galgameUi.npcProfile.gender.female',
+  other: 'galgameUi.npcProfile.gender.other',
+  unknown: 'galgameUi.npcProfile.gender.unknown',
 };
 
-const IMPORTANCE_LABEL: Record<NpcImportance, string> = {
-  major: '重要',
-  minor: '次要',
-  extra: '路人',
+const IMPORTANCE_LABEL_KEY: Record<NpcImportance, string> = {
+  major: 'galgameUi.npcProfile.importance.major',
+  minor: 'galgameUi.npcProfile.importance.minor',
+  extra: 'galgameUi.npcProfile.importance.extra',
 };
 
-const SURVIVAL_LABEL: Record<NpcSurvival, string> = {
-  alive: '存活',
-  dead: '死亡',
-  unknown: '未知',
+const SURVIVAL_LABEL_KEY: Record<NpcSurvival, string> = {
+  alive: 'galgameUi.npcProfile.survival.alive',
+  dead: 'galgameUi.npcProfile.survival.dead',
+  unknown: 'galgameUi.npcProfile.survival.unknown',
 };
 
 function reqLabel(text: string, required = false) {
@@ -177,13 +178,17 @@ function fieldLabelWithAi(opts: {
 /** 功能注释：局内添加/编辑角色档案（UE：头像 + 必填 + 可折叠补充档案）。 */
 const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
   initial,
-  submitLabel = '保存',
-  formTitle = '添加新角色',
+  submitLabel,
+  formTitle,
   sessionAvatarThumbUrl = null,
   avatarThumbsPending = false,
   onCancel,
   onSubmit,
 }) => {
+  const { t } = useTranslation();
+  const resolvedSubmitLabel = submitLabel || t('common.save');
+  const resolvedFormTitle = formTitle || t('galgameUi.npcProfile.addCharacter');
+  const fieldLabel = (field: ProfileTextField) => t(PROFILE_FIELD_LABEL_KEY[field]);
   const { sessionId } = useGameStore();
   const {
     data: sessionAvatarPricing,
@@ -480,7 +485,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
         detailedBio: values.detailedBio,
       });
       if (!res?.success || !res.data?.text) {
-        toast.error(res?.message || `${PROFILE_FIELD_LABEL[field]}生成失败`);
+        toast.error(res?.message || t('galgameUi.npcProfile.generateFailed', { field: fieldLabel(field) }));
         return;
       }
       setField(field, res.data.text);
@@ -491,12 +496,15 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
         updateUser({ points: res.data.remainingPoints });
       }
       toast.success(
-        `${PROFILE_FIELD_LABEL[field]}已生成（-${res.data.billing
-          ? formatSessionProfileCharge(res.data.billing)
-          : textChargeText}）`,
+        t('galgameUi.npcProfile.generated', {
+          field: fieldLabel(field),
+          billing: res.data.billing
+            ? formatSessionProfileCharge(res.data.billing)
+            : textChargeText,
+        }),
       );
     } catch (e) {
-      toast.error(getApiErrorMessage(e, `${PROFILE_FIELD_LABEL[field]}生成失败`));
+      toast.error(getApiErrorMessage(e, t('galgameUi.npcProfile.generateFailed', { field: fieldLabel(field) })));
     } finally {
       setAiBusy((prev) => ({ ...prev, [field]: false }));
     }
@@ -560,7 +568,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
       <form className={styles.form} onSubmit={handleSubmit}>
         <div className={styles.formScroll} ref={formScrollRef}>
         <div className={styles.formTop}>
-          <h3 className={styles.formTitle}>{formTitle}</h3>
+          <h3 className={styles.formTitle}>{resolvedFormTitle}</h3>
           <button type="button" className={styles.formClose} onClick={handleCancel} aria-label="关闭" disabled={formLocked}>
             ×
           </button>
@@ -630,18 +638,18 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
 
         <section className={styles.block} aria-label="必填档案">
           <label className={styles.field}>
-            {reqLabel('姓名', true)}
+            {reqLabel(t('galgameUi.npcProfile.fields.name'), true)}
             <input
               value={values.name}
               maxLength={CHARACTER_PROFILE_LIMITS.name.max}
-              placeholder="角色姓名"
+              placeholder={t('galgameUi.npcProfile.fields.name')}
               onChange={(e) => setField('name', e.target.value)}
             />
           </label>
 
           <div className={styles.field}>
-            {reqLabel('性别', true)}
-            <div className={styles.chips} role="radiogroup" aria-label="性别">
+            {reqLabel(t('galgameUi.npcProfile.fields.gender'), true)}
+            <div className={styles.chips} role="radiogroup" aria-label={t('galgameUi.npcProfile.fields.gender')}>
               {(values.gender === 'other' || values.gender === 'unknown'
                 ? NPC_GENDERS
                 : NPC_GENDERS.filter((g) => g !== 'other' && g !== 'unknown')
@@ -657,7 +665,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
                     setField('gender', g);
                   }}
                 >
-                  {GENDER_LABEL[g]}
+                  {t(GENDER_LABEL_KEY[g])}
                 </button>
               ))}
             </div>
@@ -665,7 +673,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
 
           <div className={styles.field}>
             {fieldLabelWithAi({
-              text: `关系（≤${CHARACTER_PROFILE_LIMITS.relationship.max}）`,
+              text: `${fieldLabel('relationship')}（≤${CHARACTER_PROFILE_LIMITS.relationship.max}）`,
               chargeText: textChargeText,
               required: true,
               busy: isAiBusy('relationship'),
@@ -685,7 +693,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
 
           <div className={styles.field}>
             {fieldLabelWithAi({
-              text: `简介（≤${CHARACTER_PROFILE_LIMITS.summary.max}）`,
+              text: `${fieldLabel('summary')}（≤${CHARACTER_PROFILE_LIMITS.summary.max}）`,
               chargeText: textChargeText,
               required: true,
               busy: isAiBusy('summary'),
@@ -706,7 +714,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
 
           <div className={styles.field}>
             {fieldLabelWithAi({
-              text: `对你的态度（≤${CHARACTER_PROFILE_LIMITS.attitudeToPlayer.max}）`,
+              text: `${fieldLabel('attitudeToPlayer')}（≤${CHARACTER_PROFILE_LIMITS.attitudeToPlayer.max}）`,
               chargeText: textChargeText,
               required: true,
               busy: isAiBusy('attitudeToPlayer'),
@@ -748,7 +756,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
           <section className={styles.supplement} aria-label="补充档案">
             <div className={styles.field}>
               {fieldLabelWithAi({
-                text: `详细简介（≤${CHARACTER_PROFILE_LIMITS.detailedBio.max}）`,
+                text: `${fieldLabel('detailedBio')}（≤${CHARACTER_PROFILE_LIMITS.detailedBio.max}）`,
                 chargeText: textChargeText,
                 busy: isAiBusy('detailedBio'),
                 disabled: formLocked,
@@ -776,7 +784,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
                     className={`${styles.chip} ${values.importance === v ? styles.chipActive : ''}`}
                     onClick={() => setField('importance', values.importance === v ? '' : v)}
                   >
-                    {IMPORTANCE_LABEL[v]}
+                    {t(IMPORTANCE_LABEL_KEY[v])}
                   </button>
                 ))}
               </div>
@@ -792,7 +800,7 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
                     className={`${styles.chip} ${values.survival === v ? styles.chipActive : ''}`}
                     onClick={() => setField('survival', values.survival === v ? '' : v)}
                   >
-                    {SURVIVAL_LABEL[v]}
+                    {t(SURVIVAL_LABEL_KEY[v])}
                   </button>
                 ))}
               </div>
@@ -803,10 +811,10 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
 
         <div className={styles.actions}>
           <button type="button" className={styles.secondary} onClick={handleCancel} disabled={formLocked}>
-            取消
+            {t('common.cancel')}
           </button>
           <button type="submit" className={styles.primary} disabled={formLocked || fieldAiBusy || avatarUploading}>
-            {saving ? '保存中…' : submitLabel}
+            {saving ? t('createGame.saving') : resolvedSubmitLabel}
           </button>
         </div>
       </form>
@@ -815,12 +823,16 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
         isOpen={Boolean(confirmKind)}
         variant="dossier"
         title={confirmKind === 'avatar'
-          ? '确认生成头像'
-          : `确认生成${confirmKind ? PROFILE_FIELD_LABEL[confirmKind] : ''}`}
+          ? t('galgameUi.npcProfile.confirmAvatarTitle')
+          : t('galgameUi.npcProfile.confirmGenerateTitle', {
+            field: confirmKind ? fieldLabel(confirmKind) : '',
+          })}
         message={confirmKind === 'avatar' ? (
           <div className={styles.confirmMsgStack}>
             <p className={styles.confirmMsgText}>
-              {`将扣除 ${sessionAvatarPrice == null ? '—' : avatarChargeText}生成 AI 头像，是否继续？`}
+              {t('galgameUi.npcProfile.confirmAvatarMessage', {
+                charge: sessionAvatarPrice == null ? t('galgameUi.common.notAvailable') : avatarChargeText,
+              })}
             </p>
             <button
               type="button"
@@ -828,23 +840,26 @@ const CharacterProfileForm: React.FC<CharacterProfileFormProps> = ({
               onClick={() => setAvatarPromptOpen((open) => !open)}
               aria-expanded={avatarPromptOpen}
             >
-              <span>{avatarPromptOpen ? '收起画风与提示词' : '画风与提示词'}</span>
+              <span>{avatarPromptOpen ? t('galgameUi.playerArchive.avatar.togglePrompt') : t('galgameUi.playerArchive.avatar.showPrompt')}</span>
               <span className={styles.promptCueChevron} aria-hidden>
                 {avatarPromptOpen ? '▴' : '▾'}
               </span>
             </button>
           </div>
         ) : (
-          `将扣除 ${textChargeText}生成「${confirmKind ? PROFILE_FIELD_LABEL[confirmKind] : ''}」，是否继续？`
+          t('galgameUi.npcProfile.confirmGenerateMessage', {
+            charge: textChargeText,
+            field: confirmKind ? fieldLabel(confirmKind) : '',
+          })
         )}
-        confirmText="确认生成"
-        cancelText="取消"
+        confirmText={t('galgameUi.common.confirmGenerate')}
+        cancelText={t('common.cancel')}
         overlayZIndex={3600}
         onConfirm={handleConfirmGenerate}
         onCancel={closeConfirmModal}
       >
         {confirmKind === 'avatar' && avatarPromptOpen ? (
-          <div className={styles.promptCuePanel} role="region" aria-label="画风与提示词">
+          <div className={styles.promptCuePanel} role="region" aria-label={t('galgameUi.playerArchive.avatar.promptAria')}>
             <div className={styles.promptCueSection}>
               <div className={styles.promptCueLabelRow}>
                 <span className={styles.promptCueLabel}>风格选择</span>

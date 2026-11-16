@@ -136,6 +136,13 @@ const getSubmissionLimitSummary = (activity: PromotionActivity, t: TranslateFn) 
 
 const getImportableGameId = (game: UserGameData) => String(game.file_id || game.id || '').trim();
 
+function localizeAvailabilityText(text: string, translate: TranslateFn) {
+    const raw = String(text || '').trim();
+    if (raw === '活动已结束') return translate('promotion.activityEnded');
+    if (raw === '活动未开始') return translate('promotion.activityNotStarted');
+    return text;
+}
+
 const getActivitySubmissionAvailability = (
     activity: PromotionActivity,
     mySubmissions: PromotionSubmission[],
@@ -144,7 +151,7 @@ const getActivitySubmissionAvailability = (
     if (activity.canSubmit === false) {
         return {
             canSubmit: false,
-            availabilityText: activity.availabilityText || t('promotion.currentActivityNotSubmittable'),
+            availabilityText: localizeAvailabilityText(activity.availabilityText || '', t) || t('promotion.currentActivityNotSubmittable'),
         };
     }
 
@@ -183,7 +190,7 @@ const getActivitySubmissionAvailability = (
 
     return {
         canSubmit: true,
-        availabilityText: activity.availabilityText || '',
+        availabilityText: localizeAvailabilityText(activity.availabilityText || '', t),
     };
 };
 
@@ -563,10 +570,12 @@ const PromotionCenter: React.FC = () => {
                                             image: t('promotion.imageSubmission'),
                                             video: t('promotion.videoSubmission'),
                                         }),
+                                        t('promotion.formSeparator'),
                                     );
                                     const endTimeBadge = formatPromotionEndTimeBadge(activity, {
                                         longTerm: t('promotion.longTermActivity'),
                                         endTimePrefix: t('promotion.endTimePrefix'),
+                                        endTimePattern: t('promotion.endTimePattern'),
                                     });
 
                                     return (

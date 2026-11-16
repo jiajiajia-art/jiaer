@@ -19,7 +19,7 @@ import {
 
 type FabPos = { side: 'left' | 'right'; y: number; docked: boolean };
 const POS_KEY = 'funloom:aiRouteFab';
-const SIZE = 52;
+const SIZE = 48;
 const EDGE_DOCK_PX = 28;
 const DRAG_THRESHOLD = 6;
 
@@ -41,7 +41,8 @@ function savePos(p: FabPos) {
 
 const AiRouteFab: React.FC<{ label?: string }> = ({ label = 'AI 线路' }) => {
   const token = useAuthStore((s) => s.user?.token);
-  const [routes, setRoutes] = useState<AiRouteOption[] | null>(null);
+  // 功能注释：先空数组占位立刻画球，避免线路接口慢/失败时整颗悬浮球不出现
+  const [routes, setRoutes] = useState<AiRouteOption[]>([]);
   const [selectedId, setSelectedId] = useState(getSelectedAiRouteId);
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<FabPos>(readPos);
@@ -55,7 +56,16 @@ const AiRouteFab: React.FC<{ label?: string }> = ({ label = 'AI 线路' }) => {
   useEffect(() => { load(); }, [load]);
   useEffect(() => subscribeAiRoute(() => setSelectedId(getSelectedAiRouteId())), []);
 
-  const active = routes ? resolveActiveRoute(routes, selectedId) : undefined;
+  // 功能注释：曾拖到贴边收起时，进局先展开一截，避免玩家以为悬浮球丢了
+  useEffect(() => {
+    if (!pos.docked) return;
+    const next = { ...pos, docked: false };
+    setPos(next);
+    savePos(next);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅挂载时纠正贴边收起态
+  }, []);
+
+  const active = resolveActiveRoute(routes, selectedId);
 
   const onPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
     if (e.button !== 0) return;
@@ -112,14 +122,12 @@ const AiRouteFab: React.FC<{ label?: string }> = ({ label = 'AI 线路' }) => {
     }
   };
 
-  // 功能注释：线路接口还没返回前不渲染；返回空列表也照常显示入口（走平台默认）
-  if (!routes) return null;
-
   const style: React.CSSProperties = drag
     ? { left: drag.x - SIZE / 2, top: drag.y - SIZE / 2 }
     : {
       top: `calc(${(pos.y * 100).toFixed(2)}% - ${SIZE / 2}px)`,
-      [pos.side]: pos.docked ? -SIZE * 0.58 : 12,
+      // 功能注释：收起只藏一半，移动端仍能看见握把
+      [pos.side]: pos.docked ? -SIZE * 0.45 : 12,
     };
 
   const name = active?.name ?? '平台默认';
@@ -141,12 +149,14 @@ const AiRouteFab: React.FC<{ label?: string }> = ({ label = 'AI 线路' }) => {
       >
         <span className={styles.ring} aria-hidden="true" />
         <span className={styles.core} aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="6" cy="18" r="2.2" />
-            <circle cx="18" cy="6" r="2.2" />
-            <path d="M6 15.8V10a4 4 0 0 1 4-4h5.8" />
-            <path d="M18 8.2V14a4 4 0 0 1-4 4H8.2" strokeOpacity="0.55" />
-          </svg>
+          {/* 功能注释：AI 线路悬浮球用网站 logo，与站内品牌一致 */}
+          <img
+            className={styles.logo}
+            src={`${import.meta.env.BASE_URL}data/assets/funloom_icon.png`}
+            srcSet={`${import.meta.env.BASE_URL}data/assets/funloom_icon.png 1x, ${import.meta.env.BASE_URL}data/assets/funloom_icon@2x.png 2x`}
+            alt=""
+            draggable={false}
+          />
         </span>
         {pos.docked && !drag && <span className={styles.peekGrip} aria-hidden="true" />}
       </button>

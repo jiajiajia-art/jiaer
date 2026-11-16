@@ -62,11 +62,11 @@
 
 .title {
     flex: 1;
-    font-size: 18px;
-    font-weight: 600;
+    font-size: var(--modal-fs-title);
+    font-weight: var(--modal-fw-title);
     color: var(--color-text);
     margin: 0;
-    line-height: 1.4;
+    line-height: var(--modal-lh-title);
 }
 
 .closeButton {
@@ -107,9 +107,9 @@
 }
 
 .message {
-    font-size: 15px;
+    font-size: var(--modal-fs-body);
     color: var(--color-text-secondary);
-    line-height: 1.6;
+    line-height: var(--modal-lh-body);
     margin: 0;
 }
 
@@ -125,8 +125,8 @@
     color: var(--color-on-primary);
     border: none;
     border-radius: 10px;
-    font-size: 15px;
-    font-weight: 600;
+    font-size: var(--modal-fs-button);
+    font-weight: var(--modal-fw-button);
     cursor: pointer;
     transition: all 0.2s;
     min-width: 100px;

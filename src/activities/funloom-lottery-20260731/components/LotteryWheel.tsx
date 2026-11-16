@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   PRIZE_DISPLAY,
   PRIZE_KEYS,
@@ -36,6 +37,7 @@ interface LotteryWheelProps {
  * 体验：点击后立即匀速转（掩盖 API 等待），结果返回后再减速落点。
  */
 const LotteryWheel: React.FC<LotteryWheelProps> = ({ spinning, targetPrizeKey, onSpinEnd }) => {
+  const { t } = useTranslation();
   const wheelRef = useRef<HTMLDivElement>(null);
   const [rotation, setRotation] = useState(0);
   const [transitionOn, setTransitionOn] = useState(false);
@@ -111,6 +113,7 @@ const LotteryWheel: React.FC<LotteryWheelProps> = ({ spinning, targetPrizeKey, o
         >
           {PRIZE_KEYS.map((key, index) => {
             const midAngle = index * sector + sector / 2;
+            const label = t(`lottery.prizes.${key}.label`);
             return (
               <div
                 key={key}
@@ -121,12 +124,12 @@ const LotteryWheel: React.FC<LotteryWheelProps> = ({ spinning, targetPrizeKey, o
                   <div className={styles.prizeFace}>
                     <img
                       src={PRIZE_IMAGES[key]}
-                      alt={PRIZE_DISPLAY[key].label}
+                      alt={label}
                       className={styles.sectorImg}
                       draggable={false}
                       decoding="async"
                     />
-                    <span className={styles.sectorName}>{PRIZE_DISPLAY[key].label}</span>
+                    <span className={styles.sectorName}>{label}</span>
                   </div>
                 </div>
               </div>

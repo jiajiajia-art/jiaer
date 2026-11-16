@@ -18,3 +18,8 @@
     background: var(--main-background); color: var(--color-on-primary);
 }
 .name { font-weight: 600; }
+.skinLabel { margin-inline-start: 6px; }
+
+@media (max-width: 768px) {
+  .skinLabel { display: none; }
+}

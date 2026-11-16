@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, useImperativeHandle, forwardRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './MapTab.module.css';
 import sharedStyles from './shared.module.css';
 import type { Scene, PlacedScene } from './types';
@@ -31,6 +32,7 @@ const MapTab = forwardRef<MapTabRef, MapTabProps>(({
     onDataChange,
     onHasUnsavedChanges,
 }, ref) => {
+    const { t } = useTranslation();
     const [placedScenes, setPlacedScenes] = useState<PlacedScene[]>([]);
     const [draggingSceneId, setDraggingSceneId] = useState<string | null>(null);
     const [selectedSceneIdInMap, setSelectedSceneIdInMap] = useState<string | null>(null);
@@ -332,12 +334,12 @@ const MapTab = forwardRef<MapTabRef, MapTabProps>(({
     // 保存场景位置
     const handleSaveScenePositions = useCallback(async () => {
         if (!fileId) {
-            toast.error('文件ID不存在，请先上传文件');
+            toast.error(t('gameSettingEditor.mapPanel.mapTab.s6feba82bdd'));
             return;
         }
 
         if (placedScenes.length === 0) {
-            toast.error('没有需要保存的场景位置');
+            toast.error(t('gameSettingEditor.mapPanel.mapTab.s269388bee9'));
             return;
         }
 
@@ -359,11 +361,11 @@ const MapTab = forwardRef<MapTabRef, MapTabProps>(({
                     onDataChange();
                 }
             } else {
-                toast.error('保存失败，请检查网络连接');
+                toast.error(t('gameSettingEditor.mapPanel.mapTab.s36dc107338'));
             }
         } catch (error: any) {
             console.error('保存失败:', error);
-            toast.error('保存失败：' + (error.message || '请检查网络连接'));
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.sb12163000c') + (error.message || t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s73a13d2b99')));
         }
     }, [placedScenes, fileId, onHasUnsavedChanges, onDataChange]);
 
@@ -392,7 +394,7 @@ const MapTab = forwardRef<MapTabRef, MapTabProps>(({
                 <img
                     ref={mapImageRef}
                     src={currentMapSrc}
-                    alt="世界地图"
+                    alt={t('gameSettingEditor.mapPanel.mapTab.s9ebf999e1b')}
                     className={sharedStyles.sceneImage}
                     draggable={false}
                     key={`map-${worldMapImage || 'default'}`}
@@ -445,7 +447,7 @@ const MapTab = forwardRef<MapTabRef, MapTabProps>(({
                             >
                                 <img
                                     src={scene.image ? getImageUrl(scene.image) : DEFAULT_SCENE_IMAGE}
-                                    alt="场景"
+                                    alt={t('createGame.circleNav.scene')}
                                     draggable={false}
                                     className={styles.sceneIcon}
                                     style={{
@@ -532,7 +534,7 @@ const MapTab = forwardRef<MapTabRef, MapTabProps>(({
                     </button>
                     <div className={sharedStyles.confirmHint}>
                         {placedScenes.length === 0
-                            ? '暂无场景位置需要保存'
+                            ? t('gameSettingEditor.mapPanel.mapTab.s8c7a5da907')
                             : `将保存 ${placedScenes.length} 个场景的位置信息`}
                     </div>
                 </div>

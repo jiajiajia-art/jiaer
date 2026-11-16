@@ -33,6 +33,15 @@ test('mapCountryToRegion_港澳台应为繁体微信', () => {
   }
 });
 
+test('mapCountryToRegion_日本应为日语海外', () => {
+  assert.deepEqual(mapCountryToRegion('JP'), {
+    country: 'JP',
+    language: 'ja',
+    payRegion: 'overseas',
+    defaultPayMethod: 'overseas',
+  });
+});
+
 test('mapCountryToRegion_其它与空应为英文海外', () => {
   assert.equal(mapCountryToRegion('US').language, 'en');
   assert.equal(mapCountryToRegion('US').defaultPayMethod, 'overseas');
@@ -46,10 +55,11 @@ test('calcOverseasCustomDiamonds_最低一钻', () => {
   assert.equal(calcWechatCustomDiamonds(1), 10);
 });
 
-test('App_启动应hydrateFromIp强制语言', () => {
+test('App_启动应hydrateFromIp且用户已选语言时不覆盖', () => {
   const app = read('src/App.tsx');
   const store = read('src/store/useGeoRegionStore.ts');
   assert.match(app, /hydrateFromIp/);
+  assert.match(store, /hasUserLanguageChoice\(\)/);
   assert.match(store, /applyAppLanguage\(region\.language/);
   assert.match(store, /fetchGeoRegion/);
 });

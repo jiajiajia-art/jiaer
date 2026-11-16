@@ -1,0 +1,373 @@
+{
+  "galgameUi": {
+    "common": {
+      "requestFailed": "Request failed",
+      "notSet": "Not set",
+      "none": "None",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "selected": "Selected",
+      "select": "Select",
+      "add": "Add",
+      "delete": "Delete",
+      "importConfirm": "Confirm import",
+      "importing": "Importing…",
+      "done": "Done",
+      "edit": "Edit",
+      "confirmGenerate": "Confirm generation",
+      "generateFailed": "Generation failed",
+      "saveFailed": "Save failed",
+      "importFailed": "Import failed",
+      "loginAndEnterSession": "Please sign in and enter a playable session first",
+      "generating": "Generating…",
+      "aiGenerate": "AI generate · {{charge}}",
+      "uploading": "Uploading…",
+      "uploadImage": "Upload image",
+      "confirm": "OK",
+      "unknownCharacter": "Unknown character",
+      "chooseAction": "Choose your action",
+      "continueGame": "Continue",
+      "storyUnfolding": "Story unfolding",
+      "emptyContent": "No content yet",
+      "customInputOr": "Or enter your own",
+      "customInput": "Custom input",
+      "customInputPlaceholder": "Type what you want to say or do...",
+      "inputPlaceholderShort": "Enter text...",
+      "send": "Send",
+      "narration": "Narration",
+      "invalidEntry": "Invalid entry",
+      "alreadyExists": "Already exists",
+      "maxCount": "Up to {{max}} items",
+      "unnamedWorldBook": "Untitled world book",
+      "entrySettingsCount": "{{count}} entries",
+      "disabledBadge": " · Disabled",
+      "entryCountBadge": " · {{count}} entries",
+      "constantTrigger": "Always on",
+      "keywordTrigger": "Keyword-triggered",
+      "noRouteSelected": "Not selected",
+      "changingRoute": "Switching…",
+      "confirmChangeRoute": "Confirm switch",
+      "deleteAria": "Remove {{word}}",
+      "cardInitial": "C",
+      "uploadCompressing": "Compressing upload…",
+      "uploadCompressingDetail": "Compressing upload (≤1MB, no background processing)…",
+      "avatar": "Avatar",
+      "zoom": "Zoom",
+      "portrait": "Portrait",
+      "notAvailable": "—"
+    },
+    "currency": {
+      "dreamBeans": "Dream Beans",
+      "kkCoins": "KK Coins",
+      "insufficientDreamBeans": "Not enough Dream Beans (need {{need}}, you have {{current}})",
+      "insufficientKkCoins": "Not enough KK Coins"
+    },
+    "serverAttributes": {
+      "empty": "No attribute panels yet"
+    },
+    "playPanel": {
+      "backAria": "Back"
+    },
+    "gameConfirm": {
+      "defaultTitle": "Confirm",
+      "defaultMessage": "Continue with this action?",
+      "confirm": "Confirm",
+      "closeAria": "Close"
+    },
+    "attributes": {
+      "importCardTitle": "Import character card",
+      "importCardSubtitle": "Pick a card from your library to overwrite this session profile",
+      "importPreviewTitle": "Import preview",
+      "attrSectionTitle": "Stats",
+      "attrSectionAria": "Stats"
+    },
+    "route": {
+      "currentSection": "Current opening route",
+      "currentHint": "Shows your opening route; switching changes how the story develops",
+      "changeTitle": "Change route",
+      "changeMessage": "Switch to this opening route? The story will follow the new route.",
+      "changeOk": "Confirm switch",
+      "progressDesc": "Story route and progress",
+      "routeRemark": "Route note (optional)",
+      "routeRemarkPlaceholder": "Reason for switching or what you expect next",
+      "switchedToast": "Switched to route: {{title}}",
+      "confirmSwitchTitle": "Confirm route change",
+      "optionalRoutes": "Available routes",
+      "stageNote": "Stage notes",
+      "currentRoute": "Current route"
+    },
+    "systems": {
+      "toast": {
+        "loadWorldBookFailed": "Failed to load my world books",
+        "cannotSaveServer": "Cannot save to server right now",
+        "worldBookSaved": "World book saved",
+        "selectTemplate": "Please select a template",
+        "selectMyWorldBook": "Please select a world book",
+        "importedCount": "Imported {{count}} entries; you can keep editing",
+        "fileReadConfirmImport": "File loaded; confirm to import",
+        "readFileFailed": "Failed to read file",
+        "enterAvoidWord": "Enter a word to avoid",
+        "avoidWordsUpdated": "Avoid-words list updated",
+        "positionSaved": "Position saved",
+        "positionGenerated": "{{field}} generated (−{{billing}})",
+        "confirmGeneratePositionTitle": "Generate {{field}}?",
+        "confirmGeneratePositionMessage": "{{charge}} will be charged to generate 「{{field}}」. Continue?"
+      },
+      "nav": {
+        "worldBook": "World book",
+        "worldBookDesc": "Loaded entries and rules",
+        "writingStyle": "Writing style",
+        "writingStyleDesc": "Style preferences and avoid-words",
+        "position": "Player position",
+        "positionDesc": "Current identity and stance",
+        "editEntry": "Edit entry",
+        "newEntry": "New entry",
+        "importWorldBook": "Import world book",
+        "avoidWords": "Avoid-words",
+        "worldBookRules": "Loaded entries and rules",
+        "importWorldBookHint": "Paste, upload, template, or import from my world books",
+        "writingStyleHint": "Style / pace / POV / description / plot",
+        "avoidEditHint": "Drag reorder in phase 2; add or remove here",
+        "positionHint": "Current identity and stance",
+        "positionEditHint": "Edit identity and stance"
+      },
+      "actions": {
+        "importWorldBook": "Import world book",
+        "addEntry": "Add entry",
+        "editAvoidWords": "Edit avoid-words",
+        "emptyWorldBook": "No world book entries; add or import",
+        "keywordsPrefix": "Trigger keywords:",
+        "loaded": "Loaded",
+        "editPosition": "Edit position",
+        "changeRoute": "Change route"
+      },
+      "form": {
+        "title": "Title",
+        "entryTitlePlaceholder": "Entry title",
+        "content": "Content",
+        "entryContentPlaceholder": "Summary / rule text",
+        "triggerKeywords": "Trigger keywords",
+        "keywordsPlaceholder": "Comma-separated",
+        "constant": "Always include",
+        "status": "Status",
+        "pasteWorldBookLabel": "Paste world book (JSON or plain text)",
+        "pasteWorldBookPlaceholder": "JSON array / {entries} / editor morePromptForms, or plain text separated by blank lines",
+        "pickJsonFile": "Click to choose .json or text file",
+        "pickFileHint": "Select a file before drag-and-drop",
+        "tabMine": "My world books",
+        "tabPaste": "Paste",
+        "tabUpload": "Upload file",
+        "tabTemplate": "Templates",
+        "loadingMyWorldBook": "Loading my world books…",
+        "noWorldBookInWarehouse": "No world books in your library. Create one under My Resources → My World Books, or use paste/template.",
+        "pace": "Pace",
+        "avoidWordsSection": "Avoid-words",
+        "noAvoidWords": "No avoid-words yet",
+        "avoidWordsHint": "Avoided words are rephrased naturally in context, not replaced with ×× or spaces. Renamed characters use their current names automatically.",
+        "avoidWordsEditHint": "The narrative rephrases to avoid these words; do not use ××, xx, or meaningless spaces.",
+        "addAvoidWord": "Add avoid-word",
+        "avoidWordPlaceholder": "Type then add",
+        "avoidEmpty": "List is empty",
+        "identity": "Current identity",
+        "traits": "Current stance",
+        "identityPlaceholder": "e.g. exiled consort / wandering swordsman",
+        "traitsPlaceholder": "Observable stance, e.g. easygoing, faction X",
+        "secretHint": "「Secret」 is set in the editor and hidden from players; the story still follows it. NPCs do not know it by default."
+      },
+      "positionField": {
+        "traits": "Current stance"
+      }
+    },
+    "playerArchive": {
+      "gender": {
+        "female": "Female",
+        "male": "Male",
+        "other": "Other"
+      },
+      "toast": {
+        "profileInvalid": "Invalid profile",
+        "profileUpdated": "Profile updated",
+        "identityChangeNextLine": "{{content}} (new identity from the next line)",
+        "abPromptAvatar": "Trial: generate an avatar for the new identity (costs {{currency}})",
+        "abPromptAvatarRole": "Trial: generate an avatar for the new role (costs {{currency}})",
+        "nameRequiredAvatar": "Enter a name before generating an avatar",
+        "avatarGenerating": "Generating avatar—you can save or leave; it will apply when done",
+        "avatarGenerateFailed": "Avatar generation failed",
+        "avatarUploadFailed": "Avatar upload failed",
+        "avatarUploaded": "Avatar uploaded",
+        "nameRequiredPersona": "Enter a name before generating",
+        "personaGenerateFailed": "Persona generation failed",
+        "personaGenerated": "Persona generated (−{{billing}})",
+        "loginToImport": "Sign in to import character cards",
+        "loadLibraryFailed": "Failed to load card library",
+        "selectPersonaCard": "Select a persona card; import role cards in Character archives",
+        "cannotImport": "Cannot import",
+        "sessionUnavailable": "Session unavailable",
+        "profileOverwritten": "Player profile overwritten for this session"
+      },
+      "confirm": {
+        "avatarTitle": "Generate avatar?",
+        "avatarMessage": "{{charge}} will be charged for an AI avatar. Continue?",
+        "personaTitle": "Generate persona?",
+        "personaMessage": "{{charge}} will be charged to generate persona. Continue?"
+      },
+      "avatar": {
+        "togglePrompt": "Hide style & prompt",
+        "showPrompt": "Style & prompt",
+        "promptAria": "Style and prompt",
+        "styleLabel": "Art style",
+        "styleHint": "Tap to select · default A",
+        "styleAria": "Portrait style",
+        "appearanceOptional": "Appearance notes (optional)",
+        "appearancePlaceholder": "Short hair, uniform, fair skin…",
+        "viewAvatarAria": "View protagonist avatar",
+        "noAvatarAria": "No avatar",
+        "generatingBadge": "Generating…",
+        "backgroundHint": "You can save or leave; it will apply when done",
+        "regenOrUpload": "Regenerate or upload session avatar",
+        "genOrUpload": "Generate or upload avatar",
+        "clickToPreview": "Tap portrait to preview",
+        "backgroundGenerating": "Generating in background…",
+        "generateAvatar": "Generate avatar",
+        "regenerateAvatar": "Regenerate"
+      },
+      "edit": {
+        "title": "Edit my profile",
+        "closeAria": "Close",
+        "name": "Name",
+        "namePlaceholder": "Your name",
+        "gender": "Gender",
+        "genderAria": "Gender",
+        "persona": "Persona",
+        "personaPlaceholder": "Personality, identity, background…",
+        "personaAria": "Persona"
+      },
+      "overview": {
+        "title": "My profile",
+        "editProfile": "Edit profile",
+        "importCard": "Import card"
+      },
+      "import": {
+        "searchPlaceholder": "Search by name or keyword",
+        "libraryEmpty": "Library empty—create a card on your account first",
+        "noPersona": "No persona yet",
+        "cardSection": "Character card",
+        "attrPreviewTitle": "Stats preview (import overwrites current custom values)",
+        "noAttrValues": "This card has no custom stat values",
+        "afterImportValue": "Value after import",
+        "previewWithAvatar": "Import overwrites your profile and uses the card portrait; you can regenerate avatar later.",
+        "previewNoAvatar": "Import fills or overwrites your profile; no portrait on card—you can generate one after import.",
+        "selectCardFirst": "Select a character card first",
+        "backToList": "Back to list"
+      }
+    },
+    "map": {
+      "controlBar": {
+        "player": "Player",
+        "history": "History",
+        "text": "Text",
+        "auto": "Auto",
+        "settings": "Settings"
+      },
+      "npcModal": {
+        "npcAttributes": "NPC stats",
+        "inventory": "Inventory",
+        "incompleteData": "Incomplete interaction data. Go back and try again.",
+        "requestFailedTitle": "Request failed",
+        "requestTimeoutTitle": "Request timed out"
+      },
+      "scene": {
+        "subSceneDefault": "Sub-scene",
+        "mainSceneDefault": "Main scene",
+        "questAlt": "Quest",
+        "loadingMap": "Loading map...",
+        "initMap": "Initializing map...",
+        "noSceneData": "No scene data",
+        "loadingScene": "Loading scene...",
+        "noSubScenes": "No sub-scenes in this area"
+      },
+      "nextRound": {
+        "start": "Start next round",
+        "loading": "Starting next round..."
+      },
+      "timeout": {
+        "choice": "No AI response for this choice after 60s. Refresh and retry?",
+        "interact": "No AI response for this interaction after 60s. Refresh and retry?",
+        "abilityNode": "Ability NPC request timed out after 60s. Refresh and retry?"
+      },
+      "errors": {
+        "networkError": "Network error. Check your connection and retry.",
+        "serverError": "Server error. Please try again later.",
+        "timeout": "Request timed out. Please retry.",
+        "unknownError": "Unknown error. Please retry.",
+        "retryFailed": "Retry failed. Refresh the page.",
+        "choiceFailed": "Failed to submit choice. Please retry.",
+        "interactFailed": "Interaction request failed. Please retry.",
+        "noRetryRequest": "Nothing to retry",
+        "handleFailed": "Processing failed. Please retry.",
+        "requestFailedRetry": "Request failed. Please retry.",
+        "responseBodyLocked": "Response body is locked",
+        "eventStateStale": "Event completed but UI state is stale. Refresh the page.",
+        "choiceNetwork": "Choice failed. Check network or retry later.",
+        "pollTimeout": "Polling timed out without history. Retry or cancel.",
+        "pollNetwork": "Polling failed. Check your connection and retry.",
+        "missingSessionEvent": "Missing sessionId, eventId, or fileId; cannot send request.",
+        "missingSessionOrEvent": "Missing sessionId or eventId; cannot send request.",
+        "requestHttpFailed": "Request failed: {{status}}",
+        "requestErrorUnknown": "Request error: {{message}}",
+        "interactTimeout": "Start-game request timed out after 60s. Refresh and retry?",
+        "startGameFailed": "Failed to start game. Check network or try later."
+      }
+    },
+    "hooks": {
+      "memoryDebugLoadFailed": "Failed to load memory debug info.",
+      "replayEmpty": "Replay is empty",
+      "replayLoadFailed": "Failed to load replay",
+      "noSessionToStart": "No sessionId; cannot start game",
+      "startGameFailed": "Failed to start game. Please retry.",
+      "autoStressSessionOnly": "Auto stress test is only available in a playable session.",
+      "startGameBeforeStress": "Start the game before running auto stress test.",
+      "autoStressEmptyChoice": "Auto stress stopped: empty choice.",
+      "noRetryAction": "No last action to retry",
+      "retryFailedLater": "Retry failed. Try again later.",
+      "pollFailed": "Polling failed. Check your connection and retry.",
+      "abilityRetryFailed": "Retry failed. Try again later."
+    },
+    "npcProfile": {
+      "fields": {
+        "relationship": "Relationship",
+        "summary": "Summary",
+        "attitudeToPlayer": "Attitude toward you",
+        "detailedBio": "Detailed bio",
+        "name": "Name",
+        "gender": "Gender",
+        "importance": "Importance",
+        "survival": "Survival"
+      },
+      "gender": {
+        "male": "Male",
+        "female": "Female",
+        "other": "Other",
+        "unknown": "Unknown"
+      },
+      "importance": {
+        "major": "Major",
+        "minor": "Minor",
+        "extra": "Extra"
+      },
+      "survival": {
+        "alive": "Alive",
+        "dead": "Dead",
+        "unknown": "Unknown"
+      },
+      "generateFailed": "Failed to generate {{field}}",
+      "generated": "{{field}} generated (-{{billing}})",
+      "confirmGenerateTitle": "Generate {{field}}?",
+      "confirmGenerateMessage": "This will cost {{charge}} to generate “{{field}}”. Continue?",
+      "confirmAvatarTitle": "Generate avatar?",
+      "confirmAvatarMessage": "This will cost {{charge}} to generate an AI avatar. Continue?",
+      "addCharacter": "Add character",
+      "editPersona": "Edit persona"
+    }
+  }
+}

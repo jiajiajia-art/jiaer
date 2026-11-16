@@ -523,7 +523,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                                 className={`${styles.worksTab} ${worksTab === 'all' ? styles.worksTabActive : ''}`}
                                 onClick={() => handleWorksTabChange('all')}
                             >
-                                我的作品 ({allGames.length})
+                                {t('create.myWorksTab', { count: allGames.length })}
                             </button>
                         )}
                         {isVisitor && (

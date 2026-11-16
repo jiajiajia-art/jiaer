@@ -38,7 +38,8 @@ export function buildFreeCss(f?: FreeStyle): string {
   if (f.font?.url && f.font.name) {
     const fam = `"${f.font.name.replace(/"/g, "")}"`;
     out.push(`@font-face { font-family: ${fam}; src: ${q(f.font.url)}; font-display: swap; }`);
-    vars.push(`--font-serif: ${fam}, 'Noto Serif SC', serif;`, `--font-sans: ${fam}, 'Noto Sans SC', sans-serif;`);
+    // 功能注释：自定义字体只作用于剧情正文；顶栏底栏等 UI 仍用 --font-ui
+    vars.push(`--font-serif: ${fam}, 'Noto Serif SC', serif;`);
   }
   if (vars.length) out.push(`${R} { ${vars.join(" ")} }`);
   for (const [slot, img] of Object.entries(f.imgs ?? {}) as [FreeSlot, FreeImg][]) {
@@ -214,9 +215,9 @@ export function buildDialogCss(d?: DialogDiy): string {
   if (d.letter != null) txt.push(`letter-spacing: ${d.letter / 100}em !important;`);
   if (txt.length) {
     o.push(
-      `${P} .story-prose, ${P} .dlg-bubble, ${P} .dlg-bubble-me, ` +
+      `${P} .story-prose, ${P} .dlg-bubble, ${P} .dlg-bubble-me, ${P} .story-thought, ${P} .option-btn, ${P} .story-input, ` +
         `${R} .novel-read-card .story-prose, ${R} .novel-read-card .dlg-bubble, ${R} .novel-read-card .dlg-bubble-me, ` +
-        `${R} [data-slot="scene-prose"] .story-prose, ${R} .story-narration-panel { ${txt.join(" ")} }`,
+        `${R} [data-slot="scene-prose"] .story-prose, ${R} .story-narration-panel, ${R} .option-btn, ${R} .story-input, ${R} .story-thought { ${txt.join(" ")} }`,
     );
   }
   const nm: string[] = [];

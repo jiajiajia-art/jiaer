@@ -157,8 +157,8 @@ const SceneList: React.FC<SceneListProps> = ({
                                                     handleToggleCollapse(scene.id);
                                                 }}
                                                 style={{ backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}
-                                                aria-label={subsceneCollapsed[scene.id] ? '展开子场景' : '折叠子场景'}
-                                                title={subsceneCollapsed[scene.id] ? '展开子场景' : '折叠子场景'}
+                                                aria-label={subsceneCollapsed[scene.id] ? t('createGame.expandSubScene') : t('createGame.collapseSubScene')}
+                                                title={subsceneCollapsed[scene.id] ? t('createGame.expandSubScene') : t('createGame.collapseSubScene')}
                                             >
                                                 {subsceneCollapsed[scene.id] ? (
                                                     <RiArrowRightSLine size={16} />

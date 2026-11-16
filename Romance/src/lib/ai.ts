@@ -359,6 +359,23 @@ export async function completeWithTools(
 
 /* ————— 内容解析 ————— */
 
+/** 功能注释：模型常把本该进 JSON options 的行动建议写进正文末尾（- / • / 1.）；从文末剥掉，不进旁白 */
+const OPTION_BULLET = /^\s*(?:[-•*·]|\d+[.)、])\s+\S/;
+const OPTION_HEAD = /^\s*(?:你可以|你可以选择|后续(?:行动)?选项|行动选项|可选行动|选项)\s*[:：]?\s*$/;
+
+export function stripTrailingPlayerOptions(text: string): string {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  let end = lines.length;
+  while (end > 0 && !lines[end - 1].trim()) end--;
+  let i = end;
+  while (i > 0 && OPTION_BULLET.test(lines[i - 1])) i--;
+  if (i < end && i > 0 && OPTION_HEAD.test(lines[i - 1])) i--;
+  // 至少两行才当「选项列表」剥；单行短破折号可能是叙事
+  if (end - i < 2) return text.trimEnd();
+  while (i > 0 && !lines[i - 1].trim()) i--;
+  return lines.slice(0, i).join("\n").trimEnd();
+}
+
 // 流式过程中，把 JSON 数据块从展示文本里剔除（玩家只看到剧情）
 export function displayText(full: string): string {
   let t = full;
@@ -368,7 +385,7 @@ export function displayText(full: string): string {
     const brace = t.search(/\n\s*\{[\s\S]*"(narrative|state_diff|narration|options|world|player_changes|npc_changes)"/);
     if (brace >= 0) t = t.slice(0, brace);
   }
-  return stripMarkup(t);
+  return stripTrailingPlayerOptions(stripMarkup(t));
 }
 
 /* 剥离模型漏出的提示词残骸：「# 谨遵指令」类指令行、--- 分隔线、各级 markdown 标题符号与加粗符号。
@@ -489,7 +506,7 @@ export function normalizeStep(raw: AIStep): AIStep {
     }
     if (attrs.length) st.player_changes = { ...(pc0 as object), attrs } as AIStep["player_changes"];
   }
-  if (st.narration) st.narration = stripMarkup(st.narration);
+  if (st.narration) st.narration = stripTrailingPlayerOptions(stripMarkup(st.narration));
   st.need_clarification = (Array.isArray(raw.need_clarification) ? raw.need_clarification : []).map(String).map((q) => q.trim()).filter(Boolean);
   return st;
 }
@@ -1068,6 +1085,12 @@ export function applyStep(state: GameState, step: AIStep): { next: GameState; ch
       const av = drawProfileAvatar(npc.id, { name: ncName, age: nc.age, identity: nc.identity, bio: nc.bio, gender: gNorm, variant: typeof nc.avatar_variant === "string" ? nc.avatar_variant : undefined });
       if (av.url) { npc.avatar = av.url; npc.avatarVariant = av.variant; }
       npc = ensureBirthday(npc, next.sim?.day ?? 0);
+      // 功能注释：本回合登场的新人物落到当前房间，才能进 walkers / 在场条（无 home 的人不上地图）
+      const here = next.sim?.room;
+      if (here) {
+        npc.home = here;
+        next.sim = { ...next.sim, mobs: { ...(next.sim.mobs ?? {}), [npc.id]: here } };
+      }
       next.npcs.push(npc);
       // 只是剧情里初次登场：是否结识由玩家在回合底部的人物名片上决定（见 game/npcIntro）
       changes.push(`初遇 ${npc.name}`);

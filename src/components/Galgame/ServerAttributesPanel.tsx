@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { IoClose } from 'react-icons/io5';
 import styles from './ServerAttributesPanel.module.css';
 import { useGameStore } from '../../store/gameStore';
@@ -16,6 +17,7 @@ interface ServerAttributesPanelProps {
  * - 完成后一次性展示解析后的 tabs 文本
  */
 const ServerAttributesPanel: React.FC<ServerAttributesPanelProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
   const { sessionId } = useGameStore();
   const [panels, setPanels] = useState<Record<string, string>>({});
   const [activeKey, setActiveKey] = useState<string | null>(null);
@@ -29,7 +31,7 @@ const ServerAttributesPanel: React.FC<ServerAttributesPanelProps> = ({ isOpen, o
 
   const startStreaming = async () => {
     if (!sessionId) {
-      setError('缺少会话信息，无法获取属性面板');
+      setError(t('galgame.panelAttrsNoSession'));
       return;
     }
     if (isStreaming) return; // 并发保护
@@ -57,14 +59,14 @@ const ServerAttributesPanel: React.FC<ServerAttributesPanelProps> = ({ isOpen, o
               const firstKey = Object.keys(result.panels)[0] || null;
               setActiveKey(firstKey);
             } else {
-              setError('面板 JSON 结构不合法');
+              setError(t('galgame.panelAttrsInvalid'));
             }
           },
         },
         controller.signal
       );
     } catch (e: any) {
-      setError(e?.message || '请求失败');
+      setError(e?.message || t('galgameUi.common.requestFailed'));
     } finally {
       setIsStreaming(false);
       setLoading(false);
@@ -93,14 +95,14 @@ const ServerAttributesPanel: React.FC<ServerAttributesPanelProps> = ({ isOpen, o
           <div className={styles.header}>
             <div className={styles.headerBar}>
               <div style={{ fontSize: 12, color: 'color-mix(in srgb, var(--color-text) 80%, transparent)' }}>
-                {loading ? '加载中…' : ''}
+                {loading ? t('galgame.panelLoading') : ''}
               </div>
               <button
                 className={styles.refreshButton}
                 onClick={() => startStreaming()}
                 disabled={isStreaming}
               >
-                刷新
+                {t('galgame.panelRefresh')}
               </button>
             </div>
             <div className={styles.tabs}>
@@ -120,9 +122,9 @@ const ServerAttributesPanel: React.FC<ServerAttributesPanelProps> = ({ isOpen, o
 
           <div className={styles.body}>
             {loading ? (
-              <div className={styles.loading}>加载中...</div>
+              <div className={styles.loading}>{t('galgame.panelLoading')}</div>
             ) : panelKeys.length === 0 ? (
-              <div className={styles.empty}>暂无属性面板</div>
+              <div className={styles.empty}>{t('galgameUi.serverAttributes.empty')}</div>
             ) : (
               <div className={styles.contentText}>{activeContent}</div>
             )}

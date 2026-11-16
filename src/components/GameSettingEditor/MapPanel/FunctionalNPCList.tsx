@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './FunctionalNPCList.module.css';
 import type { AbilityNodeSetting } from '../../../api/worldInteraction/worldInteractionApi.type';
 import { getImageUrl } from '../../../utils/constants';
@@ -9,6 +10,8 @@ interface FunctionalNPCListProps {
 }
 
 const FunctionalNPCList: React.FC<FunctionalNPCListProps> = ({ abilityNodeSetting, usedNodeIds = [] }) => {
+    const { t } = useTranslation();
+
     const abilityNodes = abilityNodeSetting?.abilityNodes || [];
 
     if (abilityNodes.length === 0) {
@@ -136,7 +139,7 @@ const FunctionalNPCList: React.FC<FunctionalNPCListProps> = ({ abilityNodeSettin
                         <div className={styles.functionalNPCThumbWrapper}>
                                 <img
                                     src={getImageUrl(abilityNode.imagePath)}
-                                        alt={abilityNode.authorNote || '功能性NPC'}
+                                        alt={abilityNode.authorNote || t('gameSettingEditor.functionalNPCsPanel.functionalNPCList.sf99e3f1430')}
                                     className={styles.functionalNPCThumbImage}
                                         draggable={false}
                                     onError={(e) => {
@@ -159,7 +162,7 @@ const FunctionalNPCList: React.FC<FunctionalNPCListProps> = ({ abilityNodeSettin
                         </div>
                             )}
                         <div className={styles.functionalNPCMeta}>
-                                <div className={styles.functionalNPCName}>{abilityNode.authorNote || '未命名NPC'}</div>
+                                <div className={styles.functionalNPCName}>{abilityNode.authorNote || t('gameSettingEditor.functionalNPCsPanel.functionalNPCList.s3db6eb05b5')}</div>
                                 <div className={styles.functionalNPCType}>
                                     {abilityNode.type === 'illustration' ? '立绘型' : abilityNode.type === 'button' ? '按钮型' : abilityNode.type || '功能性NPC'}
                                 </div>

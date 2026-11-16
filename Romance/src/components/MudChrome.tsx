@@ -197,6 +197,9 @@ export function NavTabsEditor() {
   );
 }
 
+/** 功能注释：自定义底栏图标加载失败的 URL；模块级保留，避免重挂载反复闪破图 */
+const brokenNavIcons = new Set<string>();
+
 /* 底栏：常用水晶石牌快捷位 + 中央度日水晶星章。完整牌位由右上角 ☰ 菜单呈现。
  * 度日走稳定的 endDayNow（幂等推进），不承载任何叙事计算。 */
 export default function MudChrome({ tab, setTab }: { tab: MudTab; setTab: (t: MudTab) => void }) {
@@ -204,6 +207,7 @@ export default function MudChrome({ tab, setTab }: { tab: MudTab; setTab: (t: Mu
   const nav = theme.navActive ?? {};
   useMods();
   const [flash, setFlash] = useState(false);
+  const [, bumpNavIcons] = useState(0);
   if (!game) return null;
 
   const s = game.sim;
@@ -263,9 +267,22 @@ export default function MudChrome({ tab, setTab }: { tab: MudTab; setTab: (t: Mu
             const ic = nav.icons?.[id];
             const src = active ? ic?.on || ic?.off : ic?.off || ic?.on;
             const sz = nav.iconSize ?? (src ? 24 : 20);
-            return src
-              ? <img src={src} alt="" style={{ width: sz, height: sz }} className={`object-contain ${active || ic?.off ? "" : "opacity-60 grayscale"}`} />
-              : <NavGlyph name={glyph} active={active} size={sz} />;
+            // 功能注释：自定义图失效（blob 过期 / 404）时回退矢量标，避免底栏红破图方块
+            if (src && !brokenNavIcons.has(src)) {
+              return (
+                <img
+                  src={src}
+                  alt=""
+                  style={{ width: sz, height: sz }}
+                  className={`object-contain ${active || ic?.off ? "" : "opacity-60 grayscale"}`}
+                  onError={() => {
+                    brokenNavIcons.add(src);
+                    bumpNavIcons((n) => n + 1);
+                  }}
+                />
+              );
+            }
+            return <NavGlyph name={glyph} active={active} size={sz} />;
           })()}
         </span>
         {badge != null && (
@@ -333,7 +350,7 @@ export default function MudChrome({ tab, setTab }: { tab: MudTab; setTab: (t: Mu
                 </svg>
                 </DiyIcon>
                 </span>
-                <span className="relative mt-0.5 font-serif text-[11.5px] font-black leading-none tracking-[0.2em] pl-[0.2em]">
+                <span className="relative mt-0.5 pl-[0.2em] text-[11px] font-bold leading-none tracking-[0.08em]">
                   {advanceLabel}
                 </span>
               </span>

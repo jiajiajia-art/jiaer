@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import AuthModal from '../../components/AuthModal';
 import { externalSdkApi } from '../../api/externalSdkApi';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -16,6 +17,7 @@ function appendCliResultUrl(redirectUri: string, params: Record<string, string>)
 }
 
 export default function DeveloperCliAuthorize() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const params = useMemo(() => parseDeveloperCliAuthorizeParams(searchParams), [searchParams]);
   const authUser = useAuthStore((state) => state.user?.user);
@@ -44,12 +46,12 @@ export default function DeveloperCliAuthorize() {
       });
       const redirectUrl = response.data.data?.redirectUrl;
       if (!redirectUrl) {
-        throw new Error('授权结果缺少回跳地址');
+        throw new Error(t('pagesExternal.cli.missingRedirect'));
       }
-      setSuccessText('授权成功，正在返回 Funloom CLI。');
+      setSuccessText(t('pagesExternal.cli.successRedirect'));
       window.location.assign(redirectUrl);
     } catch (err) {
-      setError(getApiErrorMessage(err, 'CLI 授权失败，请回到终端重新发起登录。'));
+      setError(getApiErrorMessage(err, t('pagesExternal.cli.authorizeFailed')));
     } finally {
       setSubmitting(false);
     }
@@ -59,7 +61,7 @@ export default function DeveloperCliAuthorize() {
     if (submitting) return;
     logout();
     setError('');
-    setSuccessText('已退出当前 Funloom 账号，请登录你要授权的账号。');
+    setSuccessText(t('pagesExternal.cli.switchedAccount'));
     setAuthOpen(true);
   };
 
@@ -71,7 +73,7 @@ export default function DeveloperCliAuthorize() {
     }));
   };
 
-  const currentName = authUser?.nickname || authUser?.phoneNumber || authUser?.userCode || '当前账号';
+  const currentName = authUser?.nickname || authUser?.phoneNumber || authUser?.userCode || t('pagesExternal.cli.currentAccount');
 
   return (
     <main className={styles.shell}>
@@ -83,26 +85,26 @@ export default function DeveloperCliAuthorize() {
 
         <div className={styles.heroBlock}>
           <p className={styles.eyebrow}>Developer CLI Authorization</p>
-          <h1 id="developer-cli-authorize-title">授权 Funloom CLI</h1>
+          <h1 id="developer-cli-authorize-title">{t('pagesExternal.cli.title')}</h1>
           <p className={styles.lead}>
-            Funloom CLI 将获得开发者授权，用于创建和查看你的外部游戏应用。授权不会向命令行暴露你的登录密码。
+            {t('pagesExternal.cli.lead')}
           </p>
         </div>
 
         {!params.valid ? (
           <div className={styles.noticeError} role="alert">
-            CLI 授权链接缺少必要参数，请回到终端重新执行登录命令。
+            {t('pagesExternal.cli.invalidParams')}
           </div>
         ) : (
           <>
             <div className={styles.summary}>
               <div>
-                <span>回调地址</span>
+                <span>{t('pagesExternal.cli.callbackUri')}</span>
                 <strong>{params.redirectUri}</strong>
               </div>
               <div>
-                <span>Funloom 账号</span>
-                <strong>{isAuthenticated ? currentName : '尚未登录'}</strong>
+                <span>{t('pagesExternal.cli.funloomAccount')}</span>
+                <strong>{isAuthenticated ? currentName : t('pagesExternal.cli.notLoggedIn')}</strong>
               </div>
             </div>
 
@@ -116,14 +118,14 @@ export default function DeveloperCliAuthorize() {
                 onClick={handleAuthorize}
                 disabled={submitting}
               >
-                {submitting ? '授权中...' : isAuthenticated ? '确认授权 CLI' : '登录后授权'}
+                {submitting ? t('pagesExternal.cli.authorizing') : isAuthenticated ? t('pagesExternal.cli.confirmCli') : t('pagesExternal.cli.loginThenAuthorize')}
               </button>
               <button type="button" className={styles.secondaryButton} onClick={handleDeny} disabled={submitting}>
-                拒绝
+                {t('pagesExternal.cli.deny')}
               </button>
               {isAuthenticated && (
                 <button type="button" className={styles.ghostButton} onClick={handleSwitchAccount} disabled={submitting}>
-                  切换 Funloom 账号
+                  {t('pagesExternal.cli.switchAccount')}
                 </button>
               )}
             </div>

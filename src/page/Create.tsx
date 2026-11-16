@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MdContentCopy, MdOutlineEdit, MdOutlineTaskAlt } from 'react-icons/md';
+import CheckInModal from '../components/CheckInModal';
 import ExchangeModal from '../components/Purchase/ExchangeModal';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import confirmModalStyles from '../components/CommonModal/ConfirmModal.module.css';
@@ -76,6 +77,7 @@ const Create: React.FC = () => {
     const [isSettling, setIsSettling] = useState(false);
     const [isEarningsModalOpen, setIsEarningsModalOpen] = useState(false);
     const [isProfilePreferenceOpen, setIsProfilePreferenceOpen] = useState(false);
+    const [showCheckInModal, setShowCheckInModal] = useState(false);
     const [followingCount, setFollowingCount] = useState(0);
     const [followersCount, setFollowersCount] = useState(0);
     const overseasPayReturnHandledRef = useRef(false);
@@ -379,15 +381,6 @@ const Create: React.FC = () => {
                                 <div className={styles.creatorHeroInfo}>
                                     <div className={styles.creatorHeroNameRow}>
                                         <div className={styles.creatorHeroNameGroup}>
-                                            <h2 className={styles.creatorHeroName}>{userName}</h2>
-                                            <button
-                                                type="button"
-                                                className={styles.creatorEditNameBtn}
-                                                onClick={openEditNickname}
-                                                aria-label={t('profile.editNickname')}
-                                            >
-                                                <MdOutlineEdit aria-hidden="true" />
-                                            </button>
                                             {genderSymbol && (
                                                 <button
                                                     type="button"
@@ -399,12 +392,29 @@ const Create: React.FC = () => {
                                                     {genderSymbol}
                                                 </button>
                                             )}
+                                            <h2 className={styles.creatorHeroName}>{userName}</h2>
+                                            <button
+                                                type="button"
+                                                className={styles.creatorEditNameBtn}
+                                                onClick={openEditNickname}
+                                                aria-label={t('profile.editNickname')}
+                                            >
+                                                <MdOutlineEdit aria-hidden="true" />
+                                            </button>
+                                            {/* 功能注释：VIP / 推广标与昵称同一行垂直居中，避免掉到 ID 行错位 */}
+                                            <button
+                                                type="button"
+                                                className={`${styles.creatorVipBadge} ${!isVipActive ? styles.creatorVipBadgeInactive : ''}`}
+                                                onClick={() => setIsVipStatusModalOpen(true)}
+                                                aria-label={t('profile.vipStatus.openAria')}
+                                                title={t('profile.vipStatus.openAria')}
+                                            >
+                                                VIP
+                                            </button>
+                                            {isPromotionPartner && (
+                                                <span className={styles.creatorRoleBadge}>推广者</span>
+                                            )}
                                         </div>
-                                        {streakDays > 0 && (
-                                            <span className={styles.creatorStreakBadge}>
-                                                {t('create.streakBadge', { days: streakDays })}
-                                            </span>
-                                        )}
                                     </div>
                                     <div className={styles.creatorHeroMetaRow}>
                                         <div className={styles.creatorHeroIdGroup}>
@@ -421,20 +431,6 @@ const Create: React.FC = () => {
                                                 >
                                                     <MdContentCopy aria-hidden="true" />
                                                 </button>
-                                            )}
-                                        </div>
-                                        <div className={styles.creatorHeroBadgeRow}>
-                                            <button
-                                                type="button"
-                                                className={`${styles.creatorVipBadge} ${!isVipActive ? styles.creatorVipBadgeInactive : ''}`}
-                                                onClick={() => setIsVipStatusModalOpen(true)}
-                                                aria-label="查看VIP会员状态与福利"
-                                                title="查看VIP会员状态与福利"
-                                            >
-                                                VIP
-                                            </button>
-                                            {isPromotionPartner && (
-                                                <span className={styles.creatorRoleBadge}>推广者</span>
                                             )}
                                         </div>
                                     </div>
@@ -497,7 +493,7 @@ const Create: React.FC = () => {
                                             {formatKk(user?.user?.kkBalance?.total ?? user?.user?.diamonds ?? 0)}
                                         </div>
                                         <div className={styles.primaryStatLabel}>
-                                            KK币（含{formatKk(user?.user?.kkBalance?.limited ?? 0)}限时KK币）
+                                            {t('create.kkBalanceWithLimited', { amount: formatKk(user?.user?.kkBalance?.limited ?? 0) })}
                                         </div>
                                     </div>
                                     <div
@@ -518,6 +514,23 @@ const Create: React.FC = () => {
                                     <div className={styles.primaryStatItem}>
                                         <div className={styles.primaryStatValue}>{stats.totalCreated}</div>
                                         <div className={styles.primaryStatLabel}>{t('create.totalCreated')}</div>
+                                    </div>
+                                    {/* 功能注释：必须用 div 而非 button——default 主题会给 button[class*=primary] 刷酒红渐变，和另外三列对不上 */}
+                                    <div
+                                        className={`${styles.primaryStatItem} ${styles.primaryStatItemClickable}`}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => setShowCheckInModal(true)}
+                                        onKeyDown={(event) => {
+                                            if (event.key === 'Enter' || event.key === ' ') {
+                                                event.preventDefault();
+                                                setShowCheckInModal(true);
+                                            }
+                                        }}
+                                        aria-label={t('create.streakBadge', { days: streakDays })}
+                                    >
+                                        <div className={styles.primaryStatValue}>{streakDays}</div>
+                                        <div className={styles.primaryStatLabel}>{t('create.streakLabel')}</div>
                                     </div>
                                 </div>
                             </div>
@@ -575,6 +588,15 @@ const Create: React.FC = () => {
                 </div>
             <FooterArea />
         </AppPageShell>
+
+            <CheckInModal
+                isOpen={showCheckInModal}
+                onClose={() => {
+                    setShowCheckInModal(false);
+                    void getSignInStreak();
+                    void getUserInfo();
+                }}
+            />
 
             <VipStatusModal
                 isOpen={isVipStatusModalOpen}

@@ -59,9 +59,10 @@
 
 .title {
   margin: 0;
-  font-size: 17px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: var(--modal-fs-title);
+  font-weight: var(--modal-fw-title);
+  line-height: var(--modal-lh-title);
+  letter-spacing: 0.01em;
 }
 
 .closeBtn {
@@ -94,13 +95,13 @@
 
 .option {
   width: 100%;
-  min-height: 52px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 16px;
-  border-radius: 14px;
+  padding: 10px 14px;
+  border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
   background: var(--lang-input);
   color: color-mix(in srgb, var(--color-text) 88%, transparent);
@@ -128,9 +129,30 @@
   border-color: var(--lang-accent-hot);
 }
 
-.optionLabel {
+.optionText {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.optionLabel {
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.optionNative {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: color-mix(in srgb, var(--color-text) 58%, transparent);
+}
+
+.optionActive .optionNative {
+  color: color-mix(in srgb, var(--color-text) 78%, transparent);
 }
 
 .check {

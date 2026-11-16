@@ -1,0 +1,373 @@
+{
+  "galgameUi": {
+    "common": {
+      "requestFailed": "请求失败",
+      "notSet": "未设置",
+      "none": "无",
+      "enabled": "启用",
+      "disabled": "停用",
+      "selected": "已选",
+      "select": "选择",
+      "add": "添加",
+      "delete": "删除",
+      "importConfirm": "确认导入",
+      "importing": "导入中…",
+      "done": "完成",
+      "edit": "编辑",
+      "confirmGenerate": "确认生成",
+      "generateFailed": "生成失败",
+      "saveFailed": "保存失败",
+      "importFailed": "导入失败",
+      "loginAndEnterSession": "请先登录并进入对局",
+      "generating": "生成中…",
+      "aiGenerate": "AI生成 · {{charge}}",
+      "uploading": "上传中…",
+      "uploadImage": "上传图片",
+      "confirm": "确定",
+      "unknownCharacter": "未知角色",
+      "chooseAction": "请选择你的行动",
+      "continueGame": "继续游戏",
+      "storyUnfolding": "剧情展开中",
+      "emptyContent": "暂无内容",
+      "customInputOr": "或者自定义输入",
+      "customInput": "自定义输入",
+      "customInputPlaceholder": "输入你想说的话或行动...",
+      "inputPlaceholderShort": "请输入...",
+      "send": "发送",
+      "narration": "旁白",
+      "invalidEntry": "条目无效",
+      "alreadyExists": "已存在",
+      "maxCount": "最多 {{max}} 个",
+      "unnamedWorldBook": "未命名世界书",
+      "entrySettingsCount": "{{count}} 条设定",
+      "disabledBadge": " · 已停用",
+      "entryCountBadge": " · {{count}} 条",
+      "constantTrigger": "常驻",
+      "keywordTrigger": "按关键词触发",
+      "noRouteSelected": "未选择",
+      "changingRoute": "更换中…",
+      "confirmChangeRoute": "确认更换",
+      "deleteAria": "删除 {{word}}",
+      "cardInitial": "卡",
+      "uploadCompressing": "压缩上传中…",
+      "uploadCompressingDetail": "压缩上传中（≤1MB，不做背景处理）…",
+      "avatar": "头像",
+      "zoom": "放大",
+      "portrait": "立绘",
+      "notAvailable": "—"
+    },
+    "currency": {
+      "dreamBeans": "织梦豆",
+      "kkCoins": "KK币",
+      "insufficientDreamBeans": "织梦豆不足（需要 {{need}}，当前 {{current}}）",
+      "insufficientKkCoins": "KK币不足"
+    },
+    "serverAttributes": {
+      "empty": "暂无属性面板"
+    },
+    "playPanel": {
+      "backAria": "返回"
+    },
+    "gameConfirm": {
+      "defaultTitle": "确认操作",
+      "defaultMessage": "请确认是否继续此操作？",
+      "confirm": "确认",
+      "closeAria": "关闭"
+    },
+    "attributes": {
+      "importCardTitle": "导入已有角色卡",
+      "importCardSubtitle": "从账号卡库选择一张覆盖本局档案",
+      "importPreviewTitle": "导入预览",
+      "attrSectionTitle": "属性数值",
+      "attrSectionAria": "属性数值"
+    },
+    "route": {
+      "currentSection": "目前选择路线",
+      "currentHint": "展示当前开场路线；切换后将按新路线约束后续叙事",
+      "changeTitle": "更换路线",
+      "changeMessage": "确认切换到该开场路线？后续叙事将按新路线约束。",
+      "changeOk": "确认更换",
+      "progressDesc": "剧情路线与进度",
+      "routeRemark": "路线备注（选填）",
+      "routeRemarkPlaceholder": "可写切换原因或期待走向",
+      "switchedToast": "已切换路线：{{title}}",
+      "confirmSwitchTitle": "确认切换路线",
+      "optionalRoutes": "可选路线",
+      "stageNote": "阶段说明",
+      "currentRoute": "当前路线"
+    },
+    "systems": {
+      "toast": {
+        "loadWorldBookFailed": "加载我的世界书失败",
+        "cannotSaveServer": "当前无法保存到服务器",
+        "worldBookSaved": "世界书已保存",
+        "selectTemplate": "请选择模板",
+        "selectMyWorldBook": "请选择我的世界书",
+        "importedCount": "已导入 {{count}} 条，可继续编辑",
+        "fileReadConfirmImport": "文件已读入，请确认后导入",
+        "readFileFailed": "读取文件失败",
+        "enterAvoidWord": "请输入避雷词",
+        "avoidWordsUpdated": "避雷词库已更新",
+        "positionSaved": "定位已保存",
+        "positionGenerated": "{{field}}已生成（-{{billing}}）",
+        "confirmGeneratePositionTitle": "确认生成{{field}}",
+        "confirmGeneratePositionMessage": "将扣除 {{charge}} 生成「{{field}}」，是否继续？"
+      },
+      "nav": {
+        "worldBook": "世界书",
+        "worldBookDesc": "已装载条目与规则",
+        "writingStyle": "文风设定",
+        "writingStyleDesc": "文风偏好与避雷词",
+        "position": "玩家目前定位",
+        "positionDesc": "当前身份与立场",
+        "editEntry": "编辑条目",
+        "newEntry": "新增条目",
+        "importWorldBook": "导入世界书",
+        "avoidWords": "避雷词库",
+        "worldBookRules": "已装载条目与规则",
+        "importWorldBookHint": "支持粘贴、上传、模板或从我的世界书导入",
+        "writingStyleHint": "文风 / 节奏 / 视角 / 描写 / 剧情",
+        "avoidEditHint": "长按拖拽排序二期；可增删",
+        "positionHint": "当前身份与立场",
+        "positionEditHint": "编辑当前身份与立场"
+      },
+      "actions": {
+        "importWorldBook": "导入世界书",
+        "addEntry": "新增条目",
+        "editAvoidWords": "编辑避雷",
+        "emptyWorldBook": "暂无世界书条目，可新增或导入",
+        "keywordsPrefix": "触发关键词：",
+        "loaded": "已装载",
+        "editPosition": "编辑定位",
+        "changeRoute": "更换路线"
+      },
+      "form": {
+        "title": "标题",
+        "entryTitlePlaceholder": "条目标题",
+        "content": "内容",
+        "entryContentPlaceholder": "条目内容摘要 / 规则正文",
+        "triggerKeywords": "触发关键词",
+        "keywordsPlaceholder": "用逗号分隔",
+        "constant": "是否常驻",
+        "status": "状态",
+        "pasteWorldBookLabel": "粘贴世界书内容（JSON 或纯文本）",
+        "pasteWorldBookPlaceholder": "支持 JSON 数组 / {entries} / 创作台 morePromptForms，或空行分隔的纯文本",
+        "pickJsonFile": "点击选择 .json / 文本文件",
+        "pickFileHint": "支持拖放前请先点选文件",
+        "tabMine": "我的世界书",
+        "tabPaste": "粘贴内容",
+        "tabUpload": "上传文件",
+        "tabTemplate": "已有模板",
+        "loadingMyWorldBook": "加载我的世界书…",
+        "noWorldBookInWarehouse": "仓库里还没有世界书。可先去「我的资源 → 我的世界书」创建，或改用粘贴/模板导入。",
+        "pace": "节奏",
+        "avoidWordsSection": "避雷词库",
+        "noAvoidWords": "暂无避雷词",
+        "avoidWordsHint": "出现避雷词时会改用符合身份与语境的自然说法，不会用 ×× / 空格占位。角色改名后的旧名会自动按现用名称呼，不必再手动加入避雷词库。",
+        "avoidWordsEditHint": "叙事会用自然替代表述避开这些词；禁止用 ××、xx 或无意义空格代替。",
+        "addAvoidWord": "添加避雷词",
+        "avoidWordPlaceholder": "输入后点添加",
+        "avoidEmpty": "词库为空",
+        "identity": "当前身份",
+        "traits": "当前立场",
+        "identityPlaceholder": "如：冷宫嫔妃 / 江湖游侠",
+        "traitsPlaceholder": "对外可被察觉的立场，如：表面随和、站队某派",
+        "secretHint": "「秘密」由创作者在创作台「玩家目前定位」中填写，局内不对玩家展示；叙事仍会遵守该秘密。NPC 默认不知情。"
+      },
+      "positionField": {
+        "traits": "当前立场"
+      }
+    },
+    "playerArchive": {
+      "gender": {
+        "female": "女",
+        "male": "男",
+        "other": "其他"
+      },
+      "toast": {
+        "profileInvalid": "档案无效",
+        "profileUpdated": "档案已更新",
+        "identityChangeNextLine": "{{content}}（下一句起按新身份）",
+        "abPromptAvatar": "实验组：请为新身份生成头像（将扣除{{currency}}）",
+        "abPromptAvatarRole": "实验组：请为新角色生成头像（将扣除{{currency}}）",
+        "nameRequiredAvatar": "请先填写姓名再生成头像",
+        "avatarGenerating": "头像生成中，可先保存或离开，完成后会自动写入",
+        "avatarGenerateFailed": "头像生成失败",
+        "avatarUploadFailed": "头像上传失败",
+        "avatarUploaded": "头像已上传",
+        "nameRequiredPersona": "请先填写姓名再生成",
+        "personaGenerateFailed": "人设生成失败",
+        "personaGenerated": "人设已生成（-{{billing}}）",
+        "loginToImport": "请先登录后再导入角色卡",
+        "loadLibraryFailed": "加载卡库失败",
+        "selectPersonaCard": "请选择人设卡；角色卡请在角色档案中导入",
+        "cannotImport": "无法导入",
+        "sessionUnavailable": "会话不可用",
+        "profileOverwritten": "已覆盖当前局玩家档案"
+      },
+      "confirm": {
+        "avatarTitle": "确认生成头像",
+        "avatarMessage": "将扣除 {{charge}} 生成 AI 头像，是否继续？",
+        "personaTitle": "确认生成人设",
+        "personaMessage": "将扣除 {{charge}} 生成「人设」，是否继续？"
+      },
+      "avatar": {
+        "togglePrompt": "收起画风与提示词",
+        "showPrompt": "画风与提示词",
+        "promptAria": "画风与提示词",
+        "styleLabel": "风格选择",
+        "styleHint": "点选即可 · 默认 A",
+        "styleAria": "立绘画风",
+        "appearanceOptional": "外貌补充（可选）",
+        "appearancePlaceholder": "短发、校服、冷白皮、侧分刘海…",
+        "viewAvatarAria": "查看主角头像",
+        "noAvatarAria": "暂无头像",
+        "generatingBadge": "生成中…",
+        "backgroundHint": "可先保存或离开，完成后自动写入",
+        "regenOrUpload": "可重新生成或上传局内头像",
+        "genOrUpload": "生成或上传头像",
+        "clickToPreview": "点击立绘可放大预览",
+        "backgroundGenerating": "后台生成中…",
+        "generateAvatar": "生成头像",
+        "regenerateAvatar": "重新生成"
+      },
+      "edit": {
+        "title": "编辑我的档案",
+        "closeAria": "关闭",
+        "name": "姓名",
+        "namePlaceholder": "你的姓名",
+        "gender": "性别",
+        "genderAria": "性别",
+        "persona": "人设",
+        "personaPlaceholder": "性格、身份、经历…",
+        "personaAria": "人设"
+      },
+      "overview": {
+        "title": "我的档案",
+        "editProfile": "编辑档案",
+        "importCard": "导入角色卡"
+      },
+      "import": {
+        "searchPlaceholder": "按姓名、关键词搜索",
+        "libraryEmpty": "卡库为空，请先在账号下创建角色卡",
+        "noPersona": "暂无人设",
+        "cardSection": "角色卡",
+        "attrPreviewTitle": "属性预览（导入后将覆盖当前自设数值）",
+        "noAttrValues": "该卡无自设属性数值",
+        "afterImportValue": "导入后数值",
+        "previewWithAvatar": "导入将覆盖当前玩家档案并带上卡库立绘，之后仍可在档案中重新生成头像。",
+        "previewNoAvatar": "导入将填写或覆盖当前玩家档案；该卡暂无立绘，导入后可在档案中生成头像。",
+        "selectCardFirst": "请先选择角色卡",
+        "backToList": "返回列表"
+      }
+    },
+    "map": {
+      "controlBar": {
+        "player": "玩家",
+        "history": "历史",
+        "text": "文本",
+        "auto": "自动",
+        "settings": "设置"
+      },
+      "npcModal": {
+        "npcAttributes": "NPC属性",
+        "inventory": "背包",
+        "incompleteData": "交互数据不完整，请返回重试",
+        "requestFailedTitle": "请求失败",
+        "requestTimeoutTitle": "请求超时"
+      },
+      "scene": {
+        "subSceneDefault": "子场景",
+        "mainSceneDefault": "主场景",
+        "questAlt": "任务",
+        "loadingMap": "加载地图中...",
+        "initMap": "初始化地图...",
+        "noSceneData": "暂无场景数据",
+        "loadingScene": "加载场景中...",
+        "noSubScenes": "该场景下暂无子场景"
+      },
+      "nextRound": {
+        "start": "开启下一回合",
+        "loading": "开启下一回合中..."
+      },
+      "timeout": {
+        "choice": "AI 回应本次选择已超过 60 秒仍未返回，是否刷新重试？",
+        "interact": "AI 回应本次交互已超过 60 秒仍未返回，是否刷新重试？",
+        "abilityNode": "功能性NPC交互请求已超过 60 秒仍未返回，是否刷新重试？"
+      },
+      "errors": {
+        "networkError": "网络请求失败，请检查网络连接后重试",
+        "serverError": "服务器错误，请稍后重试",
+        "timeout": "请求超时，请重试",
+        "unknownError": "发生未知错误，请重试",
+        "retryFailed": "重试失败，请刷新页面",
+        "choiceFailed": "选择选项失败，请重试",
+        "interactFailed": "交互请求失败，请重试",
+        "noRetryRequest": "没有可重试的请求",
+        "handleFailed": "处理失败，请重试",
+        "requestFailedRetry": "请求失败，请重试",
+        "responseBodyLocked": "响应体已被锁定",
+        "eventStateStale": "事件已完成，但前端状态未更新。请刷新页面。",
+        "choiceNetwork": "选择选项失败，请检查网络或稍后重试。",
+        "pollTimeout": "轮询超时，未能获取到历史记录。请重试或取消。",
+        "pollNetwork": "轮询请求失败，请检查网络连接后重试。",
+        "missingSessionEvent": "缺少 sessionId、eventId 或 fileId，无法发送请求...",
+        "missingSessionOrEvent": "缺少 sessionId 或 eventId，无法发送请求...",
+        "requestHttpFailed": "请求失败: {{status}}",
+        "requestErrorUnknown": "请求错误: {{message}}",
+        "interactTimeout": "开始游戏请求已超过 60 秒仍未返回，是否刷新页面重试？",
+        "startGameFailed": "开始游戏失败，请检查网络或稍后重试。"
+      }
+    },
+    "hooks": {
+      "memoryDebugLoadFailed": "加载记忆调试信息失败。",
+      "replayEmpty": "回放内容为空",
+      "replayLoadFailed": "加载回放失败",
+      "noSessionToStart": "没有 sessionId，无法开始游戏",
+      "startGameFailed": "开始游戏失败，请重试",
+      "autoStressSessionOnly": "自动压测仅可在可游玩会话中使用。",
+      "startGameBeforeStress": "请先开始游戏再运行自动压测。",
+      "autoStressEmptyChoice": "自动压测遇到空选项，已停止。",
+      "noRetryAction": "没有可重试的上次操作",
+      "retryFailedLater": "重试失败，请稍后再试",
+      "pollFailed": "轮询请求失败，请检查网络连接后重试。",
+      "abilityRetryFailed": "重试失败，请稍后再试"
+    },
+    "npcProfile": {
+      "fields": {
+        "relationship": "关系",
+        "summary": "简介",
+        "attitudeToPlayer": "对你的态度",
+        "detailedBio": "详细简介",
+        "name": "姓名",
+        "gender": "性别",
+        "importance": "重要程度",
+        "survival": "存活状态"
+      },
+      "gender": {
+        "male": "男",
+        "female": "女",
+        "other": "其他",
+        "unknown": "未知"
+      },
+      "importance": {
+        "major": "重要",
+        "minor": "次要",
+        "extra": "路人"
+      },
+      "survival": {
+        "alive": "存活",
+        "dead": "死亡",
+        "unknown": "未知"
+      },
+      "generateFailed": "{{field}}生成失败",
+      "generated": "{{field}}已生成（-{{billing}}）",
+      "confirmGenerateTitle": "确认生成{{field}}",
+      "confirmGenerateMessage": "将扣除 {{charge}}生成「{{field}}」，是否继续？",
+      "confirmAvatarTitle": "确认生成头像",
+      "confirmAvatarMessage": "将扣除 {{charge}}生成 AI 头像，是否继续？",
+      "addCharacter": "添加新角色",
+      "editPersona": "编辑人设"
+    }
+  }
+}

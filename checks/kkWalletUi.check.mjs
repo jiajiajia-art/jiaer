@@ -39,28 +39,28 @@ test('account types expose wallet, membership, recharge, and activity metadata',
 test('profile overview shows total KK coins and included limited coins', () => {
   const source = readSource('src/page/Create.tsx');
   const styles = readSource('src/page/Create.module.css');
-  assert.match(source, /含.*限时(?:KK)?币/);
+  assert.match(source, /create\.kkBalanceWithLimited/);
   assert.match(source, /kkBalance/);
   assert.match(source, /formatKk/);
-  // 限时币说明已并入统计标签（primaryStatLabel），不再单独一行 hint
-  assert.match(source, /primaryStatLabel[\s\S]{0,120}限时KK币/);
-  assert.match(source, /primaryStatLabel[^]*KK币/);
+  assert.match(source, /primaryStatLabel/);
   assert.doesNotMatch(source, /KK币：.*币/);
+  assert.match(styles, /\.primaryStatLabel/);
 });
 
 test('asset details expose wallet breakdown and KK activity filters', () => {
   const source = readSource('src/page/AssetDetails.tsx');
   const styles = readSource('src/page/AssetDetails.module.css');
-  assert.match(source, /永久币/);
-  assert.match(source, /限时币/);
-  assert.match(source, /充值币/);
-  assert.match(source, /赠币/);
-  assert.match(source, /已过期/);
-  assert.match(source, /按有效期/);
-  assert.match(source, /按来源/);
-  assert.match(source, /流水类型/);
+  assert.match(source, /labelKey: 'kkPermanent'/);
+  assert.match(source, /labelKey: 'kkLimited'/);
+  assert.match(source, /labelKey: 'kkRecharge'/);
+  assert.match(source, /labelKey: 'kkGift'/);
+  assert.match(source, /labelKey: 'eventExpired'/);
+  assert.match(source, /assetDetails\.kkBreakdownTitle/);
+  assert.match(source, /assetDetails\.kkValidity/);
+  assert.match(source, /assetDetails\.kkSource/);
+  assert.match(source, /assetDetails\.kkEventType/);
   assert.match(source, /aria-pressed/);
-  assert.match(source, /一键清除/);
+  assert.match(source, /assetDetails\.clearAll/);
   assert.match(source, /kkValidity/);
   assert.match(source, /kkAssetCategory/);
   assert.match(source, /kkEventType/);
@@ -69,9 +69,11 @@ test('asset details expose wallet breakdown and KK activity filters', () => {
   assert.doesNotMatch(source, /onClick=\{\(\) => selectCurrencyTab\('diamonds'\)\}/);
   assert.match(source, /currencyTab === 'diamonds' \? \(\s*<section className=\{styles\.kkBreakdownSection\}/s);
   assert.ok(
-    source.indexOf('aria-label="KK币余额构成"') > source.indexOf('<section className={styles.toolbar}>'),
+    source.indexOf('assetDetails.kkBreakdownAria') > source.indexOf('<section className={styles.toolbar}>'),
     'KK币构成应放在币种页签与筛选栏之后',
   );
+  assert.match(source, /kkBreakdownGrid/);
+  assert.doesNotMatch(source, /kkBreakdownGroups/);
   assert.doesNotMatch(styles, /\.balanceCardButton/);
   assert.match(styles, /\.kkBreakdownSection/);
   assert.match(styles, /\.toolbar\s*\{[^}]*flex-wrap:\s*nowrap/s);
@@ -98,7 +100,7 @@ test('discounted KK play activity shows struck original price and actual charged
   assert.match(types, /discountPercent\?: number/);
   assert.match(source, /item\.originalAmount/);
   assert.match(source, /item\.discountPercent/);
-  assert.match(source, /会员\{item\.discountPercent\}折/);
+  assert.match(source, /assetDetails\.memberDiscount/);
   assert.match(source, /itemOriginalAmount/);
   assert.match(source, /itemActualAmount/);
   assert.match(styles, /\.itemOriginalAmount\s*\{[^}]*text-decoration:\s*line-through/s);

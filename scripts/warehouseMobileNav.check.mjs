@@ -36,6 +36,6 @@ test('WarehouseHub_手机用目录条与底栏sheet而非堆叠侧栏', () => {
   assert.match(css, /background:\s*var\(--wh-stage\)/);
   assert.doesNotMatch(css, /rgba\(244,\s*242,\s*245,\s*0\.92\)/);
   assert.match(panelCss, /\.header\s*\{\s*display:\s*none;/);
-  assert.match(indexCss, /--app-mobile-navbar-height:\s*60px/);
+  assert.match(indexCss, /--app-mobile-navbar-height:\s*72px/);
   assert.match(indexCss, /--app-desktop-navbar-height:\s*var\(--app-mobile-navbar-height\)/);
 });

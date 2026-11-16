@@ -162,6 +162,81 @@
   gap: 14px;
 }
 
+/* 功能注释：仪表盘分组卡——调用质量 / 平台成本 / 用户扣费合并展示 */
+.dashGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.dashPanelWide {
+  grid-column: 1 / -1;
+}
+
+.dashPanel {
+  border: 1px solid var(--usage-border);
+  box-shadow: none;
+}
+
+.dashPanel :global(.ant-card-head) {
+  min-height: 44px;
+  padding: 0 16px;
+  border-bottom-color: color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.dashPanel :global(.ant-card-head-title) {
+  padding: 12px 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.dashPanel :global(.ant-card-body) {
+  padding: 14px 16px 16px;
+}
+
+.dashStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px 16px;
+}
+
+.dashStat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-text) 3.5%, transparent);
+  border-left: 3px solid var(--color-accent);
+}
+
+.dashStatWarn {
+  border-left-color: var(--color-highlight);
+  background: color-mix(in srgb, var(--color-highlight) 8%, transparent);
+}
+
+.dashLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--usage-muted);
+  line-height: 1.35;
+}
+
+.dashValue {
+  font-size: 22px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  color: var(--usage-text);
+}
+
+.dashSub {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
 .metric {
   height: 100%;
   border-left: 4px solid var(--color-accent);
@@ -174,8 +249,12 @@
 
 .chartGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(300px, 1fr));
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr);
   gap: 16px;
+}
+
+.aggregateInlineFilters {
+  margin-bottom: 16px;
 }
 
 .chartCard {
@@ -259,23 +338,113 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .dashGrid,
   .chartGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
-  .chartGrid > :first-child {
-    grid-column: 1 / -1;
+  .dashPanelWide {
+    grid-column: auto;
   }
 }
 
 @media (max-width: 720px) {
+  .root {
+    gap: 12px;
+  }
+
+  .section {
+    gap: 8px;
+  }
+
   .sectionHead,
   .sectionTitle {
     align-items: stretch;
     flex-direction: column;
+    gap: 4px;
+  }
+
+  .sectionHead h3,
+  .sectionTitle h3 {
+    font-size: 16px;
+  }
+
+  /* 功能注释：总览数字改成两列紧凑卡，长说明的警告卡单独占一行 */
+  .section :global(.ant-row) {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-inline: 0 !important;
+  }
+
+  .section :global(.ant-col) {
+    width: auto !important;
+    max-width: none !important;
+    flex: none !important;
+    padding: 0 !important;
+  }
+
+  .section :global(.ant-col:has([class*='warningMetric'])),
+  .section :global(.ant-col:last-child) {
+    grid-column: 1 / -1;
+  }
+
+  .metric :global(.ant-card-body) {
+    padding: 10px 10px 10px 12px;
+  }
+
+  .metric :global(.ant-statistic-title) {
+    margin-bottom: 2px;
+    font-size: 12px;
+    line-height: 1.35;
+    white-space: normal;
+  }
+
+  .metric :global(.ant-statistic-content) {
+    font-size: 18px;
+    line-height: 1.25;
+  }
+
+  .root :global(.ant-alert) {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .root :global(.ant-alert-actions) {
+    flex: 1 0 100%;
+    margin-top: 8px;
+    margin-inline-start: 0 !important;
+  }
+
+  .root :global(.ant-alert-actions .ant-btn) {
+    width: 100%;
+  }
+
+  .chartCard :global(.ant-card-head),
+  .tableCard :global(.ant-card-head),
+  .filterCard :global(.ant-card-head) {
+    min-height: 0;
+    padding: 12px 14px;
+  }
+
+  .chartCard :global(.ant-card-head-wrapper),
+  .tableCard :global(.ant-card-head-wrapper),
+  .filterCard :global(.ant-card-head-wrapper) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .chartCard :global(.ant-card-extra),
+  .tableCard :global(.ant-card-extra) {
+    margin-inline-start: 0;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: normal;
   }
 
   .filters,
+  .dashGrid,
   .chartGrid {
     grid-template-columns: 1fr;
   }
@@ -304,10 +473,6 @@
   }
 
   .timeField {
-    grid-column: auto;
-  }
-
-  .chartGrid > :first-child {
     grid-column: auto;
   }
 

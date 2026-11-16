@@ -1,3 +1,5 @@
+import i18n from '../i18n';
+
 export type InteractiveVideoEditStepKey = 'theme' | 'monetization' | 'test' | 'delivery';
 export type InteractiveVideoEditStepStatus = 'complete' | 'warning' | 'blocked' | 'pending';
 
@@ -34,6 +36,28 @@ export const INTERACTIVE_VIDEO_EDIT_STEP_ORDER: InteractiveVideoEditStepKey[] = 
     'delivery',
 ];
 
+const t = (key: string, options?: Record<string, unknown>) => i18n.t(key, options);
+
+const themeStepCopy = () => ({
+    title: t('pagesIvg.editSteps.theme.title'),
+    summary: t('pagesIvg.editSteps.theme.summary'),
+});
+
+const monetizationStepCopy = () => ({
+    title: t('pagesIvg.editSteps.monetization.title'),
+    summary: t('pagesIvg.editSteps.monetization.summary'),
+});
+
+const testStepCopy = () => ({
+    title: t('pagesIvg.editSteps.test.title'),
+    summary: t('pagesIvg.editSteps.test.summary'),
+});
+
+const deliveryStepCopy = () => ({
+    title: t('pagesIvg.editSteps.delivery.title'),
+    summary: t('pagesIvg.editSteps.delivery.summary'),
+});
+
 export const getInteractiveVideoDeliveryBlockingReasons = ({
     selectedThemeCount,
     themeTagMin,
@@ -47,16 +71,16 @@ export const getInteractiveVideoDeliveryBlockingReasons = ({
 >) => {
     const reasons: string[] = [];
     if (selectedThemeCount < themeTagMin) {
-        reasons.push(`至少选择 ${themeTagMin} 个题材标签`);
+        reasons.push(t('pagesIvg.editSteps.themeMinTags', { count: themeTagMin }));
     }
     if (hasUnsavedThemeTags) {
-        reasons.push('题材标签尚未保存');
+        reasons.push(t('pagesIvg.editSteps.themeUnsaved'));
     }
     if (themeTagError) {
         reasons.push(themeTagError);
     }
     if (!monetizationLoaded) {
-        reasons.push('内购配置尚未加载完成');
+        reasons.push(t('pagesIvg.editSteps.monetizationNotLoaded'));
     }
     if (monetizationError) {
         reasons.push(monetizationError);
@@ -67,119 +91,104 @@ export const getInteractiveVideoDeliveryBlockingReasons = ({
 export const buildInteractiveVideoEditSteps = (input: InteractiveVideoEditStepInput): InteractiveVideoEditSteps => {
     const themeReady = input.selectedThemeCount >= input.themeTagMin;
     const deliveryBlockingReasons = getInteractiveVideoDeliveryBlockingReasons(input);
-    const monetizationStatusText = input.monetizationStatusText || '当前：免费开放';
+    const monetizationStatusText = input.monetizationStatusText || t('pagesIvg.editSteps.defaultMonetizationStatus');
 
     const theme: InteractiveVideoEditStepItem = input.themeTagError ? {
         key: 'theme',
-        title: '题材标签',
-        summary: '选择作品题材',
+        ...themeStepCopy(),
         status: 'blocked',
-        statusText: '需处理',
+        statusText: t('pagesIvg.editSteps.theme.needsAction'),
         description: input.themeTagError,
     } : !themeReady ? {
         key: 'theme',
-        title: '题材标签',
-        summary: '选择作品题材',
+        ...themeStepCopy(),
         status: 'pending',
-        statusText: '未完成',
-        description: `请选择 ${input.themeTagMin}-2 个题材标签。`,
+        statusText: t('pagesIvg.editSteps.theme.incomplete'),
+        description: t('pagesIvg.editSteps.theme.pickRange', { min: input.themeTagMin }),
     } : input.hasUnsavedThemeTags ? {
         key: 'theme',
-        title: '题材标签',
-        summary: '选择作品题材',
+        ...themeStepCopy(),
         status: 'warning',
-        statusText: '未保存',
-        description: '题材修改后需要先保存，发布前会使用已保存题材。',
+        statusText: t('pagesIvg.editSteps.theme.unsaved'),
+        description: t('pagesIvg.editSteps.theme.unsavedHint'),
     } : {
         key: 'theme',
-        title: '题材标签',
-        summary: '选择作品题材',
+        ...themeStepCopy(),
         status: 'complete',
-        statusText: '已完成',
-        description: '题材标签已保存。',
+        statusText: t('pagesIvg.editSteps.theme.complete'),
+        description: t('pagesIvg.editSteps.theme.savedHint'),
     };
 
     const monetization: InteractiveVideoEditStepItem = input.monetizationError ? {
         key: 'monetization',
-        title: '内购配置',
-        summary: '确认免费或付费模式',
+        ...monetizationStepCopy(),
         status: 'blocked',
-        statusText: '需处理',
+        statusText: t('pagesIvg.editSteps.monetization.needsAction'),
         description: input.monetizationError,
     } : !input.monetizationLoaded ? {
         key: 'monetization',
-        title: '内购配置',
-        summary: '确认免费或付费模式',
+        ...monetizationStepCopy(),
         status: 'pending',
-        statusText: '加载中',
-        description: '正在加载内购配置。',
+        statusText: t('pagesIvg.editSteps.monetization.loading'),
+        description: t('pagesIvg.editSteps.monetization.loadingHint'),
     } : input.isSavingMonetization ? {
         key: 'monetization',
-        title: '内购配置',
-        summary: '确认免费或付费模式',
+        ...monetizationStepCopy(),
         status: 'warning',
         statusText: monetizationStatusText,
-        description: '内购配置正在保存，请稍候。',
+        description: t('pagesIvg.editSteps.monetization.savingHint'),
     } : input.hasUnsavedMonetization ? {
         key: 'monetization',
-        title: '内购配置',
-        summary: '确认免费或付费模式',
+        ...monetizationStepCopy(),
         status: 'warning',
         statusText: monetizationStatusText,
-        description: '内购配置已有修改，建议保存后再测试或发布。',
+        description: t('pagesIvg.editSteps.monetization.dirtyHint'),
     } : {
         key: 'monetization',
-        title: '内购配置',
-        summary: '确认免费或付费模式',
+        ...monetizationStepCopy(),
         status: 'complete',
         statusText: monetizationStatusText,
-        description: '内购配置已可用于发布前检查。',
+        description: t('pagesIvg.editSteps.monetization.readyHint'),
     };
 
     const test: InteractiveVideoEditStepItem = input.hasUnsavedThemeTags || input.isSavingThemeTags || input.isSavingMonetization ? {
         key: 'test',
-        title: '测试作品',
-        summary: '发布前体验作品',
+        ...testStepCopy(),
         status: 'warning',
-        statusText: '建议先保存',
-        description: '测试前建议先保存题材和内购配置，避免体验内容与发布准备不一致。',
+        statusText: t('pagesIvg.editSteps.test.saveFirst'),
+        description: t('pagesIvg.editSteps.test.saveFirstHint'),
     } : {
         key: 'test',
-        title: '测试作品',
-        summary: '发布前体验作品',
+        ...testStepCopy(),
         status: 'complete',
-        statusText: '可测试',
-        description: '可以进入测试页检查作品体验。',
+        statusText: t('pagesIvg.editSteps.test.ready'),
+        description: t('pagesIvg.editSteps.test.readyHint'),
     };
 
     const delivery: InteractiveVideoEditStepItem = deliveryBlockingReasons.length > 0 ? {
         key: 'delivery',
-        title: '发布交付',
-        summary: '发布、下架或下载 ZIP',
+        ...deliveryStepCopy(),
         status: 'blocked',
-        statusText: '未准备好',
+        statusText: t('pagesIvg.editSteps.delivery.notReady'),
         description: deliveryBlockingReasons.join('；'),
     } : input.hasUnsavedMonetization ? {
         key: 'delivery',
-        title: '发布交付',
-        summary: '发布、下架或下载 ZIP',
+        ...deliveryStepCopy(),
         status: 'warning',
-        statusText: '建议先保存',
-        description: '内购配置有未保存修改；当前仍会按已保存配置发布。',
+        statusText: t('pagesIvg.editSteps.delivery.saveFirst'),
+        description: t('pagesIvg.editSteps.delivery.unsavedMonetizationHint'),
     } : input.isDownloading ? {
         key: 'delivery',
-        title: '发布交付',
-        summary: '发布、下架或下载 ZIP',
+        ...deliveryStepCopy(),
         status: 'warning',
-        statusText: '下载中',
-        description: '正在准备 002 可导入 ZIP。',
+        statusText: t('pagesIvg.editSteps.delivery.downloading'),
+        description: t('pagesIvg.editSteps.delivery.preparingZip'),
     } : {
         key: 'delivery',
-        title: '发布交付',
-        summary: '发布、下架或下载 ZIP',
+        ...deliveryStepCopy(),
         status: 'complete',
-        statusText: input.isPublished ? '已发布' : '可发布',
-        description: input.isPublished ? '作品已发布，可下架或下载项目包。' : '发布前检查已通过，可发布或下载项目包。',
+        statusText: input.isPublished ? t('pagesIvg.editSteps.delivery.published') : t('pagesIvg.editSteps.delivery.readyToPublish'),
+        description: input.isPublished ? t('pagesIvg.editSteps.delivery.publishedHint') : t('pagesIvg.editSteps.delivery.readyHint'),
     };
 
     return {

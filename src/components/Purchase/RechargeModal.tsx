@@ -732,10 +732,11 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
     const diamondsTabContent = (
         <>
             <div className={styles.fixedAmounts}>
-                <div className={styles.sectionHeadRow}>
-                    <h3 className={styles.sectionHeading}>选择充值档位</h3>
-                    {isOverseas && <span className={styles.currencyBadge}>USD 美元结算</span>}
-                </div>
+                {isOverseas && (
+                    <div className={styles.sectionHeadRow}>
+                        <span className={styles.currencyBadge}>USD 美元结算</span>
+                    </div>
+                )}
                 <div className={styles.amountsGrid}>
                     {rechargePlans.map((plan) => {
                         const planDiamonds = plan.firstChargeEligible ? plan.firstTotalDiamonds : plan.baseDiamonds;
@@ -767,7 +768,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                         );
                     })}
                     <div className={`${styles.customAmount} ${styles.customAmountTile} ${styles.tileCustom} ${amountError ? styles.inputError : ''}`}>
-                        <div className={styles.customLabel}>自定义金额</div>
+                        <div className={styles.customLabel}>自定义</div>
                         <div className={styles.customInputWrapper}>
                             <span className={styles.currencySymbol}>{currencySymbol}</span>
                             <input
@@ -798,81 +799,51 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                 )}
                 <p className={styles.customAmountNotice}>
                     {isOverseas
-                        ? `海外档位价格 = 人民币价 × 后台倍率；自定义金额按 ×${overseasRate} 换算，不参与首充加赠。`
-                        : '自定义金额按 1 元 = 10 KK币 换算，不参与首充加赠。'}
+                        ? `自定义按 ×${overseasRate} 换算，不参与首充加赠`
+                        : '1 元 = 10 KK币 · 自定义不参与首充加赠'}
                 </p>
             </div>
         </>
     );
 
     const membershipTabContent = (
-        <>
-            <h3 className={styles.sectionHeading}>选择会员卡</h3>
-            <div className={styles.plansList}>
-                {MEMBERSHIP_PLANS.map((plan, index) => (
-                    <button
-                        key={plan.planId}
-                        type="button"
-                        className={`${styles.planItem} ${selectedPlanIndex === index ? styles.planItemActive : ''}`}
-                        onClick={() => setSelectedPlanIndex(index)}
-                    >
-                        <span className={styles.planItemHeader}>
-                            <span className={styles.planItemName}>{plan.name}</span>
-                            <span className={styles.planItemPrice}>
-                                {fmt(toPayPrice(plan.price))}
+        <div className={styles.membershipStack}>
+            <div className={styles.membershipBlock}>
+                <div className={styles.plansList}>
+                    {MEMBERSHIP_PLANS.map((plan, index) => (
+                        <button
+                            key={plan.planId}
+                            type="button"
+                            className={`${styles.planItem} ${selectedPlanIndex === index ? styles.planItemActive : ''}`}
+                            onClick={() => setSelectedPlanIndex(index)}
+                        >
+                            <span className={styles.planItemHeader}>
+                                <span className={styles.planItemName}>{plan.name}</span>
+                                <span className={styles.planItemPrice}>
+                                    {fmt(toPayPrice(plan.price))}
+                                </span>
                             </span>
-                        </span>
-                        <span className={styles.planRewardSummary}>
-                            {plan.durationLabel}累计 {plan.totalReward.toLocaleString()} 永久 KK币
-                        </span>
-                        <span className={styles.planDiscount}>游玩 AI 文游 85 折</span>
-                    </button>
-                ))}
+                            <span className={styles.planRewardSummary}>
+                                {plan.durationLabel} · {plan.totalReward.toLocaleString()} KK币
+                            </span>
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            <section className={styles.membershipBenefitsCard} aria-labelledby="membership-benefits-title">
-                <header className={styles.membershipBenefitsHeader}>
-                    <strong id="membership-benefits-title">会员权益</strong>
-                    <span>有效期内生效</span>
-                </header>
-                <div className={styles.membershipBenefitRow}>
-                    <span className={styles.membershipBenefitIcon} aria-hidden="true">币</span>
-                    <span className={styles.membershipBenefitText}>
-                        <strong>每日领币</strong>
-                        <small>
-                            {selectedMembershipPlan
-                                ? `每日 ${selectedMembershipPlan.dailyReward} 永久KK币，最后一天 ${selectedMembershipPlan.finalDayReward} 币`
-                                : '登录签到领取对应会员卡永久KK币'}
-                        </small>
-                    </span>
-                    <span className={styles.membershipBenefitCheck} aria-hidden="true">✓</span>
-                </div>
-                <div className={styles.membershipBenefitRow}>
-                    <span className={styles.membershipBenefitIcon} aria-hidden="true">85</span>
-                    <span className={styles.membershipBenefitText}>
-                        <strong>游玩 AI 85 折</strong>
-                        <small>仅适用于正式发布的 AI 文游游玩扣费</small>
-                    </span>
-                    <span className={styles.membershipBenefitCheck} aria-hidden="true">✓</span>
-                </div>
-                <div className={styles.membershipBenefitRow}>
-                    <span className={styles.membershipBenefitIcon} aria-hidden="true">双</span>
-                    <span className={styles.membershipBenefitText}>
-                        <strong>两档独立生效</strong>
-                        <small>周卡、月卡可同时持有并分别领取奖励</small>
-                    </span>
-                    <span className={styles.membershipBenefitCheck} aria-hidden="true">✓</span>
-                </div>
-                <div className={styles.membershipBenefitRow}>
-                    <span className={styles.membershipBenefitIcon} aria-hidden="true">续</span>
-                    <span className={styles.membershipBenefitText}>
-                        <strong>同档购买顺延</strong>
-                        <small>重复购买同档会员卡会直接延长有效期</small>
-                    </span>
-                    <span className={styles.membershipBenefitCheck} aria-hidden="true">✓</span>
-                </div>
-            </section>
-        </>
+            <div className={styles.membershipPerkStrip} aria-label="会员权益">
+                <span>
+                    {selectedMembershipPlan
+                        ? `每日 ${selectedMembershipPlan.dailyReward} 币`
+                        : '每日领币'}
+                </span>
+                <span>AI 文游 85 折</span>
+                <span>同档顺延</span>
+            </div>
+            <p className={styles.membershipFootNote}>
+                需每日签到领取；周卡/月卡可同时持有，未签到可补签后领取。
+            </p>
+        </div>
     );
 
     const formContent = (
@@ -882,19 +853,18 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                     className={`${styles.modalContent} ${styles.modalContentWide} ${styles.rechargeCenter}${constrainToGameViewport ? ` ${styles.modalContentGameViewport}` : ''}`}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <button type="button" className={styles.closeBtn} onClick={handleClose} aria-label={t('common.close')}>
-                        <span className={styles.closeIcon} aria-hidden="true" />
-                    </button>
                     <button type="button" className={styles.dismissBtn} onClick={handleClose} aria-label={t('common.close')}>
                         <span className={styles.dismissIcon} aria-hidden="true" />
                     </button>
 
-                    <h2 className={styles.title}>充值中心</h2>
-
-                    <div className={styles.regionSummary}>
-                        <span>当前支付地区</span>
-                        <strong>{currentPaymentRegion}</strong>
-                    </div>
+                    <header className={styles.rechargeHeader}>
+                        <h2 className={styles.title}>充值中心</h2>
+                        <p className={styles.regionMeta}>
+                            {currentPaymentRegion}
+                            <span aria-hidden="true">·</span>
+                            虚拟商品不支持退款
+                        </p>
+                    </header>
 
                     <div className={styles.rechargeTabs} role="tablist" aria-label="充值类型">
                         <button
@@ -907,7 +877,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                                 if (getCurrentAmount() == null) handleFixedAmountClick(rechargePlans[0]);
                             }}
                         >
-                            KK币充值
+                            <span>KK币</span>
                         </button>
                         <button
                             type="button"
@@ -919,15 +889,14 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                                 if (selectedPlanIndex < 0) setSelectedPlanIndex(0);
                             }}
                         >
-                            会员卡
+                            <span>会员卡</span>
                         </button>
                     </div>
 
                     <form className={styles.form} onSubmit={handleSubmit}>
                         {rechargeTab === 'diamonds' ? diamondsTabContent : membershipTabContent}
 
-                        <section className={styles.paymentSection} aria-labelledby="payment-method-heading">
-                            <h3 id="payment-method-heading" className={styles.sectionHeading}>支付方式</h3>
+                        <section className={styles.paymentSection} aria-label={t('rechargeModal.choosePayMethod')}>
                             <div className={styles.payMethodToggle} role="group" aria-label={t('rechargeModal.choosePayMethod')}
                                 style={isMiniProgramEnv() ? { gridTemplateColumns: '1fr' } : undefined}>
                                 {((isMiniProgramEnv() ? ['wechat'] : ['wechat', 'alipay', 'overseas']) as DefaultPayMethod[]).map((method) => (
@@ -981,8 +950,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                             {isLoading || alipay.creating
                                 ? t('rechargeModal.processing')
                                 : rechargeTab === 'membership'
-                                    ? `支付 ${fmt(membershipPayAmount)}，开通${selectedMembershipPlan?.name ?? '会员卡'}`
-                                    : `支付 ${fmt(payAmount)}，获得 ${estimatedDiamonds} KK币`}
+                                    ? `支付 ${fmt(membershipPayAmount)} · 开通${selectedMembershipPlan?.name ?? '会员卡'}`
+                                    : `支付 ${fmt(payAmount)} · 获得 ${estimatedDiamonds} KK币`}
                         </button>
 
                         {alipay.error && alipay.error !== 'cancelPending' && <p role="alert" className={styles.errorText}>
@@ -995,21 +964,6 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                                 {t('rechargeModal.alipayCancelRetry')}
                             </button>
                         </div>}
-
-                        {rechargeTab === 'membership' ? (
-                            <section className={styles.membershipRulesCard} aria-labelledby="membership-rules-title">
-                                <strong id="membership-rules-title">领取规则</strong>
-                                <ul>
-                                    <li>会员币需每日登录并完成签到后领取，到账后永久有效。</li>
-                                    <li>周卡每日 77 币、最后一天 78 币，7 天累计 540 币。</li>
-                                    <li>月卡每日 66 币、最后一天 86 币，30 天累计 2,000 币。</li>
-                                    <li>周卡与月卡同时有效时分别领取；同档重复购买直接延长有效期。</li>
-                                    <li>当日未签到不自动发放，可补签后领取对应日期奖励。</li>
-                                </ul>
-                            </section>
-                        ) : (
-                            <p className={styles.paymentNotice}>充值KK币永久有效，虚拟商品支付后不支持退款。</p>
-                        )}
                     </form>
                 </div>
             </div>

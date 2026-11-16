@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import styles from './CharactersPanel.module.css';
 
@@ -25,6 +26,8 @@ const PortraitLightbox: React.FC<PortraitLightboxProps> = ({
   posterMode = false,
   subtitle,
 }) => {
+    const { t } = useTranslation();
+
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -51,7 +54,7 @@ const PortraitLightbox: React.FC<PortraitLightboxProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? titleId : undefined}
-      aria-label={title ? undefined : '立绘预览'}
+      aria-label={title ? undefined : t('gameSettingEditor.charactersPanel.portraitLightbox.s86f23a6fca')}
       onClick={onClose}
       data-testid="portrait-lightbox"
     >
@@ -61,13 +64,13 @@ const PortraitLightbox: React.FC<PortraitLightboxProps> = ({
           type="button"
           className={styles.portraitLightboxClose}
           onClick={onClose}
-          aria-label="关闭预览"
+          aria-label={t('createGame.closePortraitPreview')}
         >
           ×
         </button>
         {posterMode ? (
           <div className={styles.coverPosterLightboxFrame}>
-            <img className={styles.coverPosterLightboxImg} src={src} alt={title || '游戏封面'} />
+            <img className={styles.coverPosterLightboxImg} src={src} alt={title || t('common.coverUpload.title')} />
             {title ? (
               <div className={styles.coverPosterLightboxTitleBlock}>
                 {subtitle ? (
@@ -80,7 +83,7 @@ const PortraitLightbox: React.FC<PortraitLightboxProps> = ({
         ) : (
           <>
             <div className={styles.portraitLightboxFrame}>
-              <img className={styles.portraitLightboxImg} src={src} alt={title || '角色立绘'} />
+              <img className={styles.portraitLightboxImg} src={src} alt={title || t('warehouse.avatars.generateSubjectCharacter')} />
             </div>
             {title ? (
               <p id={titleId} className={styles.portraitLightboxTitle}>

@@ -250,7 +250,7 @@ export const SAMPLE_REGEX_RULES: Omit<TopbarRegexRule, "id">[] = [
   { name: "周数 · 英文 WEEK", enabled: true, target: "week", pattern: "第\\s*(\\d+)\\s*周", flags: "g", replacement: "WEEK $1" },
   {
     name: "日期 · 只留月/日", enabled: true, target: "date", pattern: "(\\d{4})\\.(\\d{1,2})\\.(\\d{1,2})\\s*(周\\S+)?", flags: "g",
-    replacement: "<b style=\"font-family:var(--font-serif)\">$2/$3</b> <small style=\"opacity:.7\">$4</small>",
+    replacement: "<b style=\"font-family:var(--font-ui)\">$2/$3</b> <small style=\"opacity:.7\">$4</small>",
   },
   { name: "地点 · 星芒前后缀", enabled: true, target: "location", pattern: "^(.+)$", flags: "", replacement: "「$1」" },
   { name: "天气 · 加书名号", enabled: true, target: "weather", pattern: "^(.+)$", flags: "", replacement: "「$1」" },
@@ -282,7 +282,7 @@ export const SAMPLE_TEMPLATE_CSS = `.app-topbar .tbx { display: flex; align-item
 .app-topbar .tbx-id { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .app-topbar .tb-ava { width: 38px; height: 38px; flex-shrink: 0; border-radius: 12px; object-fit: cover; border: 2px solid var(--gold); display: flex; align-items: center; justify-content: center; background: var(--paper); color: var(--jade); font-weight: 800; }
 .app-topbar .tbx-who { display: flex; flex-direction: column; line-height: 1.25; }
-.app-topbar .tbx-who b { font-family: var(--font-serif); font-size: 16px; color: var(--jade-deep); }
+.app-topbar .tbx-who b { font-family: var(--font-ui); font-size: 16px; font-weight: 700; color: var(--jade-deep); }
 .app-topbar .tbx-who small { font-size: 10px; color: var(--ink-soft); letter-spacing: .12em; }
 .app-topbar .tbx-info { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; overflow: hidden; white-space: nowrap; font-size: 12px; }
 .app-topbar .tbx-week { padding: 1px 8px; border-radius: 99px; background: linear-gradient(90deg, var(--jade), var(--coral)); color: white; font-weight: 700; font-size: 11px; }

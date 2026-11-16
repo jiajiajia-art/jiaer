@@ -42,8 +42,8 @@ const AdminSkinSwitcher: React.FC = () => {
 
     return (
         <Popover content={content} trigger="click" placement="bottomRight" arrow={false}>
-            <Button type="text" icon={<BgColorsOutlined />} aria-label={t('settings.title')}>
-                {t('settings.skin')}
+            <Button type="text" icon={<BgColorsOutlined />} className={styles.skinButton} aria-label={t('settings.title')}>
+                <span className={styles.skinLabel}>{t('settings.skin')}</span>
             </Button>
         </Popover>
     );

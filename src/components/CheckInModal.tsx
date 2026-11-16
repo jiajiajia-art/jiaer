@@ -16,10 +16,13 @@ import {
     formatUtcMonthDay,
     getMonthProgress,
     getWeekdayKey,
+    normalizeMembershipSignInStatus,
     type CheckInViewMode,
 } from '../utils/checkInCalendar';
 import { useAuthStore } from '../store/useAuthStore';
 import styles from './CheckInModal.module.css';
+
+const CHECKIN_COIN_SRC = `${import.meta.env.BASE_URL}data/assetsv2/home/icon_coin.webp`;
 
 interface CheckInModalProps {
     isOpen: boolean;
@@ -102,23 +105,32 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
     const suppressRestoreFocusRef = useRef(false);
     const isEmbedded = presentation === 'embedded';
 
+    const applySignInStatus = useCallback((raw: MembershipSignInStatus | null | undefined) => {
+        // 功能注释：旧接口缺 week/month 时本地补齐日历，避免签到格子整块消失
+        const nextStatus = normalizeMembershipSignInStatus(raw);
+        setSignInStatus(nextStatus);
+        return nextStatus;
+    }, []);
+
     const fetchSignInStatus = useCallback(async (): Promise<MembershipSignInStatus | null> => {
         setIsFetchingStatus(true);
         setHasLoadError(false);
         try {
             const response = await auth.getSignInStatus();
-            const nextStatus = response.data.success ? response.data.data : null;
-            setSignInStatus(nextStatus);
+            const nextStatus = response.data.success
+                ? applySignInStatus(response.data.data)
+                : applySignInStatus(null);
             setHasLoadError(!nextStatus);
             return nextStatus;
         } catch (error) {
             console.error('Failed to load sign-in status:', error);
             setHasLoadError(true);
+            applySignInStatus(null);
             return null;
         } finally {
             setIsFetchingStatus(false);
         }
-    }, []);
+    }, [applySignInStatus]);
 
     useEffect(() => {
         if (!isOpen) {
@@ -126,7 +138,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
         }
         setSignInStatus(null);
         setHasLoadError(false);
-        setIsMonthExpanded(isEmbedded);
+        setIsMonthExpanded(false);
         setMakeupDialog(null);
         suppressRestoreFocusRef.current = false;
         previousFocusRef.current = document.activeElement instanceof HTMLElement
@@ -175,9 +187,20 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
     }, [makeupDialog]);
 
     const monthGrid = useMemo(
-        () => buildMonthGrid(signInStatus?.month.days ?? []),
-        [signInStatus?.month.days],
+        () => buildMonthGrid(signInStatus?.month?.days ?? []),
+        [signInStatus?.month?.days],
     );
+
+    const highlightTodayDate = useMemo(() => {
+        const weekDays = signInStatus?.week?.days;
+        if (!weekDays?.length) return null;
+        const markedToday = weekDays.find((day) => day.state === 'today')?.date;
+        if (markedToday) return markedToday;
+        if (!signInStatus?.signedInToday) return null;
+        const firstUpcoming = weekDays.findIndex((day) => day.state === 'upcoming');
+        const todayIndex = firstUpcoming === -1 ? weekDays.length - 1 : firstUpcoming - 1;
+        return todayIndex >= 0 ? weekDays[todayIndex]?.date ?? null : null;
+    }, [signInStatus]);
 
     if (!isOpen) return null;
 
@@ -192,7 +215,11 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                 return;
             }
 
-            setSignInStatus(result.status);
+            // 功能注释：部分环境签到成功体只带 signInStatus；勿用空 status 把日历清空成「只剩标题条」
+            const nextStatus = applySignInStatus(result.status ?? result.signInStatus);
+            if (!nextStatus) {
+                await fetchSignInStatus();
+            }
             updateUser({ points: result.remainingPoints, hasSignedIn: true });
             if (result.alreadySigned) {
                 toast.success(t('checkIn.alreadySigned'));
@@ -246,7 +273,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                 toast.error(response.data.message || t('checkIn.requestFailed'));
                 return;
             }
-            setSignInStatus(result.status);
+            applySignInStatus(result.status);
             updateUser({ points: result.remainingPoints });
             onSignInSuccess?.();
             setMakeupDialog({ kind: 'makeupSuccess', date, result });
@@ -261,7 +288,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                 };
             })?.response?.data;
             if (payload?.data?.status) {
-                setSignInStatus(payload.data.status);
+                applySignInStatus(payload.data.status);
             }
             if (payload?.errorCode === 'MAKEUP_CARD_UNAVAILABLE') {
                 setMakeupDialog({ kind: 'noCard', date });
@@ -269,7 +296,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
             }
 
             const calibratedStatus = await fetchSignInStatus();
-            const calibratedDay = calibratedStatus?.month.days.find((day) => day.date === date);
+            const calibratedDay = calibratedStatus?.month?.days.find((day) => day.date === date);
             if (calibratedDay?.state === 'made_up') {
                 const userResponse = await auth.getUserInfo().catch(() => null);
                 if (userResponse?.data.success && userResponse.data.data) {
@@ -298,36 +325,51 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
     };
 
     const status = signInStatus;
-    const monthProgress = status ? getMonthProgress(status.month) : 0;
-    const monthProgressPercent = status
+    const monthProgress = status?.month ? getMonthProgress(status.month) : 0;
+    const monthProgressPercent = status?.month?.targetDays
         ? Math.min(100, Math.round((monthProgress / status.month.targetDays) * 100))
         : 0;
-    const [monthYear = '', monthNumber = ''] = status?.month.monthKey.split('-') ?? [];
+    const [monthYear = '', monthNumber = ''] = status?.month?.monthKey?.split('-') ?? [];
 
     const renderWeekDay = (day: SignInWeekDay) => {
         const weekdayKey = getWeekdayKey(day.weekday);
         const stateLabel = t(`checkIn.states.${day.state}`);
+        const isBonusDay = day.weekday === 7 || day.weeklyBonusPoints > 0;
+        const displayPoints = isBonusDay ? Math.max(day.totalPoints, 15) : day.totalPoints;
+        const isTodayHighlight = day.date === highlightTodayDate;
         return (
             <button
                 type="button"
                 key={day.date}
-                className={`${styles.weekDay} ${STATE_CLASS[day.state]} ${day.weeklyBonusPoints > 0 ? styles.bonusDay : ''}`}
-                aria-label={`${t(`checkIn.weekdays.${weekdayKey}`)} ${formatUtcMonthDay(day.date)} ${stateLabel} +${day.totalPoints}`}
+                className={[
+                    styles.weekDay,
+                    STATE_CLASS[day.state],
+                    isBonusDay ? styles.bonusDay : '',
+                    isTodayHighlight ? styles.dayToday : '',
+                ].filter(Boolean).join(' ')}
+                aria-label={`${t(`checkIn.weekdays.${weekdayKey}`)} ${formatUtcMonthDay(day.date)} ${stateLabel} +${displayPoints}`}
                 data-can-makeup={day.canMakeup || undefined}
                 disabled={!day.canMakeup || isMakeupSubmitting}
                 onClick={(event) => openMakeupConfirm(day.date, event.currentTarget)}
             >
-                {day.state === 'today' && <span className={styles.todayTag}>今天</span>}
                 <span className={styles.weekday}>{t(`checkIn.weekdays.${weekdayKey}`)}</span>
                 <span className={styles.weekDate}>{formatUtcMonthDay(day.date)}</span>
                 <span className={styles.coinWrap} aria-hidden="true">
-                    <span className={styles.coinMark} />
-                    <strong className={styles.dayReward}>+{day.totalPoints}</strong>
+                    {isEmbedded ? (
+                        <span className={styles.coinImgClip}>
+                            <img className={styles.coinImg} src={CHECKIN_COIN_SRC} alt="" draggable={false} />
+                        </span>
+                    ) : (
+                        <span className={styles.coinGlyph} />
+                    )}
+                    <strong className={styles.dayReward}>+{displayPoints}</strong>
                 </span>
-                {(day.canMakeup || day.state === 'signed' || day.state === 'made_up') && (
-                    <span className={styles.dayState}>
-                        {day.canMakeup ? t('checkIn.makeupAction') : '✓'}
-                    </span>
+                {day.canMakeup && isEmbedded && (
+                    <span className={styles.dayState}>{t('checkIn.makeupAction')}</span>
+                )}
+                {/* 功能注释：弹窗按设计稿不显示角标对勾，仅嵌入态保留已签标记 */}
+                {isEmbedded && (day.state === 'signed' || day.state === 'made_up') && !day.canMakeup && (
+                    <span className={styles.dayState} aria-hidden="true">✓</span>
                 )}
             </button>
         );
@@ -347,8 +389,125 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                 </span>
             ) : status.signedInToday
                 ? t('checkIn.titleSignedIn')
-                : t('checkIn.signInForPoints', { points: status.todayReward.totalPoints })}
+                : isEmbedded
+                    ? t('checkIn.signInForPoints', { points: status.todayReward?.totalPoints ?? 0 })
+                    : t('checkIn.signInCta')}
         </button>
+    ) : null;
+
+    // 功能注释：弹窗态补签确认用全屏 portal，卡片样式自包含，避免嵌套透边与裸按钮
+    const makeupLayer = makeupDialog ? (
+        <div
+            className={isEmbedded ? styles.makeupDialogBackdrop : styles.makeupPortal}
+            onMouseDown={(event) => {
+                if (event.target === event.currentTarget) closeMakeupDialog();
+            }}
+        >
+            <section
+                ref={makeupDialogRef}
+                className={isEmbedded ? styles.makeupDialog : styles.makeupCard}
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="makeup-dialog-title"
+                tabIndex={-1}
+            >
+                {makeupDialog.kind === 'makeupConfirm' && (
+                    <>
+                        <h3 id="makeup-dialog-title" className={styles.makeupTitle}>
+                            {t('checkIn.makeupConfirmTitle')}
+                        </h3>
+                        <p className={styles.makeupDesc}>
+                            {t('checkIn.makeupConfirm', { date: makeupDialog.date })}
+                        </p>
+                        <div className={styles.makeupActions}>
+                            <button
+                                type="button"
+                                className={styles.makeupBtnGhost}
+                                onClick={closeMakeupDialog}
+                            >
+                                {t('checkIn.makeupCancel')}
+                            </button>
+                            <button
+                                type="button"
+                                className={styles.makeupBtnPrimary}
+                                disabled={isMakeupSubmitting}
+                                onClick={() => void handleMakeup(makeupDialog.date)}
+                            >
+                                {isMakeupSubmitting
+                                    ? t('checkIn.makeupSubmitting')
+                                    : t('checkIn.makeupConfirmAction')}
+                            </button>
+                        </div>
+                    </>
+                )}
+
+                {makeupDialog.kind === 'noCard' && (
+                    <>
+                        <h3 id="makeup-dialog-title" className={styles.makeupTitle}>
+                            {t('checkIn.makeupNoCardTitle')}
+                        </h3>
+                        <p className={styles.makeupDesc}>{t('checkIn.makeupNoCard')}</p>
+                        <div className={styles.makeupActions}>
+                            <button
+                                type="button"
+                                className={styles.makeupBtnGhost}
+                                onClick={closeMakeupDialog}
+                            >
+                                {t('common.close')}
+                            </button>
+                            <button
+                                type="button"
+                                className={styles.makeupBtnPrimary}
+                                onClick={handleGoToDailyTasks}
+                            >
+                                {t('checkIn.makeupGoEarn')}
+                            </button>
+                        </div>
+                    </>
+                )}
+
+                {makeupDialog.kind === 'makeupSuccess' && (
+                    <>
+                        <h3 id="makeup-dialog-title" className={styles.makeupTitle}>
+                            {t('checkIn.makeupSuccessTitle')}
+                        </h3>
+                        <p className={styles.makeupDesc}>
+                            {t('checkIn.makeupSuccess', {
+                                date: makeupDialog.date,
+                                points: makeupDialog.result.pointsAdded,
+                            })}
+                        </p>
+                        <div className={styles.makeupRewardList}>
+                            <span>{t('checkIn.makeupBaseReward', {
+                                points: makeupDialog.result.rewardBreakdown.basePoints,
+                            })}</span>
+                            {makeupDialog.result.rewardBreakdown.weeklyBonusPoints > 0 && (
+                                <span>{t('checkIn.weekBonus', {
+                                    points: makeupDialog.result.rewardBreakdown.weeklyBonusPoints,
+                                })}</span>
+                            )}
+                            {makeupDialog.result.rewardBreakdown.monthlyBonusPoints > 0 && (
+                                <span>{t('checkIn.monthBonus', {
+                                    points: makeupDialog.result.rewardBreakdown.monthlyBonusPoints,
+                                })}</span>
+                            )}
+                            {makeupDialog.result.membershipRewards?.length ? (
+                                <span>
+                                    会员补签额外永久KK币：{describeMembershipRewards(makeupDialog.result.membershipRewards)}
+                                </span>
+                            ) : null}
+                        </div>
+                        <button
+                            type="button"
+                            className={styles.makeupBtnPrimary}
+                            onClick={closeMakeupDialog}
+                        >
+                            {t('common.close')}
+                        </button>
+                    </>
+                )}
+            </section>
+        </div>
     ) : null;
 
     return (
@@ -406,31 +565,42 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                         </div>
                     ) : status ? (
                         <>
-                            {!isEmbedded && (
+                            {status.month && (
                                 <section className={styles.monthReward} aria-label={t('checkIn.monthRewardTitle')}>
                                     <div className={styles.rewardProgress}>
                                         <div className={styles.rewardProgressTop}>
-                                            <strong>{t('checkIn.monthRewardTitle')}</strong>
-                                            <span><b>{monthProgress}</b>/{status.month.targetDays}</span>
+                                            <strong>
+                                                {t('checkIn.monthStreakProgress')}
+                                                {' '}
+                                                <b>{monthProgress}</b>
+                                                /{status.month.targetDays}
+                                                {' '}
+                                                {t('checkIn.monthStreakDaysUnit')}
+                                            </strong>
                                         </div>
                                         <div className={styles.progressTrack}>
                                             <span style={{ width: `${monthProgressPercent}%` }} />
                                         </div>
+                                        <p className={styles.monthExtraHint}>
+                                            {t('checkIn.monthExtraHint', { days: status.month.targetDays })}
+                                        </p>
                                     </div>
                                     <div className={styles.rewardBadge} aria-label={status.month.bonusRewarded
                                         ? t('checkIn.monthRewarded', { points: status.month.bonusPoints })
                                         : t('checkIn.monthRewardRule', { days: status.month.targetDays, points: status.month.bonusPoints })}>
-                                        <span className={styles.coinMark} aria-hidden="true" />
-                                        <strong>+{status.month.bonusPoints}</strong>
+                                        <div className={styles.rewardBadgeText}>
+                                            <span>{t('checkIn.monthExtraBadge')}</span>
+                                            <strong>+{status.month.bonusPoints}</strong>
+                                        </div>
+                                        <span className={styles.rewardCoinGlyph} aria-hidden="true" />
                                     </div>
                                 </section>
                             )}
                             <section
-                                className={isEmbedded ? styles.embeddedCalendarSection : styles.weekSection}
-                                aria-labelledby={isEmbedded ? undefined : 'check-in-week-title'}
-                                aria-label={isEmbedded ? t('checkIn.title') : undefined}
+                                className={styles.weekSection}
+                                aria-labelledby="check-in-week-title"
                             >
-                                {!isEmbedded && (
+                                {status.week && (
                                     <>
                                         <div className={styles.sectionHeading}>
                                             <div className={styles.headingInline}>
@@ -441,7 +611,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                                                 {t('checkIn.makeupCards', { count: status.makeupCardCount ?? 0 })}
                                             </span>
                                         </div>
-                                        <div className={styles.weekGrid}>{status.week.days.map(renderWeekDay)}</div>
+                                        <div className={styles.weekGrid}>{(status.week.days ?? []).map(renderWeekDay)}</div>
 
                                         {mode === 'profile' && (
                                             <button
@@ -458,7 +628,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                                     </>
                                 )}
 
-                                {(isEmbedded || (mode === 'profile' && isMonthExpanded)) && (
+                                {mode === 'profile' && isMonthExpanded && status.month && (
                                     <section id="check-in-month-panel" className={styles.monthSection} aria-labelledby="check-in-month-title">
                                         <div className={styles.monthHeading}>
                                             <h3 id="check-in-month-title">
@@ -481,8 +651,8 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                                                     disabled={!day.canMakeup || isMakeupSubmitting}
                                                     onClick={(event) => openMakeupConfirm(day.date, event.currentTarget)}
                                                 >
-                                                    <span>{day.dayOfMonth}</span>
-                                                    <small>
+                                                    <span className={styles.monthDayNum}>{day.dayOfMonth}</span>
+                                                    <small className={styles.monthDayMark}>
                                                         {day.canMakeup
                                                             ? t('checkIn.makeupAction')
                                                             : day.state === 'signed' || day.state === 'made_up'
@@ -495,13 +665,6 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                                             ))}
                                         </div>
                                     </section>
-                                )}
-
-                                {isEmbedded && (
-                                    <div className={styles.embeddedSummary}>
-                                        <span>{t('checkIn.embeddedWeekSummary', { days: status.week.consecutiveDays })}</span>
-                                        <span>{t('checkIn.embeddedMonthSummary', { days: status.month.progressDays })}</span>
-                                    </div>
                                 )}
                             </section>
 
@@ -520,109 +683,23 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                                 <section className={styles.embeddedRewardInfo} aria-label={t('checkIn.embeddedRewardTitle')}>
                                     <strong>{t('checkIn.embeddedRewardTitle')}</strong>
                                     <p>{t('checkIn.weekRule')}</p>
-                                    <p>{status.month.bonusRewarded
-                                        ? t('checkIn.monthRewarded', { points: status.month.bonusPoints })
-                                        : t('checkIn.monthRewardRule', {
-                                            days: status.month.targetDays,
-                                            points: status.month.bonusPoints,
-                                        })}</p>
+                                    {status.month ? (
+                                        <p>{status.month.bonusRewarded
+                                            ? t('checkIn.monthRewarded', { points: status.month.bonusPoints })
+                                            : t('checkIn.monthRewardRule', {
+                                                days: status.month.targetDays,
+                                                points: status.month.bonusPoints,
+                                            })}</p>
+                                    ) : null}
                                 </section>
                             )}
                         </footer>
                     </>
                 )}
 
-                {makeupDialog && (
-                    <div className={styles.makeupDialogBackdrop}>
-                        <section
-                            ref={makeupDialogRef}
-                            className={styles.makeupDialog}
-                            role="alertdialog"
-                            aria-modal="true"
-                            aria-labelledby="makeup-dialog-title"
-                            tabIndex={-1}
-                        >
-                            {makeupDialog.kind === 'makeupConfirm' && (
-                                <>
-                                    <h3 id="makeup-dialog-title">{t('checkIn.makeupConfirmTitle')}</h3>
-                                    <p>{t('checkIn.makeupConfirm', { date: makeupDialog.date })}</p>
-                                    <div className={styles.makeupDialogActions}>
-                                        <button type="button" onClick={closeMakeupDialog}>
-                                            {t('checkIn.makeupCancel')}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className={styles.makeupDialogPrimary}
-                                            disabled={isMakeupSubmitting}
-                                            onClick={() => void handleMakeup(makeupDialog.date)}
-                                        >
-                                            {isMakeupSubmitting
-                                                ? t('checkIn.makeupSubmitting')
-                                                : t('checkIn.makeupConfirmAction')}
-                                        </button>
-                                    </div>
-                                </>
-                            )}
-
-                            {makeupDialog.kind === 'noCard' && (
-                                <>
-                                    <h3 id="makeup-dialog-title">{t('checkIn.makeupNoCardTitle')}</h3>
-                                    <p>{t('checkIn.makeupNoCard')}</p>
-                                    <div className={styles.makeupDialogActions}>
-                                        <button type="button" onClick={closeMakeupDialog}>
-                                            {t('common.close')}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className={styles.makeupDialogPrimary}
-                                            onClick={handleGoToDailyTasks}
-                                        >
-                                            {t('checkIn.makeupGoEarn')}
-                                        </button>
-                                    </div>
-                                </>
-                            )}
-
-                            {makeupDialog.kind === 'makeupSuccess' && (
-                                <>
-                                    <h3 id="makeup-dialog-title">{t('checkIn.makeupSuccessTitle')}</h3>
-                                    <p>{t('checkIn.makeupSuccess', {
-                                        date: makeupDialog.date,
-                                        points: makeupDialog.result.pointsAdded,
-                                    })}</p>
-                                    <div className={styles.makeupRewardList}>
-                                        <span>{t('checkIn.makeupBaseReward', {
-                                            points: makeupDialog.result.rewardBreakdown.basePoints,
-                                        })}</span>
-                                        {makeupDialog.result.rewardBreakdown.weeklyBonusPoints > 0 && (
-                                            <span>{t('checkIn.weekBonus', {
-                                                points: makeupDialog.result.rewardBreakdown.weeklyBonusPoints,
-                                            })}</span>
-                                        )}
-                                        {makeupDialog.result.rewardBreakdown.monthlyBonusPoints > 0 && (
-                                            <span>{t('checkIn.monthBonus', {
-                                                points: makeupDialog.result.rewardBreakdown.monthlyBonusPoints,
-                                            })}</span>
-                                        )}
-                                        {makeupDialog.result.membershipRewards?.length ? (
-                                            <span>
-                                                会员补签额外永久KK币：{describeMembershipRewards(makeupDialog.result.membershipRewards)}
-                                            </span>
-                                        ) : null}
-                                    </div>
-                                    <button
-                                        type="button"
-                                        className={styles.makeupDialogPrimary}
-                                        onClick={closeMakeupDialog}
-                                    >
-                                        {t('common.close')}
-                                    </button>
-                                </>
-                            )}
-                        </section>
-                    </div>
-                )}
+                {isEmbedded ? makeupLayer : null}
             </div>
+            {!isEmbedded && makeupLayer ? createPortal(makeupLayer, document.body) : null}
         </div>
     );
 };

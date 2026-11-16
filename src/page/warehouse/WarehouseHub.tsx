@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import Navbar from '../../components/Layout/Navbar';
 import MobileBottomNav from '../../components/Layout/MobileBottomNav';
@@ -15,6 +16,7 @@ import styles from './WarehouseHub.module.css';
 const GROUP_ORDER: WarehouseNavItem['group'][] = ['mine', 'public', 'extra'];
 
 const WarehouseHub: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -58,7 +60,7 @@ const WarehouseHub: React.FC = () => {
 
   const goUpload = () => {
     navigate('/warehouse/public/cards');
-    toast.success('可在「我的人设卡」发布到公共卡库');
+    toast.success(t('warehouse.uploadToast'));
     setSheetOpen(false);
   };
 
@@ -81,8 +83,8 @@ const WarehouseHub: React.FC = () => {
           if (variant !== 'side') setSheetOpen(false);
         }}
       >
-        <span>{item.label}</span>
-        {item.soon ? <span className={styles.soon}>待开放</span> : null}
+        <span>{t(item.label)}</span>
+        {item.soon ? <span className={styles.soon}>{t('warehouse.soon')}</span> : null}
       </NavLink>
     ));
 
@@ -90,20 +92,20 @@ const WarehouseHub: React.FC = () => {
     <div className={styles.pageRoot}>
       <Navbar />
       <div className={styles.shell}>
-        <aside className={styles.sidebar} aria-label="仓库目录">
-          <div className={styles.groupTitle}>我的资源</div>
+        <aside className={styles.sidebar} aria-label={t('warehouse.catalogAria')}>
+          <div className={styles.groupTitle}>{t(WAREHOUSE_GROUP_LABEL.mine)}</div>
           {renderNavLinks(groups.mine, 'side')}
 
-          <div className={styles.groupTitle}>公共资源</div>
+          <div className={styles.groupTitle}>{t(WAREHOUSE_GROUP_LABEL.public)}</div>
           {renderNavLinks(groups.public, 'side')}
 
-          <div className={styles.groupTitle}>其它</div>
+          <div className={styles.groupTitle}>{t(WAREHOUSE_GROUP_LABEL.extra)}</div>
           {renderNavLinks(groups.extra, 'side')}
 
           <div className={styles.uploadCard}>
-            <p>创建更多精彩 — 上传你的资源，与大家分享</p>
+            <p>{t('warehouse.uploadShare')}</p>
             <button type="button" className={styles.uploadBtn} onClick={goUpload}>
-              立即上传
+              {t('warehouse.uploadNow')}
             </button>
           </div>
         </aside>
@@ -112,9 +114,11 @@ const WarehouseHub: React.FC = () => {
           <div className={styles.mobileTop}>
             <div className={styles.mobileCurrent}>
               <span className={styles.mobileEyebrow}>
-                {current ? WAREHOUSE_GROUP_LABEL[current.group] : '资源库'}
+                {current ? t(WAREHOUSE_GROUP_LABEL[current.group]) : t('warehouse.resourceLibrary')}
               </span>
-              <h1 className={styles.mobileTitle}>{current?.label ?? '仓库'}</h1>
+              <h1 className={styles.mobileTitle}>
+                {current ? t(current.label) : t('warehouse.title')}
+              </h1>
             </div>
             <button
               type="button"
@@ -123,17 +127,17 @@ const WarehouseHub: React.FC = () => {
               aria-controls="warehouse-catalog-sheet"
               onClick={() => setSheetOpen(true)}
             >
-              目录
+              {t('warehouse.catalog')}
             </button>
           </div>
 
-          <nav className={styles.mobileRail} aria-label="同组快捷切换">
+          <nav className={styles.mobileRail} aria-label={t('warehouse.catalogAria')}>
             {renderNavLinks(railItems, 'rail')}
           </nav>
 
           <button type="button" className={styles.mobileUploadStrip} onClick={goUpload}>
-            <span className={styles.mobileUploadCopy}>上传资源 · 与大家分享</span>
-            <span className={styles.mobileUploadCta}>立即上传</span>
+            <span className={styles.mobileUploadCopy}>{t('warehouse.uploadShareShort')}</span>
+            <span className={styles.mobileUploadCta}>{t('warehouse.uploadNow')}</span>
           </button>
         </div>
 
@@ -153,28 +157,28 @@ const WarehouseHub: React.FC = () => {
             className={styles.sheetPanel}
             role="dialog"
             aria-modal="true"
-            aria-label="仓库目录"
+            aria-label={t('warehouse.catalogAria')}
             onClick={(e) => e.stopPropagation()}
           >
             <div className={styles.sheetHandle} aria-hidden />
             <div className={styles.sheetHeader}>
-              <h2 className={styles.sheetTitle}>选择分区</h2>
+              <h2 className={styles.sheetTitle}>{t('warehouse.sheetTitle')}</h2>
               <button
                 type="button"
                 className={styles.sheetClose}
                 onClick={() => setSheetOpen(false)}
               >
-                关闭
+                {t('common.close')}
               </button>
             </div>
             {GROUP_ORDER.map((group) => (
               <section key={group} className={styles.sheetGroup}>
-                <div className={styles.sheetGroupTitle}>{WAREHOUSE_GROUP_LABEL[group]}</div>
+                <div className={styles.sheetGroupTitle}>{t(WAREHOUSE_GROUP_LABEL[group])}</div>
                 <div className={styles.sheetLinks}>{renderNavLinks(groups[group], 'sheet')}</div>
               </section>
             ))}
             <button type="button" className={styles.sheetUpload} onClick={goUpload}>
-              立即上传资源
+              {t('warehouse.uploadNowLong')}
             </button>
           </div>
         </div>

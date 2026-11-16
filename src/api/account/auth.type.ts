@@ -125,8 +125,9 @@ export interface MembershipSignInStatus {
   canClaim: boolean;
   makeupCardCount: number;
   todayReward: SignInRewardBreakdown;
-  week: SignInWeekStatus;
-  month: SignInMonthStatus;
+  /** 功能注释：部分环境/旧接口可能不带 week/month，前端必须可选链，避免嵌入签到白屏 */
+  week?: SignInWeekStatus;
+  month?: SignInMonthStatus;
   streakDay: number;
   nextStreakDay: number;
   planId: MembershipPlanId | null;

@@ -138,9 +138,13 @@
   }
 
   .brandCol {
+    /* 功能注释：PC 的 flex:1 1 240px 在移动端会把整列撑成 240px 高，版权下出现大块空白 */
+    flex: 0 0 auto;
     max-width: none;
+    width: 100%;
     gap: 0;
     align-items: center;
+    min-height: 0;
   }
 
   .logo,

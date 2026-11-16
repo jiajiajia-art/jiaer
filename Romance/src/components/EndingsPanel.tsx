@@ -47,17 +47,15 @@ function DimGlyph({ icon, size = 14 }: { icon: GradeDimIcon; size?: number }) {
   return G ? <G width={size} height={size} style={{ color: meta.color }} aria-hidden /> : null;
 }
 
-function Area({ n, title, desc, right, children }: { n: number; title: string; desc: ReactNode; right?: ReactNode; children: ReactNode }) {
+function Area({ n, title, desc, right, children }: { n: number; title: string; desc?: ReactNode; right?: ReactNode; children: ReactNode }) {
   return (
     <section className="rounded-xl border border-line bg-paper px-3.5 py-3">
-      <div className="flex flex-wrap items-start gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[var(--jade)] text-[11px] font-bold text-white">{n}</span>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-[13.5px] font-bold leading-5 text-ink">{title}</h3>
-          <div className="text-[11.5px] leading-relaxed text-ink-soft">{desc}</div>
-        </div>
+        <h3 className="min-w-0 flex-1 text-[13px] font-bold leading-5 text-ink">{title}</h3>
         {right}
       </div>
+      {desc ? <div className="mt-1 pl-7 text-[11px] leading-relaxed text-ink-soft">{desc}</div> : null}
       <div className="mt-2.5 space-y-2">{children}</div>
     </section>
   );
@@ -265,12 +263,7 @@ export default function EndingsPanel({
       {!modMode && <ScopeBanner scope="save">这里的修改只影响当前存档，立即保存。作品自带的结局会在开新局时带入。</ScopeBanner>}
 
       {/* 区域 1｜结算时限设置 */}
-      <Area n={1} title="本局天数上限 / 结算时限" desc={
-          <>
-            <p>本局日历天数到达上限时，无论进度如何都强制进入结局结算；AI 叙事会遵守该时间限制。</p>
-            <p className="mt-0.5">与「主线」里的节点完成条件无关：主线看条件推进，这里只决定玩够多少天是否强制收场。天数上限只在这里配置一处。</p>
-          </>
-        }
+      <Area n={1} title="天数上限"
         right={
           <span className="flex shrink-0 gap-1">
             <button type="button" className={pill(!!tl)} onClick={() => !tl && setTl({ value: 365, unit: "day" })}>限时</button>
@@ -280,11 +273,11 @@ export default function EndingsPanel({
         {tl ? (
           <>
             <div className="flex flex-wrap items-center gap-1.5 text-[12.5px] text-ink">
-              <span className="font-bold">本局总时长</span>
+              <span className="font-semibold text-ink-soft">本局</span>
               <input type="number" min={1} step={1} inputMode="numeric" className={`${pillInp} w-20 text-center font-bold tabular-nums`} value={totalDays || ""}
                 onChange={(ev) => setTl({ value: Math.max(1, Math.trunc(Number(ev.target.value)) || 1), unit: "day" })} aria-label="本局总天数" />
               <span>天</span>
-              <span className="ml-1 rounded-full bg-paper-2 px-2.5 py-0.5 text-[11.5px] text-ink-soft">截止日期 <b className="font-mono text-ink tabular-nums">{endDate}</b></span>
+              <span className="ml-1 rounded-full bg-paper-2 px-2.5 py-0.5 text-[11.5px] text-ink-soft">截止 <b className="font-mono text-ink tabular-nums">{endDate}</b></span>
               {sim && (
                 <span className="rounded-full bg-[var(--coral)]/10 px-2.5 py-0.5 text-[11.5px] text-ink-soft">
                   倒计时 <b className="tabular-nums" style={{ color: "var(--coral)" }}>{Math.max(0, totalDays - sim.day)}</b> 天
@@ -293,32 +286,28 @@ export default function EndingsPanel({
             </div>
             {tl.endDate && (
               <p className="text-[11px] text-ink-soft">
-                当前按旧数据里的固定截止日期结算。<button type="button" className="underline hover:text-ink" onClick={() => setTl({ value: totalDays || 1, unit: "day" })}>改为按天数</button>
+                当前按固定截止日期结算。<button type="button" className="underline hover:text-ink" onClick={() => setTl({ value: totalDays || 1, unit: "day" })}>改为按天数</button>
               </p>
             )}
           </>
-        ) : (
-          <p className="text-[11.5px] text-ink-soft">不限时：只有玩家主动结束，或某条结局勾选了「满足即结算」时才会结算。</p>
-        )}
+        ) : null}
       </Area>
 
       {/* 区域 2｜自定义结局规则列表 */}
-      <Area n={2} title="自定义结局规则列表"
-        desc={<>结局从上往下依次判断；<b className="text-ink">第一个满足全部条件的结局生效</b>；所有自定义结局都不满足时，自动走默认评级结局。</>}
+      <Area n={2} title="自定义结局"
+        desc="按顺序判断，命中第一条即生效"
         right={!modMode && sim ? (
           <button type="button" className={btn} onClick={async () => { if (await confirm("现在就结束游戏，进入结算？")) void endManually("manual"); }}>立即测试结算</button>
         ) : undefined}>
-        {/* 预览只读取当前存档，不写示例数据 */}
-        <p className="flex flex-wrap items-center gap-1.5 rounded-full bg-paper-2 px-3 py-1 text-[11.5px] text-ink-soft">
-          结算预览：
-          {sim ? (
-            <>当前如果立刻结束游戏，将达成
-              <b className="rounded-full px-2 text-white" style={{ background: hit ? "var(--jade)" : "var(--gold)" }}>
-                {hit ? [hit.title || "未命名结局", hit.subTitle].filter(Boolean).join(" · ") : `默认 · ${endingText(sim).title}`}
-              </b>
-            </>
-          ) : "进入游戏后，这里显示当前存档立刻结束会达成的结局。"}
-        </p>
+        {/* 功能注释：仅局内有存档时才显示结算预览，编辑器空态不占位 */}
+        {sim ? (
+          <p className="flex flex-wrap items-center gap-1.5 rounded-full bg-paper-2 px-3 py-1 text-[11.5px] text-ink-soft">
+            立刻结束将达成
+            <b className="rounded-full px-2 text-white" style={{ background: hit ? "var(--jade)" : "var(--gold)" }}>
+              {hit ? [hit.title || "未命名结局", hit.subTitle].filter(Boolean).join(" · ") : `默认 · ${endingText(sim).title}`}
+            </b>
+          </p>
+        ) : null}
 
         {list.length > 0 && <AuditBar issues={endIssues} onJump={(at) => { setQ(""); setOpenId(at.slice(7)); }} />}
         {list.length > 4 && <SearchBox value={q} onChange={setQ} placeholder="搜索结局名称 / 副标题 / 描述" count={shown.length} />}
@@ -477,32 +466,20 @@ export default function EndingsPanel({
       </Area>
 
       {/* 区域 3｜结局评级维度设置 —— 【评级维度】：结局确定后才打分，不参与决定是哪个结局 */}
-      <Area n={3} title="结局评级维度设置"
-        desc={
-          <>
-            <p>结算打分只看这里配置的维度；最多支持 {GRADE_DIM_MAX} 个评级维度。</p>
-            <ul className="mt-0.5 list-disc space-y-0.5 pl-4">
-              <li>维度指标选自本作品建角属性 / 人物相关数值，系统按数值自动换算评级（S+、S、A、B、C、D）与图标；</li>
-              <li>未配置时，开局按本作品建角属性自动生成默认维度；没有属性则不评分，只显示「旅程结束」；</li>
-              <li>综合评级取全部维度的平均；结局规则里单独指定了评级时，以结局的评级为准。</li>
-            </ul>
-          </>
-        }>
+      <Area n={3} title="评级维度" desc={`最多 ${GRADE_DIM_MAX} 项 · 未配则按建角属性自动生成`}>
         {dims.length === 0 && (
           autoDims.length ? (
             <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-dashed border-line px-2.5 py-2">
-              <span className="rounded-full bg-[var(--jade)]/12 px-2 text-[10.5px] font-bold leading-5 text-ink">按本作品属性自动生成</span>
+              <span className="rounded-full bg-[var(--jade)]/12 px-2 text-[10.5px] font-bold leading-5 text-ink">自动</span>
               {autoDims.map((d) => {
                 const card = dimCards.find((c) => c.id === d.id);
                 return <span key={d.id} className="rounded-full border border-line bg-paper-2 px-2 text-[11.5px] leading-5 text-ink-soft">{d.label}{card ? <b className="ml-1 text-ink">{card.grade}</b> : null}</span>;
               })}
-              <button type="button" className="ml-auto text-[11.5px] font-semibold text-jade hover:underline" onClick={() => saveDims(autoDims.map((d) => ({ ...d, src: { ...d.src } })))}>改为手动配置</button>
-              <span className="w-full text-[11px] text-ink-soft">未手动配置时，开局按这些建角属性评级（满分取属性上限）。添加任意维度后以手动配置为准。</span>
+              <button type="button" className="ml-auto text-[11.5px] font-semibold text-jade hover:underline" onClick={() => saveDims(autoDims.map((d) => ({ ...d, src: { ...d.src } })))}>改为手动</button>
             </div>
           ) : (
-            <div className="rounded-lg border border-dashed border-line px-2.5 py-3 text-center text-[12px] text-ink-soft">
-              请添加评级维度（选自本作品属性）
-              <span className="mt-0.5 block text-[11px]">未配置时结局不评分，只显示「旅程结束」。</span>
+            <div className="rounded-lg border border-dashed border-line/80 bg-paper-2/40 px-2.5 py-3 text-center text-[12px] text-ink-soft">
+              还没有评级维度
             </div>
           )
         )}
@@ -543,7 +520,7 @@ export default function EndingsPanel({
           {dims.length >= GRADE_DIM_MAX ? `已达上限 ${GRADE_DIM_MAX} 条` : "＋ 添加评级维度"}
         </button>
         {srcs.every((x) => x.group === GROUP_BUILTIN) && (
-          <p className="text-[11px] text-ink-soft">本作品还没有自定义属性或人物线路词条，下拉里只有引擎内置数值。可先在「建角」或「人物线路」里建好再来选。</p>
+          <p className="text-[11px] text-ink-soft">暂无作品属性，可先去「建角」配置。</p>
         )}
       </Area>
     </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { IoChevronForward, IoHelpCircle } from 'react-icons/io5';
 import type { CreatorEarningOverview } from '../../api/creatorEarnings/creatorEarningsApi';
 import { formatCreatorShareRatio, formatYuan } from '../../lib/creatorEarningsView';
@@ -33,9 +34,10 @@ const CreatorEarningsOverview: React.FC<Props> = ({
     onRecords,
     onRules,
 }) => {
-    if (loading && !data) return <section className={styles.panel}><div className={styles.state}>正在加载收益数据…</div></section>;
+    const { t } = useTranslation();
+    if (loading && !data) return <section className={styles.panel}><div className={styles.state}>{t('creatorCenter.loadingOverview')}</div></section>;
     if (error && !data) return (
-        <section className={styles.panel}><div className={styles.state} role="alert">收益数据加载失败<button type="button" onClick={onRetry}>重试</button></div></section>
+        <section className={styles.panel}><div className={styles.state} role="alert">{t('creatorCenter.overviewLoadFailed')}<button type="button" onClick={onRetry}>{t('common.retry')}</button></div></section>
     );
     if (!data) return null;
 
@@ -43,32 +45,32 @@ const CreatorEarningsOverview: React.FC<Props> = ({
     const available = Number(summary.availableGrossYuan);
     const reached = available >= Number(summary.minimumWithdrawYuan);
     const metrics = [
-        { label: '今日待结算（税前）', value: summary.pendingGrossYuan },
-        { label: '提现处理中（税前）', value: summary.frozenGrossYuan },
-        { label: '已到账（实收）', value: summary.paidNetYuan },
-        { label: '昨日', value: summary.yesterdayGrossYuan },
-        { label: '本月', value: summary.monthGrossYuan },
-        { label: '税前累计', value: summary.cumulativeGrossYuan },
+        { label: t('creatorCenter.pendingToday'), value: summary.pendingGrossYuan },
+        { label: t('creatorCenter.frozen'), value: summary.frozenGrossYuan },
+        { label: t('creatorCenter.paidNet'), value: summary.paidNetYuan },
+        { label: t('creatorCenter.yesterday'), value: summary.yesterdayGrossYuan },
+        { label: t('creatorCenter.month'), value: summary.monthGrossYuan },
+        { label: t('creatorCenter.cumulativePretax'), value: summary.cumulativeGrossYuan },
     ];
 
     return (
         <section className={styles.panel} aria-labelledby="creator-earnings-overview-title">
             <div className={styles.overviewHeading}>
-                <h2 id="creator-earnings-overview-title">收益总览</h2>
+                <h2 id="creator-earnings-overview-title">{t('creatorCenter.overviewTitle')}</h2>
                 <button type="button" className={styles.rulesButton} onClick={onRules}>
                     <span>{benefitLabel}</span>
                     {editorShareRatio !== undefined && customShareRatio !== undefined && (
-                        <><i aria-hidden="true">·</i><span>TXT {formatCreatorShareRatio(editorShareRatio)} / 自定义 {formatCreatorShareRatio(customShareRatio)}</span></>
+                        <><i aria-hidden="true">·</i><span>TXT {formatCreatorShareRatio(editorShareRatio)} / {t('creatorCenter.customShort')} {formatCreatorShareRatio(customShareRatio)}</span></>
                     )}
-                    <i aria-hidden="true">·</i><span>分成规则</span><IoHelpCircle aria-hidden="true" />
+                    <i aria-hidden="true">·</i><span>{t('creatorCenter.shareRules')}</span><IoHelpCircle aria-hidden="true" />
                 </button>
             </div>
-            {error && <button type="button" className={styles.textButton} onClick={onRetry}>刷新失败，点击重试</button>}
+            {error && <button type="button" className={styles.textButton} onClick={onRetry}>{t('creatorCenter.refreshFailed')}</button>}
 
             <div className={styles.overviewHero}>
                 <div className={styles.heroMeta}>
-                    <span>可提现（税前）</span>
-                    <strong>{reached ? '已满¥100，可申请提现' : '未满¥100，可兑换KK或继续累计'}</strong>
+                    <span>{t('creatorCenter.withdrawable')}</span>
+                    <strong>{reached ? t('creatorCenter.thresholdReached') : t('creatorCenter.thresholdPending')}</strong>
                 </div>
                 <b>{formatYuan(summary.availableGrossYuan)}</b>
             </div>
@@ -84,15 +86,15 @@ const CreatorEarningsOverview: React.FC<Props> = ({
 
             <div className={styles.overviewActions}>
                 <button type="button" onClick={onProfile} className={styles.profileAction}>
-                    创作者资料{!profileComplete && <span>待完善</span>}
+                    {t('creatorCenter.profile')}{!profileComplete && <span>{t('creatorCenter.profileIncomplete')}</span>}
                 </button>
                 <button type="button" onClick={onWithdraw} className={styles.withdrawAction}>
-                    {data.activeWithdrawal ? '查看提现状态' : '申请提现'}
+                    {data.activeWithdrawal ? t('creatorCenter.viewWithdrawal') : t('creatorCenter.requestWithdrawal')}
                 </button>
             </div>
 
             <button type="button" onClick={onRecords} className={styles.recordsLink}>
-                收益与提现记录<IoChevronForward aria-hidden="true" />
+                {t('creatorCenter.records')}<IoChevronForward aria-hidden="true" />
             </button>
         </section>
     );

@@ -5,6 +5,7 @@
  * 两类都只读本人数据，与各自创作页同一份接口。
  */
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import shelf from './Bookshelf.module.css';
 import styles from './ShelfMyMods.module.css';
@@ -20,14 +21,13 @@ import {
   type ShelfModKind,
 } from '../../lib/shelfMyMods';
 import {
-  MY_PLAY_MOD_GROUP_LABEL,
-  MY_PLAY_MOD_STATUS_LABEL,
   groupKeyOfPlayModStatus,
   groupMyPlayMods,
+  type MyPlayModGroupKey,
   type MyPlayModItem,
 } from '../../lib/myPlayMods';
 
-const KIND_LABEL: Record<ShelfModKind, string> = { play: '玩法', app: '手机应用' };
+type TFn = (key: string, opts?: Record<string, unknown>) => string;
 
 
 /** 功能注释：两类内容统一成同一种列表行 */
@@ -43,52 +43,46 @@ type Row = {
   editPath: string;
 };
 
-const FILTERS: Record<ShelfModKind, { key: string; label: string }[]> = {
-  play: [
-    { key: 'all', label: '全部' },
-    { key: 'draft', label: MY_PLAY_MOD_GROUP_LABEL.draft },
-    { key: 'private', label: MY_PLAY_MOD_GROUP_LABEL.private },
-    { key: 'published', label: MY_PLAY_MOD_GROUP_LABEL.published },
-  ],
-  app: [
-    { key: 'all', label: '全部' },
-    { key: 'draft', label: '草稿' },
-    { key: 'published', label: '已上架' },
-  ],
-};
-
-function formatUpdated(v?: string): string {
+function formatUpdated(v: string | undefined, t: TFn): string {
   if (!v) return '';
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return '';
   const sameYear = d.getFullYear() === new Date().getFullYear();
-  return `${sameYear ? '' : `${d.getFullYear()}.`}${d.getMonth() + 1}.${d.getDate()} 更新`;
+  return `${sameYear ? '' : `${d.getFullYear()}.`}${d.getMonth() + 1}.${d.getDate()} ${t('bookshelfUi.myMods.updatedSuffix')}`;
 }
 
-function playRows(items: MyPlayModItem[]): Row[] {
+function playModStatusLabel(status: string, t: TFn): string {
+  return t(`bookshelfUi.myMods.playModStatus.${status}`, { defaultValue: status });
+}
+
+function playModGroupLabel(group: MyPlayModGroupKey, t: TFn): string {
+  return t(`bookshelfUi.myMods.playModGroup.${group}`);
+}
+
+function playRows(items: MyPlayModItem[], t: TFn): Row[] {
   const g = groupMyPlayMods(items);
   return [...g.draft, ...g.private, ...g.published].map((m) => ({
     id: m.id,
     name: m.name || m.slug || m.id,
-    desc: m.description || '暂无说明',
+    desc: m.description || t('bookshelfUi.myMods.noDescription'),
     group: groupKeyOfPlayModStatus(m.status),
-    statusLabel: MY_PLAY_MOD_STATUS_LABEL[m.status] || m.status,
-    meta: [m.version ? `v${m.version}` : '', formatUpdated(m.updatedAt)].filter(Boolean).join(' · '),
+    statusLabel: playModStatusLabel(m.status, t),
+    meta: [m.version ? `v${m.version}` : '', formatUpdated(m.updatedAt, t)].filter(Boolean).join(' · '),
     updatedAt: String(m.updatedAt || ''),
     editPath: playModEditPath(m.id),
   }));
 }
 
-function appRows(items: PlatformApp[]): Row[] {
+function appRows(items: PlatformApp[], t: TFn): Row[] {
   return items.filter((a) => a && a.appId).map((a) => {
     const published = a.status === 'published';
     return {
       id: a.appId,
       name: a.name || a.appId,
-      desc: a.summary || '暂无说明',
+      desc: a.summary || t('bookshelfUi.myMods.noDescription'),
       group: published ? 'published' : 'draft',
-      statusLabel: published ? '已上架' : '草稿',
-      meta: [a.category, formatUpdated(a.updatedAt || a.createdAt)].filter(Boolean).join(' · '),
+      statusLabel: published ? t('bookshelfUi.myMods.filterPublished') : t('bookshelfUi.myMods.filterDraft'),
+      meta: [a.category, formatUpdated(a.updatedAt || a.createdAt, t)].filter(Boolean).join(' · '),
       icon: a.icon || undefined,
       updatedAt: String(a.updatedAt || a.createdAt || ''),
       editPath: phoneAppEditPath(a.appId),
@@ -107,6 +101,7 @@ interface Props {
 }
 
 const ShelfMyMods: React.FC<Props> = ({ token, keyword, kind, onKindChange, onBeforeLeave }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
   const [status, setStatus] = useState<'loading' | 'error' | 'ready'>('loading');
@@ -122,11 +117,11 @@ const ShelfMyMods: React.FC<Props> = ({ token, keyword, kind, onKindChange, onBe
         if (kind === 'play') {
           const res = await playModStoreApi.listMine(token, 'gameplay');
           if (!res?.success) throw new Error(res?.message || 'load failed');
-          if (!aborted) setRows(playRows(Array.isArray(res.data?.items) ? res.data.items : []));
+          if (!aborted) setRows(playRows(Array.isArray(res.data?.items) ? res.data.items : [], t));
         } else {
           const res = await platformAppsApi.listMine(token);
           if (!res?.success) throw new Error(res?.message || 'load failed');
-          if (!aborted) setRows(appRows(Array.isArray(res.data) ? res.data : []));
+          if (!aborted) setRows(appRows(Array.isArray(res.data) ? res.data : [], t));
         }
         if (!aborted) setStatus('ready');
       } catch (error) {
@@ -137,10 +132,30 @@ const ShelfMyMods: React.FC<Props> = ({ token, keyword, kind, onKindChange, onBe
     };
     void run();
     return () => { aborted = true; };
-  }, [token, kind, reloadSeq]);
+  }, [token, kind, reloadSeq, t]);
+
+  const kindLabel = useMemo<Record<ShelfModKind, string>>(() => ({
+    play: t('bookshelfUi.myMods.kindPlay'),
+    app: t('bookshelfUi.myMods.kindApp'),
+  }), [t]);
+
+  const filters = useMemo(() => {
+    if (kind === 'play') {
+      return [
+        { key: 'all', label: t('bookshelfUi.myMods.filterAll') },
+        { key: 'draft', label: playModGroupLabel('draft', t) },
+        { key: 'private', label: playModGroupLabel('private', t) },
+        { key: 'published', label: playModGroupLabel('published', t) },
+      ];
+    }
+    return [
+      { key: 'all', label: t('bookshelfUi.myMods.filterAll') },
+      { key: 'draft', label: t('bookshelfUi.myMods.filterDraft') },
+      { key: 'published', label: t('bookshelfUi.myMods.filterPublished') },
+    ];
+  }, [kind, t]);
 
   const sorted = useMemo(() => [...rows].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)), [rows]);
-  const filters = FILTERS[kind];
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: sorted.length };
     for (const r of sorted) c[r.group] = (c[r.group] ?? 0) + 1;
@@ -150,7 +165,7 @@ const ShelfMyMods: React.FC<Props> = ({ token, keyword, kind, onKindChange, onBe
   const shown = sorted.filter((r) => (filter === 'all' || r.group === filter)
     && (!q || `${r.name} ${r.desc}`.toLowerCase().includes(q)));
   const filterLabel = filters.find((f) => f.key === filter)?.label ?? '';
-  const noun = kind === 'play' ? '玩法 Mod' : '手机应用';
+  const noun = kind === 'play' ? t('bookshelfUi.myMods.playModNoun') : t('bookshelfUi.myMods.appNoun');
 
   const go = (path: string) => {
     onBeforeLeave?.();
@@ -158,7 +173,7 @@ const ShelfMyMods: React.FC<Props> = ({ token, keyword, kind, onKindChange, onBe
   };
 
   const kindSwitch = (
-    <div className={styles.kindSwitch} role="tablist" aria-label="内容类型">
+    <div className={styles.kindSwitch} role="tablist" aria-label={t('bookshelfUi.myMods.contentTypeAria')}>
       {(['play', 'app'] as ShelfModKind[]).map((k) => (
         <button
           key={k}
@@ -172,7 +187,7 @@ const ShelfMyMods: React.FC<Props> = ({ token, keyword, kind, onKindChange, onBe
             onKindChange(k);
           }}
         >
-          {KIND_LABEL[k]}
+          {kindLabel[k]}
         </button>
       ))}
     </div>
@@ -188,28 +203,28 @@ const ShelfMyMods: React.FC<Props> = ({ token, keyword, kind, onKindChange, onBe
   } else if (status === 'error') {
     body = (
       <div className={shelf.stateBox}>
-        <span>我的{noun}加载失败</span>
-        <button type="button" className={shelf.stateButton} onClick={() => setReloadSeq((n) => n + 1)}>重试</button>
+        <span>{t('bookshelfUi.myMods.loadFailed', { noun })}</span>
+        <button type="button" className={shelf.stateButton} onClick={() => setReloadSeq((n) => n + 1)}>{t('bookshelfUi.myMods.retry')}</button>
       </div>
     );
   } else if (sorted.length === 0) {
     body = (
       <div className={shelf.stateBox}>
-        <span>还没有自己的{noun}</span>
+        <span>{t('bookshelfUi.myMods.emptyTitle', { noun })}</span>
         <span className={styles.stateHint}>
           {kind === 'play'
-            ? '用一句话描述玩法，AI 帮你做成叠加包，可装进任意游戏世界'
-            : '对话生成一个小手机应用，审核上架后，游戏世界里的手机就能安装'}
+            ? t('bookshelfUi.myMods.emptyHintPlay')
+            : t('bookshelfUi.myMods.emptyHintApp')}
         </span>
         <button type="button" className={shelf.stateButton} onClick={() => go(kind === 'play' ? PLAY_MOD_CREATE_PATH : PHONE_APP_CREATE_PATH)}>
-          {kind === 'play' ? '创作玩法 Mod' : '创作手机应用'}
+          {kind === 'play' ? t('bookshelfUi.myMods.createPlayMod') : t('bookshelfUi.myMods.createApp')}
         </button>
       </div>
     );
   } else {
     body = (
       <>
-        <div className={styles.filters} role="radiogroup" aria-label="按状态筛选">
+        <div className={styles.filters} role="radiogroup" aria-label={t('bookshelfUi.myMods.filterByStatusAria')}>
           {filters.map((f) => (
             <button
               key={f.key}
@@ -225,7 +240,9 @@ const ShelfMyMods: React.FC<Props> = ({ token, keyword, kind, onKindChange, onBe
         </div>
         {shown.length === 0 ? (
           <div className={shelf.stateBox}>
-            <span>{q ? `没有找到与「${keyword.trim()}」相关的${noun}` : `没有${filterLabel}的${noun}`}</span>
+            <span>{q
+              ? t('bookshelfUi.myMods.noSearchResults', { keyword: keyword.trim(), noun })
+              : t('bookshelfUi.myMods.noFilterResults', { filterLabel, noun })}</span>
           </div>
         ) : (
           <ul className={styles.list}>
@@ -248,9 +265,9 @@ const ShelfMyMods: React.FC<Props> = ({ token, keyword, kind, onKindChange, onBe
                   type="button"
                   className={`${shelf.primaryButton} ${styles.editBtn}`}
                   onClick={() => go(r.editPath)}
-                  aria-label={`编辑「${r.name}」`}
+                  aria-label={t('bookshelfUi.myMods.editAria', { name: r.name })}
                 >
-                  编辑
+                  {t('bookshelfUi.myMods.edit')}
                 </button>
               </li>
             ))}
@@ -258,8 +275,8 @@ const ShelfMyMods: React.FC<Props> = ({ token, keyword, kind, onKindChange, onBe
         )}
         <p className={styles.footNote}>
           {kind === 'play'
-            ? '点「编辑」回到对话工坊修改，改完重新上传即提交新版本。'
-            : '点「编辑」打开该应用的草稿表单，改完保存并上传应用草稿；上架 / 下架也在那里操作。'}
+            ? t('bookshelfUi.myMods.footNotePlay')
+            : t('bookshelfUi.myMods.footNoteApp')}
         </p>
       </>
     );

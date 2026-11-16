@@ -95,13 +95,9 @@ export default function StorylinesEditor({ value, sidelines, events = [], onChan
 
   return (
     <div className="space-y-2.5">
-      <p className="text-[11px] leading-relaxed text-ink-soft">
-        建议只配一条主线：按顺序排好节点，每个节点写清目标说明与完成条件。前面的必做节点完成后，下一步才开始判定；可选目标不阻塞主线。主线只按节点条件推进，不按天数；本局天数上限（结算时限）在下方「结局」区单独配置。
-        每天结束由代码判定完成 / 失败。必做节点全部完成 = 主线完成；任一必做节点失败 = 主线中断。主线节点不配奖励、不激活事件。
-      </p>
       <button className={btn} onClick={() => commit([...list, { id: uid("sl"), name: "主线", nodes: [newNode(dd)] }])}>＋ 新建主线</button>
       {list.length > 0 && <AuditBar issues={audit.issues.filter((x) => x.at?.startsWith("quest:"))} onJump={() => undefined} />}
-      {!list.length && <p className="rounded-xl border border-dashed border-line px-3 py-4 text-center text-[12px] text-ink-soft">还没有主线 · 新建一条，再按顺序添加节点</p>}
+      {!list.length && <p className="rounded-xl border border-dashed border-line/80 bg-paper-2/40 px-3 py-3.5 text-center text-[12px] text-ink-soft">还没有主线</p>}
       {list.map((l) => (
         <div key={l.id} id={auditDomId(`quest:${l.id}`)} className={`scroll-mt-3 space-y-2 rounded-2xl border border-line bg-paper-2/60 p-2.5 ${l.enabled === false ? "opacity-60" : ""}`}>
           <div className="flex items-center gap-2">
@@ -109,10 +105,13 @@ export default function StorylinesEditor({ value, sidelines, events = [], onChan
             <label className="flex shrink-0 items-center gap-1 text-[11px] text-ink-soft">
               <input type="checkbox" checked={l.enabled !== false} onChange={(e) => set(l.id, { enabled: e.target.checked ? undefined : false })} />启用
             </label>
-            <button className="shrink-0 text-[12px] text-ink-soft hover:text-danger" onClick={() => commit(list.filter((x) => x.id !== l.id))} aria-label="删除主线"><IconClose size={14} /></button>          </div>
+            <button className="shrink-0 text-[12px] text-ink-soft hover:text-danger" onClick={() => commit(list.filter((x) => x.id !== l.id))} aria-label="删除主线"><IconClose size={14} /></button>
+          </div>
           <AuditList issues={issuesAt(audit, `quest:${l.id}`)} />
-          <input className={inp} value={l.desc ?? ""} maxLength={120} placeholder="主线简介（可留空）" onChange={(e) => set(l.id, { desc: e.target.value || undefined })} />
-          <p className="text-[10.5px] text-ink-soft">ID：{l.id} · {(l.nodes ?? []).filter((n) => !n.optional).length} 个必做节点 · {(l.nodes ?? []).filter((n) => n.optional).length} 个可选目标</p>
+          <input className={inp} value={l.desc ?? ""} maxLength={120} placeholder="简介（可留空）" onChange={(e) => set(l.id, { desc: e.target.value || undefined })} />
+          <p className="text-[10.5px] text-ink-soft">
+            {(l.nodes ?? []).filter((n) => !n.optional).length} 必做 · {(l.nodes ?? []).filter((n) => n.optional).length} 可选
+          </p>
           {(l.nodes ?? []).map((n, i) => (
             <NodeCard key={n.id} n={n} idx={i} total={(l.nodes ?? []).length} events={events} quests={quests} sides={sides}
               onChange={(x) => setNodes(l, (l.nodes ?? []).map((y) => (y.id === n.id ? x : y)))}

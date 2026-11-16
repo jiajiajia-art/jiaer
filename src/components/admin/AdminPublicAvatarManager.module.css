@@ -211,6 +211,31 @@
   color: var(--av-ink);
 }
 
+.configOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--color-surface) 45%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.configDialog {
+  width: min(640px, 100%);
+  max-height: min(86vh, 760px);
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 18px 18px 22px;
+  border-radius: 16px;
+  border: 1px solid var(--av-line);
+  background: var(--color-bg);
+  color: var(--av-ink);
+  box-shadow: 0 18px 48px color-mix(in srgb, var(--color-shadow) 22%, transparent);
+}
+
 .uploadPickBox {
   display: flex;
   flex-direction: column;

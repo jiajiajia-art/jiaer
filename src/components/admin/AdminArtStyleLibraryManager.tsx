@@ -44,7 +44,7 @@ export default function AdminArtStyleLibraryManager() {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await artStyleLibraryApi.list(token, { q, includeDisabled: true });
+      const res = await artStyleLibraryApi.list(token, { includeDisabled: true });
       if (!res?.success) {
         toast.error(res?.message || '加载画风库失败');
         return;

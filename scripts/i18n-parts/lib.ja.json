@@ -1,0 +1,317 @@
+{
+  "galgameLib": {
+    "common": {
+      "genericError": "エラーが発生しました。",
+      "player": "プレイヤー",
+      "you": "あなた",
+      "unknownNpc": "不明な文字",
+      "protagonist": "主人公",
+      "traveler": "トラベラー",
+      "chooseAction": "アクションを選択してください",
+      "formInvalid": "無効なフォーム。",
+      "emDash": "—"
+    },
+    "avatar": {
+      "gender": {
+        "male": "男性",
+        "female": "女性",
+        "universal": "ユニバーサル"
+      },
+      "age": {
+        "child": "子供",
+        "adult": "成人",
+        "elder": "エルダー"
+      },
+      "background": {
+        "ancient": "いにしえの",
+        "modern": "モダン",
+        "fantasy": "西部劇ファンタジー"
+      },
+      "kind": {
+        "private": "プライベート",
+        "public": "公開",
+        "system": "システム"
+      },
+      "cardTitle": "アバター",
+      "matchPriorityDesc": "手動ロックは常に優先されます。ライブラリソースの順序とユニバーサルフォールバックは、現在のスクリプト設定に従います（デフォルト：ユニバーサルが有効な状態でパブリックライブラリが最初）。システムのデフォルトアバターが最終的なフォールバックとなります。"
+    },
+    "avatarStyle": {
+      "A": "日本のビジュアルノベルスタイル",
+      "B": "乙女スタイル",
+      "C": "ダークスタイル",
+      "D": "中国の水彩画スタイル"
+    },
+    "avatarGen": {
+      "sessionUnavailable": "セッションを利用できません",
+      "npcSessionUnavailable": "セッションまたはキャラクターが利用できません",
+      "timeout": "アバターの生成がタイムアウトしました（{{seconds}}秒）。後でもう一度お試しください。",
+      "failed": "アバターの生成に失敗しました",
+      "cancelled": "アバターの生成がキャンセルされました"
+    },
+    "writingStyle": {
+      "group": {
+        "style": "スタイル",
+        "viewpoint": "ビューポイント",
+        "technique": "テクニック",
+        "plot": "プロットガイダンス"
+      },
+      "pace": {
+        "slow": "遅い",
+        "medium": "中程度",
+        "fast": "速い"
+      },
+      "preset": {
+        "vernacular": {
+          "label": "プレーンスタイル",
+          "hint": "自然な話し方、文学的な表現を控える"
+        },
+        "female_oriented": {
+          "label": "ロマンス志向",
+          "hint": "感情と人間関係を最優先に"
+        },
+        "literary": {
+          "label": "文学",
+          "hint": "よりインパクトのある画像と雰囲気"
+        },
+        "wuxia_classic": {
+          "label": "古典武侠",
+          "hint": "武道の世界観"
+        },
+        "benevolent": {
+          "label": "寛容な見方",
+          "hint": "寛容さを高め、極端な悪意を減らす"
+        },
+        "neutral_observer": {
+          "label": "中立的な観察者",
+          "hint": "道徳的判断の押し付けが少ない"
+        },
+        "intimate_second": {
+          "label": "親しい相手に対する二人称",
+          "hint": "「あなた」により近い"
+        },
+        "character_centric": {
+          "label": "キャラクター中心",
+          "hint": "キャラクターの動機に駆り立てられる"
+        },
+        "character_molding": {
+          "label": "人格形成",
+          "hint": "特性と習慣を強化する"
+        },
+        "sensory_detail": {
+          "label": "感覚的な詳細",
+          "hint": "具体的な視覚、聴覚、触覚など"
+        },
+        "dialogue_heavy": {
+          "label": "対話重視型",
+          "hint": "会話を通じてストーリーを進める"
+        },
+        "plot_push": {
+          "label": "プロットプッシュ",
+          "hint": "各ターンで進行状況をクリアする"
+        },
+        "slow_burn": {
+          "label": "スローな焼却",
+          "hint": "準備と余裕を持たせる"
+        },
+        "choice_consequence": {
+          "label": "選択重視",
+          "hint": "原因と結果を強調する"
+        }
+      }
+    },
+    "gameStart": {
+      "currentRouteSection": "現在のオープニングルート",
+      "currentRouteHint": "現在の開始ルートを表示します。切り替えると、後の説明が新しいルートに限定されます。",
+      "changeRouteConfirmTitle": "ルートを変更する",
+      "changeRouteConfirmMessage": "このオープニングルートに切り替えますか？後のストーリーは新しいルートに沿って進みます。",
+      "changeRouteConfirmOk": "変更を確認",
+      "fallbackRouteTitle": "ルートを開いています",
+      "storylinePickLabel": "ストーリーライン",
+      "fallbackPlayerName": "トラベラー",
+      "selectStoryline": "ストーリーラインを選択してください",
+      "configInvalid": "無効な開始構成",
+      "nameRequired": "名前を入力してください",
+      "nameTooLong": "名前は90文字以内で入力してください",
+      "selectGender": "性別を選択してください",
+      "finishStorylineFirst": "まずストーリーラインの選択を完了してください",
+      "openingTooLong": "冒頭の独白が長すぎる",
+      "paceInvalid": "無効な書き込みペース",
+      "storylineMissing": "ストーリーラインが見つかりません",
+      "storylineIndexed": "ストーリーライン"
+    },
+    "worldBook": {
+      "titleRequired": "タイトルを入力してください",
+      "titleTooLong": "タイトルは40文字以内にする必要があります",
+      "contentTooLong": "コンテンツが長すぎます",
+      "keywordsTooLong": "トリガーキーワードは100文字を超えてはなりません",
+      "pasteRequired": "ワールドブックのコンテンツを貼り付けてください",
+      "importUnrecognized": "インポート可能なコンテンツが認識されません",
+      "jsonParseFailed": "JSONの解析に失敗しました。形式を確認してください。",
+      "jsonNoArray": "JSONにエントリー配列が見つかりません",
+      "noValidEntries": "インポートする有効なエントリがありません",
+      "selectWorldBook": "ワールドブックを選択してください",
+      "warehouseNoEntries": "このワールドブックにはインポートするエントリーがありません",
+      "warehouseNoValidEntries": "このワールドブックにはインポートする有効なエントリーがありません",
+      "entryIndexed": "エントリー{{n}}",
+      "importEntryIndexed": "インポートされたエントリー{{n}}",
+      "systemIndexed": "<g id=\"0\"><g id=\"1\">システム</g></g>",
+      "defaultTitle": "ワールドブック",
+      "template": {
+        "court_basic": {
+          "name": "裁判に関する基礎知識",
+          "description": "エチケット、称号、宮廷の規則"
+        },
+        "jianghu_basic": {
+          "name": "武侠の世界",
+          "description": "宗派の規則と恨みの口調"
+        }
+      }
+    },
+    "squareAvatar": {
+      "minSide": "辺の長さは{{min}}px以上でなければなりません（現在{{w}}×{{h}}）",
+      "cannotReadSize": "画像の寸法を読み取れません",
+      "canvasUnavailable": "キャンバスは利用できません",
+      "exportFailed": "アバターのエクスポートに失敗しました",
+      "requirements": "推奨サイズ{{target}}×{{target}}ピクセル、最小サイズ{{min}}×{{min}}ピクセル。PNG/JPG/WebP/GIF。1:1以外の画像は、まずトリミングする必要があります（引き伸ばしは不可）。",
+      "status": {
+        "unqualified": "不適格",
+        "qualified": "認定",
+        "needsCrop": "トリミングが必要です"
+      },
+      "cannotReadDimensions": "寸法を読み取れません",
+      "notSquareTooSmall": "1:1ではなく、短い方の辺が{{minSide}}px < {{minRequired}}pxです。トリミング後もまだ小さすぎます。",
+      "notSquareCurrent": "現在{{w}}×{{h}}、1:1ではありません"
+    },
+    "streamError": {
+      "networkDisconnected": "ネットワークが中断されました。生成が切断されました。タップして再試行してください。",
+      "generating": "コンテンツを生成しています。しばらくお待ちください。",
+      "incomplete": "生成が完了していません。もう一度お試しください。",
+      "dirtyResidue": "出力に読み取り不可能な残留物があります。再試行してください。",
+      "contentFilter": "コンテンツが安全性の確認をトリガーしました。再試行するか、別の操作を試すか、より穏やかな表現を使用してください。",
+      "sessionBusy": "コンテンツを生成中です。後でもう一度お試しください。"
+    },
+    "characterProfile": {
+      "nameRequired": "名前を入力してください",
+      "nameTooLong": "名前は90文字以内で入力してください",
+      "genderRequired": "性別（男性/女性）を選択してください",
+      "relationshipRequired": "関係を入力してください",
+      "relationshipTooLong": "関係は{{max}}文字を超えてはなりません",
+      "summaryRequired": "概要を入力してください",
+      "summaryTooLong": "概要は{{max}}文字を超えてはなりません",
+      "attitudeRequired": "あなたに対する態度を入力してください",
+      "attitudeTooLong": "態度を表す言葉は{{max}}文字を超えてはなりません",
+      "detailedBioTooLong": "詳細なプロフィールは{{max}}文字を超えてはなりません",
+      "importanceInvalid": "重要度が無効です",
+      "survivalInvalid": "生存ステータスが無効です",
+      "favorNotNumber": "愛情度は数値でなければなりません"
+    },
+    "playerCard": {
+      "attrsInvalid": "属性の形式が無効です",
+      "attrsTooMany": "{{max}}個の属性を超えることはできません",
+      "attrNameEmpty": "名前が空です",
+      "attrNameTooLong": "属性名は{{max}}文字を超えてはなりません",
+      "attrMustBeNumber": "属性「{{key}}」は数値でなければなりません",
+      "nameRequired": "名前を入力してください",
+      "nameTooLong": "名前は90文字以内で入力してください",
+      "genderInvalid": "有効な性別を選択してください",
+      "personaTooLong": "ペルソナは{{max}}文字を超えてはなりません",
+      "notFound": "キャラクターが見つかりません。",
+      "forbidden": "このカードをインポートすることはできません",
+      "invalid": "不正な文字"
+    },
+    "privateChat": {
+      "contentRequired": "内容を入力してください",
+      "contentTooLong": "メッセージは{{max}}文字以内にする必要があります",
+      "invalidMessage": "ユーザーメッセージが無効です。",
+      "messageNotFound": "メッセージが見つかりません」",
+      "replyGenerating": "プライベートチャットの返信を生成しています。しばらくお待ちください。"
+    },
+    "ideaFullWork": {
+      "missingFileId": "fileIdがありません",
+      "failPartial": "{{label}}：{{completed}}/{{total}}のみが成功しました",
+      "failIncomplete": "未完成",
+      "failStart": "タスクの開始に失敗しました",
+      "failPoll": "{{label}}の生成が完了していません（{{status}}）",
+      "failGeneric": "{{label}}の生成に失敗しました",
+      "labelPortraits": "キャラクターのポートレート",
+      "labelScenes": "シーンの背景",
+      "coverFailed": "カバーの生成に失敗しました"
+    },
+    "compressImage": {
+      "cannotProcess": "画像を処理できません",
+      "selectValid": "有効なフォームを選択してください",
+      "formatUnsupported": "サポートされているのは一般的な形式のみ（JPEG/PNG/WebP/GIF）",
+      "webpUnsupported": "ブラウザはWebPをエクスポートできません。別の画像またはブラウザをお試しください。",
+      "stillTooLarge": "圧縮後も画像が{{kb}}KBを超えています。より小さい画像を使用してください。"
+    },
+    "poster": {
+      "coverLoadFailed": "画像の読み込みに失敗しました",
+      "coverExportFailed": "カバーをエクスポートできませんでした",
+      "titleMissing": "ポスターのタイトルがありません",
+      "coverFetchFailed": "カバーの取得に失敗しました（{{status}}）",
+      "coverSizeInvalid": "カバーの寸法が無効です",
+      "canvasUnavailable": "キャンバスは利用できません",
+      "titleProbe": "タイトル"
+    },
+    "novel": {
+      "opening": "ドアを",
+      "chapterIndexed": "第 &lt;0&gt; 章"
+    },
+    "playChoice": {
+      "stayAndObserve": "{{player}}は{{scene}}に留まり、注意深く観察します",
+      "goSeekClue": "{{player}}さんが{{scene}}に向かい、手がかりを探します",
+      "leaveScene": "{{player}}さんが{{scene}}を離れて別の方法を探します",
+      "talkToNpc": "{{player}}さんが{{npc}}さんに情報を求めて話しています",
+      "followNpc": "{{player}}さんが{{npc}}さんを他の場所でフォローしています",
+      "watchNpc": "{{player}}は、決める前に{{npc}}を視聴する",
+      "steadyThenChoose": "{{player}}状況を落ち着かせ、その後進むべき道を選ぶ",
+      "walkAround": "{{player}}さんが休憩できる場所を探しています",
+      "alternateRoute": "{{player}}さんが別の方法を見つけました（{{n}}）",
+      "here": "こちら"
+    },
+    "utils": {
+      "applicableThemeMin": "該当するテーマを少なくとも1つ選択してください",
+      "listing": {
+        "unpublished": "リストにない",
+        "pending_review": "審査中",
+        "rejected": "拒否されました",
+        "delisted": "掲載停止",
+        "taken_down": "掲載停止",
+        "deleted": "掲載停止"
+      },
+      "creatorLifecycle": {
+        "draft": "下書き",
+        "private_share": "非公開で共有済み",
+        "pending": "レビュー待ち",
+        "rejected": "拒否されました",
+        "update_pending": "保留中のレビューを更新",
+        "unpublished": "限定公開",
+        "published": "公開済み"
+      },
+      "publishAppealDefault": "この作品はオペレーションチームによって掲載停止となりました。再公開の異議申し立てを修正して提出してください。",
+      "adminDiamond": {
+        "amountInvalid": "KKコインは0より大きく、小数点以下2桁まででなければなりません",
+        "amountTooLarge": "KKコインの金額が範囲外です",
+        "balanceOverflow": "変更後の残高が安全な整数範囲を超えています",
+        "deductExceeds": "差し引き額が現在の残高{{balance}}KKコインを超えることはできません",
+        "expiryInvalid": "期間限定KKコインの有効期限は1～3650日である必要があります"
+      },
+      "activityBanner": {
+        "invalidFormat": "イベント時刻の形式が無効です",
+        "startBeforeEnd": "開始時刻は終了時刻より前でなければなりません"
+      },
+      "profileCrypto": {
+        "missingKey": "フロントエンドキーがありません：VITE_CREATOR_PROFILE_AES_KEY_B64",
+        "badFormat": "暗号化されたデータの形式が無効です",
+        "badIv": "無効な暗号化IV"
+      },
+      "miniProgram": {
+        "engineCustom": "カスタム",
+        "engineSt": "フリーフォーム",
+        "engineIvg": "インタラクティブ動画",
+        "currentModeFallback": "現在のモード",
+        "pcOnly": "ミニプログラムはAIテキストゲームのみをサポートしています。{{label}}の場合は、PCを使用してください。{{url}}"
+      }
+    }
+  }
+}
