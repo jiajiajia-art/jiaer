@@ -21,6 +21,80 @@ test("platformRomanceDraft_标题与URL契约", () => {
   assert.match(mod.romanceDraftContentUrl("fid1", ""), /\/api\/auth\/games\/drafts\/romance\/fid1\/content$/);
 });
 
+test("platformRomanceDraft_新建入口不GET_content_续编才拉", () => {
+  // 功能注释：新建不误打；续编才拉（空壳现为 200 empty）
+  assert.equal(
+    mod.shouldFetchRomancePlatformDraftContent({
+      platformDraftId: "e2b9914d",
+      wantResume: false,
+      pendingHeavy: false,
+    }),
+    false,
+  );
+  assert.equal(
+    mod.shouldFetchRomancePlatformDraftContent({
+      platformDraftId: "e2b9914d",
+      wantResume: true,
+      pendingHeavy: false,
+    }),
+    true,
+  );
+  assert.equal(
+    mod.shouldFetchRomancePlatformDraftContent({
+      platformDraftId: "e2b9914d",
+      wantResume: false,
+      pendingHeavy: true,
+    }),
+    true,
+  );
+  assert.equal(
+    mod.shouldFetchRomancePlatformDraftContent({
+      platformDraftId: "",
+      wantResume: true,
+      pendingHeavy: true,
+    }),
+    false,
+  );
+});
+
+test("classifyRomanceDraftContentResponse_空壳与已删分流", () => {
+  assert.equal(
+    mod.classifyRomanceDraftContentResponse(200, { success: true, empty: true, data: null }).status,
+    "empty",
+  );
+  assert.equal(
+    mod.classifyRomanceDraftContentResponse(404, { success: false, code: "draft_content_missing" }).status,
+    "empty",
+  );
+  assert.equal(
+    mod.classifyRomanceDraftContentResponse(404, { success: false, code: "draft_not_found" }).status,
+    "gone",
+  );
+  assert.equal(
+    mod.classifyRomanceDraftContentResponse(410, { success: false, code: "draft_deleted" }).status,
+    "gone",
+  );
+  const ready = mod.classifyRomanceDraftContentResponse(200, {
+    success: true,
+    data: {
+      version: 1,
+      mod: { id: "w1", name: "测", version: "0.1.0", author: "", description: "", kind: "world", dependencies: [], content: {} },
+      draft: {
+        title: "测",
+        setting: "设定",
+        forbidGen: "",
+        aiPolish: true,
+        engineId: "balanced",
+        contentIds: ["world"],
+        editorStepIds: ["world"],
+      },
+      s1: {},
+      updatedAt: 1,
+    },
+  });
+  assert.equal(ready.status, "ready");
+});
+
 test("platformRomanceDraft_正文可用性与组装", () => {
   assert.equal(mod.isUsableRomancePlatformDraftContent(null), false);
   assert.equal(mod.isUsableRomancePlatformDraftContent({ mod: { id: "m" } }), false);
@@ -60,15 +134,20 @@ test("platformRomanceDraft_防抖只更新不create", async () => {
   mod.resetRomancePlatformDraftSyncForTests();
 });
 
-test("WorldGenWizard_保存走平台正文且resume无存档提示打不开", () => {
+test("WorldGenWizard_保存走平台正文且空壳续写_已删才打不开", () => {
   const wiz = read("Romance/src/components/WorldGenWizard.tsx");
   assert.match(wiz, /commitRomancePlatformDraftWithContent/);
-  assert.match(wiz, /fetchRomancePlatformDraftContent/);
+  assert.match(wiz, /loadRomancePlatformDraftContent/);
+  assert.match(wiz, /shouldFetchRomancePlatformDraftContent/);
   assert.match(wiz, /scheduleRomancePlatformDraftSync/);
   assert.match(wiz, /readRomancePlatformDraftId/);
+  // 功能注释：空壳打开第 1 步；gone/error 才「打不开」
+  assert.match(wiz, /remoteLoad\?\.status === "empty"/);
+  assert.match(wiz, /已打开创作页继续填写/);
   assert.match(wiz, /打不开这份存档/);
   assert.match(wiz, /resumeLoad/);
   assert.doesNotMatch(wiz, /createRomance/);
+  assert.doesNotMatch(wiz, /wantResume \|\| !localOk/);
 });
 
 test("CreateType_Romance只在入口create一次", () => {

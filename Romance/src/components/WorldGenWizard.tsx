@@ -65,15 +65,17 @@ import {
 import { sanitizeModStrings } from "../lib/sanitizeModStrings";
 import { readFunloomAuthToken } from "../lib/platformAvatarLibrary";
 import { discardDraftById, fmtDraftTime, peekDraft, resolveSavedVersionAt, writeSavedVersionAt } from "../lib/useDraft";
+import toast from "react-hot-toast";
 import {
   buildRomancePlatformDraftContent,
   commitRomancePlatformDraftWithContent,
   publishRomancePlatformDraft,
-  fetchRomancePlatformDraftContent,
+  loadRomancePlatformDraftContent,
   putRomancePlatformDraftContent,
   readRomancePlatformDraftId,
   resolveRomanceDraftCoverUrl,
   scheduleRomancePlatformDraftSync,
+  shouldFetchRomancePlatformDraftContent,
 } from "../lib/platformRomanceDraft";
 import {
   fitWorldGenSettingTextarea,
@@ -312,11 +314,19 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
       const localOk = !!(full?.mod && full?.draft);
       const localAt = localOk ? Number(full?.updatedAt || 0) : 0;
 
-      let remote: Awaited<ReturnType<typeof fetchRomancePlatformDraftContent>> = null;
-      if (platformDraftId && (wantResume || !localOk || boot.pendingHeavy)) {
-        remote = await fetchRomancePlatformDraftContent(platformDraftId);
+      // 功能注释：新建只有 draftId、内容未 PUT 时禁止 GET；续编/IDB 重载才拉（空壳现为 200 empty，不再红 404）
+      let remoteLoad: Awaited<ReturnType<typeof loadRomancePlatformDraftContent>> | null = null;
+      if (
+        shouldFetchRomancePlatformDraftContent({
+          platformDraftId,
+          wantResume,
+          pendingHeavy: boot.pendingHeavy,
+        })
+      ) {
+        remoteLoad = await loadRomancePlatformDraftContent(platformDraftId);
         if (cancelled) return;
       }
+      const remote = remoteLoad?.status === "ready" ? remoteLoad.content : null;
       const remoteOk = !!(remote?.mod && remote?.draft);
       const remoteAt = remoteOk ? Number(remote?.updatedAt || 0) : 0;
 
@@ -383,6 +393,18 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
         applyBaseline(clean, d, nextS1, localAt || Date.now(), !!platformDraftId && localAt > remoteAt);
         return;
       }
+      // 功能注释：书架点到空壳草稿 → 打开创作第 1 步续写，禁止「打不开」死胡同
+      if (wantResume && remoteLoad?.status === "empty") {
+        modRef.current = null;
+        draftRef.current = null;
+        setMod(null);
+        setDraft(null);
+        setStep(1);
+        setResumeLoad("idle");
+        toast("这份草稿还没生成过内容，已打开创作页继续填写");
+        return;
+      }
+      // 功能注释：草稿已删/无权/网络失败 → 明确打不开；无 platform 拉取结果时同处理
       if (wantResume) {
         setResumeLoad("missing");
         return;

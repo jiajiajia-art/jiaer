@@ -1,0 +1,77 @@
+/**
+ * 功能注释：Romance / 主站展示字体本地包。
+ * 禁止 fonts.googleapis.com / fonts.loli.net；部署随 public/ 同源提供。
+ * 典雅宋体/现代黑体走系统栈（PingFang / 微软雅黑 / Source Han），不自托管完整 Noto CJK。
+ */
+
+@font-face {
+  font-family: "ZCOOL KuaiLe";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./ZCOOLKuaiLe-Regular.woff") format("woff");
+}
+
+@font-face {
+  font-family: "ZCOOL XiaoWei";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./ZCOOLXiaoWei-Regular.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Ma Shan Zheng";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./MaShanZheng-Regular.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Long Cang";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./LongCang-Regular.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Zhi Mang Xing";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./ZhiMangXing-Regular.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Pixelify Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./PixelifySans-Regular.woff") format("woff");
+}
+
+@font-face {
+  font-family: "VT323";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./VT323-Regular.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Baloo 2";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./Baloo2-Bold.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Baloo 2";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("./Baloo2-ExtraBold.woff") format("woff");
+}

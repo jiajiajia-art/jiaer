@@ -8,6 +8,7 @@ import { Suspense, lazy, useEffect, useState, type ComponentType } from 'react';
 import AuthModal from '../components/AuthModal';
 import AiRouteFab from '../components/AiRoute/AiRouteFab';
 import { useLocation } from 'react-router-dom';
+import { resolveRomanceDocumentTitle } from '../lib/romanceDocumentTitle';
 import { authModalStore } from '../store/useAuthStore';
 
 import 'virtual:romance-css';
@@ -72,6 +73,13 @@ export default function RomanceHost() {
     window.addEventListener('funloom:open-auth', openAuth);
     return () => window.removeEventListener('funloom:open-auth', openAuth);
   }, [setIsAuthModalOpen]);
+  useEffect(() => {
+    const prev = document.title;
+    document.title = resolveRomanceDocumentTitle(search);
+    return () => {
+      document.title = prev || 'funloom';
+    };
+  }, [search]);
   useEffect(() => {
     const root = document.documentElement;
     // 功能注释：先记下主站主题 class，再摘掉，避免与 Romance 同名 dark/accent 抢 CSS 变量

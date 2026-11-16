@@ -15,8 +15,8 @@
         d.setAttribute('data-mode', m === 'light' ? 'light' : 'dark');
       })();
     </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet" />
+    <!-- 功能注释：展示字体本地包，禁止第三方字体 CDN（国内超时）；%BASE_URL% 随 VITE_BASE -->
+    <link rel="stylesheet" href="%BASE_URL%fonts/game/fonts.css" />
 </head>
   <body>
     <div id="root"></div>

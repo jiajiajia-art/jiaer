@@ -101,11 +101,7 @@ html[data-romance] .romance-host {
 }
 
 
-/* 线下见面弹窗（Figma 设计稿字体） */
-@font-face { font-family: "Noto Sans SC:Medium"; src: url("https://static.figma.com/font/NotoSansSC-VF_2") format("woff2"); font-style: normal; font-weight: 500; font-display: swap; }
-@font-face { font-family: "Noto Sans SC:Regular"; src: url("https://static.figma.com/font/NotoSansSC-VF_2") format("woff2"); font-style: normal; font-weight: 400; font-display: swap; }
-@font-face { font-family: "Noto Serif SC:Regular"; src: url("https://static.figma.com/font/NotoSerifSC-VF_3") format("woff2"); font-style: normal; font-weight: 400; font-display: swap; }
-@font-face { font-family: "Noto Serif SC:SemiBold"; src: url("https://static.figma.com/font/NotoSerifSC-VF_3") format("woff2"); font-style: normal; font-weight: 600; font-display: swap; }
+/* 功能注释：Figma 远程字形已去掉；宋/黑预设走系统栈，展示字由 public/fonts/game 本地注入 */
 
 /* 主题色以运行时 CSS 变量驱动，支持深色/浅色与主题色全局切换 */
 @theme {
@@ -134,31 +130,39 @@ html[data-romance] .romance-host {
   --ease-ui: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* —— 字体皮肤：设置里换字 → 覆盖 --font-serif；剧情正文 + 编辑器/创作壳跟它走；
-   局内顶栏·底栏·输入仍用 --font-ui。字形由 lib/gameFonts.ts 注入。 */
+/* —— 字体皮肤：设置里换字 → 同时覆盖 --font-serif / --font-sans（对话与正文跟套）；
+   局内顶栏·底栏·输入仍用 --font-ui。字形由 lib/gameFonts.ts 注入本地包。 */
 html[data-romance].font-song {
-  --font-serif: 'Noto Serif SC', 'Source Han Serif SC', serif;
+  --font-serif: 'Source Han Serif SC', 'Songti SC', 'Noto Serif SC', serif;
+  --font-sans: 'Source Han Serif SC', 'Songti SC', 'Noto Serif SC', serif;
 }
 html[data-romance].font-hei {
-  --font-serif: 'Noto Sans SC', var(--font-ui);
+  --font-serif: var(--font-ui);
+  --font-sans: var(--font-ui);
 }
 html[data-romance].font-round {
-  --font-serif: 'ZCOOL KuaiLe', 'Noto Sans SC', sans-serif;
+  --font-serif: 'ZCOOL KuaiLe', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-sans: 'ZCOOL KuaiLe', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 html[data-romance].font-elegant {
-  --font-serif: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+  --font-serif: 'ZCOOL XiaoWei', 'Source Han Serif SC', 'Songti SC', serif;
+  --font-sans: 'ZCOOL XiaoWei', 'Source Han Serif SC', 'Songti SC', serif;
 }
 html[data-romance].font-brush {
-  --font-serif: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  --font-serif: 'Ma Shan Zheng', 'Source Han Serif SC', 'Songti SC', serif;
+  --font-sans: 'Ma Shan Zheng', 'Source Han Serif SC', 'Songti SC', serif;
 }
 html[data-romance].font-hand {
-  --font-serif: 'Long Cang', 'Noto Serif SC', serif;
+  --font-serif: 'Long Cang', 'Source Han Serif SC', 'Songti SC', serif;
+  --font-sans: 'Long Cang', 'Source Han Serif SC', 'Songti SC', serif;
 }
 html[data-romance].font-cursive {
-  --font-serif: 'Zhi Mang Xing', 'Noto Serif SC', serif;
+  --font-serif: 'Zhi Mang Xing', 'Source Han Serif SC', 'Songti SC', serif;
+  --font-sans: 'Zhi Mang Xing', 'Source Han Serif SC', 'Songti SC', serif;
 }
 html[data-romance].font-pixel {
-  --font-serif: 'Pixelify Sans', 'VT323', 'Noto Sans SC', monospace;
+  --font-serif: 'Pixelify Sans', 'VT323', 'PingFang SC', 'Microsoft YaHei', monospace;
+  --font-sans: 'Pixelify Sans', 'VT323', 'PingFang SC', 'Microsoft YaHei', monospace;
 }
 
 /* 功能注释：局内顶栏/底栏仍用 UI 字；创作壳与编辑器整页跟「设置 · 字体」（--font-serif） */

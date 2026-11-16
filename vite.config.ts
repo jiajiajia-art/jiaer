@@ -65,6 +65,25 @@ const romanceShortLinkRedirect = () => ({
 })
 
 /**
+ * 功能注释：挡住 Romance/dist、standalone.html 等被当成 /romance/* 静态页。
+ * macOS 大小写不敏感时，残留 dist/index.html（title=今夜她是主角）会污染标签栏。
+ */
+const romanceShellGuard = () => ({
+  name: 'romance-shell-guard',
+  configureServer(server: { middlewares: { use: (fn: (req: { url?: string }, _res: unknown, next: () => void) => void) => void } }) {
+    server.middlewares.use((req, _res, next) => {
+      const raw = req.url || ''
+      const q = raw.includes('?') ? raw.slice(raw.indexOf('?')) : ''
+      const pathOnly = raw.split('?')[0] || ''
+      if (/^\/romance\/(dist(?:\/|$)|standalone\.html$|index\.html$)/i.test(pathOnly)) {
+        req.url = `/index.html${q}`
+      }
+      next()
+    })
+  },
+})
+
+/**
  * 功能注释：以 virtual 模块挂 Romance，避免 funloom 严格 tsc 跟进检查 Romance 源码（unused / verbatim 等）。
  * Vite 打包仍真实解析到 Romance/src。
  */
@@ -117,6 +136,7 @@ export default defineConfig(({ mode }) => {
       romanceVirtualModules(),
       ...(viteBase !== '/' ? [rootToBaseRedirect(viteBase)] : []),
       romanceShortLinkRedirect(),
+      romanceShellGuard(),
       removeOversizedLocalDownloads(),
       ...(mode === 'development' ? [logDevApiPreset(preset)] : []),
     ],

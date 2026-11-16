@@ -149,13 +149,15 @@ const AiRouteFab: React.FC<{ label?: string }> = ({ label = 'AI 线路' }) => {
       >
         <span className={styles.ring} aria-hidden="true" />
         <span className={styles.core} aria-hidden="true">
-          {/* 功能注释：AI 线路悬浮球用网站 logo，与站内品牌一致 */}
+          {/* 功能注释：只用已有 1x logo；禁止写不存在的 @2x（Retina 会拿到 SPA HTML → 破图） */}
           <img
             className={styles.logo}
             src={`${import.meta.env.BASE_URL}data/assets/funloom_icon.png`}
-            srcSet={`${import.meta.env.BASE_URL}data/assets/funloom_icon.png 1x, ${import.meta.env.BASE_URL}data/assets/funloom_icon@2x.png 2x`}
             alt=""
             draggable={false}
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
           />
         </span>
         {pos.docked && !drag && <span className={styles.peekGrip} aria-hidden="true" />}

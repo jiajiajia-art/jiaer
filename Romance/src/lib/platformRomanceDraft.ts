@@ -137,15 +137,67 @@ export async function patchRomancePlatformDraft(
 }
 
 /**
- * 功能注释：按作品 ID 取回编辑器正文；无存档返回 null（调用方提示打不开，禁止开空编辑器）。
+ * 功能注释：是否该 GET 平台正文。
+ * 新建入口只有 draftId、无 resume、无本机重载 → 禁止请求（无意义的空拉）。
+ * 书架 resume=1，或 boot 仍在从 IDB 拉大体积稿时才拉；空壳现返回 200+empty。
  */
-export async function fetchRomancePlatformDraftContent(
+export function shouldFetchRomancePlatformDraftContent(input: {
+  platformDraftId: string;
+  wantResume: boolean;
+  pendingHeavy?: boolean;
+}): boolean {
+  const id = String(input.platformDraftId || "").trim();
+  if (!id) return false;
+  return !!(input.wantResume || input.pendingHeavy);
+}
+
+/**
+ * 功能注释：书架续编拉正文的结果。
+ * ready=有 mod+draft；empty=账号下空壳可继续创作；gone=不存在/已删；error=鉴权或网络失败。
+ */
+export type RomanceDraftContentLoad =
+  | { status: "ready"; content: RomancePlatformDraftContent }
+  | { status: "empty" }
+  | { status: "gone" }
+  | { status: "error" };
+
+/**
+ * 功能注释：解析 GET content 响应；空壳走 200+empty，禁止再当 404 死胡同。
+ * 兼容旧后端仍返回 404 + draft_content_missing 时也视为 empty。
+ */
+export function classifyRomanceDraftContentResponse(
+  status: number,
+  json: { success?: boolean; data?: unknown; empty?: boolean; code?: string } | null,
+): RomanceDraftContentLoad {
+  if (status === 401 || status === 403) return { status: "error" };
+  if (status === 404 || status === 410) {
+    const code = String(json?.code || "");
+    if (code === "draft_content_missing" || code === "draft_content_empty") {
+      return { status: "empty" };
+    }
+    return { status: "gone" };
+  }
+  if (status < 200 || status >= 300) return { status: "error" };
+  if (json?.success === true && json.empty === true) return { status: "empty" };
+  if (json?.success === true && isUsableRomancePlatformDraftContent(json.data)) {
+    return { status: "ready", content: json.data };
+  }
+  if (json?.success === true && (json.data == null || json.data === undefined)) {
+    return { status: "empty" };
+  }
+  return { status: "error" };
+}
+
+/**
+ * 功能注释：按作品 ID 取回编辑器正文（含空壳/已删分类）；书架 resume 必须区分 empty 与 gone。
+ */
+export async function loadRomancePlatformDraftContent(
   fileId: string,
-): Promise<RomancePlatformDraftContent | null> {
+): Promise<RomanceDraftContentLoad> {
   const id = String(fileId || "").trim();
-  if (!id) return null;
+  if (!id) return { status: "gone" };
   const token = readFunloomAuthToken();
-  if (!token) return null;
+  if (!token) return { status: "error" };
   try {
     const res = await fetch(romanceDraftContentUrl(id), {
       method: "GET",
@@ -154,16 +206,26 @@ export async function fetchRomancePlatformDraftContent(
         Accept: "application/json",
       },
     });
-    if (!res.ok) return null;
     const json = await res.json().catch(() => null) as {
       success?: boolean;
       data?: unknown;
+      empty?: boolean;
+      code?: string;
     } | null;
-    if (!json?.success || !isUsableRomancePlatformDraftContent(json.data)) return null;
-    return json.data;
+    return classifyRomanceDraftContentResponse(res.status, json);
   } catch {
-    return null;
+    return { status: "error" };
   }
+}
+
+/**
+ * 功能注释：按作品 ID 取回编辑器正文；仅 ready 返回内容，其余 null（兼容旧调用方）。
+ */
+export async function fetchRomancePlatformDraftContent(
+  fileId: string,
+): Promise<RomancePlatformDraftContent | null> {
+  const loaded = await loadRomancePlatformDraftContent(fileId);
+  return loaded.status === "ready" ? loaded.content : null;
 }
 
 /**

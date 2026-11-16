@@ -1,7 +1,7 @@
-/* 功能注释：AI 线路悬浮球——跟主站皮肤浅色主色，可拖动、贴边收起 */
+/* 功能注释：AI 线路悬浮球——球芯固定白渐变（不跟暗色 --color-surface），环/logo 仍用主色 */
 .fab {
   --ar-accent: var(--color-primary, #d42a2a);
-  --ar-soft: color-mix(in srgb, var(--ar-accent) 14%, var(--color-surface, #fff));
+  --ar-soft: color-mix(in srgb, var(--ar-accent) 12%, #ffffff);
   --ar-ring: color-mix(in srgb, var(--ar-accent) 55%, #f0c2a8);
   position: fixed;
   z-index: 2147483000;
@@ -54,14 +54,15 @@
   display: grid;
   place-items: center;
   border-radius: 50%;
+  /* 功能注释：产品要求白渐变球芯；禁止再用主题 surface（暗色皮肤会整颗变黑） */
   background:
-    radial-gradient(120% 100% at 28% 16%, rgba(255, 255, 255, 0.92), transparent 46%),
-    linear-gradient(165deg, var(--color-surface, #fff) 0%, var(--ar-soft) 100%);
+    radial-gradient(120% 100% at 30% 18%, #ffffff 0%, rgba(255, 255, 255, 0.72) 42%, transparent 58%),
+    linear-gradient(165deg, #ffffff 0%, #fff8f6 42%, var(--ar-soft) 100%);
   color: var(--ar-accent);
-  border: 1px solid color-mix(in srgb, var(--ar-accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ar-accent) 18%, #ffffff);
   box-shadow:
-    0 8px 18px -10px color-mix(in srgb, var(--color-shadow, #000) 28%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    0 8px 18px -10px rgba(40, 20, 30, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
