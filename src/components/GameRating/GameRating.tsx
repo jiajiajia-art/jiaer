@@ -387,6 +387,14 @@ const GameRating: React.FC<Props> = ({ fileId, mode = 'full', onRatingChange, on
     return true;
   }, [user, setIsAuthModalOpen]);
 
+  // 功能注释：父组件常传内联 onRatingChange；若放进 fetch 依赖会 setState→重渲染→再拉，形成死循环
+  const onRatingChangeRef = useRef(onRatingChange);
+  const onUserRatingChangeRef = useRef(onUserRatingChange);
+  useEffect(() => {
+    onRatingChangeRef.current = onRatingChange;
+    onUserRatingChangeRef.current = onUserRatingChange;
+  }, [onRatingChange, onUserRatingChange]);
+
   const fetchRatings = useCallback(async (pageNum: number, append: boolean = false) => {
     if (!fileId) return;
 
@@ -403,17 +411,17 @@ const GameRating: React.FC<Props> = ({ fileId, mode = 'full', onRatingChange, on
         setSummary(data.ratingsComments.summary);
         setHasMore(data.ratingsComments.list.length === PAGE_SIZE);
         setUserRating(data.userRating);
-        onRatingChange?.(data.ratingsComments.summary);
-        onUserRatingChange?.(data.userRating);
+        onRatingChangeRef.current?.(data.ratingsComments.summary);
+        onUserRatingChangeRef.current?.(data.userRating);
       }
     } catch (error) {
       console.error('Failed to fetch ratings:', error);
     } finally {
       setLoading(false);
     }
-  }, [fileId, sortMode, onRatingChange, onUserRatingChange]);
+  }, [fileId, sortMode]);
 
-  // 功能注释：排序切换后回到第 1 页重新拉取
+  // 功能注释：仅 fileId / 排序变化时重拉；禁止因父回调引用变化重复请求
   useEffect(() => {
     setPage(1);
     fetchRatings(1, false);

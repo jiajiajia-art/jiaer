@@ -38,6 +38,7 @@ import { getOrCreatePromoAnonId } from '../utils/promoAnonId';
 import { copyTextToClipboard } from '../utils/clipboard';
 import GameRating from '../components/GameRating/GameRating';
 import { resolveRatingDisplay } from '../utils/ratingDisplay';
+import { ratingStatsEqual } from '../utils/ratingStatsSync';
 import {
     GameIssueFeedbackModal,
     GameRatingModal,
@@ -1381,6 +1382,15 @@ const GameDetail: React.FC = () => {
         setMyRatingEditCount(0);
     }, []);
 
+    // 功能注释：评论区汇总回写详情评分；值未变则不 setState，避免请求死循环
+    const applyRatingSummaryFromComments = useCallback((summary: {
+        average?: number | null;
+        total?: number;
+    }) => {
+        const next = { average: summary.average ?? null, count: Number(summary.total) || 0 };
+        setRatingStats((prev) => (ratingStatsEqual(prev, next) ? prev : next));
+    }, []);
+
     const loadUpdateLogs = useCallback(async (targetFileId: string) => {
         try {
             const res = await gameDetailExtrasApi.listUpdateLogs(targetFileId);
@@ -2022,9 +2032,7 @@ const GameDetail: React.FC = () => {
                                     fileId={fileId}
                                     mode="comments"
                                     hideSectionTitle
-                                    onRatingChange={(summary) => {
-                                        setRatingStats({ average: summary.average, count: summary.total });
-                                    }}
+                                    onRatingChange={applyRatingSummaryFromComments}
                                     onUserRatingChange={applyUserRatingFromComments}
                                 />
                             ) : null}
