@@ -544,8 +544,8 @@
 
 @media (max-width: 768px) {
     .navbarContainer {
-        /* 功能注释：移动端顶栏对齐暗色 funloom，禁止回退浅色白底 */
-        --navbar-surface: #000000;
+        /* 功能注释：移动端顶栏跟 data-mode——深色仍是黑底，浅色用主题 bg，禁止写死 #000 */
+        --navbar-surface: var(--color-bg);
         --navbar-border: color-mix(in srgb, var(--color-text) 8%, transparent);
         /* 功能注释：浅色页禁止大块墨黑投影，否则顶栏下方整片发黑；只用细底边分层 */
         --navbar-shadow: none;
@@ -575,13 +575,13 @@
         --navbar-login-text: var(--color-on-primary);
         --navbar-login-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent);
         --navbar-login-shadow-hover: inset 0 1px 0 color-mix(in srgb, var(--color-text) 16%, transparent);
-    --navbar-menu-bg: #1C1C1E;
-    --navbar-menu-border: rgba(255, 255, 255, 0.1);
-    --navbar-menu-shadow: 0 16px 32px color-mix(in srgb, var(--color-shadow) 45%, transparent);
-    --navbar-menu-text: #FFFFFF;
-    --navbar-menu-item-hover: color-mix(in srgb, var(--color-text) 8%, transparent);
-    --navbar-menu-logout-bg: linear-gradient(180deg, #b83248 0%, #8e2135 100%);
-    --navbar-menu-logout-bg-hover: linear-gradient(180deg, #b83248 0%, #8e2135 100%);
+        --navbar-menu-bg: var(--color-surface-2);
+        --navbar-menu-border: color-mix(in srgb, var(--color-text) 10%, transparent);
+        --navbar-menu-shadow: 0 16px 32px color-mix(in srgb, var(--color-shadow) 45%, transparent);
+        --navbar-menu-text: var(--color-text);
+        --navbar-menu-item-hover: color-mix(in srgb, var(--color-text) 8%, transparent);
+        --navbar-menu-logout-bg: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
+        --navbar-menu-logout-bg-hover: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-bold) 100%);
         --navbar-menu-logout-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 12%, transparent);
         width: 100vw;
         height: var(--app-navbar-offset);

@@ -44,6 +44,7 @@ import {
     GameRatingModal,
     GameUpdateLogModal,
 } from '../components/GameDetail/GameDetailExtraModals';
+import gameDetailExtrasApi, { type GameUpdateLogItem } from '../api/gameDetailExtrasApi';
 import GameDetailCharacterCards from '../components/GameDetail/GameDetailCharacterCards';
 import { useDailyTaskStore } from '../store/dailyTaskStore';
 import { useTranslation } from 'react-i18next';

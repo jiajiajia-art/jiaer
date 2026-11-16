@@ -162,15 +162,18 @@ test('GameGrid_角标应使用下载白火焰白心且禁止download切图', () 
   assert.doesNotMatch(grid, /icon_download\.webp/);
 });
 
-test('Navbar_MobileBottomNav_移动端应为暗色funloom壳', () => {
+test('Navbar_MobileBottomNav_移动端壳层须跟主题令牌不得写死黑底', () => {
   const navbarCss = read('src/components/Layout/Navbar.module.css');
   const navbarTsx = read('src/components/Layout/Navbar.tsx');
   const bottomCss = read('src/components/Layout/MobileBottomNav.module.css');
-  assert.match(navbarCss, /@media \(max-width:\s*768px\)[\s\S]*--navbar-surface:\s*(?:#000000|var\(--|color-mix\()/);
+  // 功能注释：深色模式 --color-bg 仍是黑；浅色跟主题，禁止再写死 #000000
+  assert.match(navbarCss, /@media \(max-width:\s*768px\)[\s\S]*--navbar-surface:\s*var\(--color-bg\)/);
+  assert.doesNotMatch(navbarCss, /@media \(max-width:\s*768px\)[\s\S]*--navbar-surface:\s*#000000/);
   assert.doesNotMatch(navbarCss, /@media \(max-width:\s*768px\)[\s\S]*--navbar-surface:\s*linear-gradient\(180deg,\s*rgba\(255,\s*255,\s*255/);
-  assert.match(bottomCss, /\.container[\s\S]*background:\s*(?:#000000|var\(--|color-mix\()/);
-  assert.match(bottomCss, /\.navItemActive[\s\S]*color:\s*(?:#F16C83|var\(--|color-mix\()/);
-  assert.match(bottomCss, /\.navItem[\s\S]*color:\s*(?:#B8B8C2|var\(--|color-mix\()/);
+  assert.match(bottomCss, /\.container[\s\S]*background:\s*var\(--color-bg\)/);
+  assert.doesNotMatch(bottomCss, /background:\s*#000000/);
+  assert.match(bottomCss, /\.navItemActive[\s\S]*color:\s*var\(--color-primary-fg\)/);
+  assert.match(bottomCss, /\.navItem[\s\S]*color:\s*var\(--color-text-secondary\)/);
   assert.doesNotMatch(bottomCss, /background:\s*#fff/);
   assert.doesNotMatch(bottomCss, /border-top:\s*1px solid #e6e6e6/);
   assert.doesNotMatch(bottomCss, /filter:\s*brightness\(0\)/);
