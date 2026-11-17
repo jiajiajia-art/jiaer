@@ -5,13 +5,13 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const romance = join(root, 'Romance/src');
 const editor = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8');
-const { isPublishCoverError } = await import(join(romance, 'lib/romancePublishReady.ts'));
+const { isPublishCoverError } = await import(pathToFileURL(join(romance, 'lib/romancePublishReady.ts')).href);
 
 test('isPublishCoverError_后端缺封面文案_识别为封面错误', () => {
   assert.equal(
