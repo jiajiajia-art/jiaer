@@ -153,12 +153,13 @@ test('Romance_App_应识别createWorld查询并挂载WorldGenWizard', () => {
   assert.match(css, /\.romance-platform\s*\{[^}]*--color-jade:\s*var\(--fl-wine\)/);
   assert.match(css, /\.world-gen-shell\s*\{[^}]*--wg-bg:\s*var\(--fl-bg/);
   assert.doesNotMatch(css, /\.world-gen-shell\s*\{[^}]*--wg-bg:\s*#f3e9d6/);
-  // 功能注释：创作页粉白格子布纹淡底 + 暖白纱；纸面暖玫瑰米色
-  assert.match(css, /world-gen-shell-bg\.jpg/);
-  assert.match(css, /格子布纹/);
-  assert.match(css, /\.world-gen-shell::before[\s\S]{0,800}opacity:\s*0\.48/);
-  assert.match(css, /\.world-gen-shell::after[\s\S]{0,600}#fffaf8|#fff5f2/);
-  // 功能注释：完整编辑器纸面改为实心白，避免半透玫瑰米色透出格子底纹
+  // 功能注释：创作壳改为暖浅纯色，禁止再铺格子底图；伪元素须关掉
+  assert.match(css, /\.world-gen-shell\s*\{[^}]*background-color:\s*#faf6f4/);
+  assert.match(css, /\.world-gen-shell\s*\{[^}]*background-image:\s*none/);
+  assert.match(css, /不再铺格子底图/);
+  assert.doesNotMatch(css, /world-gen-shell-bg\.jpg/);
+  assert.match(css, /\.world-gen-shell::before,\s*\.world-gen-shell::after[\s\S]{0,120}content:\s*none/);
+  // 功能注释：完整编辑器纸面改为实心白，避免半透玫瑰米色透出底纹
   assert.match(css, /\.world-gen-editor\s*\{[^}]*--paper:\s*#ffffff/);
   // 功能注释：编辑器分区卡片改为实心白底，禁止再回酒红半透磨砂
   assert.match(css, /\.world-gen-editor details\.group[\s\S]{0,500}background:\s*#ffffff/);

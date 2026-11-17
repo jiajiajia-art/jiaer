@@ -2958,42 +2958,15 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   isolation: isolate;
   min-height: 100vh;
   color: var(--wg-ink);
-  /* 功能注释：用户粉白格子布纹底图，铺浅底；真正淡化由 ::before 低透明度控制 */
-  --wg-shell-bg: url("./assets/world-gen-shell-bg.jpg");
+  /* 功能注释：壳层只用暖浅纯色，不再铺格子底图（设定页 / 完整编辑器同壳） */
   background-color: #faf6f4;
   background-image: none;
   font-family: var(--font-ui);
 }
-/* 功能注释：格子布纹再淡一档，不抢生成进度卡 */
-.world-gen-shell::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-color: #faf6f4;
-  background-image: var(--wg-shell-bg);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  opacity: 0.48;
-}
-/* 功能注释：底部更淡——向下加厚暖白纱，格子在下半屏更轻 */
+.world-gen-shell::before,
 .world-gen-shell::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, #fffaf8 18%, transparent) 0%,
-      color-mix(in srgb, #fff8f5 28%, transparent) 45%,
-      color-mix(in srgb, #fff6f3 55%, transparent) 78%,
-      color-mix(in srgb, #faf6f4 72%, transparent) 100%
-    );
-  opacity: 0.72;
+  content: none;
+  display: none;
 }
 .world-gen-shell > * {
   position: relative;
