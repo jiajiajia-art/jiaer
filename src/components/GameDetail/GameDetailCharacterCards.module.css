@@ -13,7 +13,7 @@
 }
 
 .hint {
-    margin: 0.2rem 0 0.55rem;
+    margin: 0.15rem 0 0.2rem;
     color: var(--color-text-muted);
     font-size: 0.75rem;
     line-height: 1.45;
@@ -21,9 +21,10 @@
 
 .rail {
     display: flex;
-    gap: 0.45rem;
+    align-items: stretch;
+    gap: 0;
     margin-inline: -1rem;
-    padding: 0.15rem 1rem 0.35rem;
+    padding: 0.2rem 1rem 0.85rem;
     scroll-padding-inline: 1rem;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
@@ -34,21 +35,83 @@
     display: none;
 }
 
+/*
+ * 功能注释：斜四边形卡中间空隙来自「斜切三角 + 盒模型缝」。
+ * 重叠量要比斜切宽度更大一点，斜边咬合后中间几乎不留白。
+ */
 .card {
+    --card-w: 7.75rem;
+    --card-h: 15.2rem;
+    --card-skew: 8%;
+    /* 8% 斜切约 0.62rem，重叠 1.05rem，视觉上只留一条细缝 */
+    --card-overlap: 1.05rem;
     position: relative;
-    flex: 0 0 86%;
-    height: 18.75rem;
+    flex: 0 0 var(--card-w);
+    width: var(--card-w);
+    height: var(--card-h);
+    aspect-ratio: 1 / 1.96;
+    margin-right: calc(var(--card-overlap) * -1);
     scroll-snap-align: start;
     scroll-snap-stop: always;
     padding: 0;
     border: none;
-    border-radius: 18px;
+    border-radius: 0;
     overflow: hidden;
-    background: color-mix(in srgb, var(--color-text) 12%, var(--color-surface-2));
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
+    background:
+        linear-gradient(
+            165deg,
+            color-mix(in srgb, var(--color-primary) 18%, var(--color-surface-2)) 0%,
+            color-mix(in srgb, var(--color-surface) 70%, var(--color-shadow)) 100%
+        );
     cursor: pointer;
     text-align: left;
-    color: #fff;
+    color: var(--color-on-media);
+    clip-path: polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%);
+    -webkit-clip-path: polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%);
+    /* 功能注释：阴影收小，避免光晕被当成「中间空隙」 */
+    filter:
+        drop-shadow(0 3px 6px color-mix(in srgb, var(--color-shadow) 16%, transparent))
+        drop-shadow(0 0 0.4px color-mix(in srgb, var(--color-primary) 28%, transparent));
+    transition: transform 0.18s ease, filter 0.18s ease, z-index 0s;
+    z-index: 1;
+}
+
+.card:nth-child(1) { z-index: 1; }
+.card:nth-child(2) { z-index: 2; }
+.card:nth-child(3) { z-index: 3; }
+.card:nth-child(4) { z-index: 4; }
+.card:nth-child(5) { z-index: 5; }
+.card:nth-child(n + 6) { z-index: 6; }
+
+.card:last-child {
+    margin-right: 0;
+}
+
+.card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-on-media) 14%, transparent) 0%, transparent 22%),
+        linear-gradient(
+            180deg,
+            transparent 42%,
+            color-mix(in srgb, var(--color-shadow) 55%, transparent) 68%,
+            color-mix(in srgb, var(--color-shadow) 88%, transparent) 100%
+        );
+}
+
+.card:hover,
+.card:focus-visible {
+    z-index: 20;
+    transform: translateY(-2px) scale(1.02);
+    filter:
+        drop-shadow(0 8px 14px color-mix(in srgb, var(--color-shadow) 26%, transparent))
+        drop-shadow(0 0 1px color-mix(in srgb, var(--color-primary) 55%, transparent))
+        brightness(1.03);
+    outline: none;
 }
 
 .portrait,
@@ -62,7 +125,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center top;
+    object-position: center 18%;
     display: block;
 }
 
@@ -72,27 +135,38 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2.4rem;
+    font-size: 2rem;
     font-weight: 700;
-    color: var(--color-primary-fg);
+    color: var(--color-on-primary);
+    background: linear-gradient(160deg, var(--color-primary-light), var(--color-primary-bold));
 }
 
 .rank {
     position: absolute;
     top: 0.55rem;
-    left: 0.55rem;
-    z-index: 2;
+    left: 50%;
+    z-index: 3;
+    transform: translateX(-50%);
     width: 1.45rem;
     height: 1.45rem;
     border-radius: 999px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(180deg, #f8d78a 0%, #e3a84a 100%);
-    color: #5c3d12;
-    font-size: 0.75rem;
+    background: linear-gradient(
+        160deg,
+        color-mix(in srgb, var(--color-highlight) 55%, var(--color-on-media)) 0%,
+        var(--color-highlight) 55%,
+        color-mix(in srgb, var(--color-highlight) 70%, var(--color-shadow)) 100%
+    );
+    color: color-mix(in srgb, var(--color-shadow) 70%, var(--color-highlight));
+    font-size: 0.7rem;
     font-weight: 800;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+    line-height: 1;
+    border: 1.5px solid color-mix(in srgb, var(--color-on-media) 70%, var(--color-highlight));
+    box-shadow:
+        0 2px 6px color-mix(in srgb, var(--color-shadow) 28%, transparent),
+        inset 0 1px 0 color-mix(in srgb, var(--color-on-media) 55%, transparent);
 }
 
 .copy {
@@ -100,48 +174,58 @@
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 1;
+    z-index: 2;
     display: flex;
     flex-direction: column;
-    gap: 0.12rem;
-    padding: 1.8rem 0.85rem 0.8rem;
-    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.82) 55%);
+    align-items: center;
+    gap: 0.2rem;
+    /* 功能注释：斜边内侧留安全距，避免姓名被裁 */
+    padding: 1rem 0.95rem 0.75rem;
+    text-align: center;
+    pointer-events: none;
 }
 
 .name,
 .zoomName {
     margin: 0;
-    color: #fff;
-    font-size: 1.2rem;
+    color: var(--color-on-media);
+    font-size: 0.88rem;
     font-weight: 750;
     line-height: 1.25;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    letter-spacing: 0.01em;
+    text-shadow: 0 1px 3px color-mix(in srgb, var(--color-shadow) 55%, transparent);
+    max-width: 100%;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    word-break: break-word;
 }
 
 .role,
 .zoomRole {
     margin: 0;
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 0.75rem;
-    line-height: 1.35;
+    color: color-mix(in srgb, var(--color-on-media) 82%, var(--color-primary-light));
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1.3;
+    text-shadow: 0 1px 2px color-mix(in srgb, var(--color-shadow) 45%, transparent);
 }
 
 .role {
+    max-width: 100%;
+    padding: 0.12rem 0.45rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-primary) 28%, var(--color-shadow));
+    border: 1px solid color-mix(in srgb, var(--color-on-media) 22%, transparent);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .bio {
-    margin: 0.08rem 0 0;
-    color: rgba(255, 255, 255, 0.82);
-    font-size: 0.72rem;
-    line-height: 1.45;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    overflow: hidden;
+    display: none;
 }
 
 @media (min-width: 769px) {
@@ -149,11 +233,17 @@
         margin-inline: 0;
         padding-inline: 0;
         scroll-padding-inline: 0;
+        gap: 0;
     }
 
     .card {
-        flex-basis: 16.5rem;
-        height: 22rem;
+        --card-w: 8.8rem;
+        --card-h: 17.2rem;
+        --card-overlap: 1.2rem;
+    }
+
+    .name {
+        font-size: 0.98rem;
     }
 }
 
@@ -162,6 +252,21 @@
         margin-inline: -0.875rem;
         padding-inline: 0.875rem;
         scroll-padding-inline: 0.875rem;
+        gap: 0;
+    }
+
+    .card {
+        --card-w: 7.1rem;
+        --card-h: 14rem;
+        --card-overlap: 0.95rem;
+    }
+
+    .name {
+        font-size: 0.82rem;
+    }
+
+    .copy {
+        padding: 0.9rem 0.85rem 0.7rem;
     }
 }
 
@@ -179,19 +284,20 @@
     position: absolute;
     inset: 0;
     border: none;
-    background: rgba(0, 0, 0, 0.62);
+    background: color-mix(in srgb, var(--color-shadow) 62%, transparent);
     cursor: pointer;
 }
 
 .zoomCard {
     position: relative;
     z-index: 1;
-    width: min(100%, 22rem);
+    width: min(100%, 17.5rem);
     height: min(78vh, 34rem);
-    border-radius: 18px;
     overflow: hidden;
-    background: #111;
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+    background: color-mix(in srgb, var(--color-surface) 82%, var(--color-shadow));
+    filter: drop-shadow(0 18px 42px color-mix(in srgb, var(--color-shadow) 45%, transparent));
+    clip-path: polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%);
+    -webkit-clip-path: polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%);
 }
 
 .zoomPortrait {
@@ -206,15 +312,24 @@
     z-index: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
-    max-height: 58%;
+    gap: 0.4rem;
+    max-height: 56%;
     overflow: auto;
-    padding: 2.8rem 1rem 1rem;
-    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.88) 28%);
+    /* 功能注释：斜边内缩 + 平底留白，简介完整可读不被裁切 */
+    padding: 2.4rem 1.55rem 1.25rem;
+    background: linear-gradient(
+        180deg,
+        transparent 0%,
+        color-mix(in srgb, var(--color-shadow) 88%, transparent) 26%
+    );
+    text-align: center;
 }
 
 .zoomName {
-    font-size: 1.45rem;
+    font-size: 1.35rem;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+    display: block;
 }
 
 .zoomRole {
@@ -223,22 +338,22 @@
 
 .zoomBio {
     margin: 0;
-    color: rgba(255, 255, 255, 0.88);
+    color: color-mix(in srgb, var(--color-on-media) 88%, transparent);
     font-size: 0.84rem;
     line-height: 1.55;
 }
 
 .close {
     position: absolute;
-    top: 0.55rem;
-    right: 0.55rem;
+    top: 0.7rem;
+    right: 1.15rem;
     z-index: 2;
     width: 1.8rem;
     height: 1.8rem;
     border: none;
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.45);
-    color: #fff;
+    background: color-mix(in srgb, var(--color-shadow) 45%, transparent);
+    color: var(--color-on-media);
     font-size: 1.15rem;
     line-height: 1;
     cursor: pointer;

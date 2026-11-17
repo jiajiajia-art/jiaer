@@ -116,12 +116,15 @@
     padding: var(--modal-shell-padding);
     /* 功能注释：锁回全站 UI 圆体；避免 default 主题给 h2 套站酷快乐体后，标题与「周卡」正文看起来像两套字 */
     font-family: 'Sarasa Gothic Rounded', 'Source Han Rounded SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-    /* 风格：哑光卡片，去掉发亮叠层 */
     background:
-        linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 6%, transparent) 0%, transparent 42%),
+        radial-gradient(120% 70% at 100% 0%, color-mix(in srgb, var(--color-primary) 14%, transparent), transparent 55%),
+        linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 5%, var(--color-surface)) 0%, var(--color-surface) 38%),
         var(--color-surface);
-    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
-    box-shadow: 0 18px 48px color-mix(in srgb, var(--color-shadow) 42%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
+    border-radius: 20px;
+    box-shadow:
+        0 22px 56px color-mix(in srgb, var(--color-shadow) 38%, transparent),
+        0 1px 0 color-mix(in srgb, #fff 55%, transparent) inset;
 }
 
 .modalContent.rechargeCenter :is(h1, h2, h3, button, input, select, textarea, span, strong, small, p, label, div) {
@@ -167,19 +170,21 @@
     top: 12px;
     right: 12px;
     z-index: 10;
-    width: 32px;
-    height: 32px;
-    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    width: 34px;
+    height: 34px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     border-radius: 999px;
-    background: color-mix(in srgb, var(--color-text) 5%, transparent);
+    background: color-mix(in srgb, var(--color-surface) 88%, #fff);
     color: var(--color-text-secondary);
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
+    box-shadow: 0 4px 12px -8px color-mix(in srgb, var(--color-shadow) 50%, transparent);
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .dismissBtn:hover {
     color: var(--color-text);
-    background: color-mix(in srgb, var(--color-text) 10%, transparent);
+    border-color: color-mix(in srgb, var(--color-text) 14%, transparent);
+    background: color-mix(in srgb, var(--color-text) 6%, var(--color-surface));
 }
 
 .dismissIcon {
@@ -223,26 +228,25 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    margin: 2px 28px 14px;
+    gap: 6px;
+    margin: 4px 28px 16px;
     flex-shrink: 0;
     text-align: center;
 }
 
 .title {
     color: var(--color-text);
-    font-size: var(--modal-fs-title);
-    font-weight: var(--modal-fw-title);
+    font-size: calc(var(--modal-fs-title) + 1px);
+    font-weight: 800;
     text-align: center;
     margin: 0;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.04em;
     line-height: var(--modal-lh-title);
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 0;
     flex-shrink: 0;
-    /* 功能注释：盖过 [data-theme=default] h2 的装饰字体，与套餐名同属一套 UI 字重 */
     font-family: inherit;
 }
 
@@ -251,8 +255,12 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    white-space: nowrap;
     gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 4%, transparent);
     color: var(--color-text-muted);
     font-size: var(--modal-fs-caption);
     line-height: 1.4;
@@ -311,34 +319,34 @@
     text-align: right;
 }
 
-/* 功能注释：充值类型切换 —— 哑光轨道，选中实心主色，去掉高光/内阴影发亮感 */
+/* 功能注释：充值类型切换 —— 哑光轨道，选中实心主色 */
 .rechargeTabs {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 3px;
+    gap: 4px;
     margin-bottom: 14px;
-    padding: 3px;
-    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
-    border-radius: 12px;
-    background: color-mix(in srgb, var(--color-text) 5%, var(--color-surface));
-    box-shadow: none;
+    padding: 4px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--color-text) 4.5%, var(--color-surface));
+    box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 35%, transparent);
     flex-shrink: 0;
 }
 
 .rechargeTabs button {
     position: relative;
-    min-height: 36px;
+    min-height: 40px;
     padding: 0 12px;
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     background: transparent;
     color: var(--color-text-muted);
     font-size: var(--modal-fs-button-sm);
-    font-weight: var(--modal-fw-button);
-    letter-spacing: 0.02em;
+    font-weight: 700;
+    letter-spacing: 0.03em;
     line-height: 1.2;
     cursor: pointer;
-    transition: color 0.15s ease, background 0.15s ease;
+    transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .rechargeTabs button:hover:not(.rechargeTabActive) {
@@ -356,14 +364,14 @@
 }
 
 .rechargeTabs .rechargeTabActive {
-    background: var(--color-primary);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 92%, #fff) 0%, var(--color-primary) 100%);
     color: var(--color-on-primary);
-    box-shadow: none;
+    box-shadow: 0 8px 16px -12px color-mix(in srgb, var(--color-primary) 70%, transparent);
 }
 
 .rechargeTabs .rechargeTabActive:hover {
     filter: none;
-    background: var(--color-primary-bold, var(--color-primary));
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 88%, #fff) 0%, var(--color-primary-bold, var(--color-primary)) 100%);
 }
 
 .sectionHeading {
@@ -822,18 +830,19 @@
     justify-content: center;
     width: 100%;
     max-width: none;
-    min-height: 48px;
+    min-height: 50px;
     padding: 0 16px;
     margin: 12px auto 0;
-    background: var(--color-primary);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 92%, #fff) 0%, var(--color-primary) 100%);
     color: var(--color-on-primary);
     border: none;
-    border-radius: 10px;
+    border-radius: 14px;
     font-size: 15px;
-    font-weight: 500;
+    font-weight: 700;
+    letter-spacing: 0.02em;
     cursor: pointer;
-    transition: background 0.2s ease, opacity 0.2s ease;
-    box-shadow: none;
+    transition: background 0.2s ease, opacity 0.2s ease, filter 0.15s ease;
+    box-shadow: 0 12px 24px -14px color-mix(in srgb, var(--color-primary) 70%, transparent);
 }
 
 .submitBtn:hover:not(:disabled) {
@@ -858,8 +867,12 @@
 }
 
 .orderSummary {
-    border-top: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
-    border-bottom: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+    padding: 4px 14px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 16px;
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-text) 2%, transparent) 0%, transparent 100%),
+        color-mix(in srgb, var(--color-text) 3%, var(--color-surface));
 }
 
 .orderSummary > div,
@@ -1026,18 +1039,19 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
+    gap: 6px;
     flex: 1;
     min-width: 0;
     overflow-wrap: anywhere;
-    min-height: 46px;
-    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
-    border-radius: 10px;
-    background: color-mix(in srgb, var(--color-text) 4%, transparent);
+    min-height: 48px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 11%, transparent);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--color-text) 3.5%, var(--color-surface));
     color: var(--color-text-secondary);
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 650;
     cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .payMethodLabel {
@@ -1070,8 +1084,9 @@
 
 .payMethodToggleBtnActive {
     color: var(--color-text);
-    border-color: color-mix(in srgb, var(--color-success) 65%, transparent);
-    background: color-mix(in srgb, var(--color-success) 16%, transparent);
+    border-color: color-mix(in srgb, var(--color-success) 55%, transparent);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-success) 18%, transparent) 0%, color-mix(in srgb, var(--color-success) 8%, var(--color-surface)) 100%);
+    box-shadow: 0 8px 18px -14px color-mix(in srgb, var(--color-success) 55%, transparent);
 }
 
 .payMethodBtnPreferred {
@@ -1163,11 +1178,11 @@
     box-shadow: none;
 }
 
-/* 功能注释：会员卡页统一 12px 节奏，避免「上紧下松 / 权益挤、规则散」 */
+/* 功能注释：会员卡页统一节奏——套餐卡 / 权益卡 / 支付区分层清楚 */
 .membershipStack {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
 }
 
 .membershipBlock {
@@ -1184,44 +1199,79 @@
 .plansList {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 10px;
     margin-bottom: 0;
 }
 
 .planItem {
+    position: relative;
     flex: 1;
     display: flex;
     flex-direction: column;
-    align-items: stretch;
+    align-items: flex-start;
     justify-content: flex-start;
-    gap: 6px;
-    padding: 12px 12px 11px;
-    background: color-mix(in srgb, var(--color-text) 4%, transparent);
+    gap: 4px;
+    min-height: 118px;
+    padding: 14px 14px 28px;
+    overflow: hidden;
+    text-align: left;
+    background: color-mix(in srgb, var(--color-text) 3%, var(--color-surface));
     border: 1.5px solid color-mix(in srgb, var(--color-text) 8%, transparent);
-    border-radius: 12px;
+    border-radius: 18px;
     cursor: pointer;
-    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
     box-sizing: border-box;
 }
 
 .planItem:hover {
-    border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
-    background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 38%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface));
+    transform: translateY(-1px);
 }
 
 .planItemActive {
     border-color: var(--color-primary);
-    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
-    box-shadow: none;
+    background:
+        linear-gradient(165deg, color-mix(in srgb, var(--color-primary) 14%, #fff) 0%, color-mix(in srgb, var(--color-primary) 8%, var(--color-surface)) 100%);
+    box-shadow:
+        0 12px 26px -16px color-mix(in srgb, var(--color-primary) 60%, transparent),
+        inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+.planItemRecommend:not(.planItemActive) {
+    border-color: color-mix(in srgb, var(--color-primary) 22%, transparent);
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 5%, transparent) 0%, transparent 40%),
+        color-mix(in srgb, var(--color-text) 2.5%, var(--color-surface));
+}
+
+.planRecommendBadge {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    z-index: 1;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    line-height: 1.2;
+    box-shadow: 0 4px 10px -6px color-mix(in srgb, var(--color-primary) 70%, transparent);
+}
+
+.planItemRecommend {
+    padding-bottom: 30px;
 }
 
 .planItemName {
-    font-size: 15px;
-    font-weight: 600;
-    color: color-mix(in srgb, var(--color-text) 90%, transparent);
-    margin-bottom: 0;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    margin: 0;
     line-height: 1.2;
-    text-align: left;
+    letter-spacing: 0.04em;
 }
 
 .planItemHeader {
@@ -1229,6 +1279,18 @@
     align-items: baseline;
     justify-content: space-between;
     gap: 8px;
+    width: 100%;
+}
+
+.planDailyHint {
+    margin-top: 2px;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.planItemActive .planDailyHint {
+    color: color-mix(in srgb, var(--color-primary-fg) 78%, var(--color-text-muted));
 }
 
 .payMethodToggleBtn:disabled {
@@ -1238,9 +1300,8 @@
 
 .planRewardSummary {
     color: var(--color-text-secondary);
-    font-size: 12px;
-    line-height: 1.45;
-    text-align: left;
+    font-size: 11.5px;
+    line-height: 1.4;
 }
 
 .planDiscount {
@@ -1251,27 +1312,57 @@
 }
 
 .planItemActive .planItemName {
-    color: var(--color-text);
+    color: var(--color-primary-fg);
 }
 
 .planItemPrice {
-    font-size: 17px;
-    font-weight: 700;
+    flex-shrink: 0;
+    margin: 2px 0 2px;
+    font-size: 24px;
+    font-weight: 800;
     color: var(--color-text);
     line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+}
+
+.planItemActive .planItemPrice {
+    color: var(--color-primary-fg);
+}
+
+.membershipPerksCard {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 12px 11px;
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 16px;
+    background:
+        linear-gradient(160deg, color-mix(in srgb, var(--color-primary) 7%, transparent) 0%, transparent 55%),
+        color-mix(in srgb, var(--color-text) 2.5%, var(--color-surface));
+}
+
+.membershipPerksTitle {
+    margin: 0;
+    color: var(--color-text);
+    font-size: 12.5px;
+    font-weight: 750;
+    letter-spacing: 0.02em;
 }
 
 .membershipSubmitBtn {
     width: 100%;
     max-width: none;
-    min-height: 48px;
+    min-height: 50px;
     margin: 0;
-    background: var(--color-primary);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 92%, #fff) 0%, var(--color-primary) 100%);
     border: none;
-    border-radius: 10px;
+    border-radius: 14px;
     color: var(--color-on-primary);
     font-size: 15px;
-    font-weight: 500;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    box-shadow: 0 12px 24px -14px color-mix(in srgb, var(--color-primary) 70%, transparent);
 }
 
 .membershipSubmitBtn:hover:not(:disabled) {
@@ -2420,19 +2511,23 @@
     min-height: 28px;
     padding: 0 10px;
     border-radius: 999px;
-    border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
-    background: color-mix(in srgb, var(--color-text) 4%, transparent);
-    color: var(--color-text-secondary);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 18%, transparent);
+    background: color-mix(in srgb, var(--color-surface) 88%, #fff);
+    color: var(--color-primary-fg);
     font-size: var(--modal-fs-caption);
-    font-weight: 600;
+    font-weight: 700;
     line-height: 1.2;
+    box-shadow: 0 1px 0 color-mix(in srgb, #fff 50%, transparent) inset;
 }
 
 .membershipFootNote {
     margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
     color: var(--color-text-muted);
-    font-size: var(--modal-fs-caption);
-    line-height: var(--modal-lh-meta);
+    font-size: 11px;
+    line-height: 1.5;
 }
 
 /* 功能注释：档位标题行 + 海外币种标识 */

@@ -32,6 +32,19 @@ test('myPlayMods_status_下架停用归私有便于改后重提', () => {
   assert.equal(lib.groupKeyOfPlayModStatus('listed'), 'published');
 });
 
+test('myPlayMods_提审撤回判定', () => {
+  assert.equal(lib.canSubmitPlayMod('private_test'), true);
+  assert.equal(lib.canSubmitPlayMod('rejected'), true);
+  assert.equal(lib.canSubmitPlayMod('delisted'), true);
+  assert.equal(lib.canSubmitPlayMod('pending'), false);
+  assert.equal(lib.canSubmitPlayMod('listed'), false);
+  assert.equal(lib.canWithdrawPlayMod('pending'), true);
+  assert.equal(lib.canWithdrawPlayMod('private_test'), false);
+  assert.equal(lib.pickPlayModId({ modId: 'm1' }), 'm1');
+  assert.equal(lib.pickPlayModId({ id: 'x' }), 'x');
+  assert.equal(lib.pickPlayModId(null), '');
+});
+
 test('myPlayMods_parseKkmodFileText_合法包与非法输入', () => {
   const ok = lib.parseKkmodFileText(JSON.stringify({ manifest: { slug: 'my-mod', name: 'x' }, payload: {} }), 'a.kkmod');
   assert.equal(ok.ok, true);
@@ -47,11 +60,23 @@ test('MyPlayMods_页面只调本人列表_不出现运营API', () => {
   const tsx = read('src/page/MyPlayMods.tsx');
   assert.match(tsx, /playModStoreApi\.listMine/);
   assert.match(tsx, /playModStoreApi\.uploadKkmod/);
+  assert.match(tsx, /playModStoreApi\.submitKkmod/);
+  assert.match(tsx, /playModStoreApi\.withdrawKkmod/);
   assert.match(tsx, /editComponent=/);
   assert.doesNotMatch(tsx, /playModAdminApi|\/api\/admin\//);
   assert.doesNotMatch(tsx, /\balert\(|window\.confirm/);
   const api = read('src/api/playMod/playModApi.ts');
   assert.match(api, /\/api\/components\/mine/);
+  assert.match(api, /\/api\/components\/kkmod\/\$\{encodeURIComponent\(modId\)\}\/submit/);
+  assert.match(api, /\/api\/components\/kkmod\/\$\{encodeURIComponent\(modId\)\}\/withdraw/);
+});
+
+test('ShelfMyMods_玩法列表接提审撤回', () => {
+  const tsx = read('src/components/Bookshelf/ShelfMyMods.tsx');
+  assert.match(tsx, /playModStoreApi\.submitKkmod/);
+  assert.match(tsx, /playModStoreApi\.withdrawKkmod/);
+  assert.match(tsx, /canSubmitPlayMod/);
+  assert.doesNotMatch(tsx, /playModAdminApi|\/api\/admin\//);
 });
 
 test('CreateType_不再单独展示我的玩法Mod入口', () => {

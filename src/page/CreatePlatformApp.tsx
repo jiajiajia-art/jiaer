@@ -1,6 +1,7 @@
 /**
  * 手机应用（原「创作应用」收编进「创作游戏」二级）：
- * 填需求 → AI 对话生成草稿字段 → 保存草稿 → 上架；保存时把应用草稿打成 phone_app 包上传组件商店（应用运行在平台 SDK 上）。
+ * 对话只改当前 kkapp 草稿（工具调用，检查通过才写入）→ 现有手机运行器预览 → 保存草稿 → 上架。
+ * 保存时把应用草稿打成 phone_app 包上传组件商店（应用运行在平台 SDK 上）。
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,16 +22,18 @@ import { playModStoreApi } from '../api/playMod/playModApi';
 import { buildPhoneAppKkmodPackage } from '../lib/platformAppKkmod';
 import { getAppBasePath } from '../lib/appBasePath';
 import {
-  applyPhoneAppAiPatch,
+  buildPhoneAppRepairUser,
   buildPhoneAppSystemPrompt,
-  extractPhoneAppJsonPatch,
+  judgePhoneAppTurn,
+  parsePhoneAppToolCalls,
   phoneAppContentIssues,
+  phoneAppEditTools,
   phoneAppSpecFromText,
   stringifyPhoneAppSpec,
-  stripPhoneAppJsonFence,
   type PhoneAppAiTurn,
   type PhoneAppFormDraft,
   type PhoneAppFormType,
+  type PhoneAppToolCall,
 } from '../lib/phoneAppAiChat';
 import getGameDataApi from '../api/home/getGameData';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
@@ -70,7 +73,7 @@ const emptyForm = (): FormState => ({
 async function completePhoneAppChat(
   token: string,
   messages: { role: 'system' | 'user' | 'assistant'; content: string }[],
-): Promise<string> {
+): Promise<{ text: string; toolCalls: PhoneAppToolCall[] }> {
   const res = await fetch(`${HOST_ADDRESS}/api/romance/play/complete`, {
     method: 'POST',
     headers: {
@@ -78,19 +81,25 @@ async function completePhoneAppChat(
       Accept: 'application/json',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ messages, max_tokens: 4000 }),
+    body: JSON.stringify({
+      messages,
+      max_tokens: 6000,
+      tools: phoneAppEditTools(),
+      tool_choice: 'auto',
+    }),
   });
   const json = (await res.json().catch(() => null)) as {
     success?: boolean;
     message?: string;
-    data?: { text?: string };
+    data?: { text?: string; tool_calls?: unknown };
   } | null;
   if (!res.ok || !json?.success) {
     throw new Error(json?.message || i18n.t('pagesCreatePlatform.toast.chatErrorWithStatus', { status: res.status }));
   }
   const text = String(json?.data?.text || '').trim();
-  if (!text) throw new Error(i18n.t('pagesCreatePlatform.toast.emptyModelResponse'));
-  return text;
+  const toolCalls = parsePhoneAppToolCalls(json?.data?.tool_calls);
+  if (!text && toolCalls.length === 0) throw new Error(i18n.t('pagesCreatePlatform.toast.emptyModelResponse'));
+  return { text, toolCalls };
 }
 
 const CreatePlatformApp: React.FC = () => {
@@ -233,8 +242,6 @@ const CreatePlatformApp: React.FC = () => {
     category: form.category,
     type: form.type as PhoneAppFormType,
     contentText: form.contentText,
-    // 功能注释：带上已有页面，避免对话补丁没返回 pages 时把预览页丢掉
-    pages: form.pages,
   });
 
   const sendChat = async (raw: string) => {
@@ -251,16 +258,31 @@ const CreatePlatformApp: React.FC = () => {
     setChatInput('');
     setChatBusy(true);
     try {
-      const messages = [
-        { role: 'system' as const, content: buildPhoneAppSystemPrompt(draftFields()) },
-        ...hist.slice(-10).map((t) => ({ role: t.role, content: t.text })),
-      ];
-      const reply = await completePhoneAppChat(token, messages);
-      const patch = extractPhoneAppJsonPatch(reply);
-      const next = applyPhoneAppAiPatch(draftFields(), patch);
-      setForm((f) => ({ ...f, ...next }));
-      const shown = stripPhoneAppJsonFence(reply) || (patch ? t('pagesCreatePlatform.toast.chatUpdated') : reply);
-      setTurns([...hist, { role: 'assistant', text: shown }]);
+      const base = draftFields();
+      const system = buildPhoneAppSystemPrompt(base);
+      const history = hist.slice(-8).map((turn) => ({ role: turn.role, content: turn.text }));
+      const first = await completePhoneAppChat(token, [
+        { role: 'system' as const, content: system },
+        ...history,
+      ]);
+      let judged = judgePhoneAppTurn(base, first);
+      if (judged.needsRepair) {
+        const second = await completePhoneAppChat(token, [
+          { role: 'system' as const, content: system },
+          ...history,
+          { role: 'assistant' as const, content: first.text.trim() || '（提交的修改未通过手机应用检查）' },
+          { role: 'user' as const, content: buildPhoneAppRepairUser(judged.issues) },
+        ]);
+        const again = judgePhoneAppTurn(base, second);
+        judged = again.applied
+          ? again
+          : { ...again, displayText: [judged.displayText, again.displayText].filter(Boolean).join('\n\n') };
+      }
+      if (judged.applied) setForm((f) => ({ ...f, ...judged.draft, pages: undefined }));
+      setTurns([...hist, {
+        role: 'assistant',
+        text: judged.displayText || t('pagesCreatePlatform.toast.chatUpdated'),
+      }]);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : t('pagesCreatePlatform.toast.chatFailed'));
       setTurns(turns);

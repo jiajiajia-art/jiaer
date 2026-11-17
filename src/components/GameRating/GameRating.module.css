@@ -935,7 +935,7 @@
 }
 
 .container[data-mode='comments'] .commentsSection {
-  margin-top: 0.15rem;
+  margin-top: 0.35rem;
 }
 
 .container[data-mode='comments'] .commentCard {
@@ -1042,12 +1042,12 @@
   background: color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
-/* ===== 样式调优：详情页评论区紧凑化——输入框、发表按钮、空状态缩小 ===== */
+/* ===== 样式调优：详情页评论区紧凑化——输入框、发表按钮缩小；与下方列表再隔开一些 ===== */
 .container[data-mode='comments'] .writeSection {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1.35rem;
 }
 
 .container[data-mode='comments'] .commentInput {
@@ -1085,8 +1085,8 @@
 }
 
 .container[data-mode='comments'] .emptyState {
-  padding: 0.65rem 0.75rem 0.35rem;
-  gap: 0.25rem;
+  padding: 1.1rem 0.75rem 0.75rem;
+  gap: 0.35rem;
   min-height: 0;
 }
 

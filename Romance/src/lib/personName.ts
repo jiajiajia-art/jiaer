@@ -19,7 +19,7 @@ const SURNAMES_COMPOUND = [
 const TITLE_ONLY = new Set([
   "太皇太后", "皇太后", "太后", "皇后", "皇帝", "皇上", "陛下", "娘娘", "贵妃", "宠妃", "嫔妃", "妃子", "太妃",
   "厨娘", "丫鬟", "宫女", "太监", "公公", "侍卫", "御医", "太医", "掌门", "师父", "师傅",
-  "老板", "店小二", "路人", "路人甲", "路人乙", "男人", "女人", "陌生人",
+  "老板", "老板娘", "店小二", "路人", "路人甲", "路人乙", "男人", "女人", "陌生人",
   "小姐", "公子", "少爷", "夫人", "太太", "先生", "老师", "同学",
   "保姆", "奶妈", "管家", "仆人", "侍女", "王爷", "公主", "郡主", "太子", "皇子",
   "将军", "丞相", "大臣", "贵人", "答应", "常在", "姑姑", "姨妈", "叔叔", "阿姨",
@@ -27,11 +27,15 @@ const TITLE_ONLY = new Set([
   // 功能注释：现代经营/悬疑常见身份占位，禁止当 name（如「夜班房客」曾拖垮整批地点/事件）
   "房客", "夜班房客", "常住房客", "过路客", "旅客", "住客", "店员", "服务员", "前台", "前台员",
   "清洁工", "保洁", "保安", "码头工", "渔民", "邮差", "邮递员", "灯塔看守", "邻居", "熟人",
+  // 功能注释：街头摊贩/服务业身份，禁止当姓名（如「烤红薯摊主」）
+  "摊主", "烤红薯摊主", "红薯摊主", "小贩", "摊贩", "商贩", "售货员", "收银员",
+  "快递员", "外卖员", "骑手", "司机", "出租车司机", "网约车司机", "门卫", "保安员",
+  "大叔", "大爷", "大妈", "阿姨", "叔叔", "小哥", "小姐姐",
 ]);
 
 /** 功能注释：夹在姓名里的称谓尾巴，出现则视为未写真名 */
 const TITLE_TAIL =
-  /(太皇太后|皇太后|太后|皇后|皇帝|皇上|陛下|娘娘|贵妃|厨娘|丫鬟|宫女|掌门|路人|陌生人|太监|侍卫|太医|御医|房客|店员|服务员|住客|旅客|邻居)$/;
+  /(太皇太后|皇太后|太后|皇后|皇帝|皇上|陛下|娘娘|贵妃|厨娘|丫鬟|宫女|掌门|路人|陌生人|太监|侍卫|太医|御医|房客|店员|服务员|住客|旅客|邻居|摊主|老板娘|小贩|摊贩|商贩|售货员|收银员|快递员|外卖员|骑手|司机|门卫|保安|大叔|大爷|大妈)$/;
 
 /** 功能注释：自愈用姓+名池（不依赖 game/names，避免世界生成单测循环依赖） */
 const HEAL_SURNAMES = (
@@ -107,6 +111,58 @@ export function healNpcListNames(npcs: unknown[]): { npcs: Record<string, unknow
     return n;
   });
   return { npcs: next, healedCount };
+}
+
+export type RuntimeNpcNameSlice = {
+  name: string;
+  identity?: string;
+  aliases?: string[];
+  persona?: { gender?: string };
+};
+
+/**
+ * 功能注释：局内 NPC 自愈——身份占了 name（烤红薯摊主）时挪到 identity，并补有姓有名；旧称呼进 aliases。
+ */
+export function healRuntimeNpcName<T extends RuntimeNpcNameSlice>(
+  npc: T,
+  avoid?: Set<string>,
+): T & { healed: boolean } {
+  const rawName = String(npc.name ?? "").trim();
+  if (rawName && isProperPersonName(rawName)) {
+    avoid?.add(rawName);
+    return { ...npc, name: rawName, healed: false };
+  }
+  const rawId = String(npc.identity ?? "").trim();
+  const nextIdentity = rawId || rawName || "路人";
+  const nextName = inventProperPersonName(npc.persona?.gender, avoid);
+  const aliases = [...(npc.aliases ?? [])];
+  if (rawName && rawName !== nextName && !aliases.includes(rawName)) aliases.push(rawName);
+  return {
+    ...npc,
+    name: nextName,
+    identity: nextIdentity,
+    aliases: aliases.length ? aliases : npc.aliases,
+    healed: true,
+  };
+}
+
+/** 功能注释：批量自愈存档里的 NPC 姓名；无改动时返回原数组引用 */
+export function healGameNpcsNames<T extends RuntimeNpcNameSlice>(npcs: T[]): { npcs: T[]; healedCount: number } {
+  if (!npcs.length) return { npcs, healedCount: 0 };
+  const avoid = new Set<string>();
+  let healedCount = 0;
+  let changed = false;
+  const next = npcs.map((n) => {
+    const h = healRuntimeNpcName(n, avoid);
+    if (h.healed) {
+      healedCount += 1;
+      changed = true;
+      const { healed: _h, ...rest } = h;
+      return rest as T;
+    }
+    return n;
+  });
+  return { npcs: changed ? next : npcs, healedCount };
 }
 
 /**

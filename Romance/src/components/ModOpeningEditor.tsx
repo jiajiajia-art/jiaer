@@ -63,6 +63,7 @@ export function ModCoverEditor({
   workTitle,
   workSummary,
   imageGen,
+  panelExtra,
 }: {
   value?: CoverCopy;
   onChange: (v?: CoverCopy) => void;
@@ -73,10 +74,13 @@ export function ModCoverEditor({
   workSummary?: string;
   /** 功能注释：作品级画风 / 负面词与保存回调，封面生图三层提示词共用 */
   imageGen?: WorkImageGenBinding;
+  /** 功能注释：名称等简单字段并进封面右侧 */
+  panelExtra?: import("react").ReactNode;
 }) {
   const c = value ?? {};
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-2">
+      {/* 功能注释：冗长说明在创作世界壳内由 .wg-field-help 隐藏；其它入口仍可见 */}
       <p className="wg-field-help text-[11px] leading-relaxed text-ink-soft">
         作品展示封面只用来展示，不做出开始界面。列表、详情、书架卡片会显示这张图；真正开局后不会再显示一次封面。本页只配背景，预览里没有「开始游戏 / 继续游戏 / 配置 AI」。
       </p>
@@ -91,6 +95,7 @@ export function ModCoverEditor({
         workTitle={workTitle}
         workSummary={workSummary}
         imageGen={imageGen}
+        panelExtra={panelExtra}
         previewCv={fromDiy({ ...c, title: undefined, kicker: undefined, subtitle: undefined, intro: undefined }, toDiy(c))}
         previewD={toDiy(c)}
       />

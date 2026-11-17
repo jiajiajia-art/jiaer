@@ -16,7 +16,21 @@ import ModAssetsPanel, { FileBadge, fileTitle } from "./ModAssetsPanel";
 import ModPreviewPanel from "./ModPreviewPanel";
 import { OFFICIAL_PLATFORM_APP_IDS, installedPlatformAppIds } from "../lib/phoneAppsConfig";
 import { asModArray } from "../lib/asModArray";
-import { PLAY_MOD_FORBIDDEN_FIELDS, forbiddenFieldLabels, markBaseOverrides, sanitizeConflictIds, stripForbiddenPlayFields } from "../mods/playModGuard";
+import { PLAY_MOD_FORBIDDEN_FIELDS, PLAY_MOD_SDK_VERSION, forbiddenFieldLabels, markBaseOverrides, sanitizeConflictIds, stripForbiddenPlayFields } from "../mods/playModGuard";
+import {
+  AiModelBillingBadge,
+  AssistantMsg,
+  ChangeCard,
+  ChatThread,
+  Composer,
+  PlusMenu,
+  Suggestions,
+  UserMsg,
+  ViewSwitch,
+  WorkLine,
+  type ChatChange,
+  type GenView,
+} from "./CodexChat";
 
 /** 功能注释：对话合并后立刻补缺 id / 身份占位姓名，避免顶栏长期红字「缺少 id」且保存按钮灰掉 */
 function healWorkshopDraft(mod: Mod): Mod {
@@ -34,8 +48,31 @@ function healWorkshopDraft(mod: Mod): Mod {
  * 工坊把补丁合并进草稿：数组按 id 合并（同 id 替换），对象浅合并，标量覆盖。
  * 草稿复用 validateMod 校验；可保存为用户模组，或转入模组编辑器手改。 */
 
-type Turn = { role: "user" | "assistant"; text: string; patch?: boolean; diff?: string; bad?: boolean; files?: FileChange[] };
+type Turn = {
+  role: "user" | "assistant";
+  text: string;
+  patch?: boolean;
+  diff?: string;
+  bad?: boolean;
+  files?: FileChange[];
+  ms?: number;
+  failed?: boolean;
+  changes?: ChatChange[];
+};
 type Content = Record<string, unknown>;
+
+/** 功能注释：把本轮文件变更映射成 Codex ChangeCard 行，方便对话里直接看 SDK 产出 */
+function filesToChanges(files?: FileChange[], diff?: string): ChatChange[] {
+  if (files?.length) {
+    return files.slice(0, 24).map((f) => ({
+      label: fileTitle(f.path),
+      kind: (f.change === "added" ? "add" : f.change === "removed" ? "del" : "edit") as ChatChange["kind"],
+      to: f.overridesBase ? "覆盖底层条目" : f.change === "removed" ? "已删除" : "已写入草稿",
+    }));
+  }
+  if (diff) return diff.split(" · ").filter(Boolean).map((label) => ({ label, kind: "edit" as const }));
+  return [];
+}
 
 /* 两种模式：world = 世界观模组；play = 玩法 Mod（叠加包，追加合并，改玩法不换世界） */
 type Mode = "world" | "play";
@@ -82,6 +119,9 @@ const PLAY_STEPS = [
   { label: "引擎平衡", ask: "按新玩法调整引擎规则：先在 tuning.modules 勾选需要的模块（dayGrade/work/breach/course/rest/jobPay），再填对应数值；不要预填用不上的现代打工项。luckStat 等需要属性的参数填自定义属性。说明每项为什么这样调。" },
 ];
 
+/** 功能注释：玩法对话空态 / 「＋」菜单的起步话术（与 PLAY_STEPS 同源，走真实 apply_mod_patch） */
+const playQuickFromSteps = (): [string, string][] => PLAY_STEPS.map((s) => [s.label, s.ask]);
+
 /* 玩法字段说明：玩法 Mod 与世界观对话修改共用 */
 const PLAY_FIELDS = `属性（核心，先定义再引用）：
 - customAttrs[{id:小写英文,label,desc,min,max,init,initMode?:"fixed|random",color?:"jade|coral|gold|danger",tiers?:[{min,label}],display?:"num|tier|both",pin?:true}] 自定义属性：开局固定为 init（fixed）或在 min～max 随机（random）；分档写在 tiers；必须写说明 desc
@@ -105,8 +145,8 @@ const PLAY_FIELDS = `属性（核心，先定义再引用）：
 - startDate、startMoney、weather、startRoom、growModules
 - terms{fame:"名气的叫法",money:"…",reputation:"…"}`;
 
-const PLAY_SYS = (draft: Mod, base: string, baseAttrs: unknown[] = [], baseContent?: Content) => `你是文字模拟游戏编辑器的玩法设计师，帮助创作者用对话做「玩法 Mod」。
-玩法 Mod 是叠加在世界观「${base}」之上的叠加包（kind: addon，slotMerge: merge）：列表内容按 id 追加，同 id 覆盖原条目，世界观已有内容保留。它不换题材，只改变/扩展玩法。
+const PLAY_SYS = (draft: Mod, base: string, baseAttrs: unknown[] = [], baseContent?: Content) => `你是文字模拟游戏编辑器的玩法设计师，用「对话式生成」帮助创作者做「玩法 Mod」（类似 Codex：用户平常说话，你每次只提交结构化补丁）。
+玩法 Mod 运行在平台玩法 SDK ≥ ${PLAY_MOD_SDK_VERSION} 上，是叠加在世界观「${base}」之上的叠加包（kind: addon，slotMerge: merge）：列表内容按 id 追加，同 id 覆盖原条目，世界观已有内容保留。它不换题材，只改变/扩展玩法；禁止改人物、地点等世界本体。
 ${filesPromptSpec(baseContent, draft.content as Content)}
 
 ${attrPromptSpec(collectAttrSpecs(baseAttrs, draft.content.customAttrs))}
@@ -289,6 +329,9 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
   const baseContent = play ? (baseMod?.content as Content | undefined) : undefined;
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [sideTab, setSideTab] = useState<"preview" | "assets">("preview");
+  /** 功能注释：平台「对话生成玩法」用 Codex 壳——默认对话，预览另页签 */
+  const [genView, setGenView] = useState<GenView>("chat");
+  const [started, setStarted] = useState(0);
   const [playtestIssues, setPlaytestIssues] = useState<string[]>([]);
   // 切换模式：先存当前草稿，再载入另一模式的草稿
   const switchMode = (m: Mode) => {
@@ -334,7 +377,8 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
     const cfg = loadConfig();
     if (!isConfigured(cfg)) { setErr("需要先在菜单「AI 配置」里接入模型。"); return; }
     const hist = [...turns, { role: "user", text: t } as Turn];
-    setTurns(hist); setInput(""); setBusy(true); setErr(""); setLastFailed(null);
+    const t0 = Date.now();
+    setTurns(hist); setInput(""); setBusy(true); setErr(""); setLastFailed(null); setStarted(t0);
     try {
       const msgs: ChatMsg[] = [{ role: "system", content: play ? PLAY_SYS(draft, baseName, baseAttrs, baseContent) : SYS(draft) }, ...hist.slice(-10).map((x) => ({ role: x.role, content: x.text }))];
       msgs[0] = { ...msgs[0], content: msgs[0].content + TOOL_RULE };
@@ -383,7 +427,19 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
         if (livePreview || embedInShell) pushLivePreview(ok);
         if (target && !target.isNew) importModJson(JSON.stringify({ ...ok, builtin: undefined }));
       }
-      setTurns([...hist, { role: "assistant", text: raw + guardNote, patch: !!ok, diff: ok ? (play ? playDiff(draft, ok) : diffOf(draft, ok)) : undefined, bad: next === "bad", files: ok ? diffModFiles(draft.content as Content, ok.content as Content, baseContent) : undefined }]);
+      const files = ok ? diffModFiles(draft.content as Content, ok.content as Content, baseContent) : undefined;
+      const diff = ok ? (play ? playDiff(draft, ok) : diffOf(draft, ok)) : undefined;
+      setTurns([...hist, {
+        role: "assistant",
+        text: visible(raw + guardNote) || (ok ? "已按要求写入玩法草稿。" : "这轮没有可用补丁。"),
+        patch: !!ok,
+        diff,
+        bad: next === "bad",
+        files,
+        ms: Date.now() - t0,
+        failed: !ok,
+        changes: filesToChanges(files, diff),
+      }]);
     } catch (e) {
       setErr(friendlyAIError(e).text); setLastFailed(t); setTurns(turns);
     } finally { setBusy(false); }
@@ -432,15 +488,189 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
     onClose(draft.name, draft);
   };
 
+  const rounds = turns.filter((x) => x.role === "user").length;
+  const playQuick = playQuickFromSteps();
+  const worldSelect = play ? (
+    <label className="wg-play-field text-[11.5px] text-ink-soft">
+      <span className="shrink-0">用在哪个世界</span>
+      <select
+        className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-2 py-1 text-[12px] text-ink outline-none focus:border-jade"
+        value={depId}
+        disabled={busy}
+        onChange={(e) => {
+          const v = e.target.value;
+          setDraft({ ...draft, dependencies: v ? [v] : [] });
+        }}
+      >
+        <option value="">先不绑世界（空白底）</option>
+        {authorWorlds.length === 0 ? (
+          <option value="" disabled>还没有已保存的世界</option>
+        ) : (
+          authorWorlds.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)
+        )}
+      </select>
+    </label>
+  ) : null;
+
+  /* 平台「对话生成玩法」：Codex 对话壳 + 真实 apply_mod_patch / 玩法 SDK */
+  if (embedInShell) {
+    return (
+      <Wrap modal={!!target} onClose={back} className="min-h-0 flex-1">
+        {confirmEl}
+        <div className="wg-play-bar">
+          <div className="wg-play-bar-fields">
+            {worldSelect}
+            {!target && mods.some((m) => m.kind === "addon") ? (
+              <label className="wg-play-field text-[11px] text-ink-soft">
+                <span className="shrink-0">改已有</span>
+                <select className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-2 py-1 text-[11.5px] text-ink outline-none focus:border-jade" value="" disabled={busy} onChange={(e) => loadBase(e.target.value)}>
+                  <option value="">当前草稿</option>
+                  {mods.filter((m) => m.kind === "addon").map((m) => <option key={m.id} value={m.id}>「{m.name}」</option>)}
+                </select>
+              </label>
+            ) : null}
+          </div>
+          <div className="wg-play-bar-actions">
+            <button type="button" className={`${btn} !border-transparent bg-jade !text-white`} disabled={problems.length > 0 || busy} onClick={save}>{target && !target.isNew ? "保存修改" : "保存玩法"}</button>
+            <button type="button" className={btn} disabled={!history.length || busy} onClick={undo}>撤销{history.length ? ` ${history.length}` : ""}</button>
+            {!!turns.length && !busy ? (
+              <button type="button" className={btn} onClick={() => setTurns([])}>新对话</button>
+            ) : null}
+            {!target ? (
+              <button type="button" className={btn} disabled={busy} onClick={async () => { if (await confirm("清空草稿和对话，重新开始？", { ok: "重新开始" })) { setDraft(blank(mode, defaultPlayBase)); setTurns([]); } }}>清空草稿</button>
+            ) : null}
+          </div>
+        </div>
+        <div className="wg-play-meta">
+          <p className="wg-play-meta-line">
+            <span className="font-semibold text-ink">{draft.name || "未命名玩法"}</span>
+            <span className="mx-1.5 text-ink-soft/50">·</span>
+            {playTally(draft).map(([k, v]) => `${k} ${v}`).join(" · ")}
+            <span className="mx-1.5 text-ink-soft/50">·</span>
+            SDK {PLAY_MOD_SDK_VERSION}
+          </p>
+          <AiModelBillingBadge mode="personal" />
+        </div>
+        {problems.length > 0 ? <p className="px-0.5 text-[11px] text-danger">待修正：{problems.slice(0, 3).join("；")}</p> : null}
+        {!ai ? (
+          <div className="rounded-2xl border border-gold/50 bg-gold/10 px-3 py-2.5 text-[12px]">需要接入 AI：请先在菜单「AI 配置」里接入模型，再回来对话生成。</div>
+        ) : null}
+
+        <ViewSwitch value={genView} onChange={setGenView} labels={{ chat: "AI 对话", preview: "实时预览" }} />
+
+        {genView === "chat" ? (
+          <div className="codex-ui flex min-h-0 flex-1 flex-col gap-2.5">
+            <div className="flex items-center gap-2.5 px-1">
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-medium leading-snug text-ink">玩法助手</p>
+                <p className="wg-play-assist-sub mt-0.5 text-xs text-ink-soft">
+                  {busy
+                    ? "正在调用玩法 SDK 写补丁…"
+                    : rounds
+                      ? `已对话 ${rounds} 轮 · 每轮经 apply_mod_patch 合并进草稿`
+                      : `用平常说话加玩法；绑在「${baseName}」上，不改人物和地点`}
+                </p>
+              </div>
+            </div>
+            <ChatThread
+              className="min-h-0 flex-1 rounded-2xl border border-line bg-paper/40 px-2"
+              tick={`${turns.length}:${busy}:${started}`}
+              empty={!turns.length && !busy ? (
+                <Suggestions
+                  title="想加什么样的玩法？"
+                  hint="点一条起步，或直接打字。AI 只会写玩法补丁（属性 / 头衔 / 日程 / 事件…），不会改世界里的人物和地点。"
+                  items={playQuick}
+                  onPick={(p) => { setInput(p); }}
+                />
+              ) : undefined}
+            >
+              {turns.map((t, i) => t.role === "user" ? (
+                <UserMsg key={i} text={t.text} />
+              ) : (
+                <div key={i} className="space-y-1.5">
+                  {t.ms !== undefined ? <WorkLine running={false} label={t.failed ? "未写入" : "已合并"} ms={t.ms} /> : null}
+                  <AssistantMsg text={t.text} failed={t.failed || t.bad}>
+                    {!!t.changes?.length && (
+                      <ChangeCard
+                        title={t.patch ? `已写入 ${t.changes.length} 项` : `变更 ${t.changes.length} 项`}
+                        changes={t.changes}
+                        action={t.files?.length ? (
+                          <button type="button" className="text-[11px] font-semibold text-jade" onClick={() => { setGenView("preview"); setSideTab("assets"); }}>
+                            看文件 ›
+                          </button>
+                        ) : undefined}
+                      />
+                    )}
+                    {t.bad ? <p className="text-[11px] text-danger">这轮补丁解析失败，草稿未改。可以说「请重新提交完整补丁」。</p> : null}
+                  </AssistantMsg>
+                </div>
+              ))}
+              {busy ? <WorkLine running label="正在思考并调用 apply_mod_patch" start={started} /> : null}
+            </ChatThread>
+            {err ? (
+              <div className="flex items-center justify-between gap-2 rounded-[var(--radius-ui-sm)] border border-danger/25 bg-danger/5 px-3 py-2 text-xs text-danger">
+                <span>{err}</span>
+                {lastFailed ? <button type="button" className={btn} onClick={() => void send(lastFailed)}>重试</button> : null}
+              </div>
+            ) : null}
+            <div className="wg-play-dock shrink-0">
+              <Composer
+                value={input}
+                onChange={setInput}
+                onSend={() => void send(input)}
+                busy={busy}
+                canStop={false}
+                disabled={!ai}
+                placeholder={ai ? (rounds ? "继续说，比如「头衔再难一点」「再加一条崩溃事件」…" : "描述想加的玩法…") : "需要先接入 AI"}
+                tools={<PlusMenu title="玩法起步" items={playQuick} onPick={setInput} disabled={busy || !ai} showLabel />}
+              />
+              <p className="wg-play-dock-hint">
+                <span>Enter 发送</span>
+                <span>Shift + Enter 换行</span>
+                <span>写入当前玩法草稿</span>
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <div className="wg-preview-tabs inline-flex self-start rounded-full border border-line p-0.5 text-[12px] font-bold" role="tablist">
+                {([["preview", "预览"], ["assets", "文件"]] as const).map(([k, l]) => (
+                  <button key={k} type="button" role="tab" aria-selected={sideTab === k} onClick={() => setSideTab(k)}
+                    className={`rounded-full px-3 py-1.5 transition ${sideTab === k ? "bg-jade text-white shadow-[0_6px_14px_-10px_var(--cute-glow)]" : "text-ink-soft hover:text-ink"}`}>{l}</button>
+                ))}
+              </div>
+              <span className="flex-1" />
+              <button type="button" className={btn} disabled={busy} onClick={() => pushLivePreview(draft)}>刷新预览</button>
+            </div>
+            {sideTab === "preview" ? (
+              <div className="wg-draft-card rounded-2xl border border-line p-2.5">
+                <ModPreviewPanel modContent={draft.content as Content} baseContent={baseContent} onPlaytest={playtest} playtestIssues={playtestIssues} />
+              </div>
+            ) : (
+              <ModAssetsPanel
+                modContent={draft.content as Content}
+                baseContent={baseContent}
+                baseName={baseName}
+                selected={selectedFile}
+                onSelect={setSelectedFile}
+                onCopyBase={baseContent ? copyFromBase : undefined}
+                onRemove={removeFile}
+              />
+            )}
+          </div>
+        )}
+      </Wrap>
+    );
+  }
+
   return (
     <Wrap modal={!!target} onClose={back}>
       {confirmEl}
-      {!embedInShell ? (
-        <div className="flex items-center justify-between gap-2">
-          <p className="flex min-w-0 items-center gap-1 truncate text-[14px] font-bold"><IconSpark size={16} className="shrink-0" />{target ? `对话修改「${target.mod.name}」` : "AI 创意工坊"}</p>
-          <button className={btn} disabled={busy} onClick={() => (target ? back() : onClose())}>{target ? "完成" : "返回"}</button>
-        </div>
-      ) : null}
+      <div className="flex items-center justify-between gap-2">
+        <p className="flex min-w-0 items-center gap-1 truncate text-[14px] font-bold"><IconSpark size={16} className="shrink-0" />{target ? `对话修改「${target.mod.name}」` : "AI 创意工坊"}</p>
+        <button className={btn} disabled={busy} onClick={() => (target ? back() : onClose())}>{target ? "完成" : "返回"}</button>
+      </div>
       {!target && !hideModeSwitch && !forceMode && (
         <div className="inline-flex self-start rounded-full border border-line bg-paper-2 p-0.5 text-[12px] font-bold">
           {([["world", "世界观模组"], ["play", "玩法 Mod"]] as const).map(([k, l]) => (
@@ -448,102 +678,80 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
           ))}
         </div>
       )}
-      {!embedInShell ? (
-        <p className="text-[12px] leading-relaxed text-ink-soft">
-          {target
-            ? `用聊天直接改这个${target.mod.kind === "addon" ? "叠加包" : "游戏世界"}：属性、头衔、课程打工、事件链、引擎规则、地点人物……改动会直接生效，每轮都能撤销。${target.isNew ? "这是内置模组的副本，保存后作为你的新模组。" : "保存会覆盖原模组。"}`
-            : play
-            ? `用聊天描述你想要的玩法改变：新属性、头衔、课程打工、事件链、规则开关、结局……AI 会生成叠加在「${baseName}」上的玩法 Mod，原有内容全部保留。保存后在创意工坊里打开它，开新局生效。`
-            : "用聊天描述你想要的世界，AI 会一步步生成模组草稿。满意后保存为你的模组，也可以转到编辑器里逐项手改。"}
-        </p>
-      ) : (
-        <p className="text-[12px] leading-relaxed text-ink-soft">
-          当前叠加底：{baseName}。可先选自己的世界草稿再聊，或保持空白底从零叠加。
-        </p>
-      )}
+      <p className="text-[12px] leading-relaxed text-ink-soft">
+        {target
+          ? `用聊天直接改这个${target.mod.kind === "addon" ? "叠加包" : "游戏世界"}：属性、头衔、课程打工、事件链、引擎规则、地点人物……改动会直接生效，每轮都能撤销。${target.isNew ? "这是内置模组的副本，保存后作为你的新模组。" : "保存会覆盖原模组。"}`
+          : play
+          ? `用聊天描述你想要的玩法改变：新属性、头衔、课程打工、事件链、规则开关、结局……AI 会生成叠加在「${baseName}」上的玩法 Mod，原有内容全部保留。保存后在创意工坊里打开它，开新局生效。`
+          : "用聊天描述你想要的世界，AI 会一步步生成模组草稿。满意后保存为你的模组，也可以转到编辑器里逐项手改。"}
+      </p>
 
       {!ai && (
         <div className="rounded-2xl border border-gold/50 bg-gold/10 px-3 py-2.5 text-[12px]">需要接入 AI：请先在菜单「AI 配置」里接入模型，再回来使用工坊。</div>
       )}
 
-      {!target && <label className="flex items-center gap-2 text-[11.5px] text-ink-soft">
-        起点
-        <select className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-2 py-1 text-[12px] text-ink outline-none focus:border-jade" value="" onChange={(e) => loadBase(e.target.value)}>
-          <option value="">从零开始</option>
-          {mods.filter((m) => (play ? m.kind === "addon" : true)).map((m) => <option key={m.id} value={m.id}>改造「{m.name}」</option>)}
-        </select>
-      </label>}
+      {!target && (
+        <label className="flex items-center gap-2 text-[11.5px] text-ink-soft">
+          草稿起点
+          <select className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-2 py-1 text-[12px] text-ink outline-none focus:border-jade" value="" onChange={(e) => loadBase(e.target.value)}>
+            <option value="">新建空白草稿</option>
+            {mods.filter((m) => (play ? m.kind === "addon" : true)).map((m) => <option key={m.id} value={m.id}>改造「{m.name}」</option>)}
+          </select>
+        </label>
+      )}
 
-      <div className="grid min-h-0 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,340px)]">
-      <div className="flex min-w-0 flex-col gap-2.5">
-      <div className="wg-draft-card rounded-2xl border border-line px-3.5 py-3">
-        <p className="flex items-center gap-2 text-[13.5px] font-bold tracking-wide">
-          <span className="wg-draft-mark grid size-7 shrink-0 place-items-center rounded-full" aria-hidden>
-            <IconSpark size={14} />
+      <div className="grid min-h-0 gap-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,340px)]">
+      <div className="flex min-w-0 flex-col gap-2">
+      <div className="wg-draft-card rounded-2xl border border-line px-3 py-2.5">
+        <p className="flex items-center gap-2 text-[13px] font-bold tracking-wide">
+          <span className="wg-draft-mark grid size-6 shrink-0 place-items-center rounded-full" aria-hidden>
+            <IconSpark size={13} />
           </span>
-          <span className="min-w-0 truncate">{draft.name}</span>
-          <span className="shrink-0 rounded-full bg-ink/[0.06] px-2 py-0.5 font-mono text-[10px] font-normal text-ink-soft">{draft.id}</span>
+          <span className="min-w-0 flex-1 truncate">{draft.name}</span>
         </p>
-        {draft.description && <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink-soft">{draft.description}</p>}
-        <p className="mt-1.5 text-[10.5px] leading-relaxed text-ink-soft">{play ? playTally(draft).map(([k, v]) => `${k} ${v}`).join(" · ") : counts(draft)}</p>
-        {play && (
-          <label className="mt-2 flex items-center gap-2 text-[11px] text-ink-soft">
-            叠加在
-            <select
-              className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-2 py-1 text-[11.5px] text-ink outline-none focus:border-jade"
-              value={depId}
-              onChange={(e) => {
-                const v = e.target.value;
-                setDraft({ ...draft, dependencies: v ? [v] : [] });
-              }}
-            >
-              <option value="">从零开始 / 空白叠加底</option>
-              {authorWorlds.length === 0 ? (
-                <option value="" disabled>先创作并保存一部游戏世界</option>
-              ) : (
-                authorWorlds.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)
-              )}
-            </select>
-          </label>
-        )}
+        {draft.description ? <p className="mt-1 text-[11.5px] leading-relaxed text-ink-soft line-clamp-2">{draft.description}</p> : null}
+        <p className="mt-1 text-[10.5px] leading-relaxed text-ink-soft">{play ? playTally(draft).map(([k, v]) => `${k} ${v}`).join(" · ") : counts(draft)}</p>
+        {play && worldSelect}
         {problems.length > 0 && <p className="mt-1.5 text-[11px] text-danger">待修正：{problems.slice(0, 3).join("；")}</p>}
-        <div className="mt-2.5 flex flex-wrap gap-1.5">
-          <button className={`${btn} !border-transparent bg-jade !text-white shadow-[0_8px_18px_-12px_var(--cute-glow)]`} disabled={problems.length > 0} onClick={save}>{target && !target.isNew ? "保存修改" : "保存为我的模组"}</button>
-          {(livePreview || embedInShell) ? (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <button className={`${btn} !border-transparent bg-jade !text-white shadow-[0_8px_18px_-12px_var(--cute-glow)]`} disabled={problems.length > 0} onClick={save}>{target && !target.isNew ? "保存修改" : "保存玩法"}</button>
+          {livePreview ? (
             <button type="button" className={btn} disabled={busy} onClick={() => pushLivePreview(draft)}>刷新预览</button>
           ) : null}
-          {!embedInShell ? <button className={btn} onClick={() => onEdit(healWorkshopDraft({ ...draft, builtin: undefined }))}>在编辑器里手改</button> : null}
-          <button className={btn} disabled={!history.length || busy} onClick={undo}>撤销改动{history.length ? ` (${history.length})` : ""}</button>
-          {!target && <button className={btn} disabled={busy} onClick={async () => { if (await confirm("清空草稿和对话，重新开始？", { ok: "重新开始" })) { setDraft(blank(mode, defaultPlayBase)); setTurns([]); } }}>重新开始</button>}
+          <button className={btn} onClick={() => onEdit(healWorkshopDraft({ ...draft, builtin: undefined }))}>在编辑器里手改</button>
+          <button className={btn} disabled={!history.length || busy} onClick={undo}>撤销{history.length ? ` ${history.length}` : ""}</button>
+          {!target && <button className={btn} disabled={busy} onClick={async () => { if (await confirm("清空草稿和对话，重新开始？", { ok: "重新开始" })) { setDraft(blank(mode, defaultPlayBase)); setTurns([]); } }}>清空重来</button>}
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-1.5" aria-label="引导步骤">
-        {steps.map((s, i) => {
-          // 功能注释：用 stepDoneFlag，避免 PLAY_STEPS 比 key 表长时读 undefined[1] 整页崩
-          const ok = stepDoneFlag(done, stepKey[i]);
-          return (
-            <button
-              key={s.label}
-              type="button"
-              className={`${stepChip} ${ok ? "is-done" : ""}`}
-              disabled={busy || !ai}
-              title={s.ask}
-              onClick={() => send(ok ? `${s.ask}（已有部分内容，请在此基础上补充完善，不要重复已有条目）` : s.ask)}
-            >
-              {ok ? <IconCheck size={12} className="shrink-0" /> : <span className="wg-step-index">{i + 1}</span>}
-              {s.label}
-            </button>
-          );
-        })}
+      <div className="space-y-1">
+        <p className="px-0.5 text-[11px] font-semibold text-ink-soft">点一步，让 AI 先帮你写一块</p>
+        <div className="flex flex-wrap gap-1" aria-label="引导步骤">
+          {steps.map((s, i) => {
+            const ok = stepDoneFlag(done, stepKey[i]);
+            return (
+              <button
+                key={s.label}
+                type="button"
+                className={`${stepChip} ${ok ? "is-done" : ""}`}
+                disabled={busy || !ai}
+                title={s.ask}
+                onClick={() => send(ok ? `${s.ask}（已有部分内容，请在此基础上补充完善，不要重复已有条目）` : s.ask)}
+              >
+                {ok ? <IconCheck size={12} className="shrink-0" /> : <span className="wg-step-index">{i + 1}</span>}
+                {s.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="wg-chat-panel max-h-[50vh] min-h-[168px] space-y-2.5 overflow-y-auto rounded-2xl border border-line p-3.5">
+      <div className="wg-chat-panel max-h-[42vh] min-h-[7rem] space-y-2 overflow-y-auto rounded-2xl border border-line p-3">
         {turns.length === 0 && (
-          <div className="wg-chat-hint rounded-xl px-3 py-2.5 text-[12px] leading-relaxed text-ink-soft">
+          <div className="wg-chat-hint rounded-xl px-3 py-2 text-[12px] leading-relaxed text-ink-soft">
             {play
-              ? "例如：「加一个『心理值』属性，压力太大会掉；心理值低于 20 触发崩溃事件链；新增心理咨询课程，上满 5 次解锁进阶疗程。」或「改成求生玩法：加饥饿和体温属性，每周自动下降，归零就进入坏结局。」"
-              : "例如：「做一个民国上海的歌女世界，女主从百乐门伴舞起步，想要权谋和情感线并重。」"}
+              ? "可以说：「加一个心理值，压力大会掉；太低就触发崩溃事件。」或点上面的步骤让 AI 先起草。"
+              : "例如：「做一个民国上海的歌女世界，权谋和情感线并重。」"}
           </div>
         )}
         {turns.map((t, i) => (
@@ -581,7 +789,6 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
         </div>
       )}
 
-      {/* 功能注释：一体输入条 + 酒红发送圆钮，替代原先突兀的渐变胶囊 */}
       <div className="wg-composer flex items-end gap-2 rounded-2xl border border-line bg-paper p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] focus-within:border-jade focus-within:ring-2 focus-within:ring-jade/20">
         <textarea
           value={input}
@@ -589,32 +796,32 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(input); } }}
           rows={2}
           disabled={!ai}
-          placeholder={ai ? (play ? "描述想要的玩法改变…（Enter 发送）" : "描述你的世界，或要修改的地方…（Enter 发送）") : "需要接入 AI"}
-          className="min-h-[44px] min-w-0 flex-1 resize-none bg-transparent px-2.5 py-2 text-[12.5px] leading-relaxed text-ink outline-none placeholder:text-ink-soft/70"
+          placeholder={ai ? (play ? "想加什么玩法，直接说…（Enter 发送）" : "描述你的世界…（Enter 发送）") : "需要接入 AI"}
+          className="min-h-[40px] min-w-0 flex-1 resize-none bg-transparent px-2.5 py-2 text-[12.5px] leading-relaxed text-ink outline-none placeholder:text-ink-soft/70"
         />
         <button
           type="button"
-          className="wg-send-btn relative grid size-11 shrink-0 place-items-center rounded-full disabled:cursor-not-allowed"
+          className="wg-send-btn relative grid size-10 shrink-0 place-items-center rounded-full disabled:cursor-not-allowed"
           disabled={busy || !ai || !input.trim()}
           aria-label="发送"
           onClick={() => void send(input)}
         >
           <span className="wg-send-ring" aria-hidden />
-          <span className="wg-send-core relative grid size-9 place-items-center rounded-full text-white">
-            <IconSend size={15} />
+          <span className="wg-send-core relative grid size-8 place-items-center rounded-full text-white">
+            <IconSend size={14} />
           </span>
         </button>
       </div>
       </div>
-      <div className="flex min-h-0 flex-col gap-2.5 lg:sticky lg:top-2 lg:self-start">
-        <div className="wg-preview-tabs inline-flex self-start rounded-full border border-line p-1 text-[12px] font-bold" role="tablist">
-          {([["preview", "实时预览"], ["assets", "资产文件"]] as const).map(([k, l]) => (
+      <div className="flex min-h-0 flex-col gap-2 lg:sticky lg:top-2 lg:self-start">
+        <div className="wg-preview-tabs inline-flex self-start rounded-full border border-line p-0.5 text-[12px] font-bold" role="tablist">
+          {([["preview", "预览"], ["assets", "文件"]] as const).map(([k, l]) => (
             <button key={k} type="button" role="tab" aria-selected={sideTab === k} onClick={() => setSideTab(k)}
-              className={`rounded-full px-3.5 py-1.5 transition ${sideTab === k ? "bg-jade text-white shadow-[0_6px_14px_-10px_var(--cute-glow)]" : "text-ink-soft hover:text-ink"}`}>{l}</button>
+              className={`rounded-full px-3 py-1.5 transition ${sideTab === k ? "bg-jade text-white shadow-[0_6px_14px_-10px_var(--cute-glow)]" : "text-ink-soft hover:text-ink"}`}>{l}</button>
           ))}
         </div>
         {sideTab === "preview" ? (
-          <div className="wg-draft-card rounded-2xl border border-line p-3">
+          <div className="wg-draft-card rounded-2xl border border-line p-2.5">
             <ModPreviewPanel modContent={draft.content as Content} baseContent={baseContent} onPlaytest={play ? playtest : undefined} playtestIssues={playtestIssues} />
           </div>
         ) : (
@@ -634,11 +841,11 @@ export default function ModWorkshop({ onEdit, onClose, target, forceMode, hideMo
   );
 }
 
-function Wrap({ modal, onClose, children }: { modal: boolean; onClose: () => void; children: ReactNode }) {
-  if (!modal) return <div className="flex flex-col gap-2 text-ink">{children}</div>;
+function Wrap({ modal, onClose, children, className = "" }: { modal: boolean; onClose: () => void; children: ReactNode; className?: string }) {
+  if (!modal) return <div className={`flex flex-col gap-1.5 text-ink ${className}`}>{children}</div>;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div role="dialog" aria-modal="true" className="flex max-h-[92vh] w-full max-w-5xl flex-col gap-2 overflow-y-auto rounded-3xl border border-line bg-paper p-4 text-ink shadow-2xl">{children}</div>
+      <div role="dialog" aria-modal="true" className="flex max-h-[92vh] w-full max-w-5xl flex-col gap-1.5 overflow-y-auto rounded-3xl border border-line bg-paper p-4 text-ink shadow-2xl">{children}</div>
     </div>
   );
 }

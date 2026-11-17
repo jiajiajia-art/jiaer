@@ -188,12 +188,10 @@ const AssetDetails: React.FC = () => {
         return Array.from(years).sort((left, right) => right - left);
     }, [defaultYear]);
 
-    const buildCurrencyParam = (currencyTab: CurrencyTab): PointsActivityCurrency => {
-        if (currencyTab === 'all') {
-            return 'wallet';
-        }
-        return currencyTab;
-    };
+    // 功能注释：远端旧接口还不认 wallet；「全部」用 all，再在前端去掉凤华，效果等同钱包口径
+    const buildCurrencyParam = (tab: CurrencyTab): PointsActivityCurrency => (
+        tab === 'all' ? 'all' : tab
+    );
 
     const loadActivities = useCallback(async (nextPage = 1, append = false) => {
         if (loadingRef.current) return;
@@ -230,7 +228,10 @@ const AssetDetails: React.FC = () => {
                 total: payload.diamonds ?? 0,
                 permanent: payload.diamonds ?? 0,
             });
-            setItems((prev) => (append ? [...prev, ...payload.items] : payload.items));
+            const nextItems = currencyTab === 'all'
+                ? payload.items.filter((item) => item.currency === 'points' || item.currency === 'diamonds')
+                : payload.items;
+            setItems((prev) => (append ? [...prev, ...nextItems] : nextItems));
             const nextTotalPages = Number(payload.totalPages);
             setTotalPages(Number.isFinite(nextTotalPages) && nextTotalPages > 0 ? nextTotalPages : 1);
             setPage(nextPage);

@@ -59,7 +59,8 @@ test('RechargeModal_应按支付方式切换符号与校验', () => {
   const zh = read('src/i18n/locales/zh.json');
   const en = read('src/i18n/locales/en.json');
   assert.match(modal, /selectedPayMethod/);
-  assert.match(modal, /\['wechat', 'alipay', 'overseas'\]/);
+  assert.match(modal, /availablePayMethods/);
+  assert.match(modal, /showOverseasPay \? \['wechat', 'alipay', 'overseas'\] : \['wechat', 'alipay'\]/);
   assert.match(modal, /payMethodToggle/);
   assert.match(modal, /currencySymbol/);
   assert.match(modal, /amountMaxTwoDecimals/);

@@ -1342,37 +1342,41 @@
 .secondaryButton { border-radius: 12px; border-color: transparent; background: color-mix(in srgb, var(--color-text) 7%, transparent); }
 .makeupDialog { border-color: color-mix(in srgb, var(--color-text) 8%, transparent); background: var(--color-surface); }
 
-/* ================= 风格化：暗色 Romance 每日签到（仅 modal） ================= */
-/* 功能注释：深遮罩偏冷黑，弹窗本体用酒红光晕 + 细金边感，避免外缘脏边 */
+/* ================= 风格化：每日签到弹窗（仅 modal，色值全部走平台令牌） ================= */
+/* 功能注释：清爽纸面卡 + 轻主色点缀；本地别名只映射 var(--color-*) */
 .overlay:has(.content:not(.embeddedContent)) {
-    background: rgba(6, 2, 8, 0.78);
+    padding: 36px 28px;
+    background: color-mix(in srgb, var(--color-shadow) 72%, transparent);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
 }
 
 .content:not(.embeddedContent) {
-    --ci-panel: #140e13;
-    --ci-card: linear-gradient(165deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025));
-    --ci-border: rgba(255, 180, 196, 0.16);
-    --ci-text: #fff7f9;
-    --ci-muted: rgba(255, 230, 236, 0.55);
-    --ci-pink: #ff3d66;
-    --ci-pink-soft: #ff6b8a;
-    --ci-gold: #f0c35a;
-    width: var(--modal-shell-width, min(360px, calc(100vw - 40px)));
-    max-height: min(640px, calc(100dvh - 48px));
+    --ci-panel: var(--color-surface);
+    --ci-card: color-mix(in srgb, var(--color-surface) 92%, var(--color-bg) 8%);
+    --ci-border: color-mix(in srgb, var(--color-text) 10%, transparent);
+    --ci-text: var(--color-text);
+    --ci-muted: var(--color-text-muted);
+    --ci-accent: var(--color-primary);
+    --ci-accent-soft: var(--color-primary-light);
+    --ci-accent-deep: var(--color-primary-bold);
+    --ci-gold: var(--color-highlight);
+    width: var(--modal-shell-width, min(380px, calc(100vw - 64px)));
+    max-height: min(660px, calc(100dvh - 72px));
     color: var(--ci-text);
-    border: 1px solid rgba(255, 120, 150, 0.18);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     outline: none;
-    border-radius: 20px;
+    border-radius: 22px;
     background:
-        radial-gradient(120% 70% at 50% -18%, rgba(255, 55, 95, 0.42), transparent 55%),
-        radial-gradient(70% 40% at 100% 0%, rgba(255, 150, 90, 0.12), transparent 50%),
-        radial-gradient(60% 45% at 0% 100%, rgba(120, 40, 70, 0.35), transparent 55%),
-        linear-gradient(180deg, #1c1218 0%, var(--ci-panel) 48%, #100b0f 100%);
+        linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--color-surface) 96%, var(--color-primary) 4%) 0%,
+            var(--ci-panel) 42%,
+            color-mix(in srgb, var(--color-bg) 40%, var(--color-surface) 60%) 100%
+        );
     box-shadow:
-        0 18px 48px rgba(0, 0, 0, 0.55),
-        inset 0 1px 0 rgba(255, 210, 220, 0.12);
+        0 22px 56px color-mix(in srgb, var(--color-shadow) 42%, transparent),
+        inset 0 1px 0 color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .content:not(.embeddedContent):focus,
@@ -1381,52 +1385,50 @@
 }
 
 .content:not(.embeddedContent) .header {
-    padding: 18px 48px 6px 18px;
+    padding: 20px 52px 10px 20px;
     border-bottom: 0;
 }
 
 .content:not(.embeddedContent) .title {
-    color: #fff;
-    font-size: var(--modal-fs-title, 16px);
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-shadow: 0 0 18px rgba(255, 80, 120, 0.28);
+    color: var(--color-text);
+    font-size: var(--modal-fs-title, 17px);
+    font-weight: 720;
+    letter-spacing: 0.04em;
+    text-shadow: none;
 }
 
 .content:not(.embeddedContent) .closeButton {
-    top: 8px;
-    right: 8px;
-    width: 30px;
-    height: 30px;
-    color: rgba(255, 230, 236, 0.62);
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    color: color-mix(in srgb, var(--color-text) 55%, transparent);
     font-size: 20px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.04);
+    background: color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 
 .content:not(.embeddedContent) .closeButton:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.1);
+    color: var(--color-text);
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
     transform: none;
 }
 
 .content:not(.embeddedContent) .scrollArea {
-    padding: 10px 16px 12px;
+    padding: 6px 18px 8px;
 }
 
 /* —— 连续签到进度卡 —— */
 .content:not(.embeddedContent) .monthReward {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     margin: 0;
-    padding: 14px 14px 13px;
+    padding: 16px 16px 15px;
     border: 1px solid var(--ci-border);
     border-radius: 16px;
     background: var(--ci-card);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.06),
-        0 8px 20px rgba(0, 0, 0, 0.18);
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
 .content:not(.embeddedContent) .rewardProgress {
@@ -1439,29 +1441,27 @@
 }
 
 .content:not(.embeddedContent) .rewardProgressTop strong {
-    color: rgba(255, 248, 250, 0.92);
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
     font-size: var(--modal-fs-body, 14px);
     font-weight: 650;
 }
 
 .content:not(.embeddedContent) .rewardProgressTop b {
-    margin: 0 2px;
-    color: var(--ci-pink-soft);
-    font-size: var(--modal-fs-stat, 18px);
+    margin: 0 3px;
+    color: var(--ci-accent);
+    font-size: var(--modal-fs-stat, 20px);
     font-weight: 750;
     font-variant-numeric: tabular-nums;
-    text-shadow: 0 0 12px rgba(255, 70, 110, 0.45);
+    text-shadow: none;
 }
 
 .content:not(.embeddedContent) .progressTrack {
-    height: 6px;
-    margin-top: 10px;
+    height: 8px;
+    margin-top: 12px;
     overflow: visible;
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.45);
-    box-shadow:
-        inset 0 1px 2px rgba(0, 0, 0, 0.55),
-        inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    box-shadow: inset 0 1px 1px color-mix(in srgb, var(--color-shadow) 18%, transparent);
 }
 
 .content:not(.embeddedContent) .progressTrack span {
@@ -1470,126 +1470,127 @@
     min-width: 10px;
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, #ff1f4b 0%, #ff5a78 55%, #ff9a6a 100%);
-    box-shadow: 0 0 12px rgba(255, 70, 110, 0.7);
+    background: linear-gradient(
+        90deg,
+        var(--ci-accent-deep) 0%,
+        var(--ci-accent) 70%,
+        var(--ci-accent-soft) 100%
+    );
+    box-shadow: none;
 }
 
+/* 功能注释：菱形端点，克制描边，不做粉光球 */
 .content:not(.embeddedContent) .progressTrack span::after {
     content: '';
     position: absolute;
     top: 50%;
-    right: -4px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background:
-        radial-gradient(circle at 35% 30%, #fff 0%, #ffd0da 28%, #ff5a78 70%, #e81e4a 100%);
-    box-shadow:
-        0 0 0 2px rgba(20, 10, 14, 0.85),
-        0 0 14px 2px rgba(255, 70, 110, 0.75);
-    transform: translateY(-50%);
+    right: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--ci-accent);
+    border: 2px solid var(--color-surface);
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--color-shadow) 28%, transparent);
+    transform: translate(45%, -50%) rotate(45deg);
 }
 
 .content:not(.embeddedContent) .monthExtraHint {
-    margin: 8px 0 0;
+    margin: 10px 0 0;
     color: var(--ci-muted);
     font-size: var(--modal-fs-caption, 12px);
-    line-height: 1.3;
+    line-height: 1.35;
 }
 
 .content:not(.embeddedContent) .rewardBadge {
     display: flex;
     flex: 0 0 auto;
+    flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     height: auto;
-    padding: 8px 10px 8px 12px;
+    min-width: 76px;
+    padding: 12px 12px 10px;
     line-height: 1;
-    border: 1px solid rgba(255, 190, 120, 0.22);
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 26%, transparent);
     border-radius: 14px;
-    background:
-        linear-gradient(145deg, rgba(255, 200, 120, 0.1), rgba(255, 80, 110, 0.08));
+    background: color-mix(in srgb, var(--color-highlight) 8%, var(--color-surface));
 }
 
 .content:not(.embeddedContent) .rewardBadgeText {
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
-    gap: 3px;
-    text-align: right;
+    align-items: center;
+    gap: 4px;
+    text-align: center;
     white-space: nowrap;
 }
 
 .content:not(.embeddedContent) .rewardBadgeText span {
     margin: 0;
-    color: rgba(255, 210, 170, 0.88);
-    font-size: var(--modal-fs-caption, 12px);
+    color: color-mix(in srgb, var(--color-text) 72%, var(--color-highlight));
+    font-size: 11px;
     font-weight: 650;
     line-height: 1.2;
 }
 
 .content:not(.embeddedContent) .rewardBadgeText strong {
-    color: #ffd27a;
+    color: var(--ci-gold);
     font-size: var(--modal-fs-stat, 18px);
     font-weight: 750;
     line-height: 1;
-    text-shadow: 0 0 10px rgba(255, 180, 80, 0.35);
+    text-shadow: none;
     font-variant-numeric: tabular-nums;
 }
 
-/* 功能注释：弹窗金币用 CSS 绘制，避免 webp 缩小后发糊/发脏 */
-.content:not(.embeddedContent) .rewardCoinGlyph,
-.content:not(.embeddedContent) .coinGlyph {
-    position: relative;
-    display: block;
-    flex-shrink: 0;
-    border-radius: 50%;
-    background:
-        radial-gradient(circle at 32% 28%, #fff8d8 0%, #ffe08a 26%, #f0b422 58%, #c8880e 100%);
-    box-shadow:
-        inset 0 1px 2px rgba(255, 255, 255, 0.65),
-        inset 0 -2px 3px rgba(120, 70, 0, 0.35),
-        0 0 0 1px rgba(255, 220, 140, 0.35),
-        0 3px 8px rgba(0, 0, 0, 0.35);
-}
-
-.content:not(.embeddedContent) .rewardCoinGlyph {
-    width: 36px;
-    height: 36px;
-}
-
-.content:not(.embeddedContent) .rewardCoinGlyph::before,
-.content:not(.embeddedContent) .coinGlyph::before {
-    content: '★';
-    position: absolute;
-    inset: 0;
+/* 功能注释：周签货币去圆托，只保留图标本体 */
+.content:not(.embeddedContent) .coinImgClip {
     display: grid;
     place-items: center;
-    color: #fff4c8;
-    font-size: 15px;
-    line-height: 1;
-    text-shadow: 0 1px 1px rgba(140, 80, 0, 0.45);
-}
-
-.content:not(.embeddedContent) .coinGlyph {
+    flex-shrink: 0;
     width: 26px;
     height: 26px;
+    overflow: visible;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
 }
 
-.content:not(.embeddedContent) .coinGlyph::before {
-    font-size: 12px;
+.content:not(.embeddedContent) .weekDay.dayToday .coinImgClip {
+    background: none;
+    box-shadow: none;
+}
+
+.content:not(.embeddedContent) .rewardCoinClip {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    overflow: visible;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+}
+
+.content:not(.embeddedContent) .rewardCoinImg,
+.content:not(.embeddedContent) .coinImg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    user-select: none;
 }
 
 /* —— 本周签到区 —— */
 .content:not(.embeddedContent) .weekSection {
     margin-top: 14px;
-    padding: 14px 12px 12px;
+    padding: 16px 14px 14px;
     border: 1px solid var(--ci-border);
     border-radius: 16px;
     background: var(--ci-card);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.05),
-        0 8px 20px rgba(0, 0, 0, 0.16);
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
 .content:not(.embeddedContent) .sectionHeading {
@@ -1597,7 +1598,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
     padding: 0 2px;
 }
 
@@ -1610,7 +1611,7 @@
 }
 
 .content:not(.embeddedContent) .sectionHeading h3 {
-    color: #fff;
+    color: var(--color-text);
     font-size: var(--modal-fs-body, 14px);
     font-weight: 700;
     letter-spacing: 0.02em;
@@ -1622,36 +1623,36 @@
     font-size: var(--modal-fs-caption, 12px);
 }
 
+/* 功能注释：补签卡做成轻票签，不抢周历主视觉 */
 .content:not(.embeddedContent) .makeupCardBalance {
     flex: 0 0 auto;
-    padding: 5px 12px;
-    color: #ffd0da;
-    font-size: var(--modal-fs-caption, 12px);
+    padding: 5px 11px;
+    color: color-mix(in srgb, var(--color-text) 78%, var(--color-highlight));
+    font-size: 11px;
     font-weight: 700;
-    border: 1px solid rgba(255, 90, 120, 0.45);
+    letter-spacing: 0.01em;
+    border: 1px solid color-mix(in srgb, var(--color-highlight) 30%, transparent);
     border-radius: 999px;
-    background:
-        linear-gradient(180deg, rgba(255, 70, 110, 0.22), rgba(0, 0, 0, 0.28));
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--color-highlight) 10%, var(--color-surface));
+    box-shadow: none;
 }
 
 .content:not(.embeddedContent) .weekGrid {
     gap: 8px;
 }
 
-/* —— 日卡：胶囊签到格 —— */
+/* —— 日卡：更疏朗的签到格 —— */
 .content:not(.embeddedContent) .weekDay {
     position: relative;
     gap: 0;
-    min-height: 94px;
-    padding: 10px 2px 12px;
+    min-height: 96px;
+    padding: 10px 3px 12px;
     overflow: visible;
-    color: rgba(255, 230, 236, 0.58);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 14px;
-    background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    color: color-mix(in srgb, var(--color-text) 62%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--color-text) 3.5%, transparent);
+    box-shadow: none;
     opacity: 1;
     transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
@@ -1670,92 +1671,104 @@
     color: inherit;
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+    white-space: nowrap;
 }
 
 .content:not(.embeddedContent) .weekDate {
-    margin-top: 2px;
+    margin-top: 3px;
     color: inherit;
     font-size: 10px;
-    opacity: 0.88;
+    line-height: 1.2;
+    opacity: 0.82;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
 
 .content:not(.embeddedContent) .coinWrap {
     position: relative;
     display: block;
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
     margin: 12px auto 0;
     overflow: visible;
 }
 
 .content:not(.embeddedContent) .coinWrap .dayReward {
     position: absolute;
-    top: -7px;
-    left: 14px;
+    top: -8px;
+    left: 15px;
     z-index: 2;
     padding: 1px 5px;
-    color: #fff;
+    color: var(--color-on-primary);
     font-size: 9px;
     font-weight: 800;
     line-height: 13px;
     white-space: nowrap;
     border-radius: 999px;
-    background: linear-gradient(180deg, #ff6b88, #ff2d55);
-    box-shadow: 0 2px 6px rgba(255, 45, 85, 0.4);
+    background: var(--ci-accent);
+    box-shadow: 0 1px 4px color-mix(in srgb, var(--color-primary) 28%, transparent);
     -webkit-background-clip: border-box;
     background-clip: border-box;
 }
 
-/* 今日：宝石粉渐变 + 轻呼吸光 */
+/* 今日：实心主色，去掉呼吸动画更干净 */
 .content:not(.embeddedContent) .weekDay.dayToday {
-    color: #fff;
-    border: 1px solid rgba(255, 200, 210, 0.35);
-    background:
-        linear-gradient(180deg, #ff7a94 0%, #ff3d66 48%, #e81e4a 100%);
+    color: var(--color-on-primary);
+    border: 1px solid color-mix(in srgb, var(--color-primary-bold) 35%, transparent);
+    background: linear-gradient(180deg, var(--ci-accent-soft) 0%, var(--ci-accent) 55%, var(--ci-accent-deep) 100%);
     box-shadow:
-        0 10px 22px rgba(255, 45, 85, 0.38),
-        inset 0 1px 0 rgba(255, 255, 255, 0.35);
-    animation: ciTodayPulse 2.4s ease-in-out infinite;
+        0 8px 18px color-mix(in srgb, var(--color-primary) 28%, transparent),
+        inset 0 1px 0 color-mix(in srgb, var(--color-on-primary) 28%, transparent);
+    animation: none;
 }
 
 .content:not(.embeddedContent) .weekDay.dayToday .weekday,
 .content:not(.embeddedContent) .weekDay.dayToday .weekDate {
-    color: #fff;
+    color: var(--color-on-primary);
     opacity: 1;
 }
 
 .content:not(.embeddedContent) .weekDay.dayToday .coinWrap .dayReward {
-    color: #ff2d55;
-    background: #fff;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    color: var(--ci-accent);
+    background: var(--color-on-primary);
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--color-shadow) 18%, transparent);
 }
 
-/* 已签但非今日：玫瑰雾面 */
+/* 已签但非今日：主色雾面 */
 .content:not(.embeddedContent) .weekDay.daySigned:not(.dayToday),
 .content:not(.embeddedContent) .weekDay.dayMadeUp:not(.dayToday) {
-    color: rgba(255, 230, 236, 0.82);
-    border-color: rgba(255, 90, 120, 0.28);
+    color: color-mix(in srgb, var(--color-text) 82%, transparent);
+    border-color: color-mix(in srgb, var(--color-primary) 28%, transparent);
     background:
-        linear-gradient(180deg, rgba(255, 70, 110, 0.18), rgba(255, 70, 110, 0.08));
+        linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--color-primary) 18%, transparent),
+            color-mix(in srgb, var(--color-primary) 8%, transparent)
+        );
 }
 
-/* 可补签：细粉描边提示可点 */
+/* 可补签：主色描边提示可点 */
 .content:not(.embeddedContent) .weekDay[data-can-makeup='true'] {
-    color: rgba(255, 230, 236, 0.58);
-    border-color: rgba(255, 255, 255, 0.1);
+    color: color-mix(in srgb, var(--color-text) 58%, transparent);
+    border-color: color-mix(in srgb, var(--color-text) 10%, transparent);
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
+        linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--color-text) 5.5%, transparent),
+            color-mix(in srgb, var(--color-text) 2%, transparent)
+        );
 }
 
 .content:not(.embeddedContent) .weekDay[data-can-makeup='true']:hover {
-    border-color: color-mix(in srgb, var(--ci-pink) 55%, transparent);
-    background: rgba(255, 45, 85, 0.1);
+    border-color: color-mix(in srgb, var(--ci-accent) 55%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
     transform: translateY(-1px);
 }
 
 .content:not(.embeddedContent) .weekDay.dayUpcoming {
-    color: rgba(255, 230, 236, 0.5);
+    color: color-mix(in srgb, var(--color-text) 50%, transparent);
 }
 
 .content:not(.embeddedContent) .weekDay.dayMissed .coinImg,
@@ -1764,38 +1777,36 @@
     opacity: 1;
 }
 
-/* 周日加赠：轻金色外圈 */
+/* 周日加赠：仍加大奖励数字，货币同样不套圆圈 */
 .content:not(.embeddedContent) .bonusDay .coinWrap {
     width: 26px;
     height: 26px;
     filter: none;
 }
 
-.content:not(.embeddedContent) .bonusDay .coinGlyph {
+.content:not(.embeddedContent) .bonusDay .coinImgClip {
     width: 26px;
     height: 26px;
-    box-shadow:
-        inset 0 1px 2px rgba(255, 255, 255, 0.55),
-        inset 0 -2px 3px rgba(120, 70, 0, 0.35),
-        0 0 0 2px rgba(255, 210, 100, 0.4),
-        0 2px 8px rgba(255, 190, 60, 0.35);
-}
-
-.content:not(.embeddedContent) .bonusDay .coinGlyph::before {
-    font-size: 11px;
+    background: none;
+    box-shadow: none;
+    border-radius: 0;
 }
 
 .content:not(.embeddedContent) .bonusDay .coinWrap .dayReward {
     left: 13px;
     padding: 1px 5px;
     font-size: 9px;
-    background: linear-gradient(180deg, #ffb347, #ff6a3d);
-    color: #fff;
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-highlight) 70%, var(--color-primary-light)),
+        color-mix(in srgb, var(--color-primary) 55%, var(--color-highlight))
+    );
+    color: var(--color-on-primary);
 }
 
 /* —— 底部签到按钮 —— */
 .content:not(.embeddedContent) .footer {
-    padding: 10px 16px 18px;
+    padding: 14px 18px 20px;
     border-top: 0;
     background: transparent;
 }
@@ -1804,18 +1815,18 @@
     position: relative;
     width: 100%;
     min-width: 0;
-    min-height: 48px;
+    min-height: 50px;
     overflow: hidden;
-    color: #fff;
-    font-size: var(--modal-fs-button, 14px);
+    color: var(--color-on-primary);
+    font-size: var(--modal-fs-button, 15px);
     font-weight: 750;
-    letter-spacing: 0.12em;
-    border: 1px solid rgba(255, 210, 220, 0.28);
+    letter-spacing: 0.16em;
+    border: 0;
     border-radius: 14px;
-    background: linear-gradient(100deg, #ff6b88 0%, #ff2d55 52%, #e81e4a 100%);
+    background: var(--main-background, linear-gradient(100deg, var(--ci-accent-soft) 0%, var(--ci-accent) 52%, var(--ci-accent-deep) 100%));
     box-shadow:
-        0 10px 22px rgba(255, 45, 85, 0.34),
-        inset 0 1px 0 rgba(255, 255, 255, 0.28);
+        0 10px 20px color-mix(in srgb, var(--color-primary) 26%, transparent),
+        inset 0 1px 0 color-mix(in srgb, var(--color-on-primary) 22%, transparent);
 }
 
 .content:not(.embeddedContent) .footer .signInButton::before {
@@ -1823,22 +1834,28 @@
     position: absolute;
     inset: 0 auto 0 -40%;
     width: 36%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-on-primary) 28%, transparent), transparent);
     transform: skewX(-18deg);
     animation: ciBtnSheen 3.2s ease-in-out infinite;
     pointer-events: none;
 }
 
 .content:not(.embeddedContent) .footer .signInButton:hover:not(:disabled) {
-    background: linear-gradient(100deg, #ff7a94 0%, #ff3a60 52%, #f02854 100%);
+    background: linear-gradient(100deg, var(--ci-accent-soft) 0%, var(--ci-accent) 52%, var(--ci-accent-deep) 100%);
+    filter: brightness(1.06);
     transform: translateY(-1px);
 }
 
 .content:not(.embeddedContent) .footer .signInButton:disabled {
-    color: rgba(255, 255, 255, 0.78);
+    color: color-mix(in srgb, var(--color-on-primary) 78%, transparent);
     opacity: 0.48;
-    background: linear-gradient(100deg, #9a4a5c 0%, #7a2e42 55%, #5c2234 100%);
-    border-color: rgba(255, 180, 196, 0.12);
+    background: linear-gradient(
+        100deg,
+        color-mix(in srgb, var(--color-primary) 45%, var(--color-surface-2)) 0%,
+        color-mix(in srgb, var(--color-primary-bold) 55%, var(--color-surface)) 55%,
+        color-mix(in srgb, var(--color-primary-bold) 40%, var(--color-bg)) 100%
+    );
+    border-color: color-mix(in srgb, var(--color-primary-light) 12%, transparent);
     box-shadow: none;
 }
 
@@ -1848,8 +1865,16 @@
 }
 
 @keyframes ciTodayPulse {
-    0%, 100% { box-shadow: 0 10px 22px rgba(255, 45, 85, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.32); }
-    50% { box-shadow: 0 12px 26px rgba(255, 45, 85, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4); }
+    0%, 100% {
+        box-shadow:
+            0 10px 22px color-mix(in srgb, var(--color-primary) 34%, transparent),
+            inset 0 1px 0 color-mix(in srgb, var(--color-on-primary) 32%, transparent);
+    }
+    50% {
+        box-shadow:
+            0 12px 26px color-mix(in srgb, var(--color-primary) 50%, transparent),
+            inset 0 1px 0 color-mix(in srgb, var(--color-on-primary) 40%, transparent);
+    }
 }
 
 @keyframes ciBtnSheen {
@@ -1868,20 +1893,20 @@
     justify-content: center;
     padding: 24px 16px;
     box-sizing: border-box;
-    background: rgba(0, 0, 0, 0.78);
+    background: color-mix(in srgb, var(--color-shadow) 78%, transparent);
 }
 
 .makeupCard {
     width: min(320px, 100%);
     padding: 24px 20px 18px;
     box-sizing: border-box;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
     border-radius: 20px;
-    background: #24191e;
-    color: #fff;
+    background: var(--color-surface-2);
+    color: var(--color-text);
     text-align: center;
     outline: none;
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 18px 48px color-mix(in srgb, var(--color-shadow) 55%, transparent);
 }
 
 .makeupCard:focus,
@@ -1940,13 +1965,14 @@
 }
 
 .makeupBtnPrimary {
-    color: #fff;
-    background: linear-gradient(100deg, #ff5a78 0%, #ff2d55 55%, #e81e4a 100%);
-    box-shadow: 0 8px 20px rgba(255, 45, 85, 0.28);
+    color: var(--color-on-primary);
+    background: var(--main-background, linear-gradient(100deg, var(--color-primary-light) 0%, var(--color-primary) 55%, var(--color-primary-bold) 100%));
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--color-primary) 28%, transparent);
 }
 
 .makeupBtnPrimary:hover:not(:disabled) {
-    background: linear-gradient(100deg, #ff6b88 0%, #ff3a60 55%, #f02854 100%);
+    background: linear-gradient(100deg, var(--color-primary-light) 0%, var(--color-primary) 55%, var(--color-primary-bold) 100%);
+    filter: brightness(1.06);
 }
 
 .makeupBtnPrimary:disabled {
@@ -1956,21 +1982,21 @@
 }
 
 .makeupCard .makeupTitle {
-    color: #fff;
+    color: var(--color-text);
 }
 
 .makeupCard .makeupDesc {
-    color: rgba(255, 255, 255, 0.68);
+    color: var(--color-text-secondary);
 }
 
 .makeupCard .makeupBtnGhost {
-    color: rgba(255, 255, 255, 0.92);
-    background: rgba(255, 255, 255, 0.12);
+    color: color-mix(in srgb, var(--color-text) 92%, transparent);
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
 }
 
 .makeupCard .makeupBtnGhost:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.18);
+    color: var(--color-text);
+    background: color-mix(in srgb, var(--color-text) 18%, transparent);
 }
 
 .makeupCard .makeupRewardList {
@@ -1978,98 +2004,134 @@
 }
 
 .makeupCard .makeupRewardList span {
-    color: rgba(255, 255, 255, 0.88);
-    background: rgba(255, 45, 85, 0.18);
+    color: color-mix(in srgb, var(--color-text) 88%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
 @media (max-width: 600px) {
+    /* 功能注释：窄屏居中且四周留白，禁止贴边满宽 */
     .overlay:has(.content:not(.embeddedContent)) {
-        padding: 18px 14px;
+        padding: 28px 22px;
+        padding-bottom: max(28px, env(safe-area-inset-bottom, 0px));
+        place-items: center;
+        align-items: center;
+        justify-items: center;
     }
 
     .content:not(.embeddedContent) {
-        width: min(380px, calc(100vw - 24px));
-        max-height: min(640px, calc(100dvh - 36px - env(safe-area-inset-bottom)));
+        width: min(360px, calc(100vw - 44px));
+        max-height: min(680px, calc(100dvh - 56px - env(safe-area-inset-bottom, 0px)));
         border-radius: 20px;
+        margin: auto;
     }
 
     .content:not(.embeddedContent) .header {
-        padding: 16px 44px 6px 16px;
+        padding: 18px 46px 8px 16px;
+    }
+
+    .content:not(.embeddedContent) .title {
+        font-size: 1.05rem;
     }
 
     .content:not(.embeddedContent) .scrollArea {
-        padding: 8px 14px 10px;
+        padding: 4px 14px 6px;
     }
 
     .content:not(.embeddedContent) .monthReward {
-        padding: 12px 12px;
+        padding: 14px 12px;
         gap: 10px;
         border-radius: 14px;
+        flex-wrap: wrap;
     }
 
-    .content:not(.embeddedContent) .rewardCoinGlyph {
-        width: 36px;
-        height: 36px;
-    }
-
-    .content:not(.embeddedContent) .rewardCoinGlyph::before {
-        font-size: 14px;
+    .content:not(.embeddedContent) .rewardCoinClip {
+        width: 28px;
+        height: 28px;
     }
 
     .content:not(.embeddedContent) .rewardBadgeText strong {
-        font-size: var(--modal-fs-stat, 18px);
+        font-size: var(--modal-fs-stat, 17px);
     }
 
     .content:not(.embeddedContent) .weekSection {
         margin-top: 12px;
-        padding: 12px 10px 10px;
+        padding: 14px 10px 12px;
         border-radius: 14px;
     }
 
+    .content:not(.embeddedContent) .sectionHeading {
+        gap: 8px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+    }
+
+    /* 功能注释：窄屏仍七列均分，加大间距减少挤感 */
     .content:not(.embeddedContent) .weekGrid {
-        gap: 7px;
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 6px;
+        margin-inline: 0;
+        padding-inline: 0;
+        overflow-x: visible;
     }
 
     .content:not(.embeddedContent) .weekDay {
-        min-height: 90px;
-        padding: 10px 1px 11px;
-        border-radius: 13px;
+        min-width: 0;
+        min-height: 92px;
+        padding: 9px 1px 11px;
+        border-radius: 14px;
     }
 
     .content:not(.embeddedContent) .weekday {
-        font-size: 11px;
+        font-size: 10px;
+    }
+
+    .content:not(.embeddedContent) .weekDate {
+        font-size: 9px;
     }
 
     .content:not(.embeddedContent) .coinWrap {
-        width: 24px;
-        height: 24px;
-        margin-top: 10px;
+        width: 22px;
+        height: 22px;
+        margin-top: 8px;
     }
 
-    .content:not(.embeddedContent) .coinGlyph {
-        width: 24px;
-        height: 24px;
+    .content:not(.embeddedContent) .coinImgClip {
+        width: 22px;
+        height: 22px;
     }
 
     .content:not(.embeddedContent) .bonusDay .coinWrap,
-    .content:not(.embeddedContent) .bonusDay .coinGlyph {
-        width: 26px;
-        height: 26px;
+    .content:not(.embeddedContent) .bonusDay .coinImgClip {
+        width: 24px;
+        height: 24px;
     }
 
     .content:not(.embeddedContent) .coinWrap .dayReward {
-        left: 12px;
-        font-size: 10px;
+        left: 11px;
+        top: -6px;
+        font-size: 9px;
         padding: 0 4px;
+        line-height: 12px;
     }
 
     .content:not(.embeddedContent) .footer {
-        padding: 8px 14px calc(16px + env(safe-area-inset-bottom));
+        padding: 12px 14px calc(18px + env(safe-area-inset-bottom, 0px));
     }
 
     .content:not(.embeddedContent) .footer .signInButton {
         min-height: 46px;
         font-size: 15px;
+    }
+}
+
+@media (max-width: 380px) {
+    .content:not(.embeddedContent) .weekGrid {
+        grid-template-columns: repeat(7, minmax(48px, 1fr));
+    }
+
+    .content:not(.embeddedContent) .weekDay {
+        min-width: 48px;
     }
 }
 

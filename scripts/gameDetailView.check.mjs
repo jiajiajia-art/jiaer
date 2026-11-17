@@ -155,7 +155,7 @@ test('GameDetail_应严格对齐效果图结构与文案键', () => {
   assert.match(tsx, /DetailHeartIcon/);
   assert.match(tsx, /DetailStarIcon/);
   assert.match(tsx, /DetailRateIcon/);
-  assert.match(tsx, /icon_filmstrip\.webp/);
+  assert.match(tsx, /icon_gamepad\.webp/);
   // 读档统一收进开始选项面板，简介区不再重复入口
   assert.doesNotMatch(tsx, /loadSaveBadge/);
   assert.match(tsx, /inlineActionRow/);
@@ -165,7 +165,7 @@ test('GameDetail_应严格对齐效果图结构与文案键', () => {
   assert.match(css, /\.statsBar/);
   assert.match(css, /\.statsBar[\s\S]*gap:\s*0\.55rem/);
   assert.match(css, /\.statsItem[\s\S]*flex-direction:\s*row/);
-  assert.match(css, /\.statsItem[\s\S]*border-radius:\s*11\.5px/);
+  assert.match(css, /\.statsItem\s*\{[^}]*border-radius:\s*14px/);
   assert.match(css, /\.statsText[\s\S]*flex-direction:\s*row/);
   assert.match(css, /\.statsValue[\s\S]*color:\s*inherit/);
   assert.match(css, /\.heroGameTitle/);
@@ -174,7 +174,7 @@ test('GameDetail_应严格对齐效果图结构与文案键', () => {
   /* 双 CTA 字号在各断点保持一致（含 replay） */
   assert.match(css, /\.startButton,\s*\n\s*\.purchaseButton,\s*\n\s*\.replayButton/);
   assert.doesNotMatch(css, /\.startButton,\s*\n\s*\.purchaseButton\s*\{[^}]*font-size:\s*0\.9375rem/);
-  assert.match(css, /\.topBar\s*\{[^}]*position:\s*absolute/);
+  assert.match(css, /\.topBar\s*\{[^}]*position:\s*sticky/);
   assert.match(css, /\.topBar\s*\{[^}]*background:\s*(?:rgba\(0,\s*0,\s*0,\s*0\.2\)|var\(--|color-mix\()/);
   assert.match(css, /\.heroSectionCoverOnly::after[\s\S]*var\(--detail-surface\)/);
   assert.doesNotMatch(css, /@media \(max-width:\s*768px\)[\s\S]*\.heroSection::after[\s\S]*mobile-content-image-guard-dark-gradient/);

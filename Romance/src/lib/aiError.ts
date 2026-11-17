@@ -26,10 +26,16 @@ export function friendlyAIError(e: unknown): { title: string; text: string } {
     return { title: "网络连接失败", text: "连不上服务，请检查网络后再试。" };
   if (status === 401 || /invalid.*key|api key|unauthorized|incorrect|not_logged_in|请先登录/.test(blob))
     return { title: "需要重新登录", text: "登录状态失效了，请重新登录后再继续演绎。" };
-  if (status === 400 && /insufficient_points|积分不足/.test(blob))
-    return { title: "织梦豆不足", text: detail || "织梦豆不足，请充值后再演绎。" };
+  if (status === 400 && /insufficient_points|积分不足/.test(blob)) {
+    // 功能注释：保留「需要/当前」数字，界面据此画差额条；无详情时给可读引导
+    const keep = /需要\s*\d+/.test(detail) ? detail : "";
+    return {
+      title: "织梦豆不足",
+      text: keep || "织梦豆不够这次演绎了。先去充值，再点「充值后重试」。",
+    };
+  }
   if (status === 402 || /quota|balance|insufficient|credit/.test(blob))
-    return { title: "额度不足", text: "额度不够了，请充值或稍后再试。" };
+    return { title: "额度不足", text: "额度不够了，请先充值再继续。" };
   if (status === 403) return { title: "没有权限", text: "当前账号暂时不能使用这个能力。" };
   if (status === 404 || /model.*(not|does not)|not.*found|no such model/.test(blob))
     return { title: "模型不可用", text: "当前模型暂时不可用，请在设置里换一个后再试。" };

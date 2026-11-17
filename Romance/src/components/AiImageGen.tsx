@@ -3,7 +3,16 @@ import { addTempAsset, keepAsset, isAssetKept, type AssetKind } from "../lib/fre
 import { useEffect, useRef, useState } from "react";
 import { compressImage } from "../lib/freeStyle";
 import { generatePlatformImage, platformImageConfigured } from "../lib/platformImageGen";
-import { composePositivePrompt, mergeNegativePrompt, rememberArtStyleSample, type EditorImagePromptParts } from "../lib/editorImagePrompts";
+import {
+  composePositivePrompt,
+  mergeNegativePrompt,
+  rememberArtStyleSample,
+  splitFramingFromSubject,
+  type EditorImagePromptParts,
+} from "../lib/editorImagePrompts";
+import { fmtImageChargeHint, useAiRoutes } from "../lib/platformAiRoutes";
+import { hasPlatformPlayAuth } from "../lib/platformPlayAi";
+import { resolveRomancePlayMode } from "../lib/platformRomancePlay";
 import { useGame } from "../store/gameCtx";
 import ArtStylePicker from "./ArtStylePicker";
 
@@ -63,10 +72,16 @@ export default function AiImageGen({
   assetName?: string;
 }) {
   const { cfg } = useGame();
+  const { current: imageRoute } = useAiRoutes("image");
+  // 功能注释：游玩扣 KK，创作/审核扣织梦豆——与生图计费 scene 一致
+  const chargeCurrency = resolveRomancePlayMode().mode === "play" ? "kk" : "points";
   const [prompt, setPrompt] = useState(initialPrompt ?? "");
   const layered = Boolean(initialParts);
   const [style, setStyle] = useState(initialParts?.style ?? "");
-  const [subject, setSubject] = useState(initialParts?.subject ?? "");
+  // 功能注释：构图收尾句（9:16 等）只静默拼进请求，不进可编辑主体框
+  const initialSplit = splitFramingFromSubject(initialParts?.subject ?? "");
+  const [subject, setSubject] = useState(initialSplit.subject);
+  const [framing] = useState(String(initialParts?.framing || initialSplit.framing || "").trim());
   const [negative, setNegative] = useState(initialParts?.negative ?? "");
   // 功能注释：重绘时默认把当前图作为参考图（最多 MAX_REFS 张），创作者可点「移除」
   const [refs, setRefs] = useState<string[]>(() => (initialRefs ?? []).filter(Boolean).slice(0, MAX_REFS));
@@ -99,10 +114,10 @@ export default function AiImageGen({
     if (initialPrompt != null && initialPrompt !== "") setPrompt(initialPrompt);
   }, [initialPrompt]);
 
-  // 功能注释：有三层时，正向 = 画风 + 主体；没有则沿用单段 prompt
+  // 功能注释：有三层时，正向 = 画风 + 主体 + framing（静默）；没有则沿用单段 prompt
   // 功能注释：单段模式也可选画风；选了就拼在提示词前
   const positive = layered
-    ? composePositivePrompt({ style, subject })
+    ? composePositivePrompt({ style, subject, framing })
     : (style.trim() ? composePositivePrompt({ style, subject: prompt }) : prompt.trim());
 
   // 功能注释：生成中显示已用秒数，驱动进度条缓升（不到 100%，完成后再满）
@@ -194,55 +209,55 @@ export default function AiImageGen({
   const locked = phase === "busy";
   const showResult = phase === "done" && !!img;
 
+  const fieldCls = `w-full rounded-xl border border-line/80 px-2.5 py-2 text-[12.5px] leading-relaxed text-ink shadow-[inset_0_1px_2px_rgba(40,20,30,0.04)] outline-none transition placeholder:text-ink-soft/55 focus:border-[color:var(--jade)] focus:ring-2 focus:ring-[color:var(--jade)]/15 ${
+    locked ? "cursor-not-allowed bg-[#f7f3f1] text-ink-soft" : "bg-white"
+  }`;
+
   return (
-    <div className={bare ? "space-y-3" : "space-y-3 rounded-xl border border-dashed border-coral/50 bg-coral/[0.04] p-2.5"}>
-      {!bare && <p className="text-[11.5px] font-bold text-coral">AI 生成</p>}
+    <div className={bare ? "space-y-2.5 pt-0.5" : "space-y-2.5 rounded-2xl border border-dashed border-[color:var(--jade)]/35 bg-[color:var(--jade)]/[0.03] p-3"}>
+      {!bare && <p className="text-[11.5px] font-bold text-[color:var(--jade)]">AI 生成</p>}
       {!ok && (
-        <p className="text-[11.5px] text-ink-soft">
-          请先登录平台账号后再生图（使用运营后台「生图配置」的 epone / ggb）。未登录时也可在「设置 · AI 配置」填写个人生图模型兜底。
+        <p className="rounded-xl bg-[#f7f3f1] px-3 py-1.5 text-[11px] leading-snug text-ink-soft">
+          请先登录平台账号后再生图。
         </p>
       )}
 
-      {ok && !locked && <AiRoutePicker capability="image" compact />}
+      {/* 功能注释：无线路时 AiRoutePicker 返回 null，勿包空框 */}
+      {ok && !locked ? <AiRoutePicker capability="image" compact /> : null}
 
       {showResult ? (
         <div className="space-y-3">
-          {/* 功能注释：结果页只展示图与两个动作；「重新生成」直接再跑，避免先闪回编辑页 */}
-          <p className="text-[11px] font-bold tracking-wide text-ink-soft">生成结果</p>
-          <div className="relative overflow-hidden rounded-xl border border-line bg-paper-2">
+          <div className="relative overflow-hidden rounded-2xl border border-line/80 bg-[#f7f3f1] shadow-[0_8px_24px_-18px_rgba(40,20,30,0.45)]">
             <img src={img || undefined} alt="生成结果" className="mx-auto max-h-[360px] w-full object-contain" />
-            <span className="absolute bottom-2 right-2 rounded-full bg-ink/70 px-2 py-0.5 text-[10.5px] font-semibold text-paper">
+            <span className="absolute bottom-2.5 right-2.5 rounded-full bg-black/55 px-2.5 py-0.5 text-[10.5px] font-semibold text-white backdrop-blur-sm">
               {sizeBadge(size)}
             </span>
           </div>
           {autoApply && (
-            <p className="text-[11.5px] text-jade">已写入预览。可关掉弹窗，或点「重新生成」换一张。</p>
+            <p className="text-[11.5px] text-[color:var(--jade)]">已写入预览。可关掉弹窗，或点「重新生成」换一张。</p>
           )}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() => {
-                void run();
-              }}
+              onClick={() => { void run(); }}
               disabled={!ok || !positive}
-              className="rounded-full border border-ink/20 bg-paper py-2.5 text-[13px] font-bold text-ink transition disabled:opacity-40"
+              className="rounded-2xl border border-line bg-white py-2.5 text-[13px] font-bold text-ink transition hover:border-[color:var(--jade)]/40 disabled:opacity-40"
             >
               重新生成
             </button>
             <button
               type="button"
               onClick={() => {
-                // 功能注释：用上的生图转长期保留，避免 7 天后从素材库消失
                 keepAsset(img, assetName, assetKind);
                 setKept(true);
                 onPick(img);
               }}
-              className="rounded-full bg-ink py-2.5 text-[13px] font-bold text-paper transition"
+              className="rounded-2xl bg-[color:var(--jade)] py-2.5 text-[13px] font-bold text-white shadow-[0_8px_18px_-10px_rgba(180,40,60,0.55)] transition"
             >
               使用这张图
             </button>
           </div>
-          <div className="flex items-center justify-between gap-2 rounded-xl bg-paper-2 px-3 py-2">
+          <div className="flex items-center justify-between gap-2 rounded-2xl border border-line/70 bg-[#f7f3f1] px-3 py-2">
             <p className="min-w-0 text-[11px] leading-snug text-ink-soft">
               {kept || isAssetKept(img) ? "已收藏到素材库，长期保留。" : "已暂存到素材库，7 天内没用到会自动清除。"}
             </p>
@@ -250,17 +265,17 @@ export default function AiImageGen({
               type="button"
               disabled={kept || isAssetKept(img)}
               onClick={() => { keepAsset(img, assetName, assetKind); setKept(true); }}
-              className="shrink-0 rounded-full border border-ink/20 bg-paper px-3 py-1 text-[11.5px] font-bold text-ink transition disabled:opacity-50"
+              className="shrink-0 rounded-full border border-line bg-white px-3 py-1 text-[11.5px] font-bold text-ink transition disabled:opacity-50"
             >
-              {kept || isAssetKept(img) ? "已收藏" : "收藏到素材库"}
+              {kept || isAssetKept(img) ? "已收藏" : "收藏"}
             </button>
           </div>
         </div>
       ) : (
         <>
-          {/* 功能注释：参考图 / 选画风 Tab；画风正向词后台配置，不在创作者端暴露手改框 */}
-          <div className="overflow-hidden rounded-xl border border-line/80 bg-paper-2/40">
-            <div className="grid grid-cols-2 gap-0.5 border-b border-line/70 bg-paper-2/80 p-1" role="tablist" aria-label="生图准备">
+          {/* 功能注释：参考图 / 选画风紧凑双 Tab；画风正向词后台配置，创作者端只选不改 */}
+          <div className="overflow-hidden rounded-xl border border-line/80 bg-white shadow-[0_1px_0_rgba(255,255,255,0.8)_inset]">
+            <div className="grid grid-cols-2 gap-1 bg-[#f6f1ef] p-1" role="tablist" aria-label="生图准备">
               {(
                 [
                   ["refs", "参考图", refs.length > 0 ? String(refs.length) : ""],
@@ -275,35 +290,37 @@ export default function AiImageGen({
                     role="tab"
                     aria-selected={on}
                     onClick={() => setPrepTab(id)}
-                    className={`relative rounded-lg px-1.5 py-1.5 text-[11.5px] font-bold transition ${
-                      on ? "bg-paper text-coral shadow-sm" : "text-ink-soft hover:text-ink"
+                    className={`rounded-lg px-2 py-1.5 text-[12px] font-bold transition ${
+                      on
+                        ? "bg-white text-[color:var(--jade)] shadow-[0_1px_3px_rgba(40,20,30,0.1)]"
+                        : "text-ink-soft hover:text-ink"
                     }`}
                   >
                     {label}
-                    {badge && (
-                      <span className={`ml-1 inline-grid min-w-[1rem] place-items-center rounded-full px-1 text-[9px] font-black ${
-                        on ? "bg-coral/15 text-coral" : "bg-ink/8 text-ink-soft"
+                    {badge ? (
+                      <span className={`ml-1 inline-grid min-w-[1.1rem] place-items-center rounded-full px-1 text-[9px] font-black ${
+                        on ? "bg-[color:var(--jade)]/12 text-[color:var(--jade)]" : "bg-black/5 text-ink-soft"
                       }`}>{badge}</span>
-                    )}
+                    ) : null}
                   </button>
                 );
               })}
             </div>
 
-            <div className="p-2.5" role="tabpanel">
+            <div className="p-2" role="tabpanel">
               {prepTab === "refs" && (
                 <div>
-                  <p className="mb-1.5 text-[11px] font-bold tracking-wide text-ink-soft">
-                    参考图（可选，最多 {MAX_REFS} 张{(initialRefs?.length ?? 0) > 0 ? " · 已默认带入当前图，可移除" : ""}）
+                  <p className="mb-1 text-[10px] font-semibold tracking-wide text-ink-soft">
+                    可选 · 最多 {MAX_REFS} 张{(initialRefs?.length ?? 0) > 0 ? " · 已带入当前头像" : ""}
                   </p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {refs.map((src, i) => (
-                      <div key={`${i}-${src.slice(0, 24)}`} className="relative h-16 w-16 overflow-hidden rounded-lg border border-line bg-paper-2">
+                      <div key={`${i}-${src.slice(0, 24)}`} className="relative h-14 w-14 overflow-hidden rounded-xl border border-line bg-[#f7f3f1] shadow-sm">
                         <img src={src} alt={`参考图 ${i + 1}`} className="h-full w-full object-cover" />
                         {!locked && (
                           <button
                             type="button"
-                            className="absolute inset-x-0 bottom-0 bg-ink/65 py-0.5 text-[10px] font-semibold text-paper"
+                            className="absolute inset-x-0 bottom-0 bg-black/55 py-0.5 text-[9.5px] font-semibold text-white backdrop-blur-[2px]"
                             onClick={() => setRefs((prev) => prev.filter((_, j) => j !== i))}
                           >
                             移除
@@ -315,16 +332,16 @@ export default function AiImageGen({
                       <button
                         type="button"
                         onClick={() => refInputRef.current?.click()}
-                        className="flex h-16 min-w-[7.5rem] flex-1 items-center justify-center rounded-lg border border-dashed border-line bg-paper px-2 text-[12px] font-semibold text-ink-soft transition hover:border-coral hover:text-coral"
+                        className="flex h-14 min-w-[6.5rem] flex-1 items-center justify-center rounded-xl border border-dashed border-[color:var(--jade)]/35 bg-[color:var(--jade)]/[0.03] px-2 text-[11.5px] font-semibold text-[color:var(--jade)] transition hover:border-[color:var(--jade)] hover:bg-[color:var(--jade)]/[0.07]"
                       >
                         + 上传参考图
                       </button>
                     )}
                     {refs.length > 0 && locked && (
-                      <p className="self-center text-[11.5px] text-ink-soft">已上传 {refs.length} 张参考图</p>
+                      <p className="self-center text-[11px] text-ink-soft">已上传 {refs.length} 张参考图</p>
                     )}
                     {refs.length === 0 && locked && (
-                      <p className="text-[11.5px] text-ink-soft">未使用参考图</p>
+                      <p className="text-[11px] text-ink-soft">未使用参考图</p>
                     )}
                   </div>
                   <input
@@ -342,12 +359,11 @@ export default function AiImageGen({
               )}
 
               {prepTab === "stylePick" && (
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-bold tracking-wide text-ink-soft">选填：可写画风；留空则按主体与设定生成</p>
-                  <p className="text-[11px] text-ink-soft">点选画风（提示词由后台配置，此处只选不改）</p>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-semibold tracking-wide text-ink-soft">选填 · 点选即可，不会自动生图</p>
                   <ArtStylePicker value={style} disabled={locked} onChange={(v, preset) => {
+                    // 功能注释：只改画风，绝不在此触发 run
                     setStyle(v);
-                    // 功能注释：选中画风时并入该画风的负面词（排除三次元 / 低质）
                     if (preset) setNegative((n) => mergeNegativePrompt(n, preset.negative));
                   }} />
                 </div>
@@ -356,74 +372,71 @@ export default function AiImageGen({
           </div>
 
           {layered ? (
-            <div className="space-y-2.5">
-              {/* 功能注释：只露出主体；负面词随画风静默合并，不给创作者看/改 */}
-              <div>
-                <p className="mb-1.5 text-[11px] font-bold tracking-wide text-ink-soft">
-                  {locked ? "本张主体 · 只写这一张 · 生成中不可修改" : "本张主体 · 只写这一张 · 可编辑"}
-                </p>
-                <textarea
-                  rows={4}
-                  value={subject}
-                  readOnly={locked}
-                  onChange={(e) => setSubject(e.target.value)}
-                  placeholder={placeholder ?? "这一张画什么：主体、构图……"}
-                  className={`w-full rounded-lg border border-line px-2.5 py-1.5 text-[12.5px] text-ink outline-none focus:border-coral ${
-                    locked ? "cursor-not-allowed bg-paper-2 text-ink-soft" : "bg-paper"
-                  }`}
-                />
-              </div>
+            <div>
+              <p className="mb-1 text-[10.5px] font-semibold tracking-wide text-ink-soft">
+                {locked ? "本张主体 · 生成中不可改" : "本张主体"}
+              </p>
+              <textarea
+                rows={2}
+                value={subject}
+                readOnly={locked}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder={placeholder ?? "这一张画什么：主体、场景、光线……"}
+                className={fieldCls}
+              />
             </div>
           ) : (
             <div>
-              <p className="mb-1.5 text-[11px] font-bold tracking-wide text-ink-soft">
-                {locked ? "提示词 · 生成中不可修改" : "提示词 · 可编辑"}
+              <p className="mb-1 text-[10.5px] font-semibold tracking-wide text-ink-soft">
+                {locked ? "提示词 · 生成中不可改" : "提示词"}
               </p>
               <textarea
-                rows={4}
+                rows={2}
                 value={prompt}
                 readOnly={locked}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder={placeholder ?? "描述画面：主体、场景、光线、风格……"}
-                className={`w-full rounded-lg border border-line px-2.5 py-1.5 text-[12.5px] text-ink outline-none focus:border-coral ${
-                  locked ? "cursor-not-allowed bg-paper-2 text-ink-soft" : "bg-paper"
-                }`}
+                className={fieldCls}
               />
             </div>
           )}
 
           {locked ? (
-            <div className="space-y-2">
-              <div className="h-1.5 overflow-hidden rounded-full bg-line/60">
-                <div className="h-full rounded-full bg-ink transition-[width] duration-300" style={{ width: `${progressPct}%` }} />
+            <div className="space-y-1 rounded-xl border border-line/70 bg-[#f7f3f1] px-2.5 py-2">
+              <div className="h-1 overflow-hidden rounded-full bg-black/5">
+                <div className="h-full rounded-full bg-[color:var(--jade)] transition-[width] duration-300" style={{ width: `${progressPct}%` }} />
               </div>
-              <button
-                type="button"
-                disabled
-                className="w-full rounded-full bg-ink/15 py-2.5 text-[13px] font-bold text-ink-soft"
-              >
-                生成中… {elapsed}s
-              </button>
-              <button type="button" onClick={cancelBusy} className="w-full py-1 text-[12.5px] font-semibold text-ink-soft underline-offset-2 hover:text-danger hover:underline">
-                取消生成
-              </button>
+              <div className="flex items-center gap-2">
+                <button type="button" disabled className="min-w-0 flex-1 rounded-lg bg-[color:var(--jade)]/15 py-1.5 text-[12.5px] font-bold text-[color:var(--jade)]">
+                  生成中… {elapsed}s
+                </button>
+                <button type="button" onClick={cancelBusy} className="shrink-0 px-1.5 text-[12px] font-semibold text-ink-soft underline-offset-2 hover:text-danger hover:underline">
+                  取消
+                </button>
+              </div>
             </div>
           ) : (
             <button
               type="button"
-              onClick={() => {
-                void run();
-              }}
+              onClick={() => { void run(); }}
               disabled={!ok || !positive}
-              className="w-full rounded-full bg-ink py-2.5 text-[13px] font-bold text-paper transition disabled:opacity-40"
+              title={!ok ? "请先登录" : !positive ? "请先填写提示词或选择画风" : "点击后才开始生图"}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[color:var(--jade)] px-3 py-2 text-white shadow-[0_6px_14px_-12px_rgba(180,40,60,0.55)] transition enabled:hover:brightness-[1.03] disabled:cursor-not-allowed disabled:bg-[#d9c8cb] disabled:shadow-none"
             >
-              开始生成
+              <span className="text-[13px] font-bold tracking-wide">开始生成</span>
+              {(() => {
+                const fee = fmtImageChargeHint(imageRoute, {
+                  personalFallback: !hasPlatformPlayAuth(),
+                  currency: chargeCurrency,
+                });
+                return fee ? <span className="text-[11px] font-semibold tabular-nums text-white/85">· {fee}</span> : null;
+              })()}
             </button>
           )}
         </>
       )}
 
-      {err && <p className="text-[11.5px] text-danger">{err}</p>}
+      {err && <p className="rounded-xl bg-danger/10 px-3 py-2 text-[11.5px] text-danger">{err}</p>}
     </div>
   );
 }

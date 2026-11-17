@@ -312,13 +312,13 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
     const missingAll = lib.events.filter((e) => !have.has(e.id)).length;
     const emptyLib = lib.groups.length === 0;
     return (
-      <div className="space-y-4">
-        <ModeSwitch mode={mode} setMode={setMode} />
+      <div className="space-y-3">
+        <ModeSwitch mode={mode} setMode={setMode} hidePreview={modMode} />
         {!modMode && <ScopeBanner scope="save">导入的事件写入当前存档。事件库内容来自当前世界观模组。</ScopeBanner>}
         {emptyLib ? (
           <EmptyState>
             {modMode
-              ? "这部作品还没有事件库。请到「编辑」里新建事件，或用「我的模板」套用；不会预置娱乐圈事件，也不会出现「全部导入」。"
+              ? "事件库还是空的。回到「编辑」新建，或用「我的模板」套用。"
               : "当前世界观没有提供事件库。"}
           </EmptyState>
         ) : (
@@ -423,10 +423,10 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
   if (mode === "preview") {
     const seen = events.filter((e) => fired.has(e.id));
     return (
-      <div className="space-y-4">
-        <ModeSwitch mode={mode} setMode={setMode} />
-        <p className="text-[12.5px] leading-relaxed text-ink-soft">
-          这是玩家视角：只显示已经实际触发过的固定事件。未满足条件的事件对玩家和 AI 完全不可见——不会出现在这里，也不会有任何「未解锁」提示。
+      <div className="space-y-3">
+        <ModeSwitch mode={mode} setMode={setMode} hidePreview={modMode} />
+        <p className="wg-field-help text-[12.5px] leading-relaxed text-ink-soft">
+          玩家视角：只显示已触发过的固定事件；未触发的对玩家和 AI 都不可见。
         </p>
         {seen.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-line bg-paper-2/50 px-4 py-8 text-center text-[13px] text-ink-soft">
@@ -448,13 +448,20 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
 
   /* ——— 编辑模式 ——— */
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {confirmEl}
-      <ModeSwitch mode={mode} setMode={setMode} />
+      <div className="flex flex-wrap items-center gap-2">
+        <ModeSwitch mode={mode} setMode={setMode} hidePreview={modMode} />
+        <AiEventWriter
+          existing={events}
+          world={worldContext}
+          onApply={(list) => { save(list); setOpenId(list[0]?.id ?? null); }}
+        />
+      </div>
       {!modMode && <ScopeBanner scope="save">固定事件只作用于当前存档，修改即时保存。模组预设剧本只在新开局时写入。</ScopeBanner>}
 
       {tpls.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-line bg-paper-2/40 px-3 py-2">
+        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-line bg-paper-2/40 px-3 py-2">
           <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-soft">我的模板</span>
           {tpls.map((t) => (
             <span key={t.id} className="inline-flex items-center overflow-hidden rounded-full border border-line bg-paper text-[12px]">
@@ -466,15 +473,12 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
       )}
       {toast && <p role="status" className="rounded-xl bg-jade/10 px-3 py-2 text-[12.5px] font-semibold text-jade">{toast}</p>}
 
-      <AiEventWriter
-        existing={events}
-        world={worldContext}
-        onApply={(list) => { save(list); setOpenId(list[0]?.id ?? null); }}
-      />
-
       {events.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-line/80 bg-paper-2/40 px-4 py-5 text-center text-[12.5px] text-ink-soft">
-          还没有固定事件
+        <div className="wg-story-empty flex flex-col items-center gap-2.5 rounded-xl px-3 py-4 text-center">
+          <p className="text-[12px] text-ink-soft">还没有固定事件</p>
+          <button type="button" onClick={add} className="rounded-full border border-line bg-paper px-3.5 py-1.5 text-[12px] font-semibold text-ink transition hover:border-jade hover:text-jade">
+            ＋ 新增固定事件
+          </button>
         </div>
       )}
 
@@ -487,7 +491,7 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
           if (!matches(q, e.name, e.prompt)) return null;
           const open = openId === e.id;
           return (
-            <div key={e.id} id={auditDomId(`event:${e.id}`)} className="scroll-mt-3 overflow-hidden rounded-2xl border border-line bg-paper-2/60">
+            <div key={e.id} id={auditDomId(`event:${e.id}`)} className="scroll-mt-3 overflow-hidden rounded-xl border border-line bg-paper-2/60">
               <button onClick={() => setOpenId(open ? null : e.id)} className="flex w-full items-center gap-2 px-4 py-3 text-left">
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2">
@@ -755,21 +759,24 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
         })}
       </div>
 
-      <button onClick={add} className="w-full rounded-2xl border border-dashed border-jade/60 bg-jade/5 py-3 text-[13px] font-bold text-jade transition hover:bg-jade/10">
-        ＋ 新增固定事件
-      </button>
+      {events.length > 0 && (
+        <button type="button" onClick={add} className="w-full rounded-xl border border-dashed border-line py-2.5 text-[12.5px] font-semibold text-ink-soft transition hover:border-jade hover:text-jade">
+          ＋ 新增固定事件
+        </button>
+      )}
     </div>
   );
 }
 
 type Mode = "edit" | "library" | "preview";
 const MODE_LABEL: Record<Mode, string> = { edit: "编辑", library: "事件库", preview: "预览" };
-function ModeSwitch({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }) {
+function ModeSwitch({ mode, setMode, hidePreview }: { mode: Mode; setMode: (m: Mode) => void; hidePreview?: boolean }) {
+  const modes = (hidePreview ? (["edit", "library"] as const) : (["edit", "library", "preview"] as const));
   return (
-    <div className="inline-flex rounded-full border border-line bg-paper-2/60 p-0.5 text-[12.5px] font-bold">
-      {(["edit", "library", "preview"] as const).map((m) => (
-        <button key={m} onClick={() => setMode(m)}
-          className={`rounded-full px-4 py-1.5 transition ${mode === m ? "bg-gradient-to-r from-jade to-coral text-white shadow" : "text-ink-soft"}`}>
+    <div className="inline-flex rounded-full border border-line bg-paper-2/60 p-0.5 text-[12px] font-bold">
+      {modes.map((m) => (
+        <button key={m} type="button" onClick={() => setMode(m)}
+          className={`rounded-full px-3.5 py-1.5 transition ${mode === m ? "bg-jade text-white shadow-sm" : "text-ink-soft hover:text-ink"}`}>
           {MODE_LABEL[m]}
         </button>
       ))}

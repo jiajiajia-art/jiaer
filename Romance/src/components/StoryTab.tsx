@@ -3,12 +3,13 @@ import { rulesOf } from "../game/engineRules";
 import { useGame, useLive } from "../store/gameCtx";
 import type { Npc, Segment, Thought, Turn } from "../lib/types";
 import { Avatar } from "./ui";
-import { IconChevronDown, IconPencil, IconRefresh, IconSend, IconSparkle, IconThought } from "../lib/icons";
+import { IconAlert, IconChevronDown, IconPencil, IconRefresh, IconSend, IconSparkle, IconThought, IconWallet } from "../lib/icons";
 import { EntityText } from "./EntityText";
 import { looksGarbled, repairSegments, proseToSegments } from "../lib/ai";
 import { findNpc } from "../lib/npcIdentity";
 import { resolveSpeakerLabel, sameSpeakerLabel } from "../lib/speakerLabel";
 import { openPerson } from "./NpcTab";
+import { openCloudRecharge } from "../lib/cloudSaves";
 
 /* 流式实时文本：单独订阅 LiveCtx，AI 逐帧吐字只重渲染这一小块，
  * 并让它自己把滚动容器滚到底，避免整页跟着刷新。 */
@@ -61,11 +62,12 @@ function gradFor(name: string) {
 }
 
 function SpeakerAvatar({ name, src }: { name: string; src?: string }) {
+  /* 功能注释：对话头像默认圆角方；设置里选圆形才会被 data-avatar=circle 盖成圆 */
   if (src)
-    return <img src={(src) || undefined} alt={name} className="dlg-avatar h-8 w-8 shrink-0 rounded-[8px] object-cover object-top ring-2 ring-white/70 shadow-sm" />;
+    return <img src={(src) || undefined} alt={name} className="dlg-avatar h-8 w-8 shrink-0 rounded-[8px] object-cover object-top ring-1 ring-line/60 shadow-sm" />;
   return (
     <span
-      className={`dlg-avatar flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-gradient-to-br ${gradFor(name)} text-[13px] font-semibold text-white ring-2 ring-white/70 shadow-sm`}
+      className={`dlg-avatar flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-gradient-to-br ${gradFor(name)} text-[13px] font-semibold text-white ring-1 ring-line/50 shadow-sm`}
     >
       {name.slice(0, 1)}
     </span>
@@ -135,14 +137,21 @@ function StatText({ text }: { text: string }) {
 
 /* 单条剧情片段的呈现：旁白（左竖线斜体）/ 系统日志（终端风格居中）/ 人物对话（头像+气泡）。
  * tightTop 用于让连续的系统日志相互收紧。 */
-/* 旁白内「动作 / 台词」分色：引号「」“”『』里是说出口的话（深色正文），其余为动作神态描写（主色斜体） */
+/* 旁白内「动作 / 台词」分色：
+ * 「」『』= 说出口的话；“…”仅当内文够长才当台词。
+ * “腾”这类一两字拟声/强调仍按旁白，避免被 story-speech 加深色后看起来像加粗。 */
 const QUOTE_RE = /(「[^「」]*」|“[^“”]*”|『[^『』]*』)/g;
+function isSpokenQuote(p: string): boolean {
+  if (/^[「『]/.test(p)) return true;
+  if (/^“/.test(p) && /”$/.test(p)) return p.length > 4; // “腾”=3，不当台词
+  return false;
+}
 function ProseWithSpeech({ text }: { text: string }) {
   const parts = text.split(QUOTE_RE).filter(Boolean);
   return (
     <>
       {parts.map((p, i) =>
-        /^[「“『]/.test(p) ? <span key={i} className="story-speech"><EntityText text={p} /></span> : <span key={i} className="story-action"><StatText text={p} /></span>,
+        isSpokenQuote(p) ? <span key={i} className="story-speech"><EntityText text={p} /></span> : <span key={i} className="story-action"><StatText text={p} /></span>,
       )}
     </>
   );
@@ -281,29 +290,79 @@ export function CastRow({ segments: raw, changes = [], npcs, onOpen }: { segment
   );
 }
 
+/** 功能注释：连续相同错误只留最后一条，避免「织梦豆不足」叠三张 */
+export function sameTurnError(
+  a?: { title: string; text: string } | null,
+  b?: { title: string; text: string } | null,
+): boolean {
+  return !!a && !!b && a.title === b.title && a.text === b.text;
+}
+
 export function ErrorBanner({ error }: { error: { title: string; text: string; preview?: string } }) {
   const { regenerate, busy } = useGame();
+  const blob = `${error.title}\n${error.text}`;
+  const beanShort = /织梦豆|积分不足|额度不足/.test(blob);
+  const loginNeed = /重新登录|登录状态/.test(blob);
+  // 功能注释：紧凑一行说明 + 按钮，不再单独画差额条（数字已在文案里）
   return (
-    <div className="flex flex-col gap-2.5 rounded-[var(--radius-ui)] border border-jade/20 bg-gradient-to-br from-jade/[0.07] to-paper px-3.5 py-3 shadow-[var(--shadow-ui)] sm:flex-row sm:items-center">
-      <div className="min-w-0 flex-1">
-        <div className="text-[13px] font-bold text-ink">{error.title}</div>
-        <div className="mt-0.5 whitespace-pre-line text-[12px] leading-relaxed text-ink-soft">{error.text}</div>
-        {/* 功能注释：解析失败时已生成的正文只供查看，不算进剧情、不进提示词 */}
-        {error.preview && (
-          <details className="mt-1.5">
-            <summary className="cursor-pointer text-[11.5px] font-semibold text-ink-soft">查看这次生成的正文</summary>
-            <div className="mt-1 max-h-40 overflow-y-auto whitespace-pre-line rounded-lg bg-paper-2/80 px-2.5 py-2 text-[12px] leading-relaxed text-ink-soft">{error.preview}</div>
-          </details>
+    <div
+      className={`rounded-[var(--radius-ui)] border px-3 py-2.5 ${
+        beanShort ? "border-coral/25 bg-coral/[0.06]" : "border-line/70 bg-paper-2/70"
+      }`}
+    >
+      <div className="flex items-center gap-2.5">
+        <span
+          className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ${
+            beanShort ? "bg-coral/15 text-coral" : "bg-jade/12 text-jade"
+          }`}
+          aria-hidden
+        >
+          {beanShort ? <IconWallet width={15} height={15} /> : <IconAlert width={15} height={15} />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[13px] font-bold leading-tight text-ink">{error.title}</p>
+          <p className="mt-0.5 line-clamp-2 text-[11.5px] leading-snug text-ink-soft">{error.text}</p>
+        </div>
+      </div>
+      {/* 功能注释：解析失败时已生成的正文只供查看，不算进剧情、不进提示词 */}
+      {error.preview && (
+        <details className="mt-1.5 pl-[42px]">
+          <summary className="cursor-pointer text-[11px] font-semibold text-ink-soft">查看这次生成的正文</summary>
+          <div className="mt-1 max-h-32 overflow-y-auto whitespace-pre-line rounded-lg bg-paper/80 px-2 py-1.5 text-[11.5px] leading-relaxed text-ink-soft">{error.preview}</div>
+        </details>
+      )}
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-[42px]">
+        {beanShort ? (
+          <>
+            <button
+              type="button"
+              onClick={() => openCloudRecharge("diamonds")}
+              className="diy-btn inline-flex items-center gap-1 rounded-full border border-transparent bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] px-2.5 py-1 text-[12px] font-bold text-white transition hover:brightness-110"
+            >
+              去充值
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => regenerate()}
+              className="inline-flex items-center gap-1 rounded-full border border-line/80 bg-paper px-2.5 py-1 text-[12px] font-semibold text-ink-soft transition hover:border-jade/40 hover:text-jade disabled:opacity-50"
+            >
+              <IconRefresh width={12} height={12} aria-hidden />
+              {busy ? "重试中…" : "重试"}
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => regenerate()}
+            className="diy-btn inline-flex items-center gap-1 rounded-full border border-transparent bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] px-2.5 py-1 text-[12px] font-bold text-white transition hover:brightness-110 disabled:opacity-50"
+          >
+            <IconRefresh width={12} height={12} aria-hidden />
+            {busy ? "重新生成中…" : loginNeed ? "登录后重试" : "重新生成"}
+          </button>
         )}
       </div>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => regenerate()}
-        className="shrink-0 self-end rounded-full bg-jade px-3.5 py-1.5 text-[12.5px] font-bold text-paper transition hover:brightness-110 disabled:opacity-50 sm:self-center"
-      >
-        重新生成
-      </button>
     </div>
   );
 }
@@ -478,11 +537,15 @@ export default function StoryTab() {
                   <SpeakerAvatar name={game.player.name} src={game.player.avatar || undefined} />
                 </div>
               );
+            // 功能注释：连续相同错误只留最后一张
+            if (t.error) {
+              if (sameTurnError(t.error, game.story[idx + 1]?.error)) return null;
+              return <ErrorBanner key={t.id} error={t.error} />;
+            }
             // 连续的「纯系统日志」turn 相互收紧，避免每条动作提示都隔开一大截
             const isSysTurn = (x?: Turn) => !!x && x.role === "ai" && x.segments.length > 0 && x.segments.every((s) => s.kind === "system");
             const tight = isSysTurn(t) && isSysTurn(game.story[idx - 1]);
             return (
-              t.error ? <ErrorBanner key={t.id} error={t.error} /> :
               <div key={t.id} className={`animate-pop ${tight ? "-mt-4" : ""}`}>
                 <Segments segments={t.segments} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} />
                 <Thoughts thoughts={t.thoughts} npcs={game.npcs} />

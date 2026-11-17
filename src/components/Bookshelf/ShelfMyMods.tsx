@@ -12,6 +12,7 @@ import styles from './ShelfMyMods.module.css';
 import { playModStoreApi } from '../../api/playMod/playModApi';
 import { platformAppsApi, type PlatformApp } from '../../api/platform/platformAppsApi';
 import { getImageUrl } from '../../utils/constants';
+import toast from 'react-hot-toast';
 import {
   KIND_STORAGE_KEY,
   PHONE_APP_CREATE_PATH,
@@ -21,6 +22,8 @@ import {
   type ShelfModKind,
 } from '../../lib/shelfMyMods';
 import {
+  canSubmitPlayMod,
+  canWithdrawPlayMod,
   groupKeyOfPlayModStatus,
   groupMyPlayMods,
   type MyPlayModGroupKey,
@@ -36,6 +39,8 @@ type Row = {
   name: string;
   desc: string;
   group: string;
+  /** 功能注释：原始 status，玩法提审/撤回用 */
+  rawStatus: string;
   statusLabel: string;
   meta: string;
   icon?: string;
@@ -66,6 +71,7 @@ function playRows(items: MyPlayModItem[], t: TFn): Row[] {
     name: m.name || m.slug || m.id,
     desc: m.description || t('bookshelfUi.myMods.noDescription'),
     group: groupKeyOfPlayModStatus(m.status),
+    rawStatus: String(m.status || ''),
     statusLabel: playModStatusLabel(m.status, t),
     meta: [m.version ? `v${m.version}` : '', formatUpdated(m.updatedAt, t)].filter(Boolean).join(' · '),
     updatedAt: String(m.updatedAt || ''),
@@ -81,6 +87,7 @@ function appRows(items: PlatformApp[], t: TFn): Row[] {
       name: a.name || a.appId,
       desc: a.summary || t('bookshelfUi.myMods.noDescription'),
       group: published ? 'published' : 'draft',
+      rawStatus: String(a.status || ''),
       statusLabel: published ? t('bookshelfUi.myMods.filterPublished') : t('bookshelfUi.myMods.filterDraft'),
       meta: [a.category, formatUpdated(a.updatedAt || a.createdAt, t)].filter(Boolean).join(' · '),
       icon: a.icon || undefined,
@@ -107,6 +114,7 @@ const ShelfMyMods: React.FC<Props> = ({ token, keyword, kind, onKindChange, onBe
   const [status, setStatus] = useState<'loading' | 'error' | 'ready'>('loading');
   const [filter, setFilter] = useState('all');
   const [reloadSeq, setReloadSeq] = useState(0);
+  const [actionId, setActionId] = useState<string | null>(null);
 
   useEffect(() => {
     let aborted = false;
@@ -170,6 +178,29 @@ const ShelfMyMods: React.FC<Props> = ({ token, keyword, kind, onKindChange, onBe
   const go = (path: string) => {
     onBeforeLeave?.();
     navigate(path);
+  };
+
+  /** 功能注释：玩法包提审 / 撤回走真实 kkmod API，成功后刷新本人列表 */
+  const runPlayModReview = async (row: Row, action: 'submit' | 'withdraw') => {
+    if (kind !== 'play') return;
+    setActionId(row.id);
+    try {
+      const res = action === 'submit'
+        ? await playModStoreApi.submitKkmod(token, row.id)
+        : await playModStoreApi.withdrawKkmod(token, row.id);
+      if (!res?.success) throw new Error(res?.message || res?.data?.message || (action === 'submit' ? '提审失败' : '撤回失败'));
+      toast.success(
+        res.data?.message
+          || (action === 'submit'
+            ? t('bookshelfUi.myMods.submitOk')
+            : t('bookshelfUi.myMods.withdrawOk')),
+      );
+      setReloadSeq((n) => n + 1);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : (action === 'submit' ? t('bookshelfUi.myMods.submitFail') : t('bookshelfUi.myMods.withdrawFail')));
+    } finally {
+      setActionId(null);
+    }
   };
 
   const kindSwitch = (
@@ -261,14 +292,36 @@ const ShelfMyMods: React.FC<Props> = ({ token, keyword, kind, onKindChange, onBe
                   <p className={styles.desc}>{r.desc}</p>
                   {r.meta && <p className={styles.meta}>{r.meta}</p>}
                 </div>
-                <button
-                  type="button"
-                  className={`${shelf.primaryButton} ${styles.editBtn}`}
-                  onClick={() => go(r.editPath)}
-                  aria-label={t('bookshelfUi.myMods.editAria', { name: r.name })}
-                >
-                  {t('bookshelfUi.myMods.edit')}
-                </button>
+                <div className={styles.actions}>
+                  <button
+                    type="button"
+                    className={`${shelf.primaryButton} ${styles.editBtn}`}
+                    onClick={() => go(r.editPath)}
+                    aria-label={t('bookshelfUi.myMods.editAria', { name: r.name })}
+                  >
+                    {t('bookshelfUi.myMods.edit')}
+                  </button>
+                  {kind === 'play' && canSubmitPlayMod(r.rawStatus) ? (
+                    <button
+                      type="button"
+                      className={styles.reviewBtn}
+                      disabled={actionId === r.id}
+                      onClick={() => void runPlayModReview(r, 'submit')}
+                    >
+                      {actionId === r.id ? t('bookshelfUi.myMods.submitting') : t('bookshelfUi.myMods.submitReview')}
+                    </button>
+                  ) : null}
+                  {kind === 'play' && canWithdrawPlayMod(r.rawStatus) ? (
+                    <button
+                      type="button"
+                      className={styles.withdrawBtn}
+                      disabled={actionId === r.id}
+                      onClick={() => void runPlayModReview(r, 'withdraw')}
+                    >
+                      {actionId === r.id ? t('bookshelfUi.myMods.withdrawing') : t('bookshelfUi.myMods.withdrawReview')}
+                    </button>
+                  ) : null}
+                </div>
               </li>
             ))}
           </ul>

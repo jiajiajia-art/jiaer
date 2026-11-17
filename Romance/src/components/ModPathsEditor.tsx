@@ -251,9 +251,10 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
 
   return (
     <div className="space-y-2.5">
-      <div className="flex items-center justify-between gap-2 rounded-xl bg-gradient-to-r from-jade/10 to-coral/10 px-3 py-2">
-        <p className="text-[11.5px] leading-snug text-ink-soft">让 AI 按这个世界观生成人物线路，并一并生成相关人物资料（姓名 / 年龄 / 性别 / 简介）。多条路径开局会让玩家选；只有一条则直接用。</p>
-        <button className={`${btn} shrink-0 inline-flex items-center gap-1 !border-transparent bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] !text-white`} disabled={busy} onClick={aiGen}>{busy ? "生成中…" : <><IconSpark size={14} /> AI 生成</>}</button>
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line/70 bg-paper-2/50 px-3 py-2.5">
+        <p className="min-w-0 flex-1 text-[11.5px] leading-snug text-ink-soft">按本作品设定生成人物线路，并附带相关人物资料。多条开局可选，一条则直接用。</p>
+        {/* 功能注释：用实心主色按钮，避免渐变 + !text-white 被 skin-cute / 创作壳洗成浅底白字看不见 */}
+        <button type="button" className="wg-ai-action shrink-0 inline-flex items-center gap-1 rounded-full bg-jade px-3.5 py-1.5 text-[12px] font-bold text-white shadow-sm transition hover:brightness-105 disabled:opacity-40" disabled={busy} onClick={aiGen}>{busy ? "生成中…" : <><IconSpark size={14} /> AI 生成</>}</button>
       </div>
       {err && <p className="text-[11px] text-danger">{err}</p>}
 

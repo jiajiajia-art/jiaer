@@ -75,14 +75,20 @@ test('flattenThemeTagTree_取叶子_去重_丢非法节点', async () => {
   assert.equal(parseGameThemeFromInfo(null), null);
 });
 
-// 编辑器内的世界题材表单（WorldThemeFields）已下线：题材改由平台作品信息下发，进编辑器时合入 Mod，
-// 并继续传给玩法商店与手机应用做题材筛选；通讯皮肤按题材自动判定（旧作显式 commsSkin 仍生效）
-test('ModEditorPanel_题材取自平台_并向玩法商店和手机应用传enabledThemeTags', () => {
+// 基本信息里作者自选题材（WorldThemeFields）；平台续编仍可补缺。玩法商店 / 手机应用继续吃 enabledThemeTags
+test('ModEditorPanel_基本信息挂WorldThemeFields_并向玩法商店和手机应用传enabledThemeTags', () => {
   const panel = read('components/ModEditorPanel.tsx');
-  assert.doesNotMatch(panel, /<WorldThemeFields /);
+  assert.match(panel, /<WorldThemeFields[\s\S]*?onPatch=\{/);
+  assert.equal((panel.match(/<WorldThemeFields[\s\S]*?\/>/g) || []).length, 2, '作者态 + 完整编辑器各一处');
+  assert.match(panel, /patchWorldTheme\(m, patch\)/);
   assert.equal((panel.match(/enabledThemeTags=\{enabledThemeTags\}/g) || []).length, 2, 'AddPlayModModal + PhoneAppsEditor');
   assert.match(panel, /fetchPlatformThemeTags\(\)/);
   assert.match(panel, /applyPlatformThemeToMod\(latest, theme\)/);
+  const fields = read('components/WorldThemeFields.tsx');
+  assert.match(fields, /题材 \*/);
+  assert.match(fields, /data-world-theme-tag/);
+  assert.match(fields, /只能勾选|平台题材/);
+  assert.doesNotMatch(fields, /直接填写即可/);
   const theme = read('lib/worldTheme.ts');
   assert.match(theme, /override: hint\.commsSkin/);
 });

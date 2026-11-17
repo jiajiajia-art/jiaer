@@ -8,7 +8,7 @@
     <!-- 首屏主题：在样式生效前写入 data-theme / data-mode，键名与 src/lib/theme.ts 一致 -->
     <script>
       (function () {
-        var d = document.documentElement, t = 'default', m = 'dark';
+        var d = document.documentElement, t = 'default', m = 'light';
         try { t = localStorage.getItem('funloom.theme') || t; m = localStorage.getItem('funloom.themeMode') || m; } catch (e) {}
         if (m === 'system') m = window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
         d.setAttribute('data-theme', t);

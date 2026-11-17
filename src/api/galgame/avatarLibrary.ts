@@ -1,5 +1,6 @@
 /**
  * 仓库头像库 API：列表 / 上传 / 匹配 / 标签选项 / 相册 / 匹配偏好
+ * 字段与后端 avatarLibrary handler 对齐：camelCase（stylePack / ageGroup / backgroundType）
  */
 import { HOST_ADDRESS } from '../../config';
 import type {
@@ -42,6 +43,7 @@ export const avatarLibraryApi = {
       gender?: string;
       ageGroup?: string;
       backgroundType?: string;
+      stylePack?: string;
       q?: string;
       kind?: string;
       status?: string;
@@ -53,6 +55,7 @@ export const avatarLibraryApi = {
     if (opts.gender) params.set('gender', opts.gender);
     if (opts.ageGroup) params.set('ageGroup', opts.ageGroup);
     if (opts.backgroundType) params.set('backgroundType', opts.backgroundType);
+    if (opts.stylePack) params.set('stylePack', opts.stylePack);
     if (opts.q) params.set('q', opts.q);
     if (opts.kind) params.set('kind', opts.kind);
     if (opts.status) params.set('status', opts.status);
@@ -210,6 +213,7 @@ export const avatarLibraryApi = {
       gender: string;
       ageGroup: string;
       backgroundType: string;
+      stylePack?: string;
       title?: string;
       albumId?: string;
       kind?: 'private' | 'public' | 'system';
@@ -223,6 +227,7 @@ export const avatarLibraryApi = {
     form.append('gender', meta.gender);
     form.append('ageGroup', meta.ageGroup);
     form.append('backgroundType', meta.backgroundType);
+    if (meta.stylePack) form.append('stylePack', meta.stylePack);
     if (meta.title) form.append('title', meta.title);
     if (meta.albumId) form.append('albumId', meta.albumId);
     if (meta.kind) form.append('kind', meta.kind);
@@ -237,13 +242,26 @@ export const avatarLibraryApi = {
     return parseJson(res) as Promise<{ success: boolean; data?: AvatarLibraryItem; message?: string }>;
   },
 
-  update: async (token: string, id: string, body: Record<string, unknown>) => {
+  update: async (
+    token: string,
+    id: string,
+    body: {
+      gender?: string;
+      ageGroup?: string;
+      backgroundType?: string;
+      stylePack?: string;
+      title?: string;
+      status?: string;
+      albumId?: string;
+      [key: string]: unknown;
+    },
+  ) => {
     const res = await fetch(`${HOST_ADDRESS}/api/avatar-library/${encodeURIComponent(id)}`, {
       method: 'PUT',
       headers: authHeaders(token),
       body: JSON.stringify(body),
     });
-    return parseJson(res);
+    return parseJson(res) as Promise<{ success: boolean; data?: AvatarLibraryItem; message?: string }>;
   },
 
   delist: async (token: string, id: string) => {

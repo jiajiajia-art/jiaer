@@ -10,10 +10,15 @@ import { SCENE_PORTRAIT_GEN_SIZE } from "./scenePortrait.ts";
 export type EditorImagePromptParts = {
   /** 作品画风（整部统一）；可空 */
   style: string;
-  /** 这一张的主体描述 */
+  /** 这一张的主体描述（不含构图收尾句；构图由 framing 静默拼接） */
   subject: string;
   /** 负面词（不想出现的内容） */
   negative: string;
+  /**
+   * 功能注释：构图收尾句（如「竖屏 9:16 构图，场景背景插画」）。
+   * 只在请求模型时拼进正向词；前端编辑框不展示，避免玩家看到写死技术参数。
+   */
+  framing?: string;
 };
 
 /**
@@ -31,11 +36,35 @@ export const LOCATION_SCENE_GEN_SIZE = SCENE_PORTRAIT_GEN_SIZE;
 export const WORLD_MAP_GEN_SIZE = SCENE_PORTRAIT_GEN_SIZE;
 export const WORK_COVER_GEN_SIZE = SCENE_PORTRAIT_GEN_SIZE;
 
-/** 功能注释：各类图的构图收尾句；与上面的请求尺寸一一对应 */
-const FRAMING_AVATAR = "方形 1:1 构图，半身或胸像，面部清晰";
-const FRAMING_SCENE = "竖屏 9:16 构图，场景背景插画";
-const FRAMING_MAP = "竖屏 9:16 竖向区域图，地点可辨";
-const FRAMING_COVER = "竖屏 9:16 构图，游戏封面插画，有氛围与主体";
+/** 功能注释：各类图的构图收尾句；与上面的请求尺寸一一对应；仅请求时拼入，不给玩家编辑框看 */
+export const FRAMING_AVATAR = "方形 1:1 构图，半身或胸像，面部清晰";
+export const FRAMING_SCENE = "竖屏 9:16 构图，场景背景插画";
+export const FRAMING_MAP = "竖屏 9:16 竖向区域图，地点可辨";
+export const FRAMING_COVER = "竖屏 9:16 构图，游戏封面插画，有氛围与主体";
+
+const IMAGE_FRAMING_SUFFIXES = Object.freeze([
+  FRAMING_AVATAR,
+  FRAMING_SCENE,
+  FRAMING_MAP,
+  FRAMING_COVER,
+]);
+
+/**
+ * 功能注释：从主体文案末尾剥掉已知构图收尾句（兼容旧数据把 framing 写进 subject 的情况）。
+ */
+export function splitFramingFromSubject(raw: string): { subject: string; framing: string } {
+  const s = String(raw ?? "").trim();
+  if (!s) return { subject: "", framing: "" };
+  for (const f of IMAGE_FRAMING_SUFFIXES) {
+    if (s.endsWith(`。${f}`)) {
+      return { subject: s.slice(0, -(f.length + 1)).replace(/[。.\s]+$/g, "").trim(), framing: f };
+    }
+    if (s.endsWith(f)) {
+      return { subject: s.slice(0, -f.length).replace(/[。.\s]+$/g, "").trim(), framing: f };
+    }
+  }
+  return { subject: s, framing: "" };
+}
 
 /** 功能注释：各类图固有的负面基线（原先写在正向里的「不要文字/水印/UI」挪到这里） */
 const BASE_NEGATIVE_AVATAR = "文字，水印，UI 边框，多余肢体，畸形手指";
@@ -94,11 +123,13 @@ function makeParts(
   settings: WorkImageStyleSettings,
   subject: string,
   baseNegative: string,
+  framing = "",
 ): EditorImagePromptParts {
   return {
     style: resolveArtStyle(settings.workStyle),
     subject,
     negative: mergeNegativePrompt(settings.workNegative, settings.forbidGen, baseNegative),
+    ...(framing ? { framing } : {}),
   };
 }
 
@@ -143,8 +174,8 @@ export function buildNpcAvatarPromptParts(
   // 没写外观时：性别年龄脚手架 + 身份职业，避免只剩「女，约22岁」导致千人一面
   const role = clip(n.role, 30);
   const look = clip(n.appearancePrompt, 320) || joinParts([scaffoldNpcAppearance(n), role ? `身份：${role}，衣着气质贴合身份` : ""], "；");
-  const subject = look ? `${look}。${FRAMING_AVATAR}` : "";
-  return makeParts(settings, subject, BASE_NEGATIVE_AVATAR);
+  const subject = look ? look.replace(/[。.\s]+$/g, "") : "";
+  return makeParts(settings, subject, BASE_NEGATIVE_AVATAR, subject ? FRAMING_AVATAR : "");
 }
 
 /**
@@ -177,12 +208,12 @@ export function buildLocationScenePromptParts(
 ): EditorImagePromptParts {
   const name = clip(r.name, 60);
   const space = sanitizeSceneSpace(name, r.scenePrompt ?? "");
-  // 功能注释：无画面描述时不塞叙事句，改用一句空间脚手架；有描述则「地点名 + 画面」
+  // 功能注释：无画面描述时不塞叙事句，改用一句空间脚手架；有描述则「地点名 + 画面」；构图收尾句进 framing，不进可编辑主体
   const body = space
     ? joinParts([name ? `地点「${name}」` : "", space])
     : (name ? `地点「${name}」的场景空间，布局、光线与陈设` : "");
-  const subject = body ? joinParts([body.replace(/[。.\s]+$/g, ""), FRAMING_SCENE], "。") : "";
-  return makeParts(settings, subject, BASE_NEGATIVE_SCENE);
+  const subject = body ? body.replace(/[。.\s]+$/g, "") : "";
+  return makeParts(settings, subject, BASE_NEGATIVE_SCENE, subject ? FRAMING_SCENE : "");
 }
 
 /** 功能注释：大地图三层——区域名 + 地点列表 + 竖向区域图；地点空时写「按设定补分区」 */
@@ -199,8 +230,8 @@ export function buildWorldMapPromptParts(
     places.length ? `包含地点：${places.join("、")}` : "按设定补分区",
     desc,
   ]);
-  const subject = `${body}。${FRAMING_MAP}`;
-  return makeParts(settings, subject, BASE_NEGATIVE_MAP);
+  const subject = body.replace(/[。.\s]+$/g, "");
+  return makeParts(settings, subject, BASE_NEGATIVE_MAP, subject ? FRAMING_MAP : "");
 }
 
 /**
@@ -221,8 +252,8 @@ export function buildWorkCoverPromptParts(
   const hero = clip(w.protagonistAppearance, 200);
   // 功能注释：有氛围但没填主角外观时，留一个「主角外观：」空槽给创作者补；不补则组装时自动剔除
   const body = joinParts([vibe ? `氛围：${vibe}` : "", hero ? `主角外观：${hero}` : vibe ? "主角外观：" : ""]);
-  const subject = body ? `${body}。${FRAMING_COVER}` : "";
-  return makeParts(settings, subject, BASE_NEGATIVE_COVER);
+  const subject = body ? body.replace(/[。.\s]+$/g, "") : "";
+  return makeParts(settings, subject, BASE_NEGATIVE_COVER, subject ? FRAMING_COVER : "");
 }
 
 /** 功能注释：去掉脚手架里创作者没填的「标签：」空段，避免把「发型发色：」原样发给模型 */
@@ -234,11 +265,16 @@ export function stripEmptyLabels(text: string): string {
     .trim();
 }
 
-/** 功能注释：正向提示词 = 画风 + 主体（负面词单独走 negative，不并进来）；主体为空返回空串 */
-export function composePositivePrompt(parts: Pick<EditorImagePromptParts, "style" | "subject">): string {
-  const subject = stripEmptyLabels(parts.subject);
-  if (!subject) return "";
-  return joinParts([parts.style, subject], "。");
+/** 功能注释：正向提示词 = 画风 + 主体 + framing（静默）；负面词单独走 negative，不并进来；主体为空返回空串 */
+export function composePositivePrompt(
+  parts: Pick<EditorImagePromptParts, "style" | "subject" | "framing">,
+): string {
+  const split = splitFramingFromSubject(parts.subject);
+  const subject = stripEmptyLabels(split.subject);
+  const framing = String(parts.framing || split.framing || "").trim();
+  const body = joinParts([subject, framing], "。");
+  if (!body) return "";
+  return joinParts([parts.style, body], "。");
 }
 
 /** 功能注释：网关只认一条 prompt 时，把负面词以明确标注的段落并在末尾（不混进正向描述）；负面词为空不追加 */

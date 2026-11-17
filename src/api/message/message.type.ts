@@ -12,7 +12,8 @@ export type MessageType =
     | 'report_received'
     | 'report_resolved'
     | 'moderation'
-    | 'feedback_reply';
+    | 'feedback_reply'
+    | 'operator_direct';
 
 export interface MessageAnnouncement extends AnnouncementRecord {
     messageType: 'announcement';
@@ -151,6 +152,19 @@ export interface MessageFeedbackReplyNotification {
     isRead: boolean;
 }
 
+/** 运营定向站内信 */
+export interface MessageOperatorDirectNotification {
+    id: number;
+    sourceId: number;
+    messageType: 'operator_direct';
+    title: string;
+    body: string;
+    createdByNickname?: string | null;
+    createdAt: string | null;
+    publishedAt?: string | null;
+    isRead: boolean;
+}
+
 /** 创作者：违规 / 处罚 / 申诉结果通知 */
 export interface MessageModerationNotification {
     id: number;
@@ -195,6 +209,7 @@ export interface MessageCenterData {
     reportResolvedNotifications?: MessageReportResolvedNotification[];
     moderationNotifications?: MessageModerationNotification[];
     feedbackReplyNotifications?: MessageFeedbackReplyNotification[];
+    operatorDirectNotifications?: MessageOperatorDirectNotification[];
 }
 
 export interface MessageUnreadCountData {

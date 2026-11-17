@@ -16,7 +16,7 @@ import { ActionTile } from "./personFields";
 import { canConfess, relOf } from "../game/relations";
 import { ROMANCE_ARCS, arcView, canRomance, hasPartner, romanceFixedOff, isFamilyNpc } from "../game/logic";
 import { RELATIONS, MOVIE_TITLES, COMPANIES, companyMeta, creditsOf, resumeOf, romanticCapOf, type FamilyRef, type ResumeEvent } from "../worlds/star2005/content";
-import { feature, worldPersonById as profileOf } from "../mods/registry";
+import { feature, getWorldNpcs, worldPersonById as profileOf } from "../mods/registry";
 import { locOf } from "../game/mud";
 import { homePlaceOf } from "../game/homeSpot";
 import { contactsCfg, contactsTitle, groupContactsByStage, metricKey, visibleContactMetrics, type ContactIcon as ContactIconKind, type ContactSrc, type ContactStage } from "../game/contacts";
@@ -25,6 +25,7 @@ import { FAMILY_NPC_IDS } from "../game/family";
 import { CreditsList, StatBars, WorksChips, ProfileRelations, ProfileGroup, ResumeTimeline, BondMeterRow, ProfileBio, ProfilePlaces, ProfileMemory, affiliationOf, relationRefsOf } from "./personFields";
 import IndustryPageHeader from "./IndustryPageHeader";
 import CustomPersonModal from "./CustomPersonModal";
+import PersonProfile from "./PersonProfile";
 import { NpcDiary, NpcCgStrip } from "./DiaryCg";
 import { onClearPlayerMemory } from "../lib/saveScope";
 
@@ -59,12 +60,18 @@ function Section({ title, code, children }: { title: string; code?: string; chil
 
 /* 极简人物行：头像 + 名字 / 阶段词 + 一行身份 · 所属；右侧是作者在人物上方配的卡片数值（条数不限、可隐藏） */
 export type CardMetric = { key: string; icon: ContactIconKind; value: number; tone?: string };
-function PersonCard({ onClick, name, avatar, chip, sub, metrics, dead, dating }: { onClick: () => void; name: string; avatar?: string; chip: ReactNode; sub: string; metrics: CardMetric[]; dead?: boolean; dating?: boolean }) {
+function PersonCard({ onClick, name, avatar, chip, sub, metrics, dead, dating, mystery }: {
+  onClick: () => void; name: string; avatar?: string; chip: ReactNode; sub: string; metrics: CardMetric[]; dead?: boolean; dating?: boolean; mystery?: boolean;
+}) {
   return (
     <button onClick={onClick} className="group flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-paper-2 active:bg-paper-2">
       <div className={`relative shrink-0 ${dead ? "opacity-50 grayscale" : ""}`}>
-        <Avatar src={avatar} name={name} size={40} editable={false} />
-        {dating && (
+        {mystery ? (
+          <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-[10px] border border-dashed border-line bg-paper-2 text-[18px] font-black text-ink-soft/55" aria-hidden>?</span>
+        ) : (
+          <Avatar src={avatar} name={name} size={40} editable={false} />
+        )}
+        {dating && !mystery && (
           <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-coral text-white ring-2 ring-paper-2">
             <IconHeart width={9} height={9} />
           </span>
@@ -72,12 +79,12 @@ function PersonCard({ onClick, name, avatar, chip, sub, metrics, dead, dating }:
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <p className="truncate text-[14px] font-bold text-ink">{name}</p>
+          <p className={`truncate text-[14px] font-bold ${mystery ? "tracking-[0.2em] text-ink-soft" : "text-ink"}`}>{name}</p>
           {chip}
         </div>
         <p className="mt-0.5 truncate text-[11.5px] text-ink-soft">{sub}</p>
       </div>
-      {metrics.map((m) => (
+      {!mystery && metrics.map((m) => (
         <span key={m.key} className="flex shrink-0 items-center gap-1 text-[12px] font-semibold tabular-nums"
           style={{ color: m.value < 0 ? "var(--danger)" : TONE_VAR[m.tone ?? "jade"] ?? "var(--ink-soft)" }}>
           <ContactIcon kind={m.icon} />{m.value}
@@ -88,8 +95,21 @@ function PersonCard({ onClick, name, avatar, chip, sub, metrics, dead, dating }:
   );
 }
 const LIST = "ui-list";
-const GroupHead = ({ label, count }: { label: string; count: number }) => (
-  <p className="ui-label mb-1.5 px-1">{label}<span className="ml-1.5 font-medium tabular-nums text-ink-soft/60">{count}</span></p>
+/** 功能注释：关系档位小说明，列表分区要有叙述，不只贴标签 */
+function stageHint(stage: ContactStage): string {
+  if (stage.min >= 65) return "情意渐深，往来已不同于寻常点头之交。";
+  if (stage.min >= 40) return "彼此熟悉，说话做事都更自在。";
+  if (stage.min >= 20) return "开始有好感，愿意多留心对方几分。";
+  if (stage.min >= 1) return "认得脸、打过招呼，交情尚浅。";
+  if (stage.min >= 0) return "萍水相逢，一面之缘或刚刚结识。";
+  if (stage.min >= -39) return "心里有刺，相处时难免别扭。";
+  return "积怨已深，见面也多半不愉快。";
+}
+const GroupHead = ({ label, count, hint }: { label: string; count: number; hint?: string }) => (
+  <div className="mb-1.5 px-1">
+    <p className="ui-label">{label}<span className="ml-1.5 font-medium tabular-nums text-ink-soft/60">{count}</span></p>
+    {hint ? <p className="mt-0.5 text-[11.5px] leading-snug text-ink-soft/80">{hint}</p> : null}
+  </div>
 );
 
 /* 从别处（如娱乐圈页）直接打开某人的人物详情：记下目标并切到「人脉」 */
@@ -331,8 +351,11 @@ export default function NpcTab() {
   const [addOpen, setAddOpen] = useState(false);
   const [exchange, setExchange] = useState<null | "ok" | "no">(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [mysteryId, setMysteryId] = useState<string | null>(null);
   if (!game) return null;
   const s = game.sim;
+  const metSet = new Set(s.metPeople ?? []);
+  const heroId = s.hero;
   const hasContact = (pid: string) => (game.phone?.contacts ?? []).includes(pid);
   // 艺人即 NPC：圈内艺人没有人脉条目时，就地合成一个，走同一套人物详情界面
   const starOf = (id?: string | null) => (id ? (s.npcs ?? []).find((x) => x.id === id) : undefined);
@@ -341,6 +364,21 @@ export default function NpcTab() {
     affinity: s.rel?.[st.id] ?? 0, dims: [], tags: [], attrs: [], affinityHistory: [], interactions: [],
   });
   const npc = game.npcs.find((n) => n.id === sel) ?? (starOf(sel) ? asNpc(starOf(sel)!) : undefined);
+  // 功能注释：未结识不能看完整档案——改走「？？？」神秘卡说明
+  if (npc && !metSet.has(npc.id)) {
+    return (
+      <div className="npc-tab w-full pb-5">
+        <IndustryPageHeader
+          title={contactsTitle()}
+          subtitle="尚未结识"
+          action={<button type="button" onClick={() => setSel(null)} className="rounded-[8px] border border-line bg-paper/80 px-2.5 py-1.5 text-[12px] font-bold text-ink-soft">返回</button>}
+        />
+        <div className="mx-auto max-w-2xl px-4 pt-3">
+          <PersonProfile pid={npc.id} known={false} />
+        </div>
+      </div>
+    );
+  }
 
   if (npc) {
     const pid = npc.id;
@@ -623,15 +661,13 @@ export default function NpcTab() {
     );
   }
 
-  // 列表：只展示真正打过交道（已结识）的人——没交互过的绝不出现在人脉里
-  const known = game.npcs.filter((n) => s.metPeople.includes(n.id));
+  // 功能注释：已结识按友好度档位分组；创作者写过 / 花名册有档但未结识的，一律显示「？？？」神秘卡
+  const known = game.npcs.filter((n) => metSet.has(n.id) && n.id !== heroId);
 
-  // 功能注释：玩家列表只按当前关系阶段分组；组织仅作为卡片资料展示，绝不参与归组。
   const cfg = contactsCfg();
-  type Entry = { id: string; name: string; avatar?: string; sub: string; rel: number; vals: (src: ContactSrc) => number | undefined; dead?: boolean; dating?: boolean };
+  type Entry = { id: string; name: string; avatar?: string; sub: string; rel: number; vals: (src: ContactSrc) => number | undefined; dead?: boolean; dating?: boolean; mystery?: boolean };
   const npcEntries: Entry[] = known.map((n) => {
     const prof = profileOf(n.id);
-    // 功能注释：有所属势力时列表第二行显示势力名（玩家在资料里改了也随之变化）
     const org = npcFactionOf(n.id, PERSON_BY_ID_FAC[n.id]?.factionId)?.name || prof?.org?.trim() || affiliationOf(n.identity);
     return {
       id: n.id, name: n.name, avatar: n.avatar, rel: n.affinity,
@@ -641,10 +677,10 @@ export default function NpcTab() {
       dead: prof?.status === "dead", dating: s.dating === n.id,
     };
   });
-  // 功能注释：仅在作品声明了行业公司时并入娱乐圈随机艺人；无 industry 的旅馆等题材绝不塞「新人 · 自由艺人」
+  // 功能注释：娱乐圈池里已结识的才进友好度分组；未结识的并入下方「？？？」
   const knownIds = new Set(npcEntries.map((e) => e.id));
-  const poolEntries: Entry[] = COMPANIES.length > 0
-    ? (s.npcs ?? []).filter((n) => !knownIds.has(n.id)).map((n) => {
+  const poolKnown: Entry[] = COMPANIES.length > 0
+    ? (s.npcs ?? []).filter((n) => metSet.has(n.id) && !knownIds.has(n.id) && n.id !== heroId).map((n) => {
       const rel = s.rel?.[n.id] ?? 0;
       const org = companyMeta(n.companyId).name;
       return {
@@ -654,23 +690,51 @@ export default function NpcTab() {
       };
     })
     : [];
-  const entries = [...npcEntries, ...poolEntries];
+  const entries = [...npcEntries, ...poolKnown];
   const shownMetrics = visibleContactMetrics(cfg);
   const primary = shownMetrics[0];
   const sortVal = (e: Entry) => (primary ? e.vals(primary.src) : e.rel) ?? -Infinity;
   const grouped = groupContactsByStage(cfg, entries, (entry) => entry.rel)
     .map((group) => ({ ...group, people: [...group.people].sort((a, b) => sortVal(b) - sortVal(a)) }));
 
-  const Card = ({ e, stage }: { e: Entry; stage: ContactStage }) => {
-    const metrics: CardMetric[] = shownMetrics.flatMap((m) => {
+  // 未结识：创作者角色卡 + 花名册已有档但未结识 + 圈内未结识艺人
+  const mysteryIds = new Set<string>();
+  for (const p of getWorldNpcs()) {
+    if (p.id === heroId || p.status === "dead" || metSet.has(p.id)) continue;
+    mysteryIds.add(p.id);
+  }
+  for (const n of game.npcs) {
+    if (n.id === heroId || metSet.has(n.id)) continue;
+    mysteryIds.add(n.id);
+  }
+  if (COMPANIES.length > 0) {
+    for (const n of s.npcs ?? []) {
+      if (n.id === heroId || metSet.has(n.id)) continue;
+      mysteryIds.add(n.id);
+    }
+  }
+  const mysteryEntries: Entry[] = [...mysteryIds].map((id) => ({
+    id,
+    name: "？？？",
+    rel: 0,
+    sub: "尚未结识 · 创作者已设定，登场搭话后才会揭开",
+    mystery: true,
+    vals: () => undefined,
+  }));
+
+  const Card = ({ e, stage }: { e: Entry; stage?: ContactStage }) => {
+    const metrics: CardMetric[] = e.mystery ? [] : shownMetrics.flatMap((m) => {
       const v = e.vals(m.src);
       return v === undefined || Number.isNaN(v) ? [] : [{ key: metricKey(m.src), icon: m.icon, value: Math.round(v), tone: m.tone }];
     });
     return (
       <PersonCard
-        onClick={() => { setSel(e.id); setProfileOpen(false); }}
-        name={e.name} avatar={e.avatar} dead={e.dead} dating={e.dating}
-        chip={e.dead ? <Chip tone="danger">已故</Chip> : <Chip tone={stage.tone}>{stage.label}</Chip>}
+        onClick={() => {
+          if (e.mystery) { setMysteryId(e.id); return; }
+          setSel(e.id); setProfileOpen(false);
+        }}
+        name={e.name} avatar={e.avatar} dead={e.dead} dating={e.dating} mystery={e.mystery}
+        chip={e.mystery ? <Chip tone="gold">未结识</Chip> : e.dead ? <Chip tone="danger">已故</Chip> : stage ? <Chip tone={stage.tone}>{stage.label}</Chip> : null}
         sub={e.sub}
         metrics={metrics}
       />
@@ -681,32 +745,51 @@ export default function NpcTab() {
     <div className="npc-tab w-full pb-5">
       <IndustryPageHeader
         title={contactsTitle()}
-        subtitle={cfg.subtitle ?? ""}
+        subtitle={cfg.subtitle ?? "按友好度归类 · 未结识以？？？示人"}
         action={<button onClick={() => setAddOpen(true)} aria-label="添加人物" className="flex h-8 items-center gap-1 rounded-[8px] border border-coral/40 bg-paper/80 px-2.5 text-[12px] font-bold text-coral transition hover:bg-coral/10"><span className="text-[15px] leading-none">＋</span>添加</button>}
       />
       {addOpen && <CustomPersonModal onClose={() => setAddOpen(false)} />}
+      {mysteryId && (
+        <Modal panelClassName="ui-dialog-game npc-tab" title="？？？" onClose={() => setMysteryId(null)}>
+          <PersonProfile pid={mysteryId} known={false} />
+        </Modal>
+      )}
 
       <div className="mx-auto max-w-2xl px-4 pt-3">
+        <p className="mb-3 rounded-[10px] border border-line/70 bg-paper/60 px-3 py-2 text-[12px] leading-relaxed text-ink-soft">
+          已结识的人按友好度分档；创作者写过、但还没登场或不认识的人，会以「？？？」出现——去世界里走走、当面搭话，结识后才会揭开真名与档案。
+        </p>
 
-      {entries.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-line bg-paper-2/40 px-4 py-10 text-center">
-          <span className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-ink-soft/10 text-ink-soft/60"><IconUsers width={22} height={22} /></span>
-          <p className="text-[13px] text-ink-soft">还没结识任何人。<br />到各处走走、与人搭话，认识的人才会记入{contactsTitle()}。</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {grouped.map((g) => {
-            return (
+        {entries.length === 0 && mysteryEntries.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-line bg-paper-2/40 px-4 py-10 text-center">
+            <span className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-[12px] bg-ink-soft/10 text-[22px] font-black text-ink-soft/55">？</span>
+            <p className="text-[14px] font-bold tracking-[0.18em] text-ink-soft">？？？</p>
+            <p className="mt-2 text-[12.5px] leading-relaxed text-ink-soft">还没结识任何人，作品里也还没有可揭开的角色卡。<br />到各处走走、与人搭话，认识的人才会记入{contactsTitle()}。</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {grouped.map((g) => (
               <section key={g.stage.id}>
-                <GroupHead label={g.stage.label} count={g.people.length} />
+                <GroupHead label={g.stage.label} count={g.people.length} hint={stageHint(g.stage)} />
                 <div className={LIST}>
                   {g.people.map((e) => <Card key={e.id} e={e} stage={g.stage} />)}
                 </div>
               </section>
-            );
-          })}
-        </div>
-      )}
+            ))}
+            {mysteryEntries.length > 0 && (
+              <section>
+                <GroupHead
+                  label="尚未结识"
+                  count={mysteryEntries.length}
+                  hint="创作者写过、但你还没当面结识的人。姓名与面目都以？？？遮住，等你去世界里遇见。"
+                />
+                <div className={LIST}>
+                  {mysteryEntries.map((e) => <Card key={e.id} e={e} />)}
+                </div>
+              </section>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

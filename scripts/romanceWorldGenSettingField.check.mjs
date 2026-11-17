@@ -76,7 +76,7 @@ test('worldGenSettingField_校验_勾选AI可超限_未勾选不可', async () =
 
 test('worldGenSettingField_自适应高度与UI契约', () => {
   const css = readFileSync(join(romance, 'index.css'), 'utf8');
-  assert.match(css, /\.world-gen-textarea\s*\{[^}]*min-height:\s*2\.75rem/s);
+  assert.match(css, /\.world-gen-textarea\s*\{[^}]*min-height:\s*2\.5rem/s);
   assert.match(css, /\.world-gen-textarea\s*\{[^}]*resize:\s*none/s);
   assert.match(css, /\.world-gen-textarea\s*\{[^}]*field-sizing:\s*content/s);
   assert.doesNotMatch(css, /\.world-gen-textarea\s*\{[^}]*min-height:\s*9rem/s);
@@ -90,7 +90,7 @@ test('worldGenSettingField_自适应高度与UI契约', () => {
   assert.match(ui, /is-over/);
   assert.doesNotMatch(ui, /maxLength=\{WORLD_SETTING_MAX\}/);
   assert.match(ui, /由 AI 整理设定/);
-  assert.match(ui, /作品名称也可润色/);
+  assert.match(ui, /作品名称也可润色|顺带润色作品名称/);
 });
 
 test('worldGenSettingField_fitTextarea按scrollHeight', async () => {

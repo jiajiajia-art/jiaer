@@ -30,7 +30,8 @@ export type AttrDef = {
   color?: string; // 进度条颜色：jade/coral/gold/danger 或 #hex
   tiers?: AttrTier[]; // 分档（按 min 升序）：达到即显示该档名
   display?: "num" | "tier" | "both"; // 只显示数值 / 只显示档位 / 都显示（缺省 both）
-  pin?: boolean; // 显示在顶部状态栏
+  /** 功能注释：顶栏主属性（小说顶栏名下最多展示 2 个；勾选顺序靠前优先） */
+  pin?: boolean;
   /** 功能注释：建角页隐藏（仍写入开局 attrs / 可上状态栏）；创作者在「建角字段」里配 */
   hidden?: boolean;
   tierEvent?: boolean; // 升到新档位时触发一段 AI 剧情

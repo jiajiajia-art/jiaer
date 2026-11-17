@@ -403,6 +403,11 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
             >
                 <div className={styles.heroOverlay}>
                     <div className={styles.heroContent}>
+                        {/* 功能注释：标题在上、标签在下，避免和封面自带题字叠成「深色糊块」 */}
+                        <div className={styles.heroTitleRow}>
+                            <h1 className={styles.heroTitle}>{gameDetail.title || t('createGame.untitledScript')}</h1>
+                            <span className={styles.ratingBadge}>{ratingText}</span>
+                        </div>
                         {heroTags.length > 0 ? (
                             <div className={styles.heroTags}>
                                 {heroTags.map((tag) => (
@@ -410,10 +415,6 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                                 ))}
                             </div>
                         ) : null}
-                        <div className={styles.heroTitleRow}>
-                            <h1 className={styles.heroTitle}>{gameDetail.title || t('createGame.untitledScript')}</h1>
-                            <span className={styles.ratingBadge}>{ratingText}</span>
-                        </div>
                         {heroMetaLine ? <p className={styles.heroMetaLine}>{heroMetaLine}</p> : null}
                         <p className={styles.heroComments}>{commentText}</p>
                     </div>
@@ -483,122 +484,97 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                             className={styles.overviewViewAll}
                             onClick={() => setShowAllStats((prev) => !prev)}
                         >
-                            {showAllStats ? t('createGame.myData') : t('createGame.viewAllStats')}
-                            <span aria-hidden="true"> ›</span>
+                            {showAllStats ? t('createGame.collapse') : t('createGame.viewAllStats')}
+                            <span aria-hidden="true">{showAllStats ? '' : ' ›'}</span>
                         </button>
                     </div>
 
                     {isStatsLoading ? (
                         <div className={styles.statsLoading}>{t('creatorStats.loading')}</div>
                     ) : (
-                        <div className={styles.overviewGrid}>
-                            <div className={styles.overviewItem}>
-                                <span className={styles.overviewIcon}><IoStatsChartSharp /></span>
-                                <span className={styles.overviewLabel}>{t('createGame.playVolume')}</span>
-                                <span className={styles.overviewValue}>
-                                    {formatCreatorOverviewCount(workDetail?.playCount ?? 0)}
-                                </span>
+                        <>
+                            <div className={styles.overviewGrid}>
+                                <div className={styles.overviewItem}>
+                                    <span className={styles.overviewIcon}><IoStatsChartSharp /></span>
+                                    <span className={styles.overviewLabel}>{t('createGame.playVolume')}</span>
+                                    <span className={styles.overviewValue}>
+                                        {formatCreatorOverviewCount(workDetail?.playCount ?? 0)}
+                                    </span>
+                                </div>
+                                <div className={styles.overviewDivider} aria-hidden="true" />
+                                <div className={styles.overviewItem}>
+                                    <span className={styles.overviewIcon}><IoEye /></span>
+                                    <span className={styles.overviewLabel}>{t('createGame.clickVolume')}</span>
+                                    <span className={styles.overviewValue}>
+                                        {formatCreatorOverviewCount(workDetail?.pv ?? gameStats?.pv ?? 0)}
+                                    </span>
+                                </div>
+                                <div className={styles.overviewDivider} aria-hidden="true" />
+                                <div className={styles.overviewItem}>
+                                    <span className={styles.overviewIcon}><PiCurrencyCnyBold /></span>
+                                    <span className={styles.overviewLabel}>{t('createGame.earnings')}</span>
+                                    <span className={styles.overviewValue}>
+                                        {formatCreatorOverviewCount(gameStats?.count ?? workDetail?.spendPoints ?? 0)}
+                                    </span>
+                                </div>
+                                <div className={styles.overviewDivider} aria-hidden="true" />
+                                <div className={styles.overviewItem}>
+                                    <span className={styles.overviewIcon}><IoShareSocial /></span>
+                                    <span className={styles.overviewLabel}>{t('createGame.shareVolume')}</span>
+                                    <span className={styles.overviewValue}>
+                                        {formatCreatorOverviewCount(workDetail?.shareCount ?? 0)}
+                                    </span>
+                                </div>
                             </div>
-                            <div className={styles.overviewDivider} aria-hidden="true" />
-                            <div className={styles.overviewItem}>
-                                <span className={styles.overviewIcon}><IoEye /></span>
-                                <span className={styles.overviewLabel}>{t('createGame.clickVolume')}</span>
-                                <span className={styles.overviewValue}>
-                                    {formatCreatorOverviewCount(workDetail?.pv ?? gameStats?.pv ?? 0)}
-                                </span>
-                            </div>
-                            <div className={styles.overviewDivider} aria-hidden="true" />
-                            <div className={styles.overviewItem}>
-                                <span className={styles.overviewIcon}><PiCurrencyCnyBold /></span>
-                                <span className={styles.overviewLabel}>{t('createGame.earnings')}</span>
-                                <span className={styles.overviewValue}>
-                                    {formatCreatorOverviewCount(gameStats?.count ?? workDetail?.spendPoints ?? 0)}
-                                </span>
-                            </div>
-                            <div className={styles.overviewDivider} aria-hidden="true" />
-                            <div className={styles.overviewItem}>
-                                <span className={styles.overviewIcon}><IoShareSocial /></span>
-                                <span className={styles.overviewLabel}>{t('createGame.shareVolume')}</span>
-                                <span className={styles.overviewValue}>
-                                    {formatCreatorOverviewCount(workDetail?.shareCount ?? 0)}
-                                </span>
-                            </div>
-                        </div>
+
+                            {/* 功能注释：明细并进同一张概览卡，去掉与四大指标重复的浏览/游玩/分享/收益格 */}
+                            {showAllStats ? (
+                                <div className={styles.statsSection}>
+                                    <div className={styles.statsGrid}>
+                                        <div className={styles.statBox}>
+                                            <div className={styles.statLabel}>
+                                                <TbHandClick />
+                                                <span>{t('creatorStats.totalVisitors')}</span>
+                                            </div>
+                                            <div className={styles.statValue}>{workDetail?.uv ?? 0}</div>
+                                        </div>
+                                        <div className={styles.statBox}>
+                                            <div className={styles.statLabel}>
+                                                <TbHandClick />
+                                                <span>{t('creatorStats.totalLikes')}</span>
+                                            </div>
+                                            <div className={styles.statValue}>{workDetail?.likeCount ?? 0}</div>
+                                        </div>
+                                        <div className={styles.statBox}>
+                                            <div className={styles.statLabel}>
+                                                <IoTime />
+                                                <span>{t('creatorStats.playDuration')}</span>
+                                            </div>
+                                            <div className={styles.statValue}>
+                                                {formatPlayDuration(workDetail?.playDurationSeconds ?? 0)}
+                                            </div>
+                                        </div>
+                                        <div className={styles.statBox}>
+                                            <div className={styles.statLabel}>
+                                                <IoChatbubbleEllipses />
+                                                <span>{t('creatorStats.commentCount')}</span>
+                                            </div>
+                                            <div className={styles.statValue}>{workDetail?.commentCount ?? 0}</div>
+                                        </div>
+                                        <div className={styles.statBox}>
+                                            <div className={styles.statLabel}>
+                                                <PiCurrencyCnyBold />
+                                                <span>{t('creatorStats.spendPoints')}</span>
+                                            </div>
+                                            <div className={styles.statValue}>{workDetail?.spendPoints ?? 0}</div>
+                                        </div>
+                                    </div>
+                                    {workDetail ? <CreatorWorkDetailSections detail={workDetail} /> : null}
+                                </div>
+                            ) : null}
+                        </>
                     )}
                 </section>
-
-                {showAllStats && !isStatsLoading ? (
-                    <div className={styles.statsSection}>
-                        <div className={styles.statsGrid}>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel}>
-                                    <IoEye />
-                                    <span>{t('creatorStats.totalViews')}</span>
-                                </div>
-                                <div className={styles.statValue}>{workDetail?.pv ?? gameStats?.pv ?? 0}</div>
-                            </div>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel}>
-                                    <TbHandClick />
-                                    <span>{t('creatorStats.totalVisitors')}</span>
-                                </div>
-                                <div className={styles.statValue}>{workDetail?.uv ?? 0}</div>
-                            </div>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel}>
-                                    <TbHandClick />
-                                    <span>{t('creatorStats.totalLikes')}</span>
-                                </div>
-                                <div className={styles.statValue}>{workDetail?.likeCount ?? 0}</div>
-                            </div>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel}>
-                                    <IoStatsChartSharp />
-                                    <span>{t('creatorStats.playCount')}</span>
-                                </div>
-                                <div className={styles.statValue}>{workDetail?.playCount ?? 0}</div>
-                            </div>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel}>
-                                    <IoTime />
-                                    <span>{t('creatorStats.playDuration')}</span>
-                                </div>
-                                <div className={styles.statValue}>
-                                    {formatPlayDuration(workDetail?.playDurationSeconds ?? 0)}
-                                </div>
-                            </div>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel}>
-                                    <IoShareSocial />
-                                    <span>{t('creatorStats.shareCount')}</span>
-                                </div>
-                                <div className={styles.statValue}>{workDetail?.shareCount ?? 0}</div>
-                            </div>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel}>
-                                    <IoChatbubbleEllipses />
-                                    <span>{t('creatorStats.commentCount')}</span>
-                                </div>
-                                <div className={styles.statValue}>{workDetail?.commentCount ?? 0}</div>
-                            </div>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel}>
-                                    <PiCurrencyCnyBold />
-                                    <span>{t('creatorStats.spendPoints')}</span>
-                                </div>
-                                <div className={styles.statValue}>{workDetail?.spendPoints ?? 0}</div>
-                            </div>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel}>
-                                    <PiCurrencyCnyBold />
-                                    <span>{t('createGame.earnings')}</span>
-                                </div>
-                                <div className={styles.statValue}>{gameStats?.count ?? 0}</div>
-                            </div>
-                        </div>
-                        {workDetail ? <CreatorWorkDetailSections detail={workDetail} /> : null}
-                    </div>
-                ) : null}
             </div>
 
             {/* 读取存档 → 列表 → 预览 → 加载 */}

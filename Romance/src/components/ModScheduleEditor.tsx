@@ -3,61 +3,134 @@ import { SCHEDULE_CAT_DEFAULTS, SCHEDULE_CAT_IDS } from "../game/scheduleCats";
 import { liveTerm as T } from "../mods/live";
 
 /* 模组编辑器 · 日程分类：玩家打开日程时「安排什么？」各分类的名称、说明、颜色、顺序与显示。
- * 默认值与局内日程板共用 game/scheduleCats；分类里有哪些活动由各养成子系统决定。 */
-const inp = "w-full min-w-0 rounded-md border border-line bg-paper-2 px-1.5 py-0.5 text-[12px] text-ink placeholder:text-ink-soft/60 focus:border-jade focus:outline-none";
-const iconBtn = "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-line bg-paper text-[11px] text-ink-soft transition hover:border-jade hover:text-jade disabled:opacity-30";
+ * 默认值与局内日程板共用 game/scheduleCats；分类是固定五种，不可另建——有无活动只影响玩家侧是否露出。 */
+const inp =
+  "w-full min-w-0 rounded-md border border-line bg-paper-2 px-1.5 py-0.5 text-[12px] text-ink placeholder:text-ink-soft/60 focus:border-jade focus:outline-none";
+const iconBtn =
+  "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-line bg-paper text-[10.5px] text-ink-soft transition hover:border-jade hover:text-jade disabled:opacity-30";
 
-export default function ModScheduleEditor({ value, onChange, active }: {
+export default function ModScheduleEditor({
+  value,
+  onChange,
+  active,
+}: {
   value?: ScheduleSlot;
   onChange: (v?: ScheduleSlot) => void;
-  /** 功能注释：本作品当前每个分类下是否有活动；没有的分类局内自动隐藏，这里如实标出 */
+  /** 功能注释：本作品当前每个分类下是否有活动；无活动的在局内自动隐藏，编辑器仍列出供改名/排序 */
   active?: Partial<Record<ScheduleCatId, boolean>>;
 }) {
   const saved = (value?.cats ?? []).filter((c) => SCHEDULE_CAT_IDS.includes(c.id));
-  const list: ScheduleCatCfg[] = [...saved, ...SCHEDULE_CAT_IDS.filter((id) => !saved.some((c) => c.id === id)).map((id) => ({ id }))];
+  const full: ScheduleCatCfg[] = [
+    ...saved,
+    ...SCHEDULE_CAT_IDS.filter((id) => !saved.some((c) => c.id === id)).map((id) => ({ id })),
+  ];
+  // 功能注释：五种固定分类全部列出；空壳标「暂无内容」，避免作者误以为只能加休息、加不了别的
+  const rows = full.map((c, i) => ({ c, i, live: !!active?.[c.id] }));
+
   const commit = (next: ScheduleCatCfg[]) => {
-    const clean = next.map((c) => Object.fromEntries(Object.entries(c).filter(([, v]) => v !== "" && v !== undefined && v !== false)) as ScheduleCatCfg);
+    const clean = next.map(
+      (c) =>
+        Object.fromEntries(
+          Object.entries(c).filter(([, v]) => v !== "" && v !== undefined && v !== false),
+        ) as ScheduleCatCfg,
+    );
     const untouched = clean.every((c, i) => Object.keys(c).length === 1 && c.id === SCHEDULE_CAT_IDS[i]);
     onChange(untouched ? undefined : { ...value, cats: clean });
   };
-  const set = (i: number, p: Partial<ScheduleCatCfg>) => commit(list.map((c, j) => (j === i ? { ...c, ...p } : c)));
-  const move = (i: number, d: -1 | 1) => { const n = [...list]; [n[i], n[i + d]] = [n[i + d], n[i]]; commit(n); };
+  const setAt = (fullIndex: number, p: Partial<ScheduleCatCfg>) =>
+    commit(full.map((c, j) => (j === fullIndex ? { ...c, ...p } : c)));
+  const moveRow = (rowIndex: number, d: -1 | 1) => {
+    const a = rows[rowIndex];
+    const b = rows[rowIndex + d];
+    if (!a || !b) return;
+    const n = [...full];
+    [n[a.i], n[b.i]] = [n[b.i], n[a.i]];
+    commit(n);
+  };
 
   return (
-    <ol className="space-y-1.5">
-      {list.map((c, i) => {
-        const d = SCHEDULE_CAT_DEFAULTS[c.id];
-        const color = c.color || d.color;
-        const live = active?.[c.id] !== false;
-        return (
-          <li key={c.id} className={`rounded-lg border bg-paper p-2 transition ${c.hidden ? "border-dashed border-line opacity-60" : "border-line"}`} style={{ boxShadow: `inset 3px 0 0 ${color}` }}>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3.5 shrink-0 text-center text-[10.5px] font-bold tabular-nums text-ink-soft">{i + 1}</span>
-              <label className="relative h-6 w-6 shrink-0 cursor-pointer overflow-hidden rounded-full border border-line" style={{ background: color }} title="分类颜色">
-                <input type="color" aria-label="分类颜色" value={color} onChange={(e) => set(i, { color: e.target.value })} className="absolute inset-0 cursor-pointer opacity-0" />
-              </label>
-              <input className={`${inp} font-semibold`} value={c.label ?? ""} placeholder={d.label((k) => T(k))} onChange={(e) => set(i, { label: e.target.value })} aria-label="分类名称" />
-              <button type="button" className={iconBtn} disabled={i === 0} onClick={() => move(i, -1)} aria-label="上移">↑</button>
-              <button type="button" className={iconBtn} disabled={i === list.length - 1} onClick={() => move(i, 1)} aria-label="下移">↓</button>
-            </div>
-            <div className="mt-1 pl-5">
-              <input className={inp} value={c.hint ?? ""} placeholder={d.hint} onChange={(e) => set(i, { hint: e.target.value })} aria-label="分类说明" />
-              <div className="mt-1 flex flex-wrap items-center justify-between gap-1.5">
-                <span className="flex items-center gap-1.5 text-[10.5px] text-ink-soft">
-                  <span className={`rounded-full px-1.5 py-px text-[10px] font-semibold ${live ? "bg-jade/12 text-jade" : "bg-paper-2 text-ink-soft"}`}>
-                    {live ? "有活动" : "暂无活动 · 局内不显示"}
-                  </span>
-                  {d.source}
+    <div className="space-y-1.5">
+      <p className="rounded-lg border border-line/60 bg-paper-2/50 px-2.5 py-1.5 text-[11px] leading-relaxed text-ink-soft">
+        分类共五种，不能自行新增。休息因内置「休息」项会一直出现；课程 / 打工 / 外出社交等要先在上方启用玩法并添加内容，玩家日程里才会看到。这里只改名称、颜色、顺序与是否显示。
+      </p>
+      <ol className="schedule-cat-list space-y-1">
+        {rows.map(({ c, i: fullIndex, live }, i) => {
+          const d = SCHEDULE_CAT_DEFAULTS[c.id];
+          const color = c.color || d.color;
+          return (
+            <li
+              key={c.id}
+              className={`schedule-cat-row rounded-lg border bg-paper px-2 py-1.5 transition ${
+                c.hidden || !live ? "border-dashed border-line opacity-70" : "border-line"
+              }`}
+              style={{ boxShadow: `inset 3px 0 0 ${color}` }}
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 shrink-0 text-center text-[10px] font-bold tabular-nums text-ink-soft">
+                  {i + 1}
                 </span>
-                <label className="flex cursor-pointer items-center gap-1 text-[11px] font-semibold text-ink-soft">
-                  <input type="checkbox" className="h-3 w-3 accent-jade" checked={!c.hidden} onChange={(e) => set(i, { hidden: !e.target.checked })} />
-                  对玩家显示
+                <label
+                  className="relative h-5 w-5 shrink-0 cursor-pointer overflow-hidden rounded-full border border-line"
+                  style={{ background: color }}
+                  title="分类颜色"
+                >
+                  <input
+                    type="color"
+                    aria-label="分类颜色"
+                    value={color}
+                    onChange={(e) => setAt(fullIndex, { color: e.target.value })}
+                    className="absolute inset-0 cursor-pointer opacity-0"
+                  />
                 </label>
+                <input
+                  className={`${inp} max-w-[9.5rem] shrink-0 font-semibold sm:max-w-[11rem]`}
+                  value={c.label ?? ""}
+                  placeholder={d.label((k) => T(k))}
+                  onChange={(e) => setAt(fullIndex, { label: e.target.value })}
+                  aria-label="分类名称"
+                />
+                <input
+                  className={`${inp} min-w-0 flex-1`}
+                  value={c.hint ?? ""}
+                  placeholder={d.hint}
+                  onChange={(e) => setAt(fullIndex, { hint: e.target.value })}
+                  aria-label="分类说明"
+                />
+                <label className="flex shrink-0 cursor-pointer items-center gap-1 text-[10.5px] font-semibold text-ink-soft">
+                  <input
+                    type="checkbox"
+                    className="h-3 w-3 accent-jade"
+                    checked={!c.hidden}
+                    onChange={(e) => setAt(fullIndex, { hidden: !e.target.checked })}
+                  />
+                  显示
+                </label>
+                <button
+                  type="button"
+                  className={iconBtn}
+                  disabled={i === 0}
+                  onClick={() => moveRow(i, -1)}
+                  aria-label="上移"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  className={iconBtn}
+                  disabled={i === rows.length - 1}
+                  onClick={() => moveRow(i, 1)}
+                  aria-label="下移"
+                >
+                  ↓
+                </button>
               </div>
-            </div>
-          </li>
-        );
-      })}
-    </ol>
+              <p className="mt-0.5 truncate pl-9 text-[10px] leading-snug text-ink-soft" title={d.source}>
+                {live ? d.source : `暂无内容 · ${d.source}`}
+              </p>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }

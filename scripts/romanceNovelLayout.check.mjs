@@ -39,22 +39,28 @@ test('homeMainQuest_附带进度字段', async () => {
   assert.equal(prog.progress, 1);
 });
 
-test('TopbarView_剧情模式固定三行且主线点开任务弹窗', () => {
+test('TopbarView_剧情模式头像与状态同行且主线点开任务弹窗', () => {
   const tb = read('components/TopbarView.tsx');
   assert.match(tb, /novelLayout\?: boolean/);
   assert.match(tb, /data-layout="novel"/);
   assert.match(tb, /novel-quest/);
-  assert.match(tb, /查看档案/);
+  assert.match(tb, /打开人物档案/);
   assert.match(tb, /行动/);
   assert.match(tb, /questProgress/);
   assert.match(tb, /rounded-\[var\(--radius-ui\)\]/);
   assert.match(tb, /bg-jade/);
   assert.match(tb, /text-ink/);
-  // 功能注释：主线行展示标题且加高；点开派发任务弹窗，不再本地折叠
+  // 功能注释：小说顶栏固定圆角方头像；名牌单行，不另起「查看档案」
+  assert.match(tb, /shape="rounded"/);
+  const novelBlock = tb.slice(tb.indexOf('novelLayout && !compact'), tb.indexOf('} else {'));
+  assert.doesNotMatch(novelBlock, /查看档案/);
+  // 功能注释：日/行动/金钱与头像同一行，不再单独占第二行；不展示第N周
+  assert.match(tb, /novelProfile\}\{novelStatus\}\{novelMenu/);
+  assert.doesNotMatch(novelBlock, /weekLabel|第\$\{/);
+  // 功能注释：主线行展示标题；点开派发任务弹窗，不再本地折叠
   assert.match(tb, /questLineName\?\.trim\(\) \|\| data\.questStep/);
   assert.match(tb, /openQuest\(\)/);
   assert.match(tb, /aria-label="打开任务主线"/);
-  assert.match(tb, /py-2\.5/);
   assert.doesNotMatch(tb, /setQuestOpen/);
   assert.match(tb, /flex-1 overflow-hidden rounded-full bg-line/);
   // 小说排版不硬编码 mock 粉色
@@ -86,16 +92,26 @@ test('HomeTab_小说内容卡地点天气外出与输入', () => {
   assert.match(home, /overlay=\{!isNovel\}/);
   assert.match(home, /plain=\{isNovel\}/);
   assert.match(home, /!isNovel && !isAuthorPreview\(\)/);
+  // 功能注释：小说模式不渲染「心事」块
+  assert.match(home, /!isNovel && <Thoughts/);
   // 功能注释：阅读卡高度 = 场景区 85%，垂直居中，勿 flex-1 顶满
   assert.match(home, /h-\[85%\]/);
   assert.match(home, /max-h-\[85%\]/);
   assert.match(home, /justify-center/);
   assert.doesNotMatch(home, /novel-read-card[^>]*flex-1/);
-  // 内容卡顶栏有地点 + 外出
-  const hero = home.match(/function LocationHero\([\s\S]*?\n\}\n\n\/\* 人物档案卡/)?.[0] ?? '';
+  // 内容卡顶栏有地点 + 外出；子地点与外出同行，面包屑另起一行；不在卡片下方
+  const heroStart = home.indexOf('function LocationHero');
+  const heroEnd = home.indexOf('/* 人物档案卡', heroStart);
+  const hero = heroStart >= 0 && heroEnd > heroStart ? home.slice(heroStart, heroEnd) : '';
   assert.match(hero, /外出/);
   assert.match(hero, /weather/);
   assert.match(hero, /IconPin/);
+  assert.match(hero, /mode="actions"/);
+  assert.match(hero, /mode="trail"/);
+  // 功能注释：小说内容卡分支里 TreeNav 在顶栏，不在 belowCard 之后
+  const novelCardBranch = hero.match(/if \(fill && novelCard\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+  assert.match(novelCardBranch, /tone="card"/);
+  assert.doesNotMatch(novelCardBranch, /\{belowCard\}[\s\S]*TreeNav/);
 });
 
 test('StoryTab_小说内容卡旁白普通段落与皮肤气泡', () => {

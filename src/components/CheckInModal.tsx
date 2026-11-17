@@ -20,9 +20,8 @@ import {
     type CheckInViewMode,
 } from '../utils/checkInCalendar';
 import { useAuthStore } from '../store/useAuthStore';
+import CurrencyIcon from './CurrencyIcon';
 import styles from './CheckInModal.module.css';
-
-const CHECKIN_COIN_SRC = `${import.meta.env.BASE_URL}data/assetsv2/home/icon_coin.webp`;
 
 interface CheckInModalProps {
     isOpen: boolean;
@@ -355,13 +354,10 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                 <span className={styles.weekday}>{t(`checkIn.weekdays.${weekdayKey}`)}</span>
                 <span className={styles.weekDate}>{formatUtcMonthDay(day.date)}</span>
                 <span className={styles.coinWrap} aria-hidden="true">
-                    {isEmbedded ? (
-                        <span className={styles.coinImgClip}>
-                            <img className={styles.coinImg} src={CHECKIN_COIN_SRC} alt="" draggable={false} />
-                        </span>
-                    ) : (
-                        <span className={styles.coinGlyph} />
-                    )}
+                    {/* 功能注释：签到奖励是织梦豆，统一复用 CurrencyIcon，禁止再画 CSS 金币 */}
+                    <span className={styles.coinImgClip}>
+                        <CurrencyIcon currency="points" className={styles.coinImg} draggable={false} />
+                    </span>
                     <strong className={styles.dayReward}>+{displayPoints}</strong>
                 </span>
                 {day.canMakeup && isEmbedded && (
@@ -592,7 +588,9 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                                             <span>{t('checkIn.monthExtraBadge')}</span>
                                             <strong>+{status.month.bonusPoints}</strong>
                                         </div>
-                                        <span className={styles.rewardCoinGlyph} aria-hidden="true" />
+                                        <span className={styles.rewardCoinClip} aria-hidden="true">
+                                            <CurrencyIcon currency="points" className={styles.rewardCoinImg} draggable={false} />
+                                        </span>
                                     </div>
                                 </section>
                             )}

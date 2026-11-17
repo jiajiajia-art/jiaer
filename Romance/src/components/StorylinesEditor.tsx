@@ -97,7 +97,7 @@ export default function StorylinesEditor({ value, sidelines, events = [], onChan
     <div className="space-y-2.5">
       <button className={btn} onClick={() => commit([...list, { id: uid("sl"), name: "主线", nodes: [newNode(dd)] }])}>＋ 新建主线</button>
       {list.length > 0 && <AuditBar issues={audit.issues.filter((x) => x.at?.startsWith("quest:"))} onJump={() => undefined} />}
-      {!list.length && <p className="rounded-xl border border-dashed border-line/80 bg-paper-2/40 px-3 py-3.5 text-center text-[12px] text-ink-soft">还没有主线</p>}
+      {!list.length && <p className="wg-story-empty rounded-xl px-3 py-3 text-center text-[12px] text-ink-soft">还没有主线</p>}
       {list.map((l) => (
         <div key={l.id} id={auditDomId(`quest:${l.id}`)} className={`scroll-mt-3 space-y-2 rounded-2xl border border-line bg-paper-2/60 p-2.5 ${l.enabled === false ? "opacity-60" : ""}`}>
           <div className="flex items-center gap-2">

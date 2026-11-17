@@ -146,8 +146,19 @@ test("WorldGenWizard_保存走平台正文且空壳续写_已删才打不开", (
   assert.match(wiz, /已打开创作页继续填写/);
   assert.match(wiz, /打不开这份存档/);
   assert.match(wiz, /resumeLoad/);
+  // 功能注释：顶栏发布始终挂 onPublish；缺 draftId 时用 ensure 兜底，禁止向导里直接写 createRomance
+  assert.match(wiz, /onPublish=\{async/);
+  assert.match(wiz, /ensureRomancePlatformDraftId/);
   assert.doesNotMatch(wiz, /createRomance/);
   assert.doesNotMatch(wiz, /wantResume \|\| !localOk/);
+});
+
+test("platformRomanceDraft_ensure无draftId可补建并写回URL", async () => {
+  assert.equal(typeof mod.ensureRomancePlatformDraftId, "function");
+  assert.equal(typeof mod.writeRomancePlatformDraftId, "function");
+  const src = read("Romance/src/lib/platformRomanceDraft.ts");
+  assert.match(src, /\/api\/auth\/games\/drafts\/romance/);
+  assert.match(src, /history\.replaceState/);
 });
 
 test("CreateType_Romance只在入口create一次", () => {

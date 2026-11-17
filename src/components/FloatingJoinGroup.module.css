@@ -1,23 +1,23 @@
 .floatingButton {
     position: fixed;
     top: auto;
-    right: clamp(10px, 2vw, 28px);
-    /* 实现避让轮播切换按钮 */
-    bottom: clamp(96px, 12vh, 164px);
+    right: var(--app-floating-dock-right, clamp(12px, 1.5vw, 24px));
+    /* 功能注释：贴右下角，高度收紧，减少挡住分类条/查看更多 */
+    bottom: clamp(72px, 9vh, 120px);
     transform: none;
     z-index: 1200;
-    width: 72px;
-    min-height: 244px;
-    padding: 18px 12px 16px;
+    width: var(--app-floating-dock-width, 64px);
+    min-height: 200px;
+    padding: 14px 10px 14px;
     border: none;
-    border-radius: 24px;
+    border-radius: 22px;
     background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg) 100%);
     box-shadow: 0 12px 32px color-mix(in srgb, var(--color-shadow) 14%, transparent);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: 12px;
     cursor: pointer;
     transition: transform 0.22s ease, box-shadow 0.22s ease;
     -webkit-tap-highlight-color: transparent;
@@ -56,12 +56,12 @@
 
 .label {
     color: var(--color-text);
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
     line-height: 1.1;
     writing-mode: vertical-rl;
     text-orientation: upright;
-    letter-spacing: 3px;
+    letter-spacing: 2px;
 }
 
 /* 英文横向布局 */
@@ -92,8 +92,8 @@
 }
 
 .iconWrap {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     background: color-mix(in srgb, var(--color-success) 12%, transparent);
     display: flex;
@@ -113,8 +113,8 @@
 }
 
 .wechatIcon {
-    width: 26px;
-    height: 26px;
+    width: 22px;
+    height: 22px;
     fill: var(--color-success);
     display: block;
 }
@@ -126,8 +126,8 @@
 }
 
 .qqPenguinIcon {
-    width: 26px;
-    height: 26px;
+    width: 22px;
+    height: 22px;
     display: block;
 }
 

@@ -170,6 +170,7 @@
     z-index: 2;
 }
 
+/* 功能注释：封面上的更多钮做成毛玻璃圆钮，避免纯图标看不清 */
 .moreBtn {
     width: 36px;
     height: 36px;
@@ -177,24 +178,25 @@
     align-items: center;
     justify-content: center;
     border: none;
-    border-radius: 0;
-    background: transparent;
-    color: var(--color-text);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-shadow) 36%, transparent);
+    color: var(--color-on-media);
     cursor: pointer;
     padding: 0;
-    filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--color-shadow) 70%, transparent));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 .moreBtn:hover {
-    background: transparent;
-    opacity: 0.82;
+    background: color-mix(in srgb, var(--color-shadow) 48%, transparent);
+    opacity: 1;
 }
 
 .moreMenu {
     position: absolute;
-    top: calc(100% + 6px);
+    top: calc(100% + 8px);
     right: 0;
-    min-width: 120px;
+    min-width: 132px;
     background: var(--color-surface);
     border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     border-radius: 12px;
@@ -205,23 +207,27 @@
 .moreMenuItem {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
+    justify-content: flex-start;
+    gap: 10px;
     width: 100%;
     border: none;
     background: transparent;
     color: var(--color-text);
-    text-align: center;
-    padding: 12px 18px 12px 10px;
+    text-align: left;
+    padding: 12px 16px;
     font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
     cursor: pointer;
 }
 
+/* 功能注释：report.svg 本体是白填充，菜单白底会隐形；用主题反色滤镜染成当前文字色 */
 .moreMenuIcon {
     width: 16px;
     height: 16px;
     display: block;
     flex-shrink: 0;
+    filter: var(--icon-invert-filter);
 }
 
 .moreMenuItem:hover {
@@ -278,9 +284,9 @@
 }
 
 .profileCard {
-    /* 功能注释：头像叠在 banner 上，卡片内间距收紧，避免昵称/简介/按钮/数据又大又散 */
-    margin: -56px 12px 0;
-    padding: 10px 12px 4px;
+    /* 功能注释：头像单独上叠封面；昵称/简介留在白底区，禁止压到 banner 上 */
+    margin: 0 12px;
+    padding: 12px 12px 4px;
     background: transparent;
     position: relative;
     z-index: 1;
@@ -288,18 +294,20 @@
 
 .identityRow {
     display: flex;
-    align-items: flex-end;
+    align-items: flex-start;
     gap: 12px;
 }
 
 .avatar {
     width: 72px;
     height: 72px;
+    margin-top: -48px;
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
-    border: 2px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    border: 3px solid var(--color-bg);
     background: var(--color-surface-2);
+    box-shadow: 0 2px 10px color-mix(in srgb, var(--color-shadow) 18%, transparent);
 }
 
 .identityInfo {
@@ -308,7 +316,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    padding-top: 36px;
+    padding-top: 2px;
 }
 
 .displayName {
@@ -387,7 +395,7 @@
     .profileCard {
         margin-left: 0;
         margin-right: 0;
-        padding: 12px 0 6px;
+        padding: 14px 0 6px;
     }
 
     .worksWrap {
@@ -398,10 +406,11 @@
     .avatar {
         width: 80px;
         height: 80px;
+        margin-top: -52px;
     }
 
     .identityInfo {
-        padding-top: 40px;
+        padding-top: 2px;
         gap: 5px;
     }
 

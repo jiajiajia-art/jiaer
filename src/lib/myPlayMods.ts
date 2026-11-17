@@ -38,11 +38,37 @@ export const MY_PLAY_MOD_STATUS_LABEL: Record<string, string> = {
   listed: '已上架',
   delisted: '已下架',
   disabled: '已停用',
+  rejected: '已驳回',
 };
 
 /** 功能注释：仅玩法类（gameplay）可回对话工坊继续编辑；手机应用走 /create/app */
 export function isGameplayMod(item: Pick<MyPlayModItem, 'componentKind'>): boolean {
   return String(item.componentKind || 'gameplay') === 'gameplay';
+}
+
+/**
+ * 功能注释：可提交审核——私有测试 / 驳回 / 下架后改完再提。
+ * draft 须先上传成 private_test；listed 改内容须重新上传后再提。
+ */
+export function canSubmitPlayMod(status: string): boolean {
+  const s = String(status || '').toLowerCase();
+  return s === 'private_test' || s === 'rejected' || s === 'delisted';
+}
+
+/** 功能注释：审核中可撤回回私有测试 */
+export function canWithdrawPlayMod(status: string): boolean {
+  return String(status || '').toLowerCase() === 'pending';
+}
+
+/** 功能注释：从上传 / 提审接口 data 里尽量抠出组件 id */
+export function pickPlayModId(data: unknown): string {
+  if (!data || typeof data !== 'object') return '';
+  const o = data as Record<string, unknown>;
+  for (const k of ['modId', 'id', 'componentId']) {
+    const v = o[k];
+    if (typeof v === 'string' && v.trim()) return v.trim();
+  }
+  return '';
 }
 
 /** 功能注释：过滤并分组；剔除官方来源与非玩法类，防止运营数据混入创作者页 */

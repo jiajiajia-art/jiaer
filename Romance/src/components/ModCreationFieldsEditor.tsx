@@ -285,8 +285,8 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
 
       {attrList.map((a, i) => (
         row(a.id, a.id, a.label || "未命名", creationAttrKindLabel(a),
-          <>{a.pin && <Badge tone="jade">状态栏</Badge>}{a.hidden && <Badge tone="soft">隐藏</Badge>}{(a.tiers?.length ?? 0) > 0 && <Badge tone="soft">{`${a.tiers!.length} 档`}</Badge>}</>,
-          <AttrDefForm a={a} onChange={(p) => setAttr(a.id, p)} />,
+          <>{a.pin && <Badge tone="jade">顶栏主属性</Badge>}{a.hidden && <Badge tone="soft">隐藏</Badge>}{(a.tiers?.length ?? 0) > 0 && <Badge tone="soft">{`${a.tiers!.length} 档`}</Badge>}</>,
+          <AttrDefForm a={a} onChange={(p) => setAttr(a.id, p)} pinnedOthers={attrList.filter((x) => x.pin && x.id !== a.id).length} />,
           <>
             <button type="button" disabled={!i} className={`${btn} !px-1.5`} onClick={() => { const l = [...attrList]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; setAttrs(l); }} aria-label="上移">↑</button>
             <button type="button" className="px-1 text-ink-soft hover:text-coral" onClick={() => setAttrs(attrList.filter((x) => x.id !== a.id))} aria-label="删除"><IconClose size={14} /></button>

@@ -162,9 +162,10 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
     const payMethodTouchedRef = useRef(false);
 
     const currentPaymentRegion = useMemo(() => {
+        // 功能注释：大陆/港澳台不再拼 CN，避免副标题换行；海外仍带国家码便于核对支付区
         const countrySuffix = region.country ? ` · ${region.country}` : '';
         return region.payRegion === 'greaterChina'
-            ? `中国大陆及港澳台${countrySuffix}`
+            ? '中国大陆及港澳台'
             : `海外地区${countrySuffix}`;
     }, [region.country, region.payRegion]);
 
@@ -234,7 +235,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
         if (openedRef.current) return;
         openedRef.current = true;
         payMethodTouchedRef.current = false;
-        setSelectedPayMethod('wechat');
+        // 功能注释：支付方式默认值交由 region/availablePayMethods effect 写入，勿在此写死微信
         setRechargeTab(fixedTab ?? 'diamonds');
         if ((fixedTab ?? 'diamonds') === 'diamonds') {
             const defaultPlan = rechargePlans[0];
@@ -256,9 +257,31 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
         }
     }, [isOpen, fixedTab, rechargePlans]);
 
+    /** 功能注释：仅海外 IP 才露出海外支付；大中华区只保留微信/支付宝 */
+    const showOverseasPay = region.payRegion === 'overseas';
+    const availablePayMethods = useMemo<DefaultPayMethod[]>(() => {
+        if (isMiniProgramEnv()) return ['wechat'];
+        return showOverseasPay ? ['wechat', 'alipay', 'overseas'] : ['wechat', 'alipay'];
+    }, [showOverseasPay]);
+
     useEffect(() => {
-        if (isOpen && regionLoaded && !payMethodTouchedRef.current) setSelectedPayMethod('wechat');
-    }, [isOpen, region.defaultPayMethod, regionLoaded]);
+        if (!isOpen || !regionLoaded || payMethodTouchedRef.current) return;
+        const preferred = region.defaultPayMethod;
+        setSelectedPayMethod(
+            preferred === 'overseas' && !showOverseasPay
+                ? 'wechat'
+                : availablePayMethods.includes(preferred)
+                    ? preferred
+                    : 'wechat',
+        );
+    }, [isOpen, region.defaultPayMethod, regionLoaded, showOverseasPay, availablePayMethods]);
+
+    useEffect(() => {
+        if (selectedPayMethod === 'overseas' && !showOverseasPay) {
+            setSelectedPayMethod('wechat');
+            payMethodTouchedRef.current = false;
+        }
+    }, [selectedPayMethod, showOverseasPay]);
 
     const handleFixedAmountClick = (plan: DiamondPlan) => {
         setAmountText('');
@@ -791,18 +814,14 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                 </div>
             </div>
 
-            <div className={styles.customAmount}>
-                {amountError && (
+            {/* 功能注释：自定义换算规则不对玩家展示；仅保留校验错误提示 */}
+            {amountError && (
+                <div className={styles.customAmount}>
                     <div className={styles.amountHint}>
                         <span className={styles.errorText}>{amountError}</span>
                     </div>
-                )}
-                <p className={styles.customAmountNotice}>
-                    {isOverseas
-                        ? `自定义按 ×${overseasRate} 换算，不参与首充加赠`
-                        : '1 元 = 10 KK币 · 自定义不参与首充加赠'}
-                </p>
-            </div>
+                </div>
+            )}
         </>
     );
 
@@ -810,39 +829,49 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
         <div className={styles.membershipStack}>
             <div className={styles.membershipBlock}>
                 <div className={styles.plansList}>
-                    {MEMBERSHIP_PLANS.map((plan, index) => (
-                        <button
-                            key={plan.planId}
-                            type="button"
-                            className={`${styles.planItem} ${selectedPlanIndex === index ? styles.planItemActive : ''}`}
-                            onClick={() => setSelectedPlanIndex(index)}
-                        >
-                            <span className={styles.planItemHeader}>
+                    {MEMBERSHIP_PLANS.map((plan, index) => {
+                        const active = selectedPlanIndex === index;
+                        const recommend = plan.planId === 'month_v2';
+                        return (
+                            <button
+                                key={plan.planId}
+                                type="button"
+                                aria-pressed={active}
+                                className={`${styles.planItem}${active ? ` ${styles.planItemActive}` : ''}${recommend ? ` ${styles.planItemRecommend}` : ''}`}
+                                onClick={() => setSelectedPlanIndex(index)}
+                            >
+                                {recommend ? <span className={styles.planRecommendBadge}>推荐</span> : null}
                                 <span className={styles.planItemName}>{plan.name}</span>
                                 <span className={styles.planItemPrice}>
                                     {fmt(toPayPrice(plan.price))}
                                 </span>
-                            </span>
-                            <span className={styles.planRewardSummary}>
-                                {plan.durationLabel} · {plan.totalReward.toLocaleString()} KK币
-                            </span>
-                        </button>
-                    ))}
+                                <span className={styles.planRewardSummary}>
+                                    {plan.durationLabel} · {plan.totalReward.toLocaleString()} KK币
+                                </span>
+                                <span className={styles.planDailyHint}>
+                                    每日约 {plan.dailyReward} 币
+                                </span>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
-            <div className={styles.membershipPerkStrip} aria-label="会员权益">
-                <span>
-                    {selectedMembershipPlan
-                        ? `每日 ${selectedMembershipPlan.dailyReward} 币`
-                        : '每日领币'}
-                </span>
-                <span>AI 文游 85 折</span>
-                <span>同档顺延</span>
+            <div className={styles.membershipPerksCard}>
+                <p className={styles.membershipPerksTitle}>开通即享</p>
+                <div className={styles.membershipPerkStrip} aria-label="会员权益">
+                    <span>
+                        {selectedMembershipPlan
+                            ? `每日 ${selectedMembershipPlan.dailyReward} 币`
+                            : '每日领币'}
+                    </span>
+                    <span>AI 文游 85 折</span>
+                    <span>同档顺延</span>
+                </div>
+                <p className={styles.membershipFootNote}>
+                    需每日签到领取；周卡/月卡可同时持有，未签到可补签后领取。
+                </p>
             </div>
-            <p className={styles.membershipFootNote}>
-                需每日签到领取；周卡/月卡可同时持有，未签到可补签后领取。
-            </p>
         </div>
     );
 
@@ -862,7 +891,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                         <p className={styles.regionMeta}>
                             {currentPaymentRegion}
                             <span aria-hidden="true">·</span>
-                            虚拟商品不支持退款
+                            虚拟商品不退款
                         </p>
                     </header>
 
@@ -897,9 +926,13 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                         {rechargeTab === 'diamonds' ? diamondsTabContent : membershipTabContent}
 
                         <section className={styles.paymentSection} aria-label={t('rechargeModal.choosePayMethod')}>
-                            <div className={styles.payMethodToggle} role="group" aria-label={t('rechargeModal.choosePayMethod')}
-                                style={isMiniProgramEnv() ? { gridTemplateColumns: '1fr' } : undefined}>
-                                {((isMiniProgramEnv() ? ['wechat'] : ['wechat', 'alipay', 'overseas']) as DefaultPayMethod[]).map((method) => (
+                            <div
+                                className={styles.payMethodToggle}
+                                role="group"
+                                aria-label={t('rechargeModal.choosePayMethod')}
+                                style={{ gridTemplateColumns: `repeat(${availablePayMethods.length}, minmax(0, 1fr))` }}
+                            >
+                                {availablePayMethods.map((method) => (
                                     <button
                                         key={method}
                                         type="button"
@@ -927,21 +960,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
                             </div>
                         </section>
 
-                        {/* 功能注释：订单摘要便于用户核对金额/到账；与支付按钮文案互补 */}
-                        <section className={styles.orderSummary} aria-label="订单摘要">
-                            {rechargeTab === 'membership' ? (
-                                <>
-                                    <div><span>选择商品</span><strong>{selectedMembershipPlan?.name ?? '未选择'}</strong></div>
-                                    <div><span>支付金额</span><strong>{fmt(membershipPayAmount)}</strong></div>
-                                </>
-                            ) : (
-                                <>
-                                    <div><span>支付金额</span><strong>{fmt(payAmount)}</strong></div>
-                                    <div><span>本次获得</span><strong>{estimatedDiamonds} KK币</strong></div>
-                                </>
-                            )}
-                        </section>
-
+                        {/* 功能注释：金额与商品已写在支付按钮上，不再单独展示订单摘要 */}
                         <button
                             type="submit"
                             className={`${styles.submitBtn} ${rechargeTab === 'membership' ? styles.membershipSubmitBtn : ''}`}

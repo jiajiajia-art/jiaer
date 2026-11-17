@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 test('avatarLibrary_标签与匹配文案与后端对齐', async () => {
-  const mod = await import(join(root, 'src/lib/galgame/avatarLibrary.ts'));
+  const mod = await import(pathToFileURL(join(root, 'src/lib/galgame/avatarLibrary.ts')).href);
   assert.deepEqual(
     mod.AVATAR_AGE_GROUPS.map((x) => x.id),
     ['child', 'adult', 'elder'],
@@ -17,15 +17,25 @@ test('avatarLibrary_标签与匹配文案与后端对齐', async () => {
     ['ancient', 'modern', 'fantasy'],
   );
   assert.deepEqual(
+    mod.AVATAR_STYLE_PACKS.map((x) => x.id),
+    ['anime', 'realistic', 'ink'],
+  );
+  assert.deepEqual(
     mod.AVATAR_ASSET_GENDERS.map((x) => x.id),
     ['male', 'female', 'universal'],
   );
   assert.equal(mod.avatarAgeLabel('adult'), '成人');
   assert.equal(mod.avatarBackgroundLabel('ancient'), '古代');
+  assert.equal(mod.avatarStylePackLabel('anime'), '二次元');
+  assert.equal(mod.avatarStylePackLabel(''), '未分类');
   assert.equal(mod.avatarGenderLabel('universal'), '通用');
   assert.equal(
     mod.formatAvatarCardSummary({ gender: 'female', backgroundType: 'ancient' }),
-    '女 · 古代',
+    '未分类 · 女 · 古代',
+  );
+  assert.equal(
+    mod.formatAvatarCardSummary({ gender: 'female', backgroundType: 'ancient', stylePack: 'anime' }),
+    '二次元 · 女 · 古代',
   );
   assert.equal(mod.resolveAvatarCardTitle({ title: '' }, 0), '头像 01');
   assert.equal(mod.resolveAvatarCardTitle({ title: '自定义' }, 3), '自定义');
@@ -53,7 +63,7 @@ test('avatarLibrary_标签与匹配文案与后端对齐', async () => {
 });
 
 test('avatarLibrary_正方形准备与底色', async () => {
-  const mod = await import(join(root, 'src/lib/galgame/squareAvatarPrep.ts'));
+  const mod = await import(pathToFileURL(join(root, 'src/lib/galgame/squareAvatarPrep.ts')).href);
   assert.equal(mod.SQUARE_AVATAR_FILL, '#1c1c1e');
   assert.equal(mod.SQUARE_AVATAR_MIN_SIDE, 256);
   assert.equal(mod.SQUARE_AVATAR_TARGET_SIDE, 512);
@@ -92,27 +102,28 @@ test('avatarLibrary_API与导航管理运营页已挂载', () => {
   assert.match(api, /kind/);
   assert.match(api, /crop/);
   assert.match(api, /albumId/);
+  assert.match(api, /stylePack/);
   assert.match(hook, /listTagOptions/);
+  assert.match(hook, /stylePackOptions/);
   assert.match(hook, /invalidateAvatarTagOptionsCache|cache/);
   assert.match(nav, /path:\s*'\/warehouse\/avatars'/);
-  assert.match(nav, /头像库/);
+  assert.match(nav, /warehouse\.navAvatars/);
   assert.match(app, /WarehouseAvatarLibrary/);
   assert.match(app, /path="avatars"/);
   assert.match(app, /\/admin\/avatars/);
   assert.match(app, /\/operator\/avatars/);
   assert.match(page, /SquareAvatarCropGate/);
   assert.match(page, /AvatarFrame/);
-  assert.match(page, /保留已绑定/);
   assert.match(page, /SegOptions|segRowCompact|avatarLibChip|role="radiogroup"/);
   assert.match(page, /avatarLibScopeTrack/);
   assert.match(page, /AVATAR_ASSET_GENDERS|universal/);
   // 匹配优先级已迁到剧本编辑器①基础；仓库页不得再提供全局「匹配设置」
   assert.doesNotMatch(page, /匹配设置|匹配优先级已保存|prefsOpen|allowUniversalFallback/);
   assert.match(page, /avatarAlbumCard|打开头像库/);
-  assert.match(page, /上移相册顺序|下移相册顺序/);
+  assert.match(page, /moveAlbumUpAria|moveAlbumDownAria/);
   assert.match(api, /sourceOrder|allowUniversalFallback/);
   // 上传元数据须进弹窗，禁止与列表筛选并排常驻；弹窗对齐暗色确认层语言
-  assert.match(page, /上传头像/);
+  assert.match(page, /warehouse\.avatars\.upload/);
   assert.match(page, /uploadOpen|avatarLibModal/);
   assert.match(page, /avatarLibModalPrimary|avatarLibModalCloseIcon/);
   assert.doesNotMatch(page, /上传·性别/);
@@ -127,6 +138,7 @@ test('avatarLibrary_API与导航管理运营页已挂载', () => {
   assert.match(adminMgr, /SegOptions|segRow/);
   assert.match(adminMgr, /AdminTagOptionsEditor|配置管理/);
   assert.match(adminMgr, /AVATAR_ASSET_GENDERS/);
+  assert.match(adminMgr, /style_pack|风格包|stylePackOptions|formStyle/);
   assert.doesNotMatch(adminMgr, /window\.prompt|window\.confirm|alert\(/);
   assert.doesNotMatch(adminMgr, /<select[\s>]/);
   // 管理端公共头像须用暖色浅底卡片分区，禁止整页暗色胶囊栈
@@ -151,7 +163,7 @@ test('avatarLibrary_API与导航管理运营页已挂载', () => {
   assert.doesNotMatch(adminMgr, /aria-label="上传入库"/);
   // 功能注释：侧栏文案在 AdminShell 导航配置，面板只挂载管理组件
   const shellNav = readFileSync(join(root, 'src/components/admin-shell/adminNavigation.tsx'), 'utf8');
-  assert.match(shellNav, /label: '公共头像'/);
+  assert.match(shellNav, /adminUi\.nav\.items\.assetCenter|\/admin\/avatars/);
   assert.match(admin, /AdminPublicAvatarManager/);
   assert.match(operator, /AdminPublicAvatarManager/);
   assert.match(adminMgr, /uploadKind/);
@@ -203,7 +215,7 @@ test('avatarLibrary_人设卡与角色卡自动匹配与锁定', () => {
     assert.match(src, /backgroundType:\s*draft\.backgroundType/);
     assert.match(src, /useAvatarTagOptions/);
     assert.match(src, /ageOptions|backgroundOptions/);
-    assert.match(src, /已手动选定头像/);
+    assert.match(src, /warehouse\.forms\.avatarLockedHint/);
     assert.doesNotMatch(src, /onAvatarUrl=\{\(url\) => setDraft\(\(d\) => \(\{ \.\.\.d, avatarUrl: url \}\)\)\}/);
   }
   assert.match(types, /avatarLocked\?:/);

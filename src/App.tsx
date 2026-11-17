@@ -242,7 +242,11 @@ function App() {
           <Route path="/operator/content-reports/penalties" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/appeals" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/publish-queue" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
-          <Route path="/operator/feedback" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/feedback" element={<Navigate to="/operator/messages/feedback" replace />} />
+          <Route path="/operator/messages" element={<Navigate to="/operator/messages/feedback" replace />} />
+          <Route path="/operator/messages/announcements" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/messages/feedback" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/messages/direct" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/business-coop" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/game-issues" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/works/:fileId/stats" element={<OperatorRoute><OperatorWorkStats /></OperatorRoute>} />

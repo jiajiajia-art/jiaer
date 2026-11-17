@@ -157,12 +157,11 @@
 }
 
 .tabIcon {
-    width: 20px;
-    height: 20px;
-    object-fit: contain;
+    width: 18px;
+    height: 18px;
     flex-shrink: 0;
-    opacity: 0.72;
-    image-rendering: -webkit-optimize-contrast;
+    display: block;
+    color: currentColor;
 }
 
 .tabButtonActive {
@@ -173,7 +172,7 @@
 }
 
 .tabButtonActive .tabIcon {
-    opacity: 1;
+    color: var(--color-primary);
 }
 
 .tabButtonActive::before {

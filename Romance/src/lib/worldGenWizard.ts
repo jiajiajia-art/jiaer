@@ -158,6 +158,19 @@ export function isWorldGenCoreStep(id: string): boolean {
   return (DEFAULT_WORLD_GEN_EDITOR_STEP_IDS as readonly string[]).includes(id);
 }
 
+/**
+ * 向导勾选区不展示的基础模组（生成仍走默认勾选）。
+ * startResources 已并入建角货币项，单独勾选只会重复干扰。
+ */
+export const WORLD_GEN_PICKER_HIDDEN_STEP_IDS: ReadonlySet<string> = new Set(["startResources"]);
+
+/** 勾选区可见的基础模组 id（不含隐藏项） */
+export function worldGenPickerVisibleStepIds(
+  ids: readonly string[] = DEFAULT_WORLD_GEN_EDITOR_STEP_IDS,
+): string[] {
+  return ids.filter((id) => !WORLD_GEN_PICKER_HIDDEN_STEP_IDS.has(id));
+}
+
 /** Hub 菜单 id → 默认关联的第 1 步生成内容 */
 const HUB_CONTENT: Record<string, readonly WorldGenContentId[]> = {
   person: ["characters"],

@@ -21,6 +21,7 @@ import { TIME_UNIT_LABEL, limitDays } from "./types";
 import { uid } from "./store";
 import { canRomance, phaseOf, startDateLabel } from "../game/logic";
 import { ensureBirthday, findNpc, isPlaceholderName, normName, tickBirthdays, tickPlayerAge } from "./npcIdentity";
+import { healRuntimeNpcName, isProperPersonName } from "./personName";
 import { STAT_LABELS, STAT_ORDER, WORLD_RULE_DIMS, fameTier, tierOf, clampStat, worldRuleLabel, creationCopy } from "../game/data";
 import { creationVars, fillText } from "../game/creationText";
 import { defaultWorldBook } from "../game/worldbook";
@@ -680,7 +681,7 @@ ${state.memory || "（游戏刚刚开始）"}
 2.3 正文中不得出现「# 谨遵指令」「---」分隔线、markdown 标题或任何字段名。
 3. thoughts：给本回合每位在场的重要 NPC 各写一句心事（不含主角），要与台词形成反差或补充，让玩家有「偷看到」的感觉；diary 只在情绪有明显波动时写，不要每回合都写。
 4. options 固定给 3 个（不要多于 3 个），文案就是玩家点击后要发生的事，具体可玩。没有数值变化的字段就省略，不要编造无意义的变动。
-5. 人物命名铁律：凡在剧情中出场或说话的人物（含来电、亲戚、路人里有台词者），都必须有具体姓名。台词行的「角色名」一律写全名（如「苏桂芬」），不得只写「二姨」「男人」「陌生人」等称谓；称谓写进 aliases。首次出场的新人物必须写进 npc_changes（含 name/gender/age/identity/relation/bio；gender 只能是「男」「女」或「其他」），已出场的人物沿用原名、id 与性别，只更新变化的字段，绝不另建同名或同一人的新角色。
+5. 人物命名铁律：凡在剧情中出场或说话的人物（含来电、亲戚、路人里有台词者），都必须有「姓+名」全名（如「苏桂芬」「冯建国」「沈晚晴」）。台词行的「角色名」一律写全名，不得只写「二姨」「男人」「陌生人」「烤红薯摊主」「老板娘」「小贩」等称谓或职业；称谓/职业写进 identity，口头称呼写进 aliases。首次出场的新人物必须写进 npc_changes（含 name/gender/age/identity/relation/bio；name 必须有名有姓，identity 写身份如「街边烤红薯摊主」；gender 只能是「男」「女」或「其他」），已出场的人物沿用原名、id 与性别，只更新变化的字段，绝不另建同名或同一人的新角色。
 5.1 人物关系：新人物与【核心人物】里已有人物的关系，只有剧情明确交代时才写进该新人物的 links（按 [id: …] 引用，没有 id 时写对方全名到 name），kind 指对方是新人物的什么人：parent=父亲或母亲，child=子女，partner=现任伴侣或配偶，ex=前任，other=其他明确关系（note 写清是什么关系，如 同门师兄）；拿不准就不写。links 只用于新人物，不得借此改写已有人物之间的关系；【人物关系网】以外的关系一律按未设定处理。
 5.2 性别与人称：旁白与台词指代人物时，代词必须与其性别一致——女用「她」，男用「他」，其他用「TA」；不得把女角色写成「他」或男性外貌动作，也不得把男角色写成「她」。【核心人物】里已标明的性别不可改写。
 6. 只有当故事自然抵达结局（${promptFrag("endingHint", "达成目标/离开/婚恋定局/意外")}等）才把 game_end 设为 true 并给出 epilogue。
@@ -1049,19 +1050,44 @@ export function applyStep(state: GameState, step: AIStep): { next: GameState; ch
   const cleanTags = (raw: unknown): string[] =>
     Array.isArray(raw) ? Array.from(new Set(raw.map((t) => (typeof t === "string" ? t.trim() : "")).filter(Boolean))) : [];
 
+  // 功能注释：落账前先自愈存档里已有的职业占位名（烤红薯摊主 → 有姓有名）
+  {
+    const avoid = new Set(next.npcs.map((n) => n.name).filter(Boolean));
+    next.npcs = next.npcs.map((n) => {
+      const h = healRuntimeNpcName(n, avoid);
+      if (!h.healed) return n;
+      const { healed: _h, ...rest } = h;
+      changes.push(`更名 ${n.name} → ${rest.name}`);
+      return rest as Npc;
+    });
+  }
+
   // NPC 变更
   for (const nc of step.npc_changes ?? []) {
     if (!nc || typeof nc !== "object") continue;
-    const ncName = typeof nc.name === "string" ? nc.name.trim() : "";
-    let npc: Npc | undefined = findNpc(next.npcs, nc.id, ncName);
+    const rawNcName = typeof nc.name === "string" ? nc.name.trim() : "";
+    // 功能注释：职业/称谓不得当姓名；先挪到 identity，再补有姓有名
+    let ncName = rawNcName;
+    let ncIdentity = typeof nc.identity === "string" ? nc.identity.trim() : "";
+    let ncAliases = Array.isArray(nc.aliases) ? [...nc.aliases] : [];
+    if (ncName && !isPlaceholderName(ncName) && !isProperPersonName(ncName)) {
+      if (!ncIdentity) ncIdentity = ncName;
+      else if (ncIdentity !== ncName) ncAliases.push(ncName);
+      const gHint = typeof nc.gender === "string" ? nc.gender : (/女|姐|妹|娘|她/.test(`${ncName}${ncIdentity}${nc.bio ?? ""}`) ? "女" : "男");
+      const healed = healRuntimeNpcName({ name: ncName, identity: ncIdentity, aliases: ncAliases, persona: { gender: gHint } });
+      ncName = healed.name;
+      ncIdentity = healed.identity || ncIdentity;
+      ncAliases = healed.aliases ?? ncAliases;
+    }
+    let npc: Npc | undefined = findNpc(next.npcs, nc.id, rawNcName) ?? findNpc(next.npcs, nc.id, ncName);
     if (!npc) {
       // 新人物必须有具体名字：陌生人/某人/男子/他/她 之类占位称呼不建档
-      if (isPlaceholderName(ncName)) continue;
+      if (isPlaceholderName(ncName) || !isProperPersonName(ncName)) continue;
       npc = {
         id: nc.id || uid(),
         name: ncName,
         age: nc.age || "",
-        identity: nc.identity || "神秘人物",
+        identity: ncIdentity || "神秘人物",
         relation: nc.relation || "初识",
         avatar: "",
         bio: nc.bio || "",
@@ -1076,13 +1102,14 @@ export function applyStep(state: GameState, step: AIStep): { next: GameState; ch
         attrs: [],
         affinityHistory: [],
         interactions: [],
+        aliases: ncAliases.length ? Array.from(new Set(ncAliases.map((a) => String(a).trim()).filter(Boolean))) : undefined,
       };
       // 头像：AI 指定的同名池优先，否则从本剧随机池抽（都没开 → 留空，沿用首字头像）
       // 功能注释：本剧池抽不到时套用平台头像库（按性别 / 年龄段分类）；性别一并写入 persona，后续剧情提示才能锁定人称
       const gIn = typeof nc.gender === "string" ? nc.gender.trim() : "";
-      const gNorm = gIn === "男" || gIn === "女" || gIn === "其他" ? gIn : (/女|姐|妹|娘|她/.test(`${ncName}${nc.identity ?? ""}${nc.bio ?? ""}`) ? "女" : /男|哥|弟|他/.test(`${ncName}${nc.identity ?? ""}${nc.bio ?? ""}`) ? "男" : undefined);
+      const gNorm = gIn === "男" || gIn === "女" || gIn === "其他" ? gIn : (/女|姐|妹|娘|她/.test(`${ncName}${ncIdentity}${nc.bio ?? ""}`) ? "女" : /男|哥|弟|他/.test(`${ncName}${ncIdentity}${nc.bio ?? ""}`) ? "男" : undefined);
       if (gNorm) npc.persona = { ...(npc.persona ?? {}), gender: gNorm };
-      const av = drawProfileAvatar(npc.id, { name: ncName, age: nc.age, identity: nc.identity, bio: nc.bio, gender: gNorm, variant: typeof nc.avatar_variant === "string" ? nc.avatar_variant : undefined });
+      const av = drawProfileAvatar(npc.id, { name: ncName, age: nc.age, identity: ncIdentity || nc.identity, bio: nc.bio, gender: gNorm, variant: typeof nc.avatar_variant === "string" ? nc.avatar_variant : undefined });
       if (av.url) { npc.avatar = av.url; npc.avatarVariant = av.variant; }
       npc = ensureBirthday(npc, next.sim?.day ?? 0);
       // 功能注释：本回合登场的新人物落到当前房间，才能进 walkers / 在场条（无 home 的人不上地图）
@@ -1095,11 +1122,8 @@ export function applyStep(state: GameState, step: AIStep): { next: GameState; ch
       // 只是剧情里初次登场：是否结识由玩家在回合底部的人物名片上决定（见 game/npcIntro）
       changes.push(`初遇 ${npc.name}`);
       if (Array.isArray(nc.links) && nc.links.length) newLinks.push({ id: npc.id, links: nc.links });
-    } else if (ncName && !isPlaceholderName(ncName) && normName(ncName) !== normName(npc.name) && !(npc.aliases ?? []).some((a) => normName(a) === normName(ncName))) {
+    } else if (ncName && !isPlaceholderName(ncName) && isProperPersonName(ncName) && normName(ncName) !== normName(npc.name) && !(npc.aliases ?? []).some((a) => normName(a) === normName(ncName))) {
       npc.aliases = [...(npc.aliases ?? []), ncName]; // 按 id 命中但换了称呼：记为别名，后续同名不再另建
-    }
-    for (const a of nc.aliases ?? []) {
-      if (a && normName(a) !== normName(npc.name) && !(npc.aliases ?? []).some((x) => normName(x) === normName(a))) npc.aliases = [...(npc.aliases ?? []), a];
     }
     // 功能注释：已有人物缺性别时，用本回合 AI 给出的 gender 补上（不覆盖玩家已设定）
     if (!npc.persona?.gender) {
@@ -1107,7 +1131,13 @@ export function applyStep(state: GameState, step: AIStep): { next: GameState; ch
       if (gIn === "男" || gIn === "女" || gIn === "其他") npc.persona = { ...(npc.persona ?? {}), gender: gIn };
     }
     if (nc.age && !npc.age) npc.age = nc.age;
-    if (nc.identity) npc.identity = nc.identity;
+    if (ncIdentity) npc.identity = ncIdentity;
+    else if (nc.identity) npc.identity = nc.identity;
+    for (const a of ncAliases) {
+      if (a && normName(a) !== normName(npc.name) && !(npc.aliases ?? []).some((x) => normName(x) === normName(a))) {
+        npc.aliases = [...(npc.aliases ?? []), a];
+      }
+    }
     if (nc.relation) npc.relation = nc.relation;
     if (nc.bio) npc.bio = nc.bio;
     if (nc.mood) npc.mood = nc.mood;

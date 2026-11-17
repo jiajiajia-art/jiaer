@@ -1,5 +1,5 @@
-/* 剧情初遇：新人物改成一行（左：名字+身份，右：结识）。
- * 点行弹出人物详情；点「结识」记入人脉并触发结识剧情（AI 演绎 + memory 摘要）。 */
+/* 剧情初遇：新人物一行（左：名字+身份，右：结识）。
+ * 点行看详情；点「结识」记入人脉并触发结识剧情。主按钮跟皮肤主色 jade，禁止 tone-coral 撞色。 */
 import { useState } from "react";
 import { useGame } from "../store/gameCtx";
 import { introState } from "../game/npcIntro";
@@ -52,7 +52,7 @@ function MeetRow({
           e.stopPropagation();
           onMeet();
         }}
-        className="ui-btn ui-btn-primary ui-btn-sm shrink-0 tone-coral"
+        className="ui-btn ui-btn-primary ui-btn-sm tone-jade shrink-0"
       >
         结识
       </button>
@@ -147,7 +147,7 @@ export default function NewcomerCards({ ids }: { ids?: string[] }) {
                 <button
                   type="button"
                   disabled={busy}
-                  className="ui-btn ui-btn-primary tone-coral"
+                  className="ui-btn ui-btn-primary tone-jade"
                   onClick={() => {
                     setDecided((d) => (d.includes(detail.id) ? d : [...d, detail.id]));
                     setDetailId(null);

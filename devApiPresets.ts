@@ -4,7 +4,7 @@
  */
 
 /** ↓↓↓ 只改这里（合法值见下方注释）↓↓↓ */
-export const ACTIVE_DEV_API = 'local'
+export const ACTIVE_DEV_API = 'cn-neo'
 /** ↑↑↑ 只改这里 ↑↑↑ */
 
 /**
@@ -14,6 +14,7 @@ export const ACTIVE_DEV_API = 'local'
  * - cn-gogo   同事 gogo     http://gogo.kurangames.cn/api
  * - cn-neo    同事 neo      http://neo.kurangames.cn/api
  * - cn-qqq    同事 qqq      http://qqq.kurangames.cn/api
+ * - cn-abc    本机 abc      http://abc.kurangames.cn/api
  * - cf-test2  CF 测试2      https://api-test2.kurangames.com
  * - local     本机 wrangler http://localhost:3000
  */
@@ -60,6 +61,13 @@ export const DEV_API_PRESETS: Record<string, DevApiPreset> = {
     apiOrigin: 'http://qqq.kurangames.cn',
     apiPathPrefix: '',
     publicOrigin: 'http://qqq.kurangames.cn',
+    secure: false,
+  },
+  'cn-abc': {
+    label: '本机 abc',
+    apiOrigin: 'http://abc.kurangames.cn',
+    apiPathPrefix: '',
+    publicOrigin: 'http://abc.kurangames.cn',
     secure: false,
   },
   'cf-test2': {

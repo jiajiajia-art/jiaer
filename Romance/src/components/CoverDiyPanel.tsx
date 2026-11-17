@@ -23,16 +23,19 @@ function Opt<T extends string>({ value, opts, onPick }: { value?: T; opts: reado
   return <div className="flex flex-wrap gap-1.5">{opts.map(([v, l]) => <button key={v} type="button" aria-pressed={value === v} onClick={() => onPick(v)} className={chip(value === v)}>{l}</button>)}</div>;
 }
 
-function Preview({ cv, d, displayOnly }: { cv: CoverCopy; d?: CoverDiy; displayOnly?: boolean }) {
+function Preview({ cv, d, displayOnly, compact }: { cv: CoverCopy; d?: CoverDiy; displayOnly?: boolean; compact?: boolean }) {
   const { look } = useGame();
   const land = look.orient === "landscape";
-  const [w, h, k] = land ? [1100, 620, 0.34] : [390, 700, 0.42];
+  // 功能注释：作品展示封面预览略收紧，避免生成调整页一侧空旷
+  const [w, h, k] = land
+    ? ([1100, 620, compact ? 0.24 : 0.34] as const)
+    : ([390, 700, compact ? 0.28 : 0.42] as const);
   const noop = () => {};
   return (
     <div className="mx-auto overflow-hidden rounded-2xl border border-line shadow-lg" style={{ width: w * k, height: h * k }}>
       <div style={{ width: w, height: h, transform: `scale(${k})`, transformOrigin: "top left" }}>
         {/* 功能注释：作品展示封面预览只看背景，不出现开局菜单三按钮 */}
-        <CoverView cv={cv} d={d} preview displayOnly={displayOnly} onStart={noop} onContinue={noop} onConfig={noop} />
+        <CoverView cv={cv} d={d} preview displayOnly={displayOnly} onStart={noop} onContinue={noop} />
       </div>
     </div>
   );
@@ -74,8 +77,10 @@ type CoverDiyProps = {
   workSummary?: string;
   /** 功能注释：作品级画风 / 负面词与保存回调（封面生图三层提示词） */
   imageGen?: WorkImageGenBinding;
+  /** 功能注释：作者态把名称等简单字段并进封面右侧，避免下面再单开一栏 */
+  panelExtra?: ReactNode;
 };
-function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, chatKey, cover, mode = "live", bgOnly, workTitle, workSummary, imageGen }: CoverDiyProps) {
+function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, chatKey, cover, mode = "live", bgOnly, workTitle, workSummary, imageGen, panelExtra }: CoverDiyProps) {
   const { look } = useGame();
   const [confirm, confirmEl] = useConfirm();
   const d = value;
@@ -85,7 +90,7 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
   const clean = (n: CoverDiy) => { for (const k of Object.keys(n) as (keyof CoverDiy)[]) if (n[k] === undefined || n[k] === "") delete n[k]; return Object.keys(n).length ? n : undefined; };
   const set = (p: Partial<CoverDiy>) => onChange(clean({ ...d, ...p, on: undefined }));
   const on = true; // 编辑器内封面 DIY 始终生效
-  const toggle = (k: "continue" | "config") => set({ hide: { ...(d.hide ?? {}), [k]: !d.hide?.[k] || undefined } });
+  const toggle = (k: "continue") => set({ hide: { ...(d.hide ?? {}), [k]: !d.hide?.[k] || undefined } });
   const [vidMsg, setVidMsg] = useState("");
   const pickVideo = (f?: File) => {
     if (!f) return;
@@ -100,18 +105,20 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
   const page: Record<(typeof TABS)[number], ReactNode> = {
     "AI 对话": <CoverAiChat d={d} setCover={onChange} author={author} storeKey={chatKey} cover={cover} />,
     背景: <>
-      <H t="背景类型" d="都不填则用默认封面背景" />
+      {!bgOnly && <H t="背景类型" d="都不填则用默认封面背景" />}
+      {bgOnly ? <p className="cover-bg-only-label">背景类型</p> : null}
       <Opt value={cgKind(d)} onPick={(v) => set({ cgMode: v, ...(v === "carousel" && !d.cgs?.length && d.image ? { cgs: [d.image] } : {}) })}
         opts={[["fixed", "固定 CG"], ["carousel", "轮播 CG"], ["video", "视频"]] as const} />
       {cgKind(d) === "fixed" && <>
-        <H t="固定 CG" d="始终显示这一张" />
+        {!bgOnly && <H t="固定 CG" d="始终显示这一张" />}
+        {bgOnly ? <p className="cover-bg-only-label">图片</p> : null}
         {/* 功能注释：生图走 ImagePicker 弹窗；用作品名+简介预填，不另起一套网关 */}
         <ImagePicker
           value={d.image}
           label="封面 CG"
           max={1920}
           onChange={(u) => set({ image: u })}
-          hint="竖屏建议 9:16，横屏建议 16:9"
+          hint={bgOnly ? "竖屏 9:16" : "竖屏建议 9:16，横屏建议 16:9"}
           aiGen={{
             size: WORK_COVER_GEN_SIZE,
             placeholder: "只写封面氛围与主角外观，画面里不要出现作品名文字（9:16 竖版）",
@@ -197,7 +204,7 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
       </>}
       <H t="按钮文字与显示" d="留空用默认文字；关掉的按钮不显示" />
       <div className="space-y-1.5">
-        {([["start", "开始游戏"], ["continue", "继续游戏"], ["config", "配置 AI"]] as const).map(([k, def]) => (
+        {([["start", "开始游戏"], ["continue", "继续游戏"]] as const).map(([k, def]) => (
           <div key={k} className="flex items-center gap-2">
             <input className={inp} value={d.labels?.[k] ?? ""} maxLength={10} placeholder={def} disabled={k !== "start" && !!d.hide?.[k]} onChange={(e) => set({ labels: { ...(d.labels ?? {}), [k]: e.target.value || undefined } })} />
             {k === "start" ? <span className="w-14 shrink-0 text-center text-[11px] text-ink-soft">常驻</span> : (
@@ -231,15 +238,57 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
     </>,
   };
 
-  const resetBtn = <button type="button" className={`${chip(false)} w-full hover:!border-danger hover:!text-danger`} onClick={async () => { if (await confirm(bgOnly ? "清空作品展示封面背景？" : "清空封面的文字、背景与样式，恢复默认封面？", { ok: "恢复默认" })) onChange(undefined); }}>{bgOnly ? "清空背景" : "恢复默认封面"}</button>;
+  const resetBtn = (
+    <button
+      type="button"
+      className={bgOnly
+        ? "cover-bg-only-clear"
+        : `${chip(false)} w-full hover:!border-danger hover:!text-danger`}
+      onClick={async () => {
+        if (await confirm(bgOnly ? "清空作品展示封面背景？" : "清空封面的文字、背景与样式，恢复默认封面？", { ok: "恢复默认" })) {
+          onChange(undefined);
+        }
+      }}
+    >
+      {bgOnly ? "清空背景" : "恢复默认封面"}
+    </button>
+  );
   // 功能注释：bgOnly 必须 displayOnly，预览禁止出现开始/继续/配置 AI 与标题壳
   const previewEl = <>
-    <Preview cv={previewCv} d={previewD ?? (bgOnly ? value : undefined)} displayOnly={!!bgOnly} />
-    <p className="mt-1 text-center text-[10.5px] text-ink-soft">实时预览 · {look.orient === "landscape" ? "横屏" : "竖屏"}{bgOnly ? " · 仅背景展示" : ""}</p>
+    <Preview
+      cv={previewCv}
+      d={previewD ?? (bgOnly ? value : undefined)}
+      displayOnly={!!bgOnly}
+      compact={!!bgOnly}
+    />
+    <p className={bgOnly ? "cover-bg-only-caption" : "mt-1 text-center text-[10.5px] text-ink-soft"}>
+      实时预览 · {look.orient === "landscape" ? "横屏" : "竖屏"}{bgOnly ? " · 仅背景" : ""}
+    </p>
   </>;
 
   // 对话为主：纯对话式界面，不带预览（预览在「实时预览」里看）
   if (mode === "chat") return <div className="text-ink">{confirmEl}<CoverAiChat d={d} setCover={onChange} author={author} storeKey={chatKey} cover={cover} full /></div>;
+
+  // 功能注释：作品展示封面强制左右结构（预览左、设置右），单卡紧凑，禁止再上下拆成两块
+  if (bgOnly) {
+    return (
+      <div className="cover-bg-only text-ink">
+        {confirmEl}
+        <div className="cover-bg-only-stage" aria-label="封面预览">
+          {previewEl}
+        </div>
+        <div className="cover-bg-only-panel" role="tabpanel" aria-label="封面背景">
+          <div className="cover-bg-only-panel-head">
+            <span className="cover-bg-only-panel-title">封面背景</span>
+            <span className="cover-bg-only-panel-desc">列表 / 详情 / 书架用</span>
+            {resetBtn}
+          </div>
+          <div className="cover-bg-only-body">{page["背景"]}</div>
+          {panelExtra ? <div className="cover-bg-only-extra mt-1.5 space-y-2 border-t border-line/70 pt-2">{panelExtra}</div> : null}
+        </div>
+      </div>
+    );
+  }
 
   // 实时预览：左侧预览常驻（宽屏吸顶），右侧分组编辑；改动即时反映在预览上
   return (
@@ -251,18 +300,15 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
       </div>
 
       <div className={`min-w-0 flex-1 ${on || tab === "AI 对话" ? "" : "pointer-events-none opacity-50"}`}>
-        {/* 功能注释：作品展示封面只留背景，不渲染其它页签按钮 */}
-        {!bgOnly && (
-          <div role="tablist" aria-label="封面编辑项" className="mb-3 flex flex-wrap gap-1.5">
-            {tabs.map((t) => (
-              <button key={t} role="tab" type="button" aria-selected={tab === t} onClick={() => setTab(t)}
-                className={`rounded-full px-3 py-1 text-[12.5px] font-semibold transition ${tab === t ? "bg-coral text-white shadow-sm" : "bg-paper text-ink-soft ring-1 ring-line hover:text-ink hover:ring-coral/50"}`}>
-                {t}
-              </button>
-            ))}
-          </div>
-        )}
-        <div role="tabpanel" aria-label={bgOnly ? "背景" : tab} className="rounded-[var(--radius-ui-lg)] border border-line bg-paper/60 p-3 sm:p-4">{page[bgOnly ? "背景" : tab]}</div>
+        <div role="tablist" aria-label="封面编辑项" className="mb-3 flex flex-wrap gap-1.5">
+          {tabs.map((t) => (
+            <button key={t} role="tab" type="button" aria-selected={tab === t} onClick={() => setTab(t)}
+              className={`rounded-full px-3 py-1 text-[12.5px] font-semibold transition ${tab === t ? "bg-coral text-white shadow-sm" : "bg-paper text-ink-soft ring-1 ring-line hover:text-ink hover:ring-coral/50"}`}>
+              {t}
+            </button>
+          ))}
+        </div>
+        <div role="tabpanel" aria-label={tab} className="rounded-[var(--radius-ui-lg)] border border-line bg-paper/60 p-3 sm:p-4">{page[tab]}</div>
       </div>
     </div>
   );

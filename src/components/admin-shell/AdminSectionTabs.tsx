@@ -106,6 +106,14 @@ const tabsForPath = (pathname: string, t: TFunction, badges: Record<string, numb
     ];
   }
 
+  if (starts(pathname, '/operator/messages') || pathname === '/operator/feedback') {
+    return [
+      { key: 'messagesAnnouncements', label: t('adminUi.nav.items.messagesAnnouncements', { defaultValue: '公告' }), path: '/operator/messages/announcements' },
+      { key: 'messagesFeedback', label: t('adminUi.nav.items.messagesFeedback', { defaultValue: '意见反馈' }), path: '/operator/messages/feedback' },
+      { key: 'messagesDirect', label: t('adminUi.nav.items.messagesDirect', { defaultValue: '定向站内信' }), path: '/operator/messages/direct' },
+    ];
+  }
+
   const operatorAsset = ['/operator/avatars', '/operator/locations', '/operator/location-assets', '/operator/audio-library', '/operator/art-styles']
     .some((prefix) => starts(pathname, prefix));
   if (operatorAsset) {

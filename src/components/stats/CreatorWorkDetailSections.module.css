@@ -3,20 +3,20 @@
 .detailSection {
   --admin-text-soft: var(--color-text-secondary);
   --admin-accent: var(--color-primary);
-  --stat-surface: var(--color-surface);
-  --stat-surface-soft: var(--color-surface);
+  --stat-surface: var(--color-surface-2);
+  --stat-surface-soft: var(--color-surface-2);
   --stat-border: color-mix(in srgb, var(--color-text) 10%, transparent);
   --stat-text: color-mix(in srgb, var(--color-text) 88%, transparent);
   --stat-muted: var(--color-text-muted);
   --stat-accent: var(--color-primary);
   --stat-accent-deep: var(--color-primary-bold);
-  margin-top: 28px;
+  margin-top: 20px;
   color: var(--stat-text);
 }
 
 .sectionTitle {
   margin: 0;
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--color-text);
   letter-spacing: -0.02em;
@@ -24,7 +24,7 @@
 
 /* MetricTitleTip 挂在区块标题上时保持原 h2 视觉层级 */
 .sectionTitle > span:first-child {
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--color-text);
 }
@@ -72,16 +72,16 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* 功能注释：高峰时段用酒红墨渍高亮，与白底粉卡划清界限 */
+/* 功能注释：高峰时段酒红高亮；浅色字保证对比度 */
 .hourCellTop {
   background: linear-gradient(145deg, color-mix(in srgb, var(--color-primary) 55%, transparent) 0%, color-mix(in srgb, var(--color-primary) 95%, transparent) 100%);
   border-color: color-mix(in srgb, var(--color-primary-light) 28%, transparent);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 10%, transparent);
-  color: var(--color-primary-lighter);
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .hourCellTop strong {
-  color: var(--color-text);
+  color: #fff;
   font-size: 14px;
 }
 

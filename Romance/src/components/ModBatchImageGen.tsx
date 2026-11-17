@@ -184,7 +184,7 @@ export default function ModBatchImageGen({ rooms, maps, curMapId, imageGen, onAp
         <button type="button" className={pill} data-batch-toggle aria-expanded={open} onClick={() => setOpen((v) => !v)}>
           {open ? "收起批量生图" : "批量生图"}
         </button>
-        {!open && <span className="text-[11px] text-ink-soft">一次给多个地点 / 大地图补场景图（9:16），默认只补没图的</span>}
+        {!open && <span className="text-[11px] text-ink-soft">一次给多个地点或大地图补图，默认只补还没有图的</span>}
       </div>
 
       {open && (

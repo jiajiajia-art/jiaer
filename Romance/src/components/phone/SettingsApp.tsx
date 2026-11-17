@@ -8,7 +8,6 @@ import { IconChevron, IconGear, IconSun, IconMusic, IconClock, IconUser } from "
 import { PHONE_FRAMES, frameById, useWide, type FrameId } from "../Phone";
 import type { ThemePref } from "../../lib/store";
 import { liveTerm as T } from "../../mods/live";
-import { ReviewCenter } from "./studio/Studio";
 
 /* 界面主题风格（全站皮肤）：切换 <html> 上的 skin class。 */
 type SkinId = NonNullable<ThemePref["skin"]>;
@@ -324,7 +323,7 @@ function GeneralPage({ onBack, week, dateLabel }: { onBack: () => void; week: nu
 export default function SettingsApp({ onBack, prefs, onChange }: { onBack: () => void; prefs: Prefs; onChange: (p: Partial<Prefs>) => void }) {
   const wide = useWide();
   const { game, theme, setTheme } = useGame();
-  const [page, setPage] = useState<"root" | "wallpaper" | "frame" | "general" | "theme" | "review">("root");
+  const [page, setPage] = useState<"root" | "wallpaper" | "frame" | "general" | "theme">("root");
   const wp = resolveWallpaper(prefs.wallpaper, prefs.customWallpaper);
   const week = game!.sim.week ?? 1;
   const dateLabel = gameTimeLabel(game!).split(" ")[0] ?? "";
@@ -342,9 +341,6 @@ export default function SettingsApp({ onBack, prefs, onChange }: { onBack: () =>
   }
   if (page === "frame") return <FramePage current={prefs.frameColor} wpCss={wp.css} onPick={(id) => onChange({ frameColor: id })} onBack={() => setPage("root")} />;
   if (page === "theme") return <ThemeStylePage current={theme.skin} onPick={(skin) => setTheme({ ...theme, skin })} onBack={() => setPage("root")} />;
-  if (page === "review") return (
-    <div className="flex h-full flex-col bg-[#f2f2f7]"><SubHeader title="审核中心" onBack={() => setPage("root")} /><div className="relative min-h-0 flex-1 overflow-y-auto"><ReviewCenter /></div></div>
-  );
   if (page === "general") return <GeneralPage week={week} dateLabel={dateLabel} onBack={() => setPage("root")}  />;
 
   return (
@@ -373,16 +369,6 @@ export default function SettingsApp({ onBack, prefs, onChange }: { onBack: () =>
         {/* 显示与亮度 + 墙纸 + 声音 */}
         <div className="mt-4 overflow-hidden rounded-xl border border-black/5 bg-white mx-4">
           <Row icon={<IconSun size={16} />} tint="#0a84ff" label="深色模式" right={<Toggle on={prefs.dark} onChange={(v) => onChange({ dark: v })} />} />
-          <div className="flex items-center gap-3 bg-white px-3.5 py-2.5">
-            <span className="text-ink-soft"><IconSun size={16} /></span>
-            <input
-              type="range" min={55} max={100} value={Math.round(prefs.brightness * 100)}
-              onChange={(e) => onChange({ brightness: Number(e.target.value) / 100 })}
-              className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-black/10 accent-[#0a84ff]"
-              aria-label="亮度"
-            />
-            <span className="w-9 text-right text-[12px] tabular-nums text-ink-soft">{Math.round(prefs.brightness * 100)}%</span>
-          </div>
           <Row icon={<IconGear size={16} />} tint="#5856d6" label="墙纸" right={wp.label} onClick={() => setPage("wallpaper")} last={!wide} />
           {wide ? (
             <>
@@ -408,7 +394,6 @@ export default function SettingsApp({ onBack, prefs, onChange }: { onBack: () =>
 
         {/* 通用 */}
         <div className="mt-4 overflow-hidden rounded-xl border border-black/5 bg-white mx-4">
-          <Row icon={<IconGear size={16} />} tint="#3fb68b" label="审核中心" right="开发者工坊" onClick={() => setPage("review")} />
           <Row icon={<IconGear size={16} />} tint="#8e8e93" label="通用" onClick={() => setPage("general")} last />
         </div>
 

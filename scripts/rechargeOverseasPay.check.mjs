@@ -58,16 +58,19 @@ test('i18n_应有支付方式文案', () => {
   assert.match(zh, /"payOverseas":\s*"海外支付"/);
 });
 
-test('RechargeModal_PC默认微信并允许手动切换三种支付方式', () => {
+test('RechargeModal_海外IP才显示海外支付_大中华区仅微信支付宝', () => {
   assert.match(modal, /useGeoRegionStore/);
-  assert.match(modal, /setSelectedPayMethod\('wechat'\)/);
   assert.match(modal, /region\.payRegion/);
-  assert.match(modal, /\['wechat', 'alipay', 'overseas'\]/);
-  assert.match(modal, /isMiniProgramEnv\(\) \? \(\['wechat'\]/);
-  // 海外支付由开关控制，后端美元下单就绪前隐藏
-  assert.match(modal, /const OVERSEAS_PAY_ENABLED = (true|false);/);
-  assert.match(modal, /OVERSEAS_PAY_ENABLED \? \['wechat', 'alipay', 'overseas'\] : \['wechat', 'alipay'\]/);
+  assert.match(modal, /showOverseasPay/);
+  assert.match(modal, /availablePayMethods/);
+  // 功能注释：按 IP 区域露出海外支付，禁止国内 IP 也常驻「海外支付」按钮
+  assert.match(modal, /payRegion === 'overseas'/);
+  assert.match(modal, /showOverseasPay \? \['wechat', 'alipay', 'overseas'\] : \['wechat', 'alipay'\]/);
+  assert.match(modal, /if \(isMiniProgramEnv\(\)\) return \['wechat'\]/);
   assert.match(modal, /payMethodToggle/);
+  // 功能注释：自定义换算倍率不对玩家展示
+  assert.doesNotMatch(modal, /自定义按/);
+  assert.doesNotMatch(modal, /customAmountNotice/);
   const css = readFileSync(join(root, 'src/components/Purchase/RechargeModal.module.css'), 'utf8');
   assert.match(css, /\.payMethodToggle\s*\{/);
 });
@@ -87,13 +90,15 @@ test('RechargeModal_会员卡应能选择海外支付并复用统一下单函数
   assert.match(modal, /startWechatPay\(confirmed\.orderData, receipt\)/);
 });
 
-test('RechargeModal_应展示地区、订单摘要并适配移动端确认层', () => {
+test('RechargeModal_应展示地区并适配移动端确认层', () => {
   assert.match(modal, /currentPaymentRegion/);
-  assert.match(modal, /orderSummary/);
+  assert.match(modal, /regionMeta/);
+  // 功能注释：金额与商品写在支付按钮上，不再单独展示订单摘要
+  assert.doesNotMatch(modal, /orderSummary/);
   const css = readFileSync(join(root, 'src/components/Purchase/RechargeModal.module.css'), 'utf8');
   assert.match(css, /\.regionSummary\s*\{/);
+  assert.match(css, /\.regionMeta\s*\{/);
   assert.match(css, /\.rechargeTabs\s*\{/);
-  assert.match(css, /\.orderSummary\s*\{/);
   assert.match(css, /\.confirmationOverlay\s*\{/);
   assert.match(css, /@media\s*\(max-width:\s*768px\)[^]*\.confirmationPanel/s);
 });

@@ -36,7 +36,6 @@ const Phone = lazyPanel(() => import("./Phone"));
 const Finance = lazyPanel(() => import("./Finance"));
 const Works = lazyPanel(() => import("./Works"));
 import BreachDialog from "./BreachDialog";
-const AIConfigPanel = lazyPanel(() => import("./AIConfigPanel"));
 const WorldRulesPanel = lazyPanel(() => import("./WorldRulesPanel"));
 const WorldBookPanel = lazyPanel(() => import("./WorldBookPanel"));
 // 编辑器体积大、只有打开时才需要：按需加载，缩短首屏加载
@@ -66,7 +65,7 @@ import ScheduleBoard from "./ScheduleBoard";
 import { Chip, Modal, toneColor } from "./ui";
 import NewSpotImagePrompt from "./NewSpotImagePrompt";
 import { useConfirm } from "./EditorKit";
-import { IconBook, IconCamera, IconClose, IconFlag, IconHeart, IconMenu, IconMoon, IconMusic, IconPin, IconPlay, IconSave, IconScroll, IconSettings, IconSpark, IconSparkle, IconStar, IconSun, IconUser, IconWallet, IconClock } from "../lib/icons";
+import { IconBook, IconCamera, IconClose, IconFlag, IconHeart, IconMenu, IconMoon, IconMusic, IconPin, IconPlay, IconSave, IconScroll, IconSpark, IconSparkle, IconStar, IconSun, IconUser, IconWallet, IconClock } from "../lib/icons";
 import { Segments, CastRow } from "./StoryTab";
 import NewcomerCards from "./NewcomerCards";
 import BranchSheet from "./BranchSheet";
@@ -76,9 +75,23 @@ import FrameEditor, { FrameOverlay } from "./FrameDiy";
 import { topbarSummary } from "../lib/topbarDiy";
 import { defaultWorldBook } from "../game/worldbook";
 import { EntityProvider } from "./EntityText";
-import { listManualSaves, saveToSlot, deleteSlot, renameSlot, getSlot, MAX_SLOTS, AUTO_SLOT_ID, type SaveSlot, defaultTheme } from "../lib/store";
-import { syncCloudSaves } from "../lib/storage";
+import { listManualSaves, saveToSlot, deleteSlot, renameSlot, getSlot, AUTO_SLOT_ID, type SaveSlot, defaultTheme } from "../lib/store";
+import { syncCloudSaves, currentSaveGameId } from "../lib/storage";
 import CloudSaveStatus from "./CloudSaveStatus";
+import {
+  CLOUD_FREE_LIMIT,
+  CLOUD_MEMBER_LIMIT,
+  canCreateManualCloudSave,
+  cloudOffReason,
+  defaultCloudQuota,
+  getCloudQuota,
+  nearLimitMemberHint,
+  onCloudQuota,
+  openCloudLogin,
+  openCloudMembership,
+  refreshCloudQuota,
+  type CloudQuota,
+} from "../lib/cloudSaves";
 import { isAuthorPreview } from "../lib/authorPreview";
 import { homeMainQuest } from "../lib/homeMainQuest";
 import { dayDateLabel } from "../game/logic";
@@ -93,6 +106,7 @@ import { resolveCgImageFile } from "../game/cgImageStore";
 import { applyCgUnlocks, cgRevealBatch, hasCgMenu, latestCgDialogue } from "../lib/cgGallery";
 import { liveTerm as T } from "../mods/live";
 const GameTour = lazyPanel(() => import("./GameTour"));
+const PhoneTour = lazyPanel(() => import("./PhoneTour"));
 
 type Tab = MudTab;
 
@@ -656,7 +670,7 @@ function MenuRow({
 // 合并「养成/人物」后，本文件不再引用 CharacterTab（触发一次全量重转译，清除旧 HMR 残留）。
 export default function GameShell() {
   useEffect(() => { hookWorldBgm(); }, []);
-  const { game, cfg, theme, look, saveNow, loadState, endManually, popup, setPopup, retryPopup, busy, autosaveOn, setAutosaveOn, commitGame } = useGame();
+  const { game, theme, look, saveNow, loadState, endManually, popup, setPopup, retryPopup, busy, autosaveOn, setAutosaveOn, commitGame } = useGame();
   // 进入设了 BGM 的地点（含任意一层子地点）自动切歌；没设的地点不打断当前音乐
   const curRoom = game?.sim.room;
   // 地点 / RP 房间 BGM：进入自动播放；离开到没设 BGM 的地方，停止由场景开的那首
@@ -668,18 +682,7 @@ export default function GameShell() {
   const skinBgm = look.skin ? game?.skinBgm?.[look.skin] : undefined;
   useEffect(() => { if (skinBgm) void switchBgm(skinBgm); }, [skinBgm]);
   const [tab, setTab] = useState<Tab>("home");
-  // 剧情输出期间统一锁定：不能切去其他功能 / 手机聊天，看完这一段再行动
-  const busyRef = useRef(busy);
-  busyRef.current = busy;
-  const [lockTip, setLockTip] = useState(false);
-  const lockTimer = useRef<number | undefined>(undefined);
-  const flashLock = useCallback(() => {
-    setLockTip(true);
-    window.clearTimeout(lockTimer.current);
-    lockTimer.current = window.setTimeout(() => setLockTip(false), 1800);
-  }, []);
-  // 剧情开始书写时，若停在其他页签则收回剧情页，保证玩家看到正在发生的故事
-  useEffect(() => { if (busy) { setTab((t) => (t === "home" ? t : "home")); setPanelOpen(false); } }, [busy]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 功能注释：剧情生成中仍可切世界/人脉/手机/设置；只锁「行动输入 / 推进时间」，避免等模型时整页卡住
   const [setOpen, setSetOpen] = useState(false); // 设置弹窗
   const [cgOpen, setCgOpen] = useState(false); // 玩家 CG 图鉴
   const [cgEditOpen, setCgEditOpen] = useState(false); // 编辑器 · CG 编排
@@ -721,7 +724,6 @@ export default function GameShell() {
   useEffect(() => {
     const onNav = (e: Event) => {
       const dest = (e as CustomEvent<Tab>).detail;
-      if (busyRef.current && dest !== "home") { flashLock(); return; }
       // 「人物」以档案弹窗呈现；其余功能切到对应整屏界面（横屏则展开侧栏浮层）
       if (dest === "sim") { setSimOpen(true); return; }
       // 功能注释：顶栏状态行 / 主线条 → 任务主线弹窗，不整页切到剧情志
@@ -747,7 +749,6 @@ export default function GameShell() {
   }, [landscape]);
   const [saveMsg, setSaveMsg] = useState<"ok" | "fail" | null>(null);
   const [endOpen, setEndOpen] = useState(false);
-  const [cfgOpen, setCfgOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [finOpen, setFinOpen] = useState(false);
   const [worksOpen, setWorksOpen] = useState(false);
@@ -787,20 +788,20 @@ export default function GameShell() {
     if (hubReturn && !hubChildOpen && !editorOpen && !modsOpen) { setHubReturn(false); setEditorOpen(true); }
   }, [hubReturn, hubChildOpen, editorOpen, modsOpen]);
   const [savesOpen, setSavesOpen] = useState(false); // 存档管理
-  const [saves, setSaves] = useState<SaveSlot[]>([]); // 六个手动槽的当前内容
-  const [autoSlot, setAutoSlot] = useState<SaveSlot | null>(null); // 自动存档
+  const [saves, setSaves] = useState<SaveSlot[]>([]); // 当前作品手动槽
+  const [autoSlot, setAutoSlot] = useState<SaveSlot | null>(null); // 自动存档（不占配额）
   const [editId, setEditId] = useState<string | null>(null); // 正在重命名的槽 id
   const [editName, setEditName] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null); // 正在写入的槽（禁用按钮）
+  const [cloudQuota, setCloudQuota] = useState<CloudQuota | null>(() => getCloudQuota());
+  const [quotaGate, setQuotaGate] = useState<string | null>(null); // 满额说明弹层
   const [schedOpen, setSchedOpen] = useState(false); // 本周日程板（全局弹窗，可从任意页直接唤出）
   const [simOpen, setSimOpen] = useState(false); // 人物档案（点左上角头像唤出的弹窗）
   // 「世界」页场景里的「本周日程」入口直接派发事件唤出，无需先跳到人物页；关养成时忽略，避免仍弹出日程板
   useEffect(() => {
     const onSched = () => { if (worldGrowEnabled()) setSchedOpen(true); };
     window.addEventListener("star:navschedule", onSched);
-    const onAi = () => setCfgOpen(true);
-    window.addEventListener("star:openaicfg", onAi);
-    return () => { window.removeEventListener("star:navschedule", onSched); window.removeEventListener("star:openaicfg", onAi); };
+    return () => { window.removeEventListener("star:navschedule", onSched); };
   }, []);
   if (!game) return null;
 
@@ -827,40 +828,73 @@ export default function GameShell() {
       : {}),
   };
 
+  useEffect(() => onCloudQuota(setCloudQuota), []);
+
   const refreshSaves = async (pull = false) => {
-    // 功能注释：打开面板时先拉云端（换设备继续玩），存/删后只刷本机列表
-    if (pull) await syncCloudSaves();
+    // 功能注释：打开面板时先拉云端（换设备继续玩）并刷新账号级配额
+    const gameId = currentSaveGameId();
+    if (pull) {
+      await syncCloudSaves();
+      if (!cloudOffReason(gameId, isAuthorPreview())) await refreshCloudQuota(gameId).catch(() => undefined);
+    }
     const [manual, auto] = await Promise.all([listManualSaves(), getSlot(AUTO_SLOT_ID)]);
     setSaves(manual);
     setAutoSlot(auto);
+    setCloudQuota(getCloudQuota());
   };
-  const openSaves = () => { void refreshSaves().then(() => refreshSaves(true)); setEditId(null); setSavesOpen(true); };
-  // 立即存档：把当前进度刷入自动存档槽
+  const openSaves = () => { void refreshSaves().then(() => refreshSaves(true)); setEditId(null); setQuotaGate(null); setSavesOpen(true); };
+  // 立即存档：把当前进度刷入自动存档槽（不占 10/20）
   const quickSave = async () => {
+    if (cloudOffReason(currentSaveGameId(), isAuthorPreview())?.reason === "not-logged-in") {
+      setQuotaGate("请先登录后使用云存档");
+      return;
+    }
     const ok = await saveNow();
     setSaveMsg(ok ? "ok" : "fail");
     setTimeout(() => setSaveMsg(null), 1800);
     if (ok) void refreshSaves();
   };
-  // 存入 / 覆盖某个手动槽
+  // 存入 / 覆盖某个手动槽；新建受账号级 quota 预检，后端仍强校验
   const saveIntoSlot = async (id: string) => {
+    const off = cloudOffReason(currentSaveGameId(), isAuthorPreview());
+    if (off?.reason === "not-logged-in") {
+      setQuotaGate("请先登录后使用云存档");
+      return;
+    }
+    const overwrite = saves.some((s) => s.id === id);
+    const q = cloudQuota ?? getCloudQuota();
+    if (!canCreateManualCloudSave(q, overwrite)) {
+      const qq = q ?? defaultCloudQuota();
+      if (!qq.isMember && qq.used >= qq.freeLimit) {
+        setQuotaGate(`云存档已满（${qq.used}/${qq.limit}）。可覆盖已有槽，或开通会员扩容至 ${qq.memberLimit} 个。`);
+      } else if (qq.isMember) {
+        setQuotaGate(`云存档已满（${qq.used}/${qq.limit}），请删除或覆盖后再存。`);
+      } else if (qq.used > qq.freeLimit) {
+        setQuotaGate(`会员已到期，云存档上限恢复为 ${qq.freeLimit}；请删除多余存档或续费后再新建。`);
+      } else {
+        setQuotaGate(`云存档已满（${qq.used}/${qq.limit}），请删除或覆盖后再存。`);
+      }
+      return;
+    }
     setSavingId(id);
     const ok = await saveToSlot(id, game);
     setSavingId(null);
     setSaveMsg(ok ? "ok" : "fail");
     setTimeout(() => setSaveMsg(null), 1800);
-    if (ok) void refreshSaves();
+    if (ok) void refreshSaves(true);
   };
   const removeSlot = async (id: string) => {
     await deleteSlot(id);
-    void refreshSaves();
+    void refreshSaves(true);
   };
   const commitRename = async () => {
     if (editId) { await renameSlot(editId, editName); void refreshSaves(); }
     setEditId(null);
   };
-  // 六个固定槽位（顺序稳定），空槽显示为「可存入」
-  const SLOT_IDS = Array.from({ length: MAX_SLOTS }, (_, i) => `slot-${i + 1}`);
+  // 功能注释：展示位数量 = 当前云配额 limit（10/20）；无配额时按普通 10 展示
+  const quotaView = cloudQuota ?? defaultCloudQuota({ limit: CLOUD_FREE_LIMIT });
+  const SLOT_IDS = Array.from({ length: quotaView.limit }, (_, i) => `slot-${i + 1}`);
+  const memberHint = nearLimitMemberHint(quotaView);
 
   const tabNode = (t: Tab): ReactNode =>
     t === "home" ? <HomeTab /> : t === "sim" ? <SimTab /> : t === "image" ? (feature("imageCrisis") ? <ImageTab /> : null)
@@ -871,7 +905,6 @@ export default function GameShell() {
   /* 统一功能入口：世界 / 手机为常驻底页，其余（人物 / 形象 / 人脉 / 娱乐圈）一律封装为浮层弹窗。
    * 横屏沿用右侧侧栏浮层，竖屏改以居中弹窗呈现，菜单 / 底栏 / 跨页跳转皆走此分发。 */
   const openFeature = (t: Tab) => {
-    if (busy && t !== "home") { flashLock(); return; }
     if (t === "sim") { setSimOpen(true); return; }
     setTab(t);
     setSeen((p) => (p.has(t) ? p : new Set(p).add(t)));
@@ -944,7 +977,8 @@ export default function GameShell() {
         onMenu={() => setMenuOpen((v) => !v)}
         onEnd={() => setEndOpen(true)}
       >
-        {(game.attrDefs ?? []).some((d) => d.pin) && (
+        {/* 功能注释：小说布局已把 pin 主属性收进名牌副行，此处只留给非小说模式的可编辑状态条 */}
+        {!novelLayout && (game.attrDefs ?? []).some((d) => d.pin) && (
           <div className="flex gap-1.5 overflow-x-auto px-4 pb-1.5 [scrollbar-width:none]">
             {game.attrDefs!.filter((d) => d.pin).map((d) => {
               const v = game.player.attrs.find((a) => a.key === d.id)?.value ?? d.init;
@@ -964,15 +998,11 @@ export default function GameShell() {
       </TopbarView>
       )}
 
-      {lockTip && (
-        <div role="status" className="pointer-events-none fixed left-1/2 top-16 z-[90] -translate-x-1/2 animate-pop rounded-full bg-ink/90 px-4 py-2 text-[12.5px] font-medium text-paper shadow-lg">
-          剧情正在上演，看完这一段再行动
-        </div>
-      )}
-      {/* 线下剧情触发的来电：不在手机页时，顶部弹出提醒，点按去接听 */}
+      {/* 线下剧情触发的来电：不在手机页时，顶部弹出提醒，点按去接听（生成中也可进手机） */}
       {game.phone?.ringing && tab !== "phone" && (
         <button
-          onClick={() => { if (busy) { flashLock(); return; } setTab("phone"); setSeen((p) => (p.has("phone") ? p : new Set(p).add("phone"))); if (landscape) setPanelOpen(true); }}
+          type="button"
+          onClick={() => { setTab("phone"); setSeen((p) => (p.has("phone") ? p : new Set(p).add("phone"))); if (landscape) setPanelOpen(true); }}
           className="fixed left-1/2 top-3 z-[45] flex w-[min(22rem,calc(100vw-1.5rem))] -translate-x-1/2 animate-pop items-center gap-3 rounded-[22px] bg-[#1c2430]/92 px-3.5 py-2.5 text-left text-white shadow-[0_16px_40px_-12px_rgba(0,0,0,0.55)] ring-1 ring-white/10 backdrop-blur-xl"
         >
           <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#34c759]">
@@ -1077,11 +1107,6 @@ export default function GameShell() {
               </div>
               <div className="grid grid-cols-1 gap-1.5">
                 <MenuRow
-                  icon={IconSettings} label="AI 配置" romaji="MODEL" hint="接入模型 · API Key · 叙事引擎设置"
-                  onClick={() => { setCfgOpen(true); setMenuOpen(false); }}
-                  badge={cfg?.apiKey ? "已接入" : "未配置"} badgeTone={cfg?.apiKey ? "jade" : "muted"}
-                />
-                <MenuRow
                   icon={IconSparkle} label="游戏设置" romaji="OPTIONS" hint="暗色模式 · 界面皮肤 · 背景音乐 · 字体风格 · 屏幕方向"
                   onClick={() => { setSetOpen(true); setMenuOpen(false); }}
                 />
@@ -1111,8 +1136,9 @@ export default function GameShell() {
       </main>
 
       {/* 底部时辰盘 · 石牌导航 */}
-      <MudChrome tab={tab} setTab={openFeature} />
+      <MudChrome tab={tab} setTab={openFeature} seamlessTop={tab === "home"} />
       {!landscape && <GameTour active={tab === "home"} />}
+      <PhoneTour active={tab === "phone"} />
 
       {/* 支线剧场：点事件进入扣行程点，支线内行动不再扣 */}
       <BranchSheet />
@@ -1349,26 +1375,57 @@ export default function GameShell() {
         </Modal>
       )}
 
-      {/* AI 配置 */}
-      {cfgOpen && (
-        <Modal title="AI 配置" onClose={() => setCfgOpen(false)}>
-          <AIConfigPanel />
-        </Modal>
-      )}
-
-      {/* 存档管理：6 个手动存档位 + 自动存档 + 立即存档 */}
+      {/* 存档管理：云端正式档 · 账号级 10/20 手动位 · 自动档不占配额 */}
       {savesOpen && (
-        <Modal panelClassName="ui-dialog-game" title="存档管理" onClose={() => setSavesOpen(false)}>
-          {/* 当前进度 + 立即存档（写入自动存档槽） */}
+        <Modal panelClassName="ui-dialog-game" title="存档管理" onClose={() => { setSavesOpen(false); setQuotaGate(null); }}>
+          {/* 功能注释：标题区 — 身份角标 + 已用/上限 + 同步状态 */}
+          <div className="mb-3 rounded-2xl border border-line bg-paper-2/50 px-3.5 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[14px] font-bold text-ink">
+                云存档{" "}
+                <span className="tabular-nums text-ink-soft">
+                  已用 {quotaView.used} / {quotaView.limit}
+                </span>
+              </p>
+              <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ring-1 ${quotaView.isMember ? "bg-jade/12 text-jade-deep ring-jade/25" : "bg-ink-soft/10 text-ink-soft ring-line"}`}>
+                {quotaView.isMember ? "会员" : "普通"}
+              </span>
+              {!quotaView.isMember && (
+                <button type="button" className="ml-auto text-[11px] font-semibold text-jade hover:underline" onClick={() => openCloudMembership()}>
+                  扩容至 {CLOUD_MEMBER_LIMIT}
+                </button>
+              )}
+            </div>
+            <p className="mt-1 text-[11.5px] text-ink-soft">进度保存在云端，换设备可继续玩</p>
+            <CloudSaveStatus />
+            {memberHint ? <p className="mt-1 text-[11px] text-coral">{memberHint}</p> : null}
+          </div>
+
+          {quotaGate && (
+            <div className="mb-3 rounded-2xl border border-coral/40 bg-coral/[0.06] px-3.5 py-3" role="status">
+              <p className="text-[12.5px] leading-relaxed text-ink">{quotaGate}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {/登录/.test(quotaGate) ? (
+                  <button type="button" className="rounded-lg bg-jade px-3 py-1.5 text-xs font-bold text-white" onClick={() => openCloudLogin()}>去登录</button>
+                ) : null}
+                {/会员|扩容|续费|到期/.test(quotaGate) ? (
+                  <button type="button" className="rounded-lg bg-coral px-3 py-1.5 text-xs font-bold text-white" onClick={() => openCloudMembership()}>开通会员</button>
+                ) : null}
+                <button type="button" className="rounded-lg border border-line px-3 py-1.5 text-xs text-ink-soft" onClick={() => setQuotaGate(null)}>知道了</button>
+              </div>
+            </div>
+          )}
+
+          {/* 当前进度 → 写入自动存档（系统位） */}
           <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-dashed border-jade/50 bg-jade/[0.05] p-3.5">
             <div className="min-w-0">
               <p className="text-[13.5px] font-bold text-ink">当前进度</p>
               <p className="truncate text-[11.5px] text-ink-soft">{game.world.time} · {game.world.location} · 第 {game.turnCount} 回合</p>
-              {saveMsg === "ok" && <p className="mt-0.5 text-[11px] text-jade">已写入本地大容量存档</p>}
-              {saveMsg === "fail" && <p className="mt-0.5 text-[11px] text-danger">存档失败：本地存储不可用</p>}
-              <CloudSaveStatus />
+              {saveMsg === "ok" && <p className="mt-0.5 text-[11px] text-jade">已写入自动存档（不占配额）</p>}
+              {saveMsg === "fail" && <p className="mt-0.5 text-[11px] text-danger">存档失败</p>}
             </div>
             <button
+              type="button"
               onClick={() => void quickSave()}
               className="flex shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] px-4 py-2 text-[13px] font-semibold text-white shadow-[0_8px_20px_-8px_rgba(150,110,220,0.7)] transition hover:brightness-110"
             >
@@ -1376,21 +1433,22 @@ export default function GameShell() {
             </button>
           </div>
 
-          {/* 自动存档开关 + 读取自动存档 */}
+          {/* 自动存档：系统位 · 不占配额 */}
+          <p className="mb-2 px-0.5 text-[11px] font-bold tracking-[0.14em] text-ink-soft">自动存档（系统位 · 不占配额）</p>
           <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-line bg-paper p-3.5">
             <div className="min-w-0">
-              <p className="text-[13px] font-bold text-ink">自动存档</p>
               <p className="truncate text-[11px] text-ink-soft">
-                {autoSlot ? `${autoSlot.state.world.time} · 第 ${autoSlot.state.turnCount} 回合 · ${new Date(autoSlot.updatedAt).toLocaleString("zh-CN")}` : "每次行动后自动保存（防抖写入，不卡顿）"}
+                {autoSlot ? `${autoSlot.state.world.time} · 第 ${autoSlot.state.turnCount} 回合 · ${new Date(autoSlot.updatedAt).toLocaleString("zh-CN")}` : "每次行动后自动保存"}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               {autoSlot && (
-                <button onClick={() => { loadState(autoSlot.state); setSavesOpen(false); }} className="rounded-lg bg-jade px-3 py-1.5 text-xs font-medium text-paper-2 transition hover:brightness-110">
+                <button type="button" onClick={() => { loadState(autoSlot.state); setSavesOpen(false); }} className="rounded-lg bg-jade px-3 py-1.5 text-xs font-medium text-paper-2 transition hover:brightness-110">
                   读取
                 </button>
               )}
               <button
+                type="button"
                 onClick={() => setAutosaveOn(!autosaveOn)}
                 aria-pressed={autosaveOn}
                 className={`relative h-6 w-11 shrink-0 rounded-full transition ${autosaveOn ? "bg-jade" : "bg-line"}`}
@@ -1400,9 +1458,11 @@ export default function GameShell() {
             </div>
           </div>
 
-          {/* 6 个手动存档位 */}
-          <p className="mb-2 px-0.5 text-[11px] font-bold tracking-[0.18em] text-ink-soft">手动存档位 · 共 {MAX_SLOTS} 位</p>
-          <div className="space-y-2">
+          <p className="mb-2 px-0.5 text-[11px] font-bold tracking-[0.14em] text-ink-soft">
+            手动云存档 · 共 {quotaView.limit} 位
+            <span className="ml-1 font-medium tracking-normal text-ink-soft/70">（全账号共用，含其他作品）</span>
+          </p>
+          <div className="max-h-[42vh] space-y-2 overflow-y-auto pr-0.5">
             {SLOT_IDS.map((id, i) => {
               const sv = saves.find((s) => s.id === id);
               const cur = !!sv && sv.state.id === game.id;
@@ -1437,6 +1497,7 @@ export default function GameShell() {
                   </div>
                   <div className="mt-2.5 flex flex-wrap justify-end gap-1.5">
                     <button
+                      type="button"
                       disabled={busySlot}
                       onClick={() => void saveIntoSlot(id)}
                       className="rounded-lg bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] px-3 py-1.5 text-xs font-medium text-white transition hover:brightness-110 disabled:opacity-50"
@@ -1445,13 +1506,13 @@ export default function GameShell() {
                     </button>
                     {sv && (
                       <>
-                        <button onClick={() => { loadState(sv.state); setSavesOpen(false); }} className="rounded-lg bg-jade px-3 py-1.5 text-xs font-medium text-paper-2 transition hover:brightness-110">
+                        <button type="button" onClick={() => { loadState(sv.state); setSavesOpen(false); }} className="rounded-lg bg-jade px-3 py-1.5 text-xs font-medium text-paper-2 transition hover:brightness-110">
                           读取存档
                         </button>
-                        <button onClick={() => { setEditId(id); setEditName(sv.name); }} className="rounded-lg border border-line px-2.5 py-1.5 text-xs text-ink-soft transition hover:border-jade hover:text-jade-deep">
+                        <button type="button" onClick={() => { setEditId(id); setEditName(sv.name); }} className="rounded-lg border border-line px-2.5 py-1.5 text-xs text-ink-soft transition hover:border-jade hover:text-jade-deep">
                           重命名
                         </button>
-                        <button onClick={() => void removeSlot(id)} className="rounded-lg border border-line px-2.5 py-1.5 text-xs text-ink-soft transition hover:border-danger hover:text-danger">
+                        <button type="button" onClick={() => void removeSlot(id)} className="rounded-lg border border-line px-2.5 py-1.5 text-xs text-ink-soft transition hover:border-danger hover:text-danger">
                           删除
                         </button>
                       </>

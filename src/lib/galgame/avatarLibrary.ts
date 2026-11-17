@@ -1,4 +1,4 @@
-/** 头像库：三维标签 + 匹配优先级（与后端 avatarLibraryService 对齐） */
+/** 头像库：标签（性别·年龄·背景·风格包）+ 匹配优先级（与后端 avatarLibraryService 对齐） */
 
 /** 角色匹配性别（男/女）；头像资产另含 universal */
 export const AVATAR_GENDERS = Object.freeze([
@@ -27,6 +27,13 @@ export const AVATAR_BACKGROUNDS = Object.freeze([
   { id: 'fantasy', label: '西幻' },
 ] as const);
 
+/** 平台默认风格包（运营可在配置管理新增/改名） */
+export const AVATAR_STYLE_PACKS = Object.freeze([
+  { id: 'anime', label: '二次元' },
+  { id: 'realistic', label: '写实' },
+  { id: 'ink', label: '水墨' },
+] as const);
+
 export const AVATAR_KINDS = Object.freeze([
   { id: 'private', label: '私人' },
   { id: 'public', label: '公共' },
@@ -37,11 +44,14 @@ export type AvatarGenderId = (typeof AVATAR_GENDERS)[number]['id'];
 export type AvatarAssetGenderId = (typeof AVATAR_ASSET_GENDERS)[number]['id'];
 export type AvatarAgeGroupId = (typeof AVATAR_AGE_GROUPS)[number]['id'];
 export type AvatarBackgroundId = (typeof AVATAR_BACKGROUNDS)[number]['id'];
+export type AvatarStylePackId = (typeof AVATAR_STYLE_PACKS)[number]['id'];
 export type AvatarKindId = (typeof AVATAR_KINDS)[number]['id'];
+
+export type AvatarTagDimension = 'age_group' | 'background_type' | 'style_pack' | string;
 
 export type AvatarTagOption = {
   id: string;
-  dimension: 'age_group' | 'background_type' | string;
+  dimension: AvatarTagDimension;
   label: string;
   sortOrder?: number;
   status?: 'active' | 'disabled' | string;
@@ -72,6 +82,8 @@ export type AvatarLibraryItem = {
   gender: string;
   ageGroup: string;
   backgroundType: string;
+  /** 风格包；公共/系统入库必填 */
+  stylePack?: string;
   imageUrl: string;
   thumbUrl?: string;
   originalUrl?: string;
@@ -114,20 +126,28 @@ export function avatarBackgroundLabel(id: string, options?: readonly AvatarTagOp
   return AVATAR_BACKGROUNDS.find((x) => x.id === id)?.label || id || '—';
 }
 
+export function avatarStylePackLabel(id: string, options?: readonly AvatarTagOption[]): string {
+  if (!id) return '未分类';
+  const fromOpts = options?.find((x) => x.dimension === 'style_pack' && x.id === id)?.label;
+  if (fromOpts) return fromOpts;
+  return AVATAR_STYLE_PACKS.find((x) => x.id === id)?.label || id || '未分类';
+}
+
 export function avatarKindLabel(id: string): string {
   return AVATAR_KINDS.find((x) => x.id === id)?.label || id || '—';
 }
 
 /**
- * 功能注释：管理端网格卡副文案——性别 · 背景（历史停用标签仍可读展示）。
+ * 功能注释：管理端网格卡副文案——风格 · 性别 · 背景（历史停用标签仍可读展示）。
  */
 export function formatAvatarCardSummary(
-  item: Pick<AvatarLibraryItem, 'gender' | 'backgroundType'>,
+  item: Pick<AvatarLibraryItem, 'gender' | 'backgroundType' | 'stylePack'>,
   options?: readonly AvatarTagOption[],
 ): string {
+  const style = avatarStylePackLabel(item.stylePack || '', options);
   const gender = avatarGenderLabel(item.gender);
   const background = avatarBackgroundLabel(item.backgroundType, options);
-  return `${gender} · ${background}`;
+  return `${style} · ${gender} · ${background}`;
 }
 
 /** 功能注释：标题优先用户填写；否则用序号占位，对齐线框「头像 01」。 */
@@ -144,7 +164,7 @@ export function resolveAvatarCardTitle(
 /** 功能注释：把后台选项转成分段控件；无数据时回落平台默认 */
 export function tagOptionsToSeg(
   options: readonly AvatarTagOption[] | undefined,
-  dimension: 'age_group' | 'background_type',
+  dimension: AvatarTagDimension,
   fallback: readonly { id: string; label: string }[],
 ): { id: string; label: string }[] {
   const active = (options || [])

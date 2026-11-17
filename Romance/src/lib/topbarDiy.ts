@@ -87,6 +87,16 @@ export type TopbarDiy = {
   customCss?: string;
 };
 
+/** 功能注释：作者 pin 的顶栏主属性（名下胶囊，最多 2 个） */
+export type TopbarHeroAttr = {
+  id: string;
+  label: string;
+  icon?: string;
+  /** 已拼好的展示串：档名 / 数值 / 档名·数值 */
+  text: string;
+  color?: string;
+};
+
 /* 顶栏要显示的数据（由游戏状态算出；预览时用示例数据） */
 export type TopbarData = {
   name: string;
@@ -106,6 +116,8 @@ export type TopbarData = {
   apLow?: boolean;
   daysLeft?: number;
   world: string;
+  /** 功能注释：作者配置的顶栏主属性（最多 2；小说布局占原日期胶囊位） */
+  heroAttrs?: TopbarHeroAttr[];
   /** 功能注释：当前主线步骤文案（作者预览顶栏只显示这一项） */
   questStep?: string;
   /** 功能注释：小说模式主线展开详情 */
@@ -122,7 +134,14 @@ export type TopbarData = {
 export const SAMPLE_TOPBAR_DATA: TopbarData = {
   name: "叶见月", age: 22, initial: "叶", week: "第 01 周", weekNum: "01", date: "2005.01.03 周一", time: "第 1 周 · 2005.01.03 周一",
   location: "星城 · 梧桐里", weather: "晴", money: "¥0.5万", ap: 3, apMax: 5, daysLeft: 365, world: "星城",
+  heroAttrs: [
+    { id: "sample_fame", label: "名气", text: "新锐", color: "coral" },
+    { id: "sample_mood", label: "心境", text: "平稳", color: "jade" },
+  ],
 };
+
+/** 功能注释：顶栏主属性槽上限（小说名下胶囊） */
+export const TOPBAR_HERO_ATTR_LIMIT = 2;
 
 export const MODULE_KEYS: TopbarModuleKey[] = ["week", "date", "location", "weather", "money", "days", "ap"];
 export const MODULE_LABELS: Record<TopbarModuleKey, string> = {

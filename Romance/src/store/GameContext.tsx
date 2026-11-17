@@ -44,6 +44,7 @@ import { syncWorldRules, ruleOf } from "../game/worldRules";
 import { worldRuleLabel } from "../game/data";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { tickBirthdays, tickPlayerAge } from "../lib/npcIdentity";
+import { healGameNpcsNames } from "../lib/personName";
 import { canPay, shortOf } from "../game/logic";
 import {
   applyStep,
@@ -111,7 +112,7 @@ import {
 import { gossipTick, kbOf, remember } from "../game/npcKnowledge";
 import { findNpc } from "../lib/npcIdentity";
 import { meetPerson, withNewcomers } from "../game/npcIntro";
-import { addAutoSpot, isFormalPlaceName } from "../lib/newLocation";
+import { addAutoSpot, isArrivalBoilerplate, isFormalPlaceName } from "../lib/newLocation";
 import { preloadPlatformAvatarPools } from "../lib/avatarPreload";
 import { drawProfileAvatar } from "../game/avatarPools";
 import { getWorldNpcs } from "../mods/registry";
@@ -465,7 +466,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
     // 功能注释：读档进局同样默认竖屏；局内改横屏只在本会话生效，下次进来仍竖屏
     const g0 = syncSimToPlayer(ensureLoveAxis(ensureSim(s)));
-    const g = { ...g0, playPrefs: { ...g0.playPrefs, orient: "portrait" as const } };
+    // 功能注释：旧档里职业当姓名的 NPC 读档时自愈为有姓有名
+    const healedNpcs = healGameNpcsNames(g0.npcs);
+    const g = {
+      ...g0,
+      npcs: healedNpcs.npcs,
+      playPrefs: { ...g0.playPrefs, orient: "portrait" as const },
+    };
     syncFactions(g);
     syncEngineRules(g);
     setTheme({ ...themeRef.current, orient: "portrait", orientLock: false });
@@ -499,6 +506,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (screenRef.current === "game") runAudioCmds(s0.id, s0.sim.audioQ);
       s0 = { ...s0, sim: { ...s0.sim, audioQ: undefined } };
     }
+    // 功能注释：职业占位名（烤红薯摊主等）自愈为有姓有名，旧称呼进 identity/aliases
+    {
+      const healed = healGameNpcsNames(s0.npcs);
+      if (healed.healedCount) s0 = { ...s0, npcs: healed.npcs };
+    }
     // 主线复盘：与上一次落盘比较，自动记下关键变动；每回合第一条附带检查点（可回溯 / 开平行分支）
     syncEngineRules(s0);
     // 功能注释：玩法数值绑定——名气/口碑/黑粉/体能与作者建角属性双向同步（同一存档才比较前后，否则以建角属性为准）
@@ -518,6 +530,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (cp) void writeCheckpoint(cp, s);
     return true;
   }, []);
+
+  // 功能注释：局内一旦发现职业占位名，立刻自愈并落盘，资料卡不再显示「烤红薯摊主」当姓名
+  useEffect(() => {
+    const cur = gameRef.current;
+    if (!cur?.npcs?.length) return;
+    const healed = healGameNpcsNames(cur.npcs);
+    if (healed.healedCount) persist({ ...cur, npcs: healed.npcs });
+  }, [game?.id, game?.npcs?.length, persist]);
 
   // 功能注释：开局预拉平台头像库；之后把 AI 新建、还没头像的人物（非作者预设）按性别年龄套用平台头像
   useEffect(() => {
@@ -2336,13 +2356,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const head = `${plan.explore ? "你摸索着来到" : "你来到"}${locName}（${via}${cost}）。${plan.explore ? "这处地方在地图上点亮了。" : ""}`;
     // 首次踏入触发一次性场景剧情（内容池提供），随抵达一并呈现
     const intro = firstArrival ? introOf(roomId) : undefined;
-    // 功能注释：抵达后必须有地点可读描写；无 intro 时用地点 desc / 在场人补一段，禁止只剩系统句（3.5）
+    // 功能注释：抵达后正文要有可读描写；「你来到了「X」」样板句只进 AI 提示词，不进玩家可见正文（3.5）
     const descFlavor = (() => {
       if (intro) return undefined;
       const fromSpot = spotDesc(g, roomId)?.trim();
       const fromRoom = (roomDesc(roomId) || "").trim();
       const raw = fromSpot || fromRoom || "";
-      if (raw && !/新地点/.test(raw)) return raw;
+      if (raw && !/新地点/.test(raw) && !isArrivalBoilerplate(raw, locName) && !isArrivalBoilerplate(raw)) return raw;
       const present = mobsHere({ ...moved, mobs: beat.mobs }, roomId, g.npcs)
         .filter((p) => p.present)
         .map((p) => p.name)

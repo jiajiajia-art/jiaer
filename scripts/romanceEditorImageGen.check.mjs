@@ -46,7 +46,10 @@ test('editorImagePrompts_人物主体只写外观_不混关系剧情小传_缺�
   });
   assert.match(withLook.subject, /灰白短发/);
   assert.doesNotMatch(withLook.subject, /后厨掌勺|房东|关系|小传/);
-  assert.match(withLook.subject, /1:1/);
+  // 功能注释：构图收尾句进 framing，不进可编辑主体
+  assert.match(withLook.framing || '', /1:1/);
+  assert.doesNotMatch(withLook.subject, /1:1/);
+  assert.match(mod.composePositivePrompt(withLook), /1:1/);
 
   // 缺 appearancePrompt：性别 + 年龄搭脚手架，发型/面容/衣着留给创作者
   const scaffold = mod.buildNpcAvatarPromptParts({ gender: '男', age: 17 });
@@ -75,8 +78,8 @@ test('editorImagePrompts_地点只用画面描述_不用进入叙事desc_大地�
   });
   assert.match(scene.subject, /旅馆前院/);
   assert.match(scene.subject, /石板路/);
-  assert.match(scene.subject, /9:16/);
-  assert.doesNotMatch(scene.subject, /你推门而入|不安|老板娘/);
+  assert.match(scene.framing || '', /9:16/);
+  assert.doesNotMatch(scene.subject, /9:16|你推门而入|不安|老板娘/);
   assert.equal(mod.buildLocationScenePromptParts({}).subject, '');
   assert.equal(mod.buildLocationScenePrompt({}), '');
 
@@ -84,7 +87,8 @@ test('editorImagePrompts_地点只用画面描述_不用进入叙事desc_大地�
   assert.match(map.subject, /皇宫/);
   assert.match(map.subject, /寝宫/);
   assert.match(map.subject, /御花园/);
-  assert.match(map.subject, /9:16/);
+  assert.match(map.framing || '', /9:16/);
+  assert.doesNotMatch(map.subject, /9:16/);
   // 功能注释：空输入仍给出「按设定补分区」脚手架，不再返回空串
   assert.match(mod.buildWorldMapPromptParts({}).subject, /按设定补分区/);
 
@@ -95,7 +99,8 @@ test('editorImagePrompts_地点只用画面描述_不用进入叙事desc_大地�
   });
   assert.match(cover.subject, /继承故事/);
   assert.match(cover.subject, /黑色长发/);
-  assert.match(cover.subject, /9:16/);
+  assert.match(cover.framing || '', /9:16/);
+  assert.doesNotMatch(cover.subject, /9:16/);
   // 功能注释：作品名不写进画面；标题文字进负面词
   assert.doesNotMatch(cover.subject, /雾色旅馆/);
   assert.match(cover.negative, /标题文字/);
@@ -133,14 +138,15 @@ test('editorImagePrompts_请求尺寸与提示词构图一致_头像方图_场�
   assert.equal(mod.WORK_COVER_GEN_SIZE, portrait.SCENE_PORTRAIT_GEN_SIZE);
   assert.equal(portrait.SCENE_PORTRAIT_GEN_SIZE, '1080x1920');
   const avatar = mod.buildNpcAvatarPromptParts({ gender: '女', age: 20, appearancePrompt: '长发' });
-  assert.match(avatar.subject, /1:1/);
-  assert.doesNotMatch(avatar.subject, /9:16/);
-  for (const subject of [
-    mod.buildLocationScenePromptParts({ name: 'A', scenePrompt: 'x' }).subject,
-    mod.buildWorldMapPromptParts({ name: 'M' }).subject,
-    mod.buildWorkCoverPromptParts({ summary: 's' }).subject,
+  assert.match(avatar.framing || '', /1:1/);
+  assert.doesNotMatch(avatar.subject, /1:1|9:16/);
+  for (const parts of [
+    mod.buildLocationScenePromptParts({ name: 'A', scenePrompt: 'x' }),
+    mod.buildWorldMapPromptParts({ name: 'M' }),
+    mod.buildWorkCoverPromptParts({ summary: 's' }),
   ]) {
-    assert.match(subject, /9:16/);
+    assert.match(parts.framing || '', /9:16/);
+    assert.doesNotMatch(parts.subject, /9:16/);
   }
 });
 
@@ -199,8 +205,8 @@ test('AiImageGen_默认编辑页再开始生成_仍走platformImageGen', () => {
   assert.match(gen, /使用这张图/);
   assert.match(gen, /参考图/);
   assert.match(gen, /MAX_REFS = 2/);
-  assert.match(gen, /取消生成/);
-  assert.match(gen, /生成中不可修改/);
+  assert.match(gen, />\s*取消\s*</);
+  assert.match(gen, /本张主体 · 生成中不可改|生成中不可改/);
   assert.match(gen, /referenceImages: refs/);
   // 功能注释：兼容旧 props，但默认不得自动开跑
   assert.match(gen, /autoRun = false/);
@@ -219,17 +225,22 @@ test('AiImageGen_三层可编辑_正向画风加主体_负面词单独传_重绘
   assert.match(gen, /选画风/);
   assert.doesNotMatch(gen, /画风词|styleText|setPrepTab\("styleText"\)/);
   assert.match(gen, /grid-cols-2/);
-  assert.match(gen, /本张主体 · 只写这一张/);
+  assert.match(gen, /本张主体/);
+  assert.doesNotMatch(gen, /本张主体 · 只写这一张/);
   const picker = read('components/ArtStylePicker.tsx');
   assert.match(picker, /grid-cols-3/);
   assert.doesNotMatch(picker, /preview\.prompt\}/);
-  assert.match(gen, /负面词 · 不想出现的内容/);
-  assert.match(gen, /composePositivePrompt\(\{ style, subject \}\)/);
+  // 功能注释：画风芯片不再挂放大镜预览弹层，只保留点选
+  assert.doesNotMatch(picker, /示例大图|createPortal|setPreview/);
+  assert.doesNotMatch(picker, /用这个画风/);
+  // 功能注释：负面词随画风静默合并，可不对创作者露出编辑框文案
+  assert.match(gen, /负面词|negative/);
+  assert.match(gen, /composePositivePrompt\(\{ style, subject, framing \}\)/);
   assert.match(gen, /negativePrompt: negative\.trim\(\) \|\| undefined/);
   assert.match(gen, /onPartsCommit/);
   // 功能注释：参考图初始值取 initialRefs 前 MAX_REFS 张，创作者可移除
   assert.match(gen, /useState<string\[\]>\(\(\) => \(initialRefs \?\? \[\]\)\.filter\(Boolean\)\.slice\(0, MAX_REFS\)\)/);
-  assert.match(gen, /已默认带入当前图，可移除/);
+  assert.match(gen, /已带入当前头像|可点「移除」|创作者可点/);
 });
 
 test('ImagePicker_透传三层与初始参考图', () => {

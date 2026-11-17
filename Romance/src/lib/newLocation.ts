@@ -25,6 +25,17 @@ export function spotDescFor(name: string, aiDesc?: string): string {
   return `你来到了「${name}」。`;
 }
 
+/**
+ * 功能注释：「你来到了「地名」。」是提示词用的进入脚手架，不是给玩家看的正文。
+ * 整句命中（含无书名号变体）视为样板句，界面应隐藏。
+ */
+export function isArrivalBoilerplate(text: string | undefined | null, placeName?: string): boolean {
+  const t = (text ?? "").trim();
+  if (!t) return false;
+  const esc = (placeName ?? ".+?").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^你来到了[「"']?${esc}[」"']?[。.!！…]*$`).test(t);
+}
+
 /** 自建地点 id：按地名生成稳定短哈希，同名只会得到同一 id（同日 / 同名只建一次） */
 export function customSpotIdFor(name: string): string {
   let h = 0;

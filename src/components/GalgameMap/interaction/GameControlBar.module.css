@@ -6,10 +6,12 @@
   width: 100%;
   padding: 1rem; /* 12px 16px */
   padding-right: 6.25rem; /* 100px */
-  padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); /* max(12px, env(...)) */
+  padding-bottom: max(0.85rem, env(safe-area-inset-bottom, 0px));
   display: flex;
+  align-items: center;
   gap: 1.25rem; /* 20px */
   overflow-x: auto;
+  overflow-y: visible;
   z-index: 3100; /* 提到最上层，确保在设置/历史弹窗之上可见 */
   box-sizing: border-box;
   -ms-overflow-style: none;
@@ -32,15 +34,15 @@
   flex-shrink: 0;
   width: 2.625rem; /* 42px */
   height: 2.625rem; /* 42px */
-  background: color-mix(in srgb, var(--color-text) 10%, transparent);
+  background: color-mix(in srgb, var(--color-on-media) 14%, transparent);
   backdrop-filter: blur(0.625rem); /* 10px */
   -webkit-backdrop-filter: blur(0.625rem); /* 10px */
   border-radius: 0.75rem; /* 12px */
   transform: rotate(45deg);
   position: relative;
   overflow: hidden;
-  border: 0.0625rem solid color-mix(in srgb, var(--color-text) 20%, transparent); /* 1px */
-  box-shadow: 0 0.125rem 0.5rem color-mix(in srgb, var(--color-shadow) 10%, transparent); /* 0 2px 8px */
+  border: 0.0625rem solid color-mix(in srgb, var(--color-on-media) 28%, transparent);
+  box-shadow: 0 0.125rem 0.5rem color-mix(in srgb, var(--color-shadow) 28%, transparent);
   transition: all 0.3s ease;
 }
 
@@ -57,9 +59,9 @@
 .buttonItemDisabled {
   pointer-events: none;
   /* 禁用状态下恢复为普通按钮样式，不使用激活状态的红色 */
-  background: color-mix(in srgb, var(--color-text) 10%, transparent);
-  border-color: color-mix(in srgb, var(--color-text) 20%, transparent);
-  box-shadow: 0 0.125rem 0.5rem color-mix(in srgb, var(--color-shadow) 10%, transparent);
+  background: color-mix(in srgb, var(--color-on-media) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-on-media) 18%, transparent);
+  box-shadow: 0 0.125rem 0.5rem color-mix(in srgb, var(--color-shadow) 20%, transparent);
 }
 
 .buttonItemDisabled .buttonInner {
@@ -69,7 +71,7 @@
 .buttonItemDisabled .buttonInner span,
 .buttonItemDisabled .buttonInner svg {
   opacity: 0.5;
-  color: var(--color-text-secondary);
+  color: color-mix(in srgb, var(--color-on-media) 70%, transparent);
 }
 
 .buttonItem .buttonInner {
@@ -78,7 +80,7 @@
   padding: 0;
   border: none;
   border-radius: 0.75rem; /* 12px */
-  color: var(--color-text);
+  color: var(--color-on-media);
   font-size: 0.75rem; /* 12px */
   cursor: pointer;
   transition: all 0.3s ease;
@@ -113,9 +115,9 @@
 
 @media (max-width: 768px) {
   .buttonContainer {
-    padding: 0.625rem 1.125rem; /* 10px 18px */
+    padding: 0.75rem 1.125rem;
     padding-right: 5.625rem; /* 90px */
-    padding-bottom: max(0.625rem, env(safe-area-inset-bottom)); /* max(10px, env(...)) */
+    padding-bottom: max(0.85rem, env(safe-area-inset-bottom, 0px));
     gap: 1rem; /* 16px */
     margin-bottom: 0;
   }

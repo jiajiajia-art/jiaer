@@ -29,10 +29,41 @@ import {
 import { useExternalLinkCopyModal } from '../hooks/useExternalLinkCopyModal';
 import { useTranslation } from 'react-i18next';
 
-/** 功能注释：活动中心 Tab 图标对齐效果图（热门火焰 / 我的投稿文档） */
-const HOME_ICON_BASE = `${import.meta.env.BASE_URL}data/assetsv2/home`;
-const ICON_HOT = `${HOME_ICON_BASE}/icon_hot.webp`;
-const ICON_MY_SUBMISSIONS = `${HOME_ICON_BASE}/icon_my_submissions.webp`;
+/** 功能注释：活动中心 Tab 用内联 SVG，跟随 currentColor，避免 webp 发糊发灰 */
+const TabHotIcon = () => (
+    <svg className={styles.tabIcon} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path
+            fill="currentColor"
+            d="M12.2 2.1c.3 2.1-.2 3.8-1.4 5.2-1 1.2-1.5 2.3-1.3 3.6.2 1.3 1.1 2.3 2.3 2.9-.9-.1-1.8.2-2.4 1-.7.9-.8 2.1-.3 3.2.7 1.6 2.3 2.7 4.1 2.8 2.6.1 4.8-1.9 5-4.5.2-2.8-1.1-4.6-2.5-6.2-1.1-1.3-2.1-2.6-1.9-4.4.1-.7.4-1.4.8-2.1-.8.3-1.6.8-2.4 1.5z"
+        />
+        <path
+            fill="currentColor"
+            opacity="0.55"
+            d="M12.1 13.2c.7-.1 1.3.2 1.7.8.5.7.5 1.7 0 2.5-.5.8-1.4 1.2-2.3 1.1-.8-.1-1.5-.7-1.7-1.5-.1-.5 0-1 .3-1.4.4-.6 1.1-.9 2-.9z"
+        />
+    </svg>
+);
+
+const TabSubmissionIcon = () => (
+    <svg className={styles.tabIcon} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M8 3.5h5.2L18 8.3V20a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 7 20V5a1.5 1.5 0 0 1 1-1.5z"
+        />
+        <path
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M13 3.5V8h4.5M9.5 12.5h5M9.5 16h5"
+        />
+    </svg>
+);
 
 type PromotionTab = 'activities' | 'submissions';
 type SubmissionDraftPayload = {
@@ -541,7 +572,7 @@ const PromotionCenter: React.FC = () => {
                         className={`${styles.tabButton} ${activeTab === 'activities' ? styles.tabButtonActive : ''}`}
                         onClick={() => setActiveTab('activities')}
                     >
-                        <img src={ICON_HOT} alt="" className={styles.tabIcon} />
+                        <TabHotIcon />
                         {t('promotion.hotActivities')}
                     </button>
                     <button
@@ -549,7 +580,7 @@ const PromotionCenter: React.FC = () => {
                         className={`${styles.tabButton} ${activeTab === 'submissions' ? styles.tabButtonActive : ''}`}
                         onClick={() => setActiveTab('submissions')}
                     >
-                        <img src={ICON_MY_SUBMISSIONS} alt="" className={styles.tabIcon} />
+                        <TabSubmissionIcon />
                         {t('promotion.mySubmissions')}
                     </button>
                 </div>

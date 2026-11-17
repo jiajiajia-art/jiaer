@@ -67,24 +67,30 @@ export default function ModWorldBookEditor({ value, onChange, npcs = [], rooms =
   };
 
   return (
-    <div className="space-y-2">
-      <p className="text-[11px] leading-relaxed text-ink-soft">
-        一条设定写一遍即可（名称 · 正文 · 关键词）。必须挂本作品的地点或人物：玩家在该地点、该人物在场，或正文提到关键词时，才发给 AI。
-        始终生效的铁律请写进「①基础 · 剧本基调」。
+    <div className="space-y-2.5">
+      {/* 功能注释：创作向导里由 CSS 隐藏冗长说明，局内编辑器仍可见 */}
+      <p className="wg-field-help text-[11px] leading-relaxed text-ink-soft">
+        一条设定写一遍即可。挂上地点或人物后，玩家在场或正文提到关键词时才发给 AI；全局铁律请写进「①基础 · 剧本基调」。
       </p>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         <button className={btn} onClick={() => { const e = blankWorldBookEntry((list[list.length - 1]?.order ?? 90) + 10); commit([...list, e]); setOpen(e.id); }}>＋ 添加条目</button>
-        <button className={btn} onClick={() => file.current?.click()}>导入 JSON</button>
-        <button className={btn} disabled={!list.length} onClick={() => {
-          const url = URL.createObjectURL(new Blob([JSON.stringify(list, null, 2)], { type: "application/json" }));
-          Object.assign(document.createElement("a"), { href: url, download: "worldbook.json" }).click();
-          URL.revokeObjectURL(url);
-        }}>导出</button>
+        <span className="wg-json-io inline-flex flex-wrap gap-1.5">
+          <button className={btn} onClick={() => file.current?.click()}>导入</button>
+          <button className={btn} disabled={!list.length} onClick={() => {
+            const url = URL.createObjectURL(new Blob([JSON.stringify(list, null, 2)], { type: "application/json" }));
+            Object.assign(document.createElement("a"), { href: url, download: "worldbook.json" }).click();
+            URL.revokeObjectURL(url);
+          }}>导出</button>
+        </span>
         <input ref={file} type="file" accept="application/json,.json" hidden onChange={(e) => importFile(e.target.files?.[0])} />
       </div>
       {err && <p className="text-[11px] text-coral">{err}</p>}
       {list.length > 0 && <AuditBar issues={audit.issues.filter((x) => x.at?.startsWith("wb:"))} onJump={(at) => setOpen(at.slice(3))} />}
-      {!list.length && <p className="rounded-lg border border-dashed border-line px-3 py-4 text-center text-[12px] text-ink-soft">暂无条目 · 适合地图规则、势力背景、节日习俗、禁忌话题等设定</p>}
+      {!list.length && (
+        <p className="wg-story-empty rounded-xl px-3 py-3 text-center text-[12px] text-ink-soft">
+          还没有条目 · 可写地图规则、势力背景、节日习俗等
+        </p>
+      )}
 
       {list.map((e) => {
         const isOpen = open === e.id;

@@ -26,9 +26,8 @@ import { useGame } from "../store/gameCtx";
 import TalkPanel from "./TalkPanel";
 import { pregWeeks } from "../game/pregnancy";
 import { wxResolve } from "../game/phone";
-import { Segments, LiveNarration, Thoughts, ErrorBanner } from "./StoryTab";
-import NewcomerCards from "./NewcomerCards";
-import { newcomerSlots } from "../game/npcIntro";
+import { Segments, LiveNarration, Thoughts, ErrorBanner, sameTurnError } from "./StoryTab";
+import { introState } from "../game/npcIntro";
 import ProducerParley from "./ProducerParley";
 import GigBoard from "./GigBoard";
 import { HeartMeter, Modal, Chip, Avatar } from "./ui";
@@ -64,6 +63,7 @@ import { CARS, carById, resaleValue, attrLabelOf } from "../game/data";
 import { BRANCH_POINTS } from "../store/GameContext";
 import { tripPoints, apPerMove } from "../game/mud";
 import { customActsOf, customItemsOf, firedOf, spotBackground, spotDesc, spotEventsOf, spotName, activityApCost } from "../game/mapedits";
+import { isArrivalBoilerplate } from "../lib/newLocation";
 import type { FamilyRef } from "../worlds/star2005/content";
 import { LIVE_PEOPLE as PEOPLE, LIVE_PERSON_BY_ID as PERSON_BY_ID, feature, getWorldMap, getWorldMaps, getWorldRooms, getWorldStartRoom, worldActivitiesOfRoom as activitiesOfRoom } from "../mods/registry";
 import { factsOf, isManager, knows, producerProjects } from "../game/producer";
@@ -259,15 +259,23 @@ function MapNode({
       aria-label={`${displayName}${current ? "（你在这里）" : ""}${alert ? "（有事件）" : ""}${jump ? `，进入「${jump.name}」` : ""}`}
       className={`group absolute z-10 flex -translate-x-1/2 -translate-y-full flex-col items-center rounded-xl px-1.5 pt-1 transition-transform duration-200 hover:-translate-y-[calc(100%+3px)] focus-visible:z-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-jade ${current ? "z-20" : ""}`}
     >
-      <span className={`mb-1 whitespace-nowrap rounded-full border px-2.5 py-1 text-[12px] font-bold leading-none shadow-lg ring-1 ring-black/10 backdrop-blur-md ${
-        current ? "border-coral bg-coral text-white" : "border-white/80 bg-paper/95 text-ink group-hover:border-jade group-hover:text-jade"
+      <span className={`mb-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-[12px] font-bold leading-none shadow-[0_6px_16px_-8px_rgba(20,10,20,0.55)] ring-1 backdrop-blur-md ${
+        current
+          ? "border-coral/80 bg-coral text-white ring-coral/30"
+          : "border-white/85 bg-paper/95 text-ink ring-black/8 group-hover:border-jade group-hover:text-jade"
       }`}>
         {current && <span className="mr-1 text-[10px] font-semibold opacity-90">你在</span>}
         {isHome && <span className={`mr-1 rounded-full px-1 text-[10px] font-black ${current ? "bg-white/25" : "bg-coral/15 text-coral"}`}>家</span>}
         {displayName}{jump && <span className="ml-1 inline-flex opacity-80"><IconExternal size={10} /></span>}
       </span>
       <span className="relative">
-        <svg width={current ? 26 : 21} height={current ? 33 : 27} viewBox="0 0 28 35" aria-hidden className="drop-shadow-[0_2px_3px_rgba(0,0,0,0.35)]">
+        {current && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-[92%] h-3 w-7 -translate-x-1/2 rounded-[100%] bg-coral/35 blur-[3px]"
+          />
+        )}
+        <svg width={current ? 28 : 22} height={current ? 36 : 28} viewBox="0 0 28 35" aria-hidden className="drop-shadow-[0_3px_5px_rgba(0,0,0,0.38)]">
           <path d="M14 1C6.8 1 1 6.6 1 13.6 1 23 14 34 14 34s13-11 13-20.4C27 6.6 21.2 1 14 1z"
             fill={current ? "var(--coral)" : "var(--jade)"} stroke="white" strokeWidth="1.6" />
           {!edits?.icon && <circle cx="14" cy="13.5" r="4.6" fill="white" />}
@@ -275,7 +283,7 @@ function MapNode({
         {edits?.icon && (/^(data:|https?:|\/)/.test(edits.icon)
           ? <img src={(edits.icon) || undefined} alt="" className="pointer-events-none absolute left-1/2 top-[38%] h-[13px] w-[13px] -translate-x-1/2 -translate-y-1/2 rounded-full object-cover" />
           : <span className="pointer-events-none absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2 text-[10px] leading-none">{edits.icon}</span>)}
-        {current && <span className="pointer-events-none absolute left-1/2 top-[34%] h-7 w-7 -translate-x-1/2 -translate-y-1/2 animate-ping rounded-full bg-coral/30" />}
+        {current && <span className="pointer-events-none absolute left-1/2 top-[34%] h-8 w-8 -translate-x-1/2 -translate-y-1/2 animate-ping rounded-full bg-coral/30" />}
         {alert && <span className="pointer-events-none absolute -right-2 -top-1 h-[14px] w-[14px] animate-ping rounded-full bg-red-500/60" />}
         {alert && (
           <span className="absolute -right-2 -top-1 flex h-[14px] w-[14px] items-center justify-center rounded-full bg-red-600 text-[10px] font-black leading-none text-white shadow ring-2 ring-white">
@@ -301,6 +309,39 @@ function TransportIcon({ id }: { id: string }) {
   if (id === "bike") return <svg {...p}><circle cx="6" cy="17" r="3" /><circle cx="18" cy="17" r="3" /><path d="M6 17l4-8h5l3 8M10 9l-1-3H7M12 17l3-8" /></svg>;
   if (id === "taxi") return <svg {...p}><path d="M5 17V12l2-5h10l2 5v5M3 12h18M9 4h6" /><circle cx="7.5" cy="17" r="1.6" /><circle cx="16.5" cy="17" r="1.6" /></svg>;
   return <svg {...p}><path d="M3 16v-3l2-5h14l2 5v3H3z" /><circle cx="7" cy="16.5" r="1.8" /><circle cx="17" cy="16.5" r="1.8" /></svg>;
+}
+
+/** 功能注释：舆图底图层——有图用实景；无图用纸质舆图氛围（经纬网 + 雾气 + 暗角），避免一片灰紫空底 */
+function CityMapBackdrop({ mapBg, mapAlt }: { mapBg?: string; mapAlt: string }) {
+  return (
+    <>
+      {mapBg ? (
+        <img
+          src={mapBg}
+          alt={mapAlt}
+          className="absolute inset-0 h-full w-full object-cover object-center"
+        />
+      ) : (
+        <div className="city-map-atlas" aria-hidden>
+          <div className="city-map-atlas__grain" />
+          <div className="city-map-atlas__paths" />
+          <div className="city-map-atlas__mist" />
+          <div className="city-map-atlas__mist city-map-atlas__mist--b" />
+        </div>
+      )}
+      <div className="city-map-vignette" aria-hidden />
+      <svg className="city-map-compass" viewBox="0 0 64 64" aria-hidden>
+        <circle cx="32" cy="32" r="29" fill="var(--paper)" fillOpacity="0.78" stroke="currentColor" strokeWidth="1.4" />
+        <circle cx="32" cy="32" r="22" fill="none" stroke="currentColor" strokeWidth="0.8" opacity="0.45" />
+        <path d="M32 8 L36 32 L32 28 L28 32 Z" fill="var(--coral)" />
+        <path d="M32 56 L28 32 L32 36 L36 32 Z" fill="currentColor" opacity="0.55" />
+        <path d="M8 32 L32 28 L28 32 L32 36 Z" fill="currentColor" opacity="0.35" />
+        <path d="M56 32 L32 36 L36 32 L32 28 Z" fill="currentColor" opacity="0.35" />
+        <circle cx="32" cy="32" r="3.2" fill="var(--paper-2)" stroke="currentColor" strokeWidth="1" />
+        <text x="32" y="15.5" textAnchor="middle" fontSize="7" fontWeight="800" fill="var(--coral)">N</text>
+      </svg>
+    </>
+  );
 }
 
 function CityMap({ s, onPick }: { s: SimState; onPick: (id: string) => void; wide?: boolean }) {
@@ -350,8 +391,12 @@ function CityMap({ s, onPick }: { s: SimState; onPick: (id: string) => void; wid
     });
   };
 
+  const legendText = displayNodes.length <= 1
+    ? "你在此处 · 探索后会点亮更多地点"
+    : `已点亮 ${displayNodes.length} 处 · 点图钉前往`;
+
   return (
-    <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden border-b border-line bg-paper-2">
+    <div className="city-map-stage relative flex min-h-0 w-full flex-1 flex-col overflow-hidden border-b border-line">
       {/* 多底图切换 */}
       {sheets.length > 1 && (
         <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border border-line bg-paper/95 p-1 shadow-lg backdrop-blur-md">
@@ -396,31 +441,25 @@ function CityMap({ s, onPick }: { s: SimState; onPick: (id: string) => void; wid
       {/* 地图内容画布 */}
       {mode === "panorama" ? (
         <div ref={scrollRef} className="relative min-h-0 w-full flex-1 overflow-x-auto overflow-y-hidden scrollbar-none">
-          <div className="relative h-full min-h-[240px] w-[1800px] select-none">
-            {mapBg ? <img
-              src={(mapBg) || undefined}
-              alt={mapAlt}
-              className="absolute inset-0 h-full w-full object-cover object-center opacity-100"
-            /> : <div className="absolute inset-0 bg-gradient-to-br from-paper via-line/40 to-paper" />}
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/25" />
-
+          <div className="relative h-full min-h-[280px] w-[1800px] select-none">
+            <CityMapBackdrop mapBg={mapBg} mapAlt={mapAlt} />
             {displayNodes.map((id) => (
               <MapNode key={id} s={s} id={id} current={id === cur} onPick={onPick} mode="panorama" mapEdits={mapEdits} jump={jumpFor(id)} />
             ))}
           </div>
         </div>
       ) : (
-        <div className="relative min-h-[240px] w-full flex-1 overflow-hidden select-none">
-          {mapBg ? <img
-            src={(mapBg) || undefined}
-            alt={mapAlt}
-            className="absolute inset-0 h-full w-full object-cover object-center opacity-100"
-          /> : <div className="absolute inset-0 bg-gradient-to-br from-paper via-line/40 to-paper" />}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/25" />
-
+        <div className="relative min-h-[280px] w-full flex-1 overflow-hidden select-none">
+          <CityMapBackdrop mapBg={mapBg} mapAlt={mapAlt} />
           {displayNodes.map((id) => (
             <MapNode key={id} s={s} id={id} current={id === cur} onPick={onPick} mode="single" mapEdits={mapEdits} jump={jumpFor(id)} />
           ))}
+          {sheets.length < 2 ? (
+            <div className="city-map-legend" aria-hidden>
+              <span className="city-map-legend__dot" />
+              <span className="truncate">{legendText}</span>
+            </div>
+          ) : null}
         </div>
       )}
     </div>
@@ -493,46 +532,42 @@ export function SceneSpot({ spot, active, index }: { spot: Spot; active: boolean
   );
 }
 
-/* 角色卡牌：以名字哈希取一组梦幻渐变，头像用姓氏首字做花体字牌，供实景图左上角浮层使用。 */
-const CARD_GRADS = [
-  ["#a68bec", "#e2a6d6"], ["#7fb8ec", "#b39ff0"], ["#f0a8c8", "#f6c99a"],
-  ["#8ad6c4", "#7fb8ec"], ["#c79ae4", "#e79ac9"], ["#e4b062", "#e79ac9"],
-];
-function cardGrad(name: string): [string, string] {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return CARD_GRADS[h % CARD_GRADS.length] as [string, string];
-}
-function PersonCard({ name, known: met, named, active, onClick, avatar }: { name: string; role?: string; known: boolean; named?: boolean; active: boolean; onClick: () => void; avatar?: string }) {
-  // 头像式：已结识或已在剧情中登场（知道名字）显示头像+名字；完全没照过面才显示剪影
+/* 功能注释：在场只露方头像，不套外框、不挂名标；初遇只标「初」 */
+function PersonCard({ name, known: met, named, active, onClick, avatar, firstMeet }: { name: string; role?: string; known: boolean; named?: boolean; active: boolean; onClick: () => void; avatar?: string; firstMeet?: boolean }) {
   const known = met || !!named;
-  const [c1, c2] = known ? cardGrad(name) : ["#9c93b8", "#c8bfe0"];
   return (
-    <button onClick={onClick} aria-pressed={active} aria-label={known ? name : "陌生人"} className="flex w-14 shrink-0 flex-col items-center gap-1">
-      <span className={`grid h-11 w-11 place-items-center overflow-hidden rounded-[10px] font-serif text-[16px] font-black text-white shadow-md ring-2 transition ${active ? "ring-coral scale-105" : "ring-white/80"}`}
-        style={{ backgroundImage: `linear-gradient(150deg, ${c1}, ${c2})` }}>
+    <button onClick={onClick} aria-pressed={active} aria-label={firstMeet ? `初遇 ${name}` : known ? name : "陌生人"} className="relative shrink-0">
+      <span className={`grid h-10 w-10 place-items-center overflow-hidden rounded-[10px] border text-[14px] font-bold transition ${
+        active
+          ? "border-jade bg-jade text-paper-2 ring-2 ring-jade/30 scale-105"
+          : known
+            ? "border-line/70 bg-paper text-jade"
+            : "border-line/70 bg-paper-2 text-ink-soft"
+      }`}>
         {known && avatar ? <img src={(avatar) || undefined} alt="" className="h-full w-full object-cover" /> : known ? name.slice(0, 1) : (
-          // 未结识：人形剪影，比一个问号更像「有个人在这儿」
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" className="text-white/90" aria-hidden><circle cx="12" cy="8.2" r="4" /><path d="M4.5 20.5c.8-4 3.9-6.3 7.5-6.3s6.7 2.3 7.5 6.3z" /></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-ink-soft/80" aria-hidden><circle cx="12" cy="8.2" r="4" /><path d="M4.5 20.5c.8-4 3.9-6.3 7.5-6.3s6.7 2.3 7.5 6.3z" /></svg>
         )}
       </span>
-      <span className={`max-w-full truncate rounded-full px-1.5 py-px text-[10.5px] font-bold leading-tight backdrop-blur ${active ? "bg-coral text-white" : "bg-paper-2/90 text-ink ring-1 ring-line/60"}`}>{known ? name : "陌生人"}</span>
+      {firstMeet && (
+        <span className="absolute -right-0.5 -top-0.5 rounded-[5px] bg-jade px-1 py-px text-[9px] font-bold leading-none text-white">初</span>
+      )}
     </button>
   );
 }
 
 /* 线下见面弹窗：五颗心表示关系值（满 / 半 / 空） */
 /* 线下见面弹窗：互动选项卡片（图标 + 文案 + 右箭头） */
+/* 功能注释：highlight 跟皮肤主色 jade，避免紫皮里再冒一块 coral/平台红 */
 function MeetOption({ icon: Icon, label, onClick, disabled, active, highlight }: { icon?: (p: { width?: number; height?: number; className?: string }) => React.ReactNode; label: string; onClick: () => void; disabled?: boolean; active?: boolean; highlight?: boolean }) {
   return (
     <button type="button" onClick={onClick} disabled={disabled} aria-expanded={active}
-      className={`flex min-w-0 items-center gap-3 rounded-[14px] border px-3 py-2.5 text-left transition hover:border-coral/60 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${active || highlight ? "border-coral bg-coral/10" : "border-line bg-paper"}`}>
+      className={`flex min-w-0 items-center gap-3 rounded-[14px] border px-3 py-2.5 text-left transition hover:border-jade/60 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${active || highlight ? "border-jade bg-jade/10" : "border-line bg-paper"}`}>
       {Icon && (
-        <span className={`flex size-7 shrink-0 items-center justify-center rounded-[8px] border ${highlight ? "border-coral/40 bg-coral/10 text-coral" : "border-line bg-paper-2 text-ink-soft"}`}>
+        <span className={`flex size-7 shrink-0 items-center justify-center rounded-[8px] border ${highlight ? "border-jade/40 bg-jade/10 text-jade" : "border-line bg-paper-2 text-ink-soft"}`}>
           <Icon width={14} height={14} />
         </span>
       )}
-      <span className={`min-w-px flex-1 truncate text-[13px] font-medium ${highlight ? "text-coral" : "text-ink"}`}>{label}</span>
+      <span className={`min-w-px flex-1 truncate text-[13px] font-medium ${highlight ? "text-jade" : "text-ink"}`}>{label}</span>
       <IconChevronRight width={14} height={14} aria-hidden className={`shrink-0 text-ink-soft transition-transform duration-200 ${active ? "rotate-90" : ""}`} />
     </button>
   );
@@ -540,58 +575,96 @@ function MeetOption({ icon: Icon, label, onClick, disabled, active, highlight }:
 
 /* 地点实景横幅：进入一处后展示该地实景照片 + 场景名 + 营业状态 + 可点位标记，右下角可切回星城舆图。 */
 /* 地点树导航：面包屑（任意一层可点回）+ 入口区（返回上层 · 直接子地点胶囊）。只在多级地点里出现 */
-function TreeNav({ s, onGo }: { s: SimState; onGo: (id: string) => void }) {
+/** mode: all=完整；actions=子地点/返回（塞进外出旁）；trail=面包屑 */
+function TreeNav({ s, onGo, tone = "overlay", mode = "all" }: {
+  s: SimState; onGo: (id: string) => void;
+  /** overlay=叠在场景图上；card=小说内容卡顶栏浅色 */
+  tone?: "overlay" | "card";
+  mode?: "all" | "actions" | "trail";
+}) {
   const [mapOpen, setMapOpen] = useState(false);
   const room = s.room ?? getWorldStartRoom();
   const path = roomPath(room);
   const kids = childEntries(s, room);
   const up = roomParent(room);
+  const showTrail = mode !== "actions";
+  const showActions = mode !== "trail";
+  if (showTrail && !showActions && path.length < 2) return null;
+  if (showActions && !showTrail && !kids.length && !up) return null;
   if (path.length < 2 && !kids.length) return null;
   const upName = up ? path[path.length - 2]?.name : "";
-  const pill = "flex shrink-0 items-center gap-1 rounded-full border px-3 py-1.5 text-[12px] font-bold backdrop-blur-md transition active:scale-95";
+  const onCard = tone === "card";
+  const pill = onCard
+    ? "flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold transition active:scale-95"
+    : "flex shrink-0 items-center gap-1 rounded-full border px-3 py-1.5 text-[12px] font-bold backdrop-blur-md transition active:scale-95";
   // 功能注释：此地有内部地图时可展开，子地点按作者点位上图点选进入
   const innerMap = getWorldRooms()[room]?.innerMap;
-  return (
-    <div className="mx-3 mt-2 shrink-0 space-y-1.5">
-      {path.length > 1 && (
-        <nav aria-label="所在位置" className="flex flex-wrap items-center gap-1 text-[11.5px]">
-          {path.map((p, i) => {
-            const last = i === path.length - 1;
-            return (
-              <span key={p.id} className="flex items-center gap-1">
-                {last ? (
-                  <span aria-current="page" className="rounded-full bg-white/90 px-2.5 py-0.5 font-bold text-ink shadow">{p.name}</span>
-                ) : (
-                  <button type="button" onClick={() => onGo(p.id)} className="rounded-full border border-white/25 bg-black/40 px-2.5 py-0.5 text-white/90 backdrop-blur-md transition hover:bg-black/60">{p.name}</button>
-                )}
-                {!last && <span className="text-white/60" aria-hidden>›</span>}
-              </span>
-            );
-          })}
-        </nav>
+  const trail = showTrail && path.length > 1 && (
+    <nav aria-label="所在位置" className="flex flex-wrap items-center gap-1 text-[11.5px]">
+      {path.map((p, i) => {
+        const last = i === path.length - 1;
+        return (
+          <span key={p.id} className="flex items-center gap-1">
+            {last ? (
+              <span aria-current="page" className={onCard
+                ? "rounded-full bg-jade/12 px-2 py-0.5 font-bold text-jade"
+                : "rounded-full bg-white/90 px-2.5 py-0.5 font-bold text-ink shadow"}>{p.name}</span>
+            ) : (
+              <button type="button" onClick={() => onGo(p.id)} className={onCard
+                ? "rounded-full border border-line bg-paper px-2 py-0.5 text-ink-soft transition hover:border-jade hover:text-jade"
+                : "rounded-full border border-white/25 bg-black/40 px-2.5 py-0.5 text-white/90 backdrop-blur-md transition hover:bg-black/60"}>{p.name}</button>
+            )}
+            {!last && <span className={onCard ? "text-ink-soft/50" : "text-white/60"} aria-hidden>›</span>}
+          </span>
+        );
+      })}
+    </nav>
+  );
+  const actions = showActions && (kids.length > 0 || up || (innerMap && kids.length > 0)) && (
+    <div className={`flex flex-wrap items-center gap-1.5 ${mode === "actions" ? "justify-end" : ""}`}>
+      {up && (
+        <button type="button" onClick={() => onGo(up)} className={onCard
+          ? `${pill} border-line bg-paper text-ink hover:border-jade hover:text-jade`
+          : `${pill} border-white/30 bg-black/50 text-white hover:bg-black/70`} title={`返回${upName}`}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m15 18-6-6 6-6" /></svg>
+          {roomUpLabel(room) || `返回${upName}`}
+        </button>
       )}
-      <div className="flex flex-wrap items-center gap-1.5">
-        {up && (
-          <button type="button" onClick={() => onGo(up)} className={`${pill} border-white/30 bg-black/50 text-white hover:bg-black/70`} title={`返回${upName}`}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m15 18-6-6 6-6" /></svg>
-            {roomUpLabel(room) || `返回${upName}`}
-          </button>
+      {innerMap && kids.length > 0 && (
+        <button type="button" onClick={() => setMapOpen(true)} className={`${pill} border-jade/70 bg-jade text-paper-2 hover:brightness-110`} title={`展开${path[path.length - 1]?.name ?? ""}地图`}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 4 3 6.5V20l6-2.5 6 2.5 6-2.5V4l-6 2.5L9 4z" /><path d="M9 4v13.5M15 6.5V20" /></svg>
+          地图
+        </button>
+      )}
+      {kids.map((k) => (
+        <button key={k.id} type="button" onClick={() => k.ok && onGo(k.id)} disabled={!k.ok} title={k.ok ? k.desc.slice(0, 60) : k.note}
+          className={`${pill} ${k.ok
+            ? (onCard ? "border-line bg-paper text-ink hover:border-jade" : "border-white/70 bg-white/85 text-ink hover:bg-white")
+            : (onCard ? "cursor-not-allowed border-line bg-paper-2 text-ink-soft/60" : "cursor-not-allowed border-white/20 bg-black/40 text-white/55")}`}>
+          {!k.ok && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>}
+          {k.name}
+          {k.ok && !k.visited && <span className="h-1.5 w-1.5 rounded-full bg-coral" aria-label="未去过" />}
+        </button>
+      ))}
+    </div>
+  );
+  if (mode === "actions") {
+    return (
+      <>
+        {actions}
+        {mapOpen && innerMap && (
+          <Modal title={path.map((p) => p.name).join(" / ")} onClose={() => setMapOpen(false)}>
+            <SubMapView map={innerMap} kids={kids} onGo={(id) => { setMapOpen(false); onGo(id); }} />
+          </Modal>
         )}
-        {innerMap && kids.length > 0 && (
-          <button type="button" onClick={() => setMapOpen(true)} className={`${pill} border-jade/70 bg-jade text-paper-2 hover:brightness-110`} title={`展开${path[path.length - 1]?.name ?? ""}地图`}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 4 3 6.5V20l6-2.5 6 2.5 6-2.5V4l-6 2.5L9 4z" /><path d="M9 4v13.5M15 6.5V20" /></svg>
-            地图
-          </button>
-        )}
-        {kids.map((k) => (
-          <button key={k.id} type="button" onClick={() => k.ok && onGo(k.id)} disabled={!k.ok} title={k.ok ? k.desc.slice(0, 60) : k.note}
-            className={`${pill} ${k.ok ? "border-white/70 bg-white/85 text-ink hover:bg-white" : "cursor-not-allowed border-white/20 bg-black/40 text-white/55"}`}>
-            {!k.ok && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>}
-            {k.name}
-            {k.ok && !k.visited && <span className="h-1.5 w-1.5 rounded-full bg-coral" aria-label="未去过" />}
-          </button>
-        ))}
-      </div>
+      </>
+    );
+  }
+  if (mode === "trail") return trail;
+  return (
+    <div className={onCard ? "shrink-0 space-y-1.5" : "mx-3 mt-2 shrink-0 space-y-1.5"}>
+      {trail}
+      {actions}
       {mapOpen && innerMap && (
         <Modal title={path.map((p) => p.name).join(" / ")} onClose={() => setMapOpen(false)}>
           <SubMapView map={innerMap} kids={kids} onGo={(id) => { setMapOpen(false); onGo(id); }} />
@@ -649,7 +722,7 @@ function SubMapView({ map, kids, onGo }: { map: string; kids: ChildEntry[]; onGo
  * - Studio 作者预览竖屏 fill：仍铺满，正文叠图（无内容卡），与正式小说排版区分。
  * 不改任何模拟结算。
  */
-function LocationHero({ s, spots, activeKey, onOpenMap, onGo, fill, novelCard, bg: bgProp, name, prose, proseRef, footer, belowCard }: {
+function LocationHero({ s, spots, activeKey, onOpenMap, onGo, fill, novelCard, bg: bgProp, name, prose, proseRef, footer }: {
   onGo?: (id: string) => void; s: SimState; spots: Spot[]; activeKey: string | null; onOpenMap: () => void;
   fill?: boolean;
   /** 功能注释：小说模式内容卡（叠在场景图上） */
@@ -660,8 +733,6 @@ function LocationHero({ s, spots, activeKey, onOpenMap, onGo, fill, novelCard, b
   proseRef?: RefObject<HTMLDivElement | null>;
   /** 功能注释：小说内容卡底部输入区 */
   footer?: ReactNode;
-  /** 功能注释：内容卡下方附加（在场人物条等） */
-  belowCard?: ReactNode;
 }) {
   const { game, look: theme } = useGame();
   const room = s.room ?? getWorldStartRoom();
@@ -720,30 +791,38 @@ function LocationHero({ s, spots, activeKey, onOpenMap, onGo, fill, novelCard, b
     return (
       <div data-scene-layout="fill" data-novel-card="1" className="relative h-full min-h-0 w-full overflow-hidden bg-ink/20">
         <div className="absolute inset-0 overflow-hidden">{bgLayer}</div>
-        {/* 功能注释：阅读卡高度 = 场景区 85%，垂直居中；左右 20px 露出场景，勿贴边；勿改卡高/圆角/底栏 */}
-        <div className="absolute inset-0 z-[15] flex min-h-0 flex-col items-stretch justify-center px-5 py-2">
+        {/* 功能注释：阅读卡铺满场景区；顶边多留一点露出场景，底边留给下方输入坞 */}
+        <div className="absolute inset-0 z-[15] flex min-h-0 flex-col items-stretch gap-1 px-4 pb-2 pt-3">
           <div
             data-tour="story"
             data-dstyle={theme.dialogStyle ?? "soft"}
-            className="novel-read-card relative flex min-h-0 h-[85%] max-h-[85%] w-full flex-col overflow-hidden rounded-[var(--radius-ui-lg)] border border-line text-ink shadow-[var(--shadow-ui-lift)] backdrop-blur-[2px]"
+            className="novel-read-card relative flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[var(--radius-ui-lg)] border border-line text-ink shadow-[var(--shadow-ui-lift)] backdrop-blur-[2px]"
           >
-            <div className="flex shrink-0 items-start justify-between gap-2 border-b border-line/70 px-3 py-2.5">
-              <div className="min-w-0">
-                <p className="flex items-center gap-1 truncate text-[13.5px] font-bold text-ink">
-                  <IconPin width={13} height={13} className="shrink-0 text-jade" aria-hidden />
-                  <span className="truncate">{title || "所在地"}</span>
-                </p>
-                {weather && (
-                  <p className="mt-0.5 flex items-center gap-1 truncate pl-[18px] text-[11.5px] text-ink-soft">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 text-gold" aria-hidden>
-                      <circle cx="12" cy="12" r="4" />
-                      <path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8l1.8-1.8M18 6l1.8-1.8" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" />
-                    </svg>
-                    <span className="truncate">{weather}</span>
-                  </p>
+            <div className="flex shrink-0 flex-col gap-1.5 border-b border-line/70 px-3 py-2.5">
+              {/* 功能注释：子地点标签与外出同一行，塞进标题与外出之间的空位 */}
+              <div className="flex items-center gap-2">
+                {/* 功能注释：地点/天气用同一 14px 图标列网格左对齐，文案起笔在同一竖线 */}
+                <div className="grid min-w-0 shrink grid-cols-[14px_minmax(0,1fr)] items-center gap-x-1.5 gap-y-0.5">
+                  <IconPin width={14} height={14} className="shrink-0 text-jade" aria-hidden />
+                  <p className="truncate text-[13.5px] font-bold text-ink">{title || "所在地"}</p>
+                  {weather ? (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 text-gold" aria-hidden>
+                        <circle cx="12" cy="12" r="4" />
+                        <path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8l1.8-1.8M18 6l1.8-1.8" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+                      </svg>
+                      <p className="truncate text-[11.5px] text-ink-soft">{weather}</p>
+                    </>
+                  ) : null}
+                </div>
+                {onGo && (
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5">
+                    <TreeNav s={s} onGo={onGo} tone="card" mode="actions" />
+                  </div>
                 )}
+                {mapBtn}
               </div>
-              {mapBtn}
+              {onGo && <TreeNav s={s} onGo={onGo} tone="card" mode="trail" />}
             </div>
             {prose != null && (
               <div
@@ -758,13 +837,6 @@ function LocationHero({ s, spots, activeKey, onOpenMap, onGo, fill, novelCard, b
               <div className="shrink-0 border-t border-line/70 px-2.5 py-2">{footer}</div>
             )}
           </div>
-          {/* 功能注释：在场人物与子地点分两行排在卡片下方（不再叠在一起）；卡片用剩余高度，底部内容不会被挤出、互相覆盖 */}
-          {belowCard}
-          {onGo && (
-            <div className="shrink-0 pt-1">
-              <TreeNav s={s} onGo={onGo} />
-            </div>
-          )}
         </div>
       </div>
     );
@@ -848,7 +920,7 @@ function PersonDossier({ pid, onClose, onJump }: { pid: string; onClose: () => v
 // 功能注释：无剧情选项时的行动灵感改由 lib/actionIdeas.buildActionIdeas 按当前地点 / 在场人物 / 主线生成，禁止写死他作品人名
 
 export default function HomeTab() {
-  const { game, busy, look: theme, commitGame, submit, directTurn, theaterTurn, endManually, simMove, simVisit, simEvent, simChooseArc, simConfirmDating, simPickup, simActivity, simBuy, simAskIntel, playSpotEvent, playEventNotice } = useGame();
+  const { game, busy, look: theme, commitGame, submit, directTurn, theaterTurn, endManually, simMove, simVisit, simEvent, simChooseArc, simConfirmDating, simPickup, simActivity, simBuy, simAskIntel, playSpotEvent, playEventNotice, meetNewcomer } = useGame();
   const landscape = theme.orient === "landscape";
   const [input, setInput] = useState("");
   const [ideasOpen, setIdeasOpen] = useState(false);
@@ -954,9 +1026,12 @@ export default function HomeTab() {
   // 玩家在地图编辑器里对本点位的覆写（名称/描述/背景图/自定义物件）
   const bgOverride = spotBackground(game, room);
   const nameOverride = spotName(game, room);
-  // 功能注释：地点说明取本地点真实描述；「新地点」「你来到了「新地点」」这类占位文案一律隐藏，不用错名兜底
+  // 功能注释：地点说明取本地点真实描述；「新地点」占位与「你来到了「X」」样板句一律不进正文（样板只进提示词）
   const rawDescText = spotDesc(game, room) ?? roomDesc(room) ?? loc?.func;
-  const descText = rawDescText && !/新地点/.test(rawDescText) ? rawDescText : undefined;
+  const placeLabel = nameOverride || loc?.name || "";
+  const descText = rawDescText && !/新地点/.test(rawDescText) && !isArrivalBoilerplate(rawDescText, placeLabel) && !isArrivalBoilerplate(rawDescText)
+    ? rawDescText
+    : undefined;
   const people = mobsHere(s, room, game.npcs).filter((p) => p.present); // 含设了常驻地点的自定义 / 剧情新增人物
   const encounters = encountersHere(s, room, game.npcs); // 同处一地方可触发的条件邂逅
   // 内容池物件 + 玩家自定义物件，统一带上是否已入行囊
@@ -996,20 +1071,26 @@ export default function HomeTab() {
   // 当前被点选的人物（点石牌弹出行动条：交谈/洽谈/打听/端详）
   // 前缀须覆盖行动条里所有子面板（含接洽通告 gigs / 档案 dossier / 情感线 arc），否则点开即被当成关闭
   const activePid = openId && /^(menu|bio|intel|parley|gigs|dossier|arc):/.test(openId) ? openId.slice(openId.indexOf(":") + 1) : null;
-  /* 在场人物卡片：onImage=浮于实景图（横屏）；否则作为实景下方的独立卡片行（竖屏）。无人时不显示 */
-  const peopleStrip = (onImage: boolean) => people.length > 0 ? (
-    <div className={onImage ? "pointer-events-auto" : "mt-3 px-1"}>
-      <div className="-mx-1 flex gap-2 overflow-x-auto px-1.5 pb-1.5 pt-1.5 [scrollbar-width:none]">
-        {people.map((p) => {
-          const active = activePid === p.id;
-          return (
-            <PersonCard key={`p:${p.id}`} name={p.name} role="" known={(s.metPeople ?? []).includes(p.id)}
-              named={!!game?.npcs.some((n) => n.id === p.id)}
-              avatar={game?.npcs.find((n) => n.id === p.id)?.avatar || undefined}
-              active={active} onClick={() => setOpenId(active ? null : `menu:${p.id}`)} />
-          );
-        })}
-      </div>
+  /* 在场人物：剧情下方只排头像，不套卡片外框、不写「在场」标题 */
+  const peopleUnderStory = people.length > 0 ? (
+    <div className="mt-2.5 flex gap-2 overflow-x-auto [scrollbar-width:none]" aria-label="在场人物">
+      {people.map((p) => {
+        const active = activePid === p.id;
+        const met = (s.metPeople ?? []).includes(p.id);
+        return (
+          <PersonCard
+            key={`p:${p.id}`}
+            name={p.name}
+            role=""
+            known={met}
+            named={!!game?.npcs.some((n) => n.id === p.id)}
+            avatar={game?.npcs.find((n) => n.id === p.id)?.avatar || undefined}
+            firstMeet={!met && introState(game, p.id) === "pending"}
+            active={active}
+            onClick={() => setOpenId(active ? null : `menu:${p.id}`)}
+          />
+        );
+      })}
     </div>
   ) : null;
 
@@ -1063,7 +1144,6 @@ export default function HomeTab() {
   ];
 
   // 功能注释：正文固定在场景图下累积留屏，不再进可消失对话框；底部只留输入与行动选项。
-  const introSlots = newcomerSlots(game.story); // 初遇名片挂在该人物最近一次登场的回合底部
   // 功能注释：换场景即翻篇——正文区只显示到达当前地点之后的剧情（记录完整保留，剧情志 / AI 上下文不受影响）
   const sceneStory = turnsInCurrentScene(game.story, room);
   const hasOpts = !busy && (game.options?.length ?? 0) > 0 && !custom;
@@ -1122,7 +1202,7 @@ export default function HomeTab() {
     isNovel ||
     (isAuthorPreview() && (playPrefs.orient ?? "portrait") !== "landscape");
 
-  // 功能注释：行动输入区；小说模式塞进内容卡底栏，游戏模式仍挂在场景下方
+  // 功能注释：行动输入区；小说/游戏都挂在场景下方，贴着底栏一起，不进内容卡
   const actionInput = (
         <div className="relative pt-0.5">
           {ideasOpen && (
@@ -1150,11 +1230,11 @@ export default function HomeTab() {
                         : "border-jade/12 bg-paper/70 hover:border-jade/35 hover:bg-paper"
                     }`}
                   >
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-ui-sm)] bg-jade/10 text-[11px] font-semibold tabular-nums text-jade transition group-hover:bg-jade group-hover:text-paper">
-                      {/* 功能注释：序号也跟游戏字体，避免 option 正文宋体、数字黑体两套字 */}
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-ui-sm)] bg-jade/10 text-[11px] tabular-nums text-jade transition group-hover:bg-jade group-hover:text-paper">
+                      {/* 功能注释：序号也跟游戏字体，避免 option 正文宋体、数字黑体两套字；字重与选项正文统一 */}
                       {hasOpts ? <kbd>{i + 1}</kbd> : <IconSparkle width={11} height={11} />}
                     </span>
-                    <span className="min-w-0 flex-1 leading-snug">{o.label}</span>
+                    <span className="min-w-0 flex-1 font-normal leading-snug">{o.label}</span>
                     {eventIdx.has(i) && <span className="shrink-0 rounded-full bg-coral px-1.5 py-px text-[10px] font-bold leading-snug text-white">事件</span>}
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0 -translate-x-1 text-jade opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100" aria-hidden>
                       <path d="m9 18 6-6-6-6" />
@@ -1286,8 +1366,8 @@ export default function HomeTab() {
               onEncore={async (topic, format) => { setTheaterView(null); const id = await theaterTurn(topic, format); if (id) setTheaterView(id); }}
             />
           )}
-          <div className="action-capsule flex items-center gap-2 rounded-[var(--radius-ui)] border border-line bg-paper p-1.5 shadow-[var(--shadow-ui)] transition-all duration-300">
-            <div className="flex flex-1 items-center gap-2 pl-0.5">
+          <div className="action-capsule flex items-center gap-1.5 rounded-[12px] border border-line/80 bg-paper px-1.5 py-1.5 transition-all duration-300">
+            <div className="flex flex-1 items-center gap-1.5 pl-0.5">
               <div className="relative shrink-0">
                 <button
                   type="button"
@@ -1295,7 +1375,7 @@ export default function HomeTab() {
                   aria-label={hasOpts ? `展开剧情选项（${Math.min(game.options?.length ?? 0, 3)} 个）` : "灵感提示"}
                   aria-expanded={ideasOpen}
                   aria-controls="action-ideas"
-                  className={`flex h-8 items-center justify-center gap-1 rounded-[var(--radius-ui-sm)] transition ${
+                  className={`flex h-8 items-center justify-center gap-1 rounded-[8px] transition ${
                     ideasOpen
                       ? "bg-jade/15 px-2.5 text-jade-deep ring-1 ring-jade/30"
                       : hasOpts
@@ -1311,7 +1391,7 @@ export default function HomeTab() {
                     </svg>
                   </DiyIcon>
                   {hasOpts && (
-                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-coral px-1 text-[10px] font-bold leading-none text-white shadow-xs">
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-[5px] bg-coral px-1 text-[10px] font-bold leading-none text-white shadow-xs">
                       {Math.min(game.options?.length ?? 0, 3)}
                     </span>
                   )}
@@ -1323,7 +1403,7 @@ export default function HomeTab() {
                 aria-label="魔法棒：推进 / 切换视角 / 完结 / 后日谈 / 小剧场"
                 aria-expanded={wandOpen}
                 aria-controls="action-wand"
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-ui-sm)] transition ${wandOpen ? "bg-coral/15 text-coral ring-1 ring-coral/30" : "bg-coral/[0.08] text-coral/85 hover:bg-coral/15"}`}
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] transition ${wandOpen ? "bg-coral/15 text-coral ring-1 ring-coral/30" : "bg-coral/[0.08] text-coral/85 hover:bg-coral/15"}`}
               >
                 <IconWand width={15} height={15} />
               </button>
@@ -1345,7 +1425,7 @@ export default function HomeTab() {
               onClick={() => send(input)}
               disabled={busy || !input.trim()}
               aria-label="发送"
-              className="send-btn diy-btn flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-ui-sm)] bg-jade text-paper-2 transition-all hover:brightness-110 active:scale-[0.94] disabled:bg-jade/12 disabled:text-jade/40 disabled:shadow-none"
+              className="send-btn diy-btn flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-jade text-paper-2 transition-all hover:brightness-110 active:scale-[0.94] disabled:bg-jade/12 disabled:text-jade/40 disabled:shadow-none"
             >
               <DiyIcon slot="input.send" size={15}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
@@ -1421,29 +1501,31 @@ export default function HomeTab() {
             </div>
             <div className={novelFill && !showMap ? "relative min-h-0 flex-1" : landscape && !showMap ? "flex min-h-0 flex-1 flex-col" : showMap ? "-mx-4 -mt-3 -mb-3 flex min-h-0 flex-1 flex-col sm:-mx-6" : "flex min-h-0 flex-col"}>
               {showMap ? (
-                <div data-tour="map" className="relative flex min-h-0 w-full flex-1 flex-col">
-                  <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-paper-2 px-4 py-2.5">
+                <div data-tour="map" className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-t-[18px] shadow-[0_-8px_28px_-18px_rgba(40,20,30,0.35)]">
+                  <div className="city-map-toolbar flex shrink-0 items-center justify-between gap-3 px-4 py-3">
                     <div className="min-w-0">
-                      <p className="truncate font-serif text-[16px] font-black leading-tight text-ink">{T("city")}舆图</p>
-                      <p className="mt-0.5 truncate text-[11.5px] text-ink-soft">点地点即可前往 · 换地点会扣行动点</p>
+                      <p className="truncate font-serif text-[17px] font-black leading-tight tracking-[0.02em] text-ink">{T("city")}舆图</p>
+                      <p className="mt-1 truncate text-[11.5px] leading-snug text-ink-soft">点地点即可前往 · 换地点会扣行动点</p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowMap(false)}
-                      className="flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full bg-ink px-4 text-[13.5px] font-bold text-paper-2 shadow-md transition hover:brightness-125 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-jade"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                        <path d="m15 18-6-6 6-6" />
-                      </svg>
-                      <span>返回此地</span>
-                    </button>
-                    {homeRoomOf(game) !== room && (
-                      <button type="button" disabled={busy} onClick={() => setPending(homeRoomOf(game))}
-                        className="flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border border-coral/40 bg-paper px-4 text-[13.5px] font-bold text-coral shadow-md transition hover:bg-coral/10 active:scale-95 disabled:opacity-50">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 11 12 4l9 7" /><path d="M5 10v10h14V10" /><path d="M10 20v-5h4v5" /></svg>
-                        <span>回家</span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {homeRoomOf(game) !== room && (
+                        <button type="button" disabled={busy} onClick={() => setPending(homeRoomOf(game))}
+                          className="flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border border-coral/40 bg-paper px-3.5 text-[13px] font-bold text-coral shadow-md transition hover:bg-coral/10 active:scale-95 disabled:opacity-50">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 11 12 4l9 7" /><path d="M5 10v10h14V10" /><path d="M10 20v-5h4v5" /></svg>
+                          <span>回家</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setShowMap(false)}
+                        className="flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-br from-[var(--jade)] to-[var(--jade-deep)] px-4 text-[13.5px] font-bold text-paper-2 shadow-[0_8px_18px_-10px_color-mix(in_srgb,var(--jade)_70%,transparent)] transition hover:brightness-110 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-jade"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <path d="m15 18-6-6 6-6" />
+                        </svg>
+                        <span>返回此地</span>
                       </button>
-                    )}
+                    </div>
                   </div>
                   <CityMap s={s} wide={landscape} onPick={(id) => (id === room ? setShowMap(false) : setPending(id))} />
                 </div>
@@ -1462,8 +1544,6 @@ export default function HomeTab() {
                       bg={bgOverride}
                       name={nameOverride}
                       proseRef={scrollRef}
-                      footer={isNovel ? actionInput : undefined}
-                      belowCard={isNovel ? <div className="shrink-0 pt-1">{peopleStrip(true)}</div> : undefined}
                       prose={
                         <>
                           {descText && (
@@ -1477,42 +1557,43 @@ export default function HomeTab() {
                               </p>
                             )
                           )}
-                          {game.story.map((t) => {
-                            if (!sceneStory.some((row) => row.id === t.id)) return null;
-                            return t.role === "player" ? (
-                              <div key={t.id} className="flex justify-end">
-                                <div className="dlg-bubble-me max-w-[85%] rounded-[var(--radius-ui)] rounded-tr-sm bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] px-3.5 py-2 text-[13.5px] font-medium text-white shadow-sm">
-                                  {t.segments.map((seg) => (seg.kind === "narration" ? seg.text : "")).join("")}
+                          {(() => {
+                            // 功能注释：本场景回合按出现序；连续相同错误只留最后一张，避免叠三张「织梦豆不足」
+                            const sceneTurns = game.story.filter((t) => sceneStory.some((row) => row.id === t.id));
+                            return sceneTurns.map((t, i) => {
+                              if (t.role === "player") {
+                                return (
+                                  <div key={t.id} className="flex justify-end">
+                                    <div className="dlg-bubble-me max-w-[85%] rounded-[var(--radius-ui)] rounded-tr-sm bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] px-3.5 py-2 text-[13.5px] font-medium text-white shadow-sm">
+                                      {t.segments.map((seg) => (seg.kind === "narration" ? seg.text : "")).join("")}
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              if (t.error) {
+                                if (sameTurnError(t.error, sceneTurns[i + 1]?.error)) return null;
+                                return <ErrorBanner key={t.id} error={t.error} />;
+                              }
+                              return (
+                                <div key={t.id} className="text-[13px] leading-relaxed text-[color:var(--story-ink)]">
+                                  {/* 功能注释：小说内容卡=普通段落+皮肤气泡；游戏模式叠图旁白用可调浅色底+黑字 */}
+                                  <Segments segments={t.segments} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} overlay={!isNovel} plain={isNovel} />
+                                  {/* 功能注释：小说内容卡不展示「心事」块，避免打断正文；游戏模式仍保留 */}
+                                  {!isNovel && <Thoughts thoughts={t.thoughts} npcs={game.npcs} />}
                                 </div>
-                              </div>
-                            ) : t.error ? (
-                              <ErrorBanner key={t.id} error={t.error} />
-                            ) : (
-                              <div key={t.id} className="text-[13px] leading-relaxed text-[color:var(--story-ink)]">
-                                {/* 功能注释：小说内容卡=普通段落+皮肤气泡；游戏模式叠图旁白用可调浅色底+黑字 */}
-                                <Segments segments={t.segments} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} overlay={!isNovel} plain={isNovel} />
-                                <Thoughts thoughts={t.thoughts} npcs={game.npcs} />
-                                <NewcomerCards ids={introSlots.get(t.id)} />
-                              </div>
-                            );
-                          })}
+                              );
+                            });
+                          })()}
                           {busy && <LiveNarration scrollRef={scrollRef} overlay={!isNovel} plain={isNovel} />}
+                          {/* 功能注释：初遇并入「在场」一条，不再另挂初遇/结识块；点头像进弹窗结识 */}
+                          {peopleUnderStory}
                         </>
                       }
                     />
                   </div>
-                  {/* 在场人物：游戏模式在图下；作者预览 fill 叠图底；小说模式已放进内容卡下方 */}
-                  {!isNovel && (novelFill ? (
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[19] px-1 pb-1">
-                      <div className="pointer-events-auto">{peopleStrip(true)}</div>
-                    </div>
-                  ) : peopleStrip(false))}
                 </>
               )}
             </div>
-
-            {/* 竖屏：实景下方是「在场人物」卡片 */}
-            {/* 竖屏的在场人物也叠在实景图底部，不再另占一行 */}
 
             {/* 居家活动 / 物件的详情与操作已改到下半部分「对话框」里展开（见下方场景点位卡片） */}
 
@@ -1543,9 +1624,11 @@ export default function HomeTab() {
         </div>
       </div>
 
-      {/* ═══ 底部：游戏模式放输入；小说模式输入已进内容卡，这里只挂弹层 ═══ */}
-      <div data-tour={isNovel ? undefined : "story"} data-dstyle={theme.dialogStyle ?? "soft"}
-        className={`relative flex shrink-0 flex-col text-ink ${isNovel ? "mx-0 mb-0 mt-0" : "mx-4 mb-3 mt-2 sm:mx-auto sm:w-[calc(100%-2rem)] sm:max-w-2xl"}`}>
+      {/* ═══ 底部输入坞：与 MudChrome 同底贴合；小说模式去掉第二层玻璃阴影，避免底栏看起来「怪」 ═══ */}
+      <div data-tour="story" data-dstyle={theme.dialogStyle ?? "soft"}
+        className={`relative z-10 flex shrink-0 flex-col text-ink ${isNovel
+          ? "border-t border-line/50 bg-paper-2/92 px-3 pb-1.5 pt-2 backdrop-blur-xl"
+          : "mx-4 mb-3 mt-2 sm:mx-auto sm:w-[calc(100%-2rem)] sm:max-w-2xl"}`}>
 
         {/* 点位操作信息（若有） */}
         {(() => {
@@ -1621,6 +1704,19 @@ export default function HomeTab() {
                   <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4">
                     <p className="font-serif text-[14px] font-semibold text-ink">互动</p>
                     <div className="grid grid-cols-2 gap-2">
+                      {!known && introState(game, p.id) === "pending" && (
+                        <MeetOption
+                          icon={IconSpark}
+                          label="结识"
+                          highlight
+                          disabled={busy}
+                          onClick={() => {
+                            if (busy) return;
+                            setOpenId(null);
+                            meetNewcomer(p.id);
+                          }}
+                        />
+                      )}
                       <MeetOption icon={IconMessage} label="对话" disabled={busy} onClick={() => setTalkWith({ pid: p.id, name: p.name, role: p.role })} />
                       {/* 查看 / 接洽通告属于「事业经营包」：未启用时不出现，避免关掉扩展包仍能接单 */}
                       {known && feature("career") && isManager(p.id) && (
@@ -1686,7 +1782,7 @@ export default function HomeTab() {
               );
             })}
 
-        {!isNovel && actionInput}
+        {actionInput}
       </div>
 
       {/* ═══ 移动确认 ═══ */}

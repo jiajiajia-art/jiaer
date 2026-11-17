@@ -44,6 +44,33 @@ const rootToBaseRedirect = (base: string) => ({
   },
 })
 
+/**
+ * 功能注释：Romance/index.html 是 Figma 占位页（标题 <!-- figma:title -->）。
+ * Windows 路径不区分大小写，访问 /funloom/romance/ 会命中它而不是主站 index。
+ * 文档请求改回主站 index.html，地址栏仍停在 /romance/，由 SPA 接管。
+ */
+const romanceDocumentToSpaIndex = (viteBase: string) => ({
+  name: 'romance-document-to-spa-index',
+  configureServer(server: { middlewares: { use: (fn: (req: { url?: string }, res: unknown, next: () => void) => void) => void } }) {
+    const base = viteBase.replace(/\/+$/, '')
+    const romanceRoot = `${base}/romance`.toLowerCase()
+    server.middlewares.use((req, _res, next) => {
+      const raw = req.url || ''
+      const queryAt = raw.indexOf('?')
+      const pathOnly = queryAt >= 0 ? raw.slice(0, queryAt) : raw
+      const query = queryAt >= 0 ? raw.slice(queryAt) : ''
+      const trimmed = pathOnly.replace(/\/+$/, '').toLowerCase()
+      const isRomanceDocument = trimmed === romanceRoot || pathOnly.toLowerCase() === `${romanceRoot}/index.html`
+      if (isRomanceDocument) {
+        // 功能注释：不能改写成 /index.html。public/index.html 是 Firebase Auth Handler，
+        // 会盖住 Vite 入口；改到不存在的路径，才会落到主站 index 由 SPA 接管。
+        req.url = `${base}/__spa${query}`
+      }
+      next()
+    })
+  },
+})
+
 /** 功能注释：开发态短链 /romance → /funloom/romance/（生产由 Worker 同逻辑处理） */
 const romanceShortLinkRedirect = () => ({
   name: 'romance-short-link-redirect',
@@ -135,6 +162,7 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       romanceVirtualModules(),
       ...(viteBase !== '/' ? [rootToBaseRedirect(viteBase)] : []),
+      romanceDocumentToSpaIndex(viteBase),
       romanceShortLinkRedirect(),
       romanceShellGuard(),
       removeOversizedLocalDownloads(),

@@ -55,7 +55,9 @@ test('ModCoverEditor_只留背景_无自定义HTML与多余页签入口', () => 
   assert.match(diy, /只留背景/);
   assert.match(diy, /BG_ONLY_TABS = \["背景"\]/);
   assert.match(diy, /if \(props\.bgOnly\) return <CoverDiyBody \{\.\.\.props\} mode="live" \/>/);
-  assert.match(diy, /\{!bgOnly && \(/);
+  // 功能注释：作品展示封面走独立排版，不再和全部分组共用左右栏+页签
+  assert.match(diy, /if \(bgOnly\)/);
+  assert.match(diy, /cover-bg-only/);
   assert.match(diy, /displayOnly=\{!!bgOnly\}/);
   assert.match(cover, /displayOnly/);
   // 功能注释：展示封面 displayOnly 时 showUI=false，整段标题+三按钮都不渲染

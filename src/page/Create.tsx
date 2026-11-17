@@ -28,6 +28,7 @@ import { copyTextToClipboard } from '../utils/clipboard';
 import { getImageUrl } from '../utils/constants';
 import { getGenderSymbol, normalizeGender } from '../utils/profileCompletion';
 import { formatKk } from '../utils/kkMoney';
+import { normalizeMembershipSignInStatus } from '../utils/checkInCalendar';
 import { hasActiveVip } from '../lib/membershipStatus';
 import {
     parseOverseasPayReturnSearch,
@@ -144,11 +145,10 @@ const Create: React.FC = () => {
         try {
             const response = await auth.getSignInStatus();
             if (response.data.success && response.data.data) {
-                const status = response.data.data;
-                const days = status.signedInToday
-                    ? status.streakDay
-                    : Math.max(0, (status.streakDay || 1) - 1);
-                setStreakDays(days);
+                // 功能注释：接口 streakDay 是本周奖励档的星期序号（周二=2），不是连续天数。
+                // 角标与签到弹窗共用月历连续天数，避免创作页显示 2、弹窗显示 1/30。
+                const status = normalizeMembershipSignInStatus(response.data.data);
+                setStreakDays(status?.month?.currentConsecutiveDays ?? 0);
             }
         } catch (error) {
             console.error('获取签到状态错误:', error);
@@ -253,6 +253,15 @@ const Create: React.FC = () => {
             return;
         }
         navigate(`/account/${encodeURIComponent(userCode)}/social?tab=${tab}`);
+    };
+
+    /** 功能注释：打开本人创作者主页（与详情页跳作者主页同一路由） */
+    const handleOpenOwnHomepage = () => {
+        if (!userCode) {
+            toast.error(t('create.previewHomepageNoCode'));
+            return;
+        }
+        navigate(`/account/${encodeURIComponent(userCode)}`);
     };
 
     const handleCopyUserCode = async () => {
@@ -377,6 +386,14 @@ const Create: React.FC = () => {
                                         tabIndex={-1}
                                         aria-hidden="true"
                                     />
+                                    <button
+                                        type="button"
+                                        className={styles.creatorViewHomepageBtn}
+                                        onClick={handleOpenOwnHomepage}
+                                        disabled={!userCode}
+                                    >
+                                        {t('create.previewHomepage')}
+                                    </button>
                                 </div>
                                 <div className={styles.creatorHeroInfo}>
                                     <div className={styles.creatorHeroNameRow}>
@@ -401,15 +418,23 @@ const Create: React.FC = () => {
                                             >
                                                 <MdOutlineEdit aria-hidden="true" />
                                             </button>
-                                            {/* 功能注释：VIP / 推广标与昵称同一行垂直居中，避免掉到 ID 行错位 */}
+                                            {/* 功能注释：未开通显示「开通VIP」并更暗；开通后只显示 VIP */}
                                             <button
                                                 type="button"
                                                 className={`${styles.creatorVipBadge} ${!isVipActive ? styles.creatorVipBadgeInactive : ''}`}
                                                 onClick={() => setIsVipStatusModalOpen(true)}
-                                                aria-label={t('profile.vipStatus.openAria')}
-                                                title={t('profile.vipStatus.openAria')}
+                                                aria-label={
+                                                    isVipActive
+                                                        ? t('profile.vipStatus.openAria')
+                                                        : t('profile.vipStatus.activateBadgeAria')
+                                                }
+                                                title={
+                                                    isVipActive
+                                                        ? t('profile.vipStatus.openAria')
+                                                        : t('profile.vipStatus.activateBadgeAria')
+                                                }
                                             >
-                                                VIP
+                                                {isVipActive ? t('profile.vip') : t('profile.vipStatus.activateBadge')}
                                             </button>
                                             {isPromotionPartner && (
                                                 <span className={styles.creatorRoleBadge}>推广者</span>

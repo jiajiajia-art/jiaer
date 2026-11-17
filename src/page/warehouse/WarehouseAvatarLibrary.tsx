@@ -1,5 +1,5 @@
 /**
- * 我的资源 · 头像库：私人相册 / 公共 / 系统；三维标签。
+ * 我的资源 · 头像库：私人相册 / 公共 / 系统；标签含风格包。
  * 匹配优先级改由剧本编辑器①基础按剧配置；此处只管理资产与相册顺序。
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -14,6 +14,7 @@ import {
   avatarAgeLabel,
   avatarBackgroundLabel,
   avatarGenderLabel,
+  avatarStylePackLabel,
   type AvatarLibraryAlbum,
   type AvatarLibraryItem,
 } from '../../lib/galgame/avatarLibrary';
@@ -91,7 +92,7 @@ function SegOptions({
 const WarehouseAvatarLibrary: React.FC = () => {
   const { t } = useTranslation();
   const token = useAuthStore((s) => s.user?.token);
-  const { ageOptions, backgroundOptions, options: tagOptions } = useAvatarTagOptions(token);
+  const { ageOptions, backgroundOptions, stylePackOptions, options: tagOptions } = useAvatarTagOptions(token);
 
   const assetGenderOptions = useMemo(
     () => AVATAR_ASSET_GENDERS.map((g) => ({
@@ -110,6 +111,7 @@ const WarehouseAvatarLibrary: React.FC = () => {
   const [gender, setGender] = useState('');
   const [ageGroup, setAgeGroup] = useState('');
   const [backgroundType, setBackgroundType] = useState('');
+  const [stylePack, setStylePack] = useState('');
   const [q, setQ] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -149,6 +151,7 @@ const WarehouseAvatarLibrary: React.FC = () => {
         gender: gender || undefined,
         ageGroup: ageGroup || undefined,
         backgroundType: backgroundType || undefined,
+        stylePack: stylePack || undefined,
         q: q.trim() || undefined,
         albumId: scope === 'mine' && activeAlbumId ? activeAlbumId : undefined,
       });
@@ -164,7 +167,7 @@ const WarehouseAvatarLibrary: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [token, scope, gender, ageGroup, backgroundType, q, activeAlbumId, t]);
+  }, [token, scope, gender, ageGroup, backgroundType, stylePack, q, activeAlbumId, t]);
 
   useEffect(() => {
     if (!token) return;
@@ -314,6 +317,16 @@ const WarehouseAvatarLibrary: React.FC = () => {
                 ← {activeAlbum.title}
               </button>
             ) : null}
+            {scope !== 'mine' ? (
+              <SegOptions
+                label="风格包"
+                value={stylePack}
+                options={stylePackOptions}
+                allowEmpty
+                emptyLabel={filterAllLabel}
+                onChange={setStylePack}
+              />
+            ) : null}
             <SegOptions
               label={t('warehouse.avatars.filterGender')}
               value={gender}
@@ -450,7 +463,7 @@ const WarehouseAvatarLibrary: React.FC = () => {
                 />
               </button>
               <p className={panel.sub} style={{ margin: '8px 0 0', fontSize: 12 }}>
-                {displayAssetGender(item.gender, t)} · {avatarAgeLabel(item.ageGroup, tagOptions)} · {avatarBackgroundLabel(item.backgroundType, tagOptions)}
+                {item.stylePack ? `${avatarStylePackLabel(item.stylePack, tagOptions)} · ` : ''}{displayAssetGender(item.gender, t)} · {avatarAgeLabel(item.ageGroup, tagOptions)} · {avatarBackgroundLabel(item.backgroundType, tagOptions)}
               </p>
               {item.title ? <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--color-text)' }}>{item.title}</p> : null}
               {scope === 'mine' && (
@@ -487,7 +500,7 @@ const WarehouseAvatarLibrary: React.FC = () => {
               />
             </div>
             <p style={{ margin: 0, textAlign: 'center' }}>
-              {displayAssetGender(preview.gender, t)} · {avatarAgeLabel(preview.ageGroup, tagOptions)} · {avatarBackgroundLabel(preview.backgroundType, tagOptions)}
+              {preview.stylePack ? `${avatarStylePackLabel(preview.stylePack, tagOptions)} · ` : ''}{displayAssetGender(preview.gender, t)} · {avatarAgeLabel(preview.ageGroup, tagOptions)} · {avatarBackgroundLabel(preview.backgroundType, tagOptions)}
             </p>
           </div>
         ) : ''}

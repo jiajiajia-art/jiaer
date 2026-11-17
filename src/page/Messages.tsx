@@ -20,6 +20,7 @@ import type {
     MessagePromotion,
     MessagePromotionSubmissionNotification,
     MessageFeedbackReplyNotification,
+    MessageOperatorDirectNotification,
     MessageReportReceivedNotification,
     MessageReportResolvedNotification,
     MessageType,
@@ -61,7 +62,8 @@ type MessageFeedItem =
     | (MessageReportReceivedNotification & { itemType: 'report_received'; sortTime: string | null })
     | (MessageReportResolvedNotification & { itemType: 'report_resolved'; sortTime: string | null })
     | (MessageModerationNotification & { itemType: 'moderation'; sortTime: string | null })
-    | (MessageFeedbackReplyNotification & { itemType: 'feedback_reply'; sortTime: string | null });
+    | (MessageFeedbackReplyNotification & { itemType: 'feedback_reply'; sortTime: string | null })
+    | (MessageOperatorDirectNotification & { itemType: 'operator_direct'; sortTime: string | null });
 
 type SafetyDetail = {
     title: string;
@@ -267,6 +269,12 @@ const Messages: React.FC = () => {
             sortTime: item.publishedAt || item.createdAt || null,
         }));
 
+        const operatorDirectNotifications = (messageCenter?.operatorDirectNotifications || []).map((item) => ({
+            ...item,
+            itemType: 'operator_direct' as const,
+            sortTime: item.publishedAt || item.createdAt || null,
+        }));
+
         return [
             ...announcements,
             ...promotions,
@@ -279,6 +287,7 @@ const Messages: React.FC = () => {
             ...reportResolvedNotifications,
             ...moderationNotifications,
             ...feedbackReplyNotifications,
+            ...operatorDirectNotifications,
         ].sort((left, right) => {
             const leftTime = new Date(left.sortTime || 0).getTime();
             const rightTime = new Date(right.sortTime || 0).getTime();
@@ -356,6 +365,12 @@ const Messages: React.FC = () => {
                     : item
             ));
 
+            const operatorDirectNotifications = (prev.operatorDirectNotifications || []).map((item) => (
+                messageType === 'operator_direct' && item.sourceId === sourceId
+                    ? { ...item, isRead: true }
+                    : item
+            ));
+
             return {
                 ...prev,
                 unreadCount: nextUnreadCount,
@@ -370,6 +385,7 @@ const Messages: React.FC = () => {
                 reportResolvedNotifications,
                 moderationNotifications,
                 feedbackReplyNotifications,
+                operatorDirectNotifications,
             };
         });
     }, []);
@@ -392,6 +408,7 @@ const Messages: React.FC = () => {
                 reportResolvedNotifications: markCollectionAsRead(prev.reportResolvedNotifications || []),
                 moderationNotifications: markCollectionAsRead(prev.moderationNotifications || []),
                 feedbackReplyNotifications: markCollectionAsRead(prev.feedbackReplyNotifications || []),
+                operatorDirectNotifications: markCollectionAsRead(prev.operatorDirectNotifications || []),
             };
         });
     }, []);
@@ -510,6 +527,14 @@ const Messages: React.FC = () => {
             title: notification.title?.trim() || t('messages.feedbackReplyTitle', { defaultValue: '意见反馈回复' }),
             body: notification.body
                 || t('messages.feedbackReplyBody', { defaultValue: '您的反馈已收到回复。' }),
+        });
+    }, [markMessageAsRead, t]);
+
+    const handleOpenOperatorDirect = useCallback(async (notification: MessageOperatorDirectNotification) => {
+        await markMessageAsRead('operator_direct', notification.sourceId, notification.isRead);
+        setSafetyDetail({
+            title: notification.title?.trim() || t('messages.operatorDirectTitle', { defaultValue: '官方消息' }),
+            body: notification.body || '',
         });
     }, [markMessageAsRead, t]);
 
@@ -668,6 +693,19 @@ const Messages: React.FC = () => {
                 continue;
             }
 
+            if (item.itemType === 'operator_direct') {
+                buckets[section].push({
+                    key: `operator-direct-${item.sourceId}`,
+                    title: item.title?.trim()
+                        || t('messages.operatorDirectTitle', { defaultValue: '官方消息' }),
+                    preview: truncateMessagePreview(item.body || ''),
+                    time,
+                    isRead: item.isRead,
+                    onOpen: () => { void handleOpenOperatorDirect(item); },
+                });
+                continue;
+            }
+
             if (item.itemType === 'creator_earning_withdrawal') {
                 const view = buildCreatorEarningWithdrawalMessageView(item);
                 buckets[section].push({
@@ -812,6 +850,7 @@ const Messages: React.FC = () => {
         handleOpenReportReceived,
         handleOpenReportResolved,
         handleOpenFeedbackReply,
+        handleOpenOperatorDirect,
         messageFeed,
         t,
     ]);

@@ -141,7 +141,7 @@ export default function SidelinesEditor({ value, events = [], storylines, onChan
     <div className="space-y-2.5">
       {confirmEl}
       <button className={btn} onClick={() => commit([...list, newSideline(dd)])}>＋ 新建支线</button>
-      {!list.length && <p className="rounded-xl border border-dashed border-line/80 bg-paper-2/40 px-3 py-3.5 text-center text-[12px] text-ink-soft">{SIDELINES_EMPTY_TEXT}</p>}
+      {!list.length && <p className="wg-story-empty rounded-xl px-3 py-3 text-center text-[12px] text-ink-soft">{SIDELINES_EMPTY_TEXT}</p>}
       {list.map((l, i) => (
         <SidelineCard key={l.id} l={l} idx={i} total={list.length} opts={opts}
           onChange={(x) => commit(list.map((y) => (y.id === l.id ? x : y)))}

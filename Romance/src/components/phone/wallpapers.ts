@@ -42,7 +42,8 @@ export function resolveEffectiveHomeWallpaper(
   const world = typeof worldWallpaper === "string" ? worldWallpaper.trim() : "";
   if (world) {
     const css = /url\(/i.test(world) ? world : customWallpaperCss(world);
-    return { id: "world-home", label: "作品默认", css, dark: true, kind: "photo" };
+    // 功能注释：作品桌面常见浅色写真；勿默认 dark=true，否则状态栏白字看不清
+    return { id: "world-home", label: "作品默认", css, dark: false, kind: "photo" };
   }
   return resolveWallpaper(prefs.wallpaper || DEFAULT_WALLPAPER, prefs.customWallpaper);
 }

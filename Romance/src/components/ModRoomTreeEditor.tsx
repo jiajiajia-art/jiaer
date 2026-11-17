@@ -215,8 +215,8 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
 
   const mapBar = (
     <div className="space-y-1.5 rounded-2xl border border-line bg-paper-2 p-2">
-      <p className="px-1 text-[11px] font-bold text-ink-soft">大地图 · 每张下面一棵地点树</p>
-      {/* 功能注释：大地图页签与「＋大地图 / 从地点库添加」同一行，删掉单独一行按钮区 */}
+      <p className="px-1 text-[11px] font-bold text-ink-soft">大地图：先配总览图，再在图上添加地点</p>
+      {/* 功能注释：大地图页签与「＋新大地图 / 从地点库添加」同一行 */}
       <div className="flex flex-wrap items-center gap-1.5">
         {maps.map((m) => (
           <button
@@ -228,7 +228,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
             {m.name || m.id}
           </button>
         ))}
-        <button type="button" className={pill} onClick={addMap}>＋ 大地图</button>
+        <button type="button" className={pill} onClick={addMap}>＋ 新大地图</button>
         <button type="button" className={pill} onClick={() => setLibOpen(true)}>从地点库添加</button>
         {maps.length > 1 && curMapId ? (
           <button type="button" className={`${pill} !text-danger`} onClick={() => delMap(curMapId)}>删除当前大地图</button>
@@ -240,9 +240,9 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
             <span className={lbl}>大地图名称</span>
             <input className={inp} value={curMap.name} onChange={(e) => patchMap(curMap.id, { name: e.target.value })} placeholder="如：雾色旅馆" />
           </label>
-          {/* 功能注释：大地图图统一竖版 9:16；生图/上传/素材库/链接入库前都裁成竖图预览 */}
+          {/* 功能注释：大地图图统一竖版 9:16 / 1080×1920；界面文案对创作者白话说明 */}
           <div className="block">
-            <span className={lbl}>大地图图 · 竖版 9:16 · 可生图、上传或从素材库选图</span>
+            <span className={lbl}>大地图封面（竖版，可上传 / AI 生成 / 素材库）</span>
             <ImagePicker
               value={curMap.bg}
               onChange={(bg) => patchMap(curMap.id, { bg: bg || undefined })}
@@ -253,7 +253,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
               platformAssetPurpose="world_map"
               aiGen={{
                 size: WORLD_MAP_GEN_SIZE,
-                placeholder: "只写这张地图：名称与包含的地点（9:16 竖版）…",
+                placeholder: "写清这张地图叫什么、上面有哪些地点…",
                 initialParts: buildWorldMapPromptParts(
                   { name: curMap.name, places: Object.values(mapRooms).map((x) => x.name || ""), desc: curMap.desc },
                   imageGen?.settings,
@@ -262,13 +262,13 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
               }}
             />
           </div>
-          {/* 功能注释：上传大地图图后直接在图上点点位：选地点 → 点图放置；拖图钉微调；没选时点空白处新建顶层地点 */}
+          {/* 功能注释：上传大地图图后直接在图上点点位 */}
           {curMap.bg ? (() => {
             const tops = Object.entries(mapRooms).filter(([, x]) => !x.parent);
             const target = pinTarget && mapRooms[pinTarget] && !mapRooms[pinTarget].parent ? pinTarget : null;
             return (
               <div className="space-y-1.5" data-map-pins>
-                <span className={lbl}>地图点位 · 选地点后点图放置，拖动图钉微调；不选时点空白处新建地点</span>
+                <span className={lbl}>在图上标地点：先点地点名，再点地图；也可直接点空白处新建</span>
                 <div className="flex flex-wrap gap-1">
                   {tops.map(([id, x]) => {
                     const placed = typeof x.mapX === "number" && typeof x.mapY === "number";
@@ -299,15 +299,15 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
                   />
                 </div>
                 <p className="text-[10.5px] text-ink-soft">
-                  {target ? `点地图把「${mapRooms[target]?.name || target}」放到该处` : "提示：只有顶层地点会出现在大地图上，子地点在所属地点里进入。"}
+                  {target ? `点地图，把「${mapRooms[target]?.name || target}」放到这里` : "小提示：大地图上只显示直属地点；下级地点进了上一级后再选。"}
                   {target && typeof mapRooms[target]?.mapX === "number" && (
-                    <button type="button" className="ml-2 text-coral underline" onClick={() => { set(target, { mapX: undefined, mapY: undefined }); setPinTarget(null); }}>移除点位</button>
+                    <button type="button" className="ml-2 text-coral underline" onClick={() => { set(target, { mapX: undefined, mapY: undefined }); setPinTarget(null); }}>移除标记</button>
                   )}
                 </p>
               </div>
             );
           })() : (
-            <p className="text-[10.5px] text-ink-soft">上传或生成大地图图后，可直接在图上点出各地点的位置。</p>
+            <p className="text-[10.5px] text-ink-soft">有了封面图后，点一下图就能标出地点位置。</p>
           )}
         </div>
       )}
@@ -321,7 +321,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
         {batchPanel}
         <EmptyState>{emptyHint}</EmptyState>
         <div className="flex flex-wrap gap-1.5">
-          <button data-author-field="author-field-rooms" className={pill} onClick={() => add()}>＋ 添加顶层地点</button>
+          <button data-author-field="author-field-rooms" className={pill} onClick={() => add()}>＋ 添加地点</button>
           <button type="button" className={pill} onClick={() => setLibOpen(true)}>从地点库添加</button>
         </div>
         {libPicker}
@@ -344,13 +344,13 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
       {ids.length > 6 && <SearchBox value={q} onChange={setQ} placeholder="搜索地点" />}
       <div className="grid gap-2 sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)]">
         <div className="rounded-2xl border border-line bg-paper-2 p-1.5">
-          <p className="px-2 pb-1 text-[11px] font-bold text-ink-soft">地点树 · {curMap?.name || "当前大地图"} · 拖拽同级顺序</p>
+          <p className="px-2 pb-1 text-[11px] font-bold text-ink-soft">地点列表 · {curMap?.name || "当前大地图"} · 可拖动调整顺序</p>
           <ul className="max-h-[22rem] space-y-0.5 overflow-y-auto">
             {sortedRoots.map((x) => tree(x, 0))}
             {orphans.map((x) => tree(x, 0))}
           </ul>
           <div className="mt-1.5 grid gap-1">
-            <button className={`${pill} w-full`} onClick={() => add()}>＋ 顶层地点</button>
+            <button className={`${pill} w-full`} onClick={() => add()}>＋ 添加地点</button>
           </div>
         </div>
 
@@ -365,7 +365,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
               ))}
             </nav>
             <div className="flex flex-wrap gap-1" role="tablist">
-              {([["base", "基本"], ["kids", `子地点管理 · ${kids.length}`], ["flags", "标记与准入"]] as const).map(([k, t]) => (
+              {([["base", "基本"], ["kids", `下级地点 · ${kids.length}`], ["flags", "显示与进入条件"]] as const).map(([k, t]) => (
                 <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
                   className={`rounded-full px-3 py-1 text-[12px] font-bold transition ${tab === k ? "bg-ink text-paper-2" : "bg-paper text-ink-soft hover:text-ink"}`}>{t}</button>
               ))}
@@ -378,24 +378,24 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
                   <button className={`${pill} shrink-0`} onClick={() => onDelete(cur)} aria-label="删除地点">×</button>
                 </div>
                 <label className="block">
-                  <span className={lbl}>父地点 · 空 = 本大地图顶层（不能选自己或自己的下级）</span>
+                  <span className={lbl}>属于哪里 · 不选就是大地图上的直属地点（不能选自己或自己的下级）</span>
                   <select className={inp} value={parentVal} onChange={(e) => {
                     const p = e.target.value || undefined;
                     if (wouldCycle(mapRooms, cur, p)) return;
                     set(cur, { parent: p, order: p ? childrenOf(mapRooms, p).length : undefined, mapId: curMapId });
                   }}>
-                    <option value="">（顶层地点）</option>
+                    <option value="">（大地图直属地点）</option>
                     {parentOpts.filter((x) => x !== cur).map((x) => <option key={x} value={x}>{pathOf(mapRooms, x).map(nm).join(" › ")}</option>)}
                   </select>
                 </label>
-                <textarea className={`${area} ${String(r.desc ?? "").trim() ? "" : "!border-danger"}`} rows={3} value={String(r.desc ?? "")} placeholder="进入此地时的场景描述（必填）" onChange={(e) => set(cur, { desc: e.target.value })} />
-                {/* 功能注释：画面描述只喂场景生图（空间布局/光线/陈设），与上面玩家可见的进入叙事分开 */}
+                <textarea className={`${area} ${String(r.desc ?? "").trim() ? "" : "!border-danger"}`} rows={3} value={String(r.desc ?? "")} placeholder="玩家走进这里时看到的描述（必填）" onChange={(e) => set(cur, { desc: e.target.value })} />
+                {/* 功能注释：画面描述只喂场景生图；规格仍为 9:16 / 1080×1920 */}
                 <label className="block">
-                  <span className={lbl}>画面描述 · 只给场景生图用（空间布局 / 光线 / 陈设），不写进入叙事</span>
-                  <textarea className={area} rows={2} value={String(r.scenePrompt ?? "")} placeholder="如：木质回廊，午后斜阳，靠窗长桌，墙上挂着旧地图（可空）" onChange={(e) => set(cur, { scenePrompt: e.target.value || undefined })} />
+                  <span className={lbl}>给 AI 画图用的画面提示（写空间、光线、陈设即可，可空）</span>
+                  <textarea className={area} rows={2} value={String(r.scenePrompt ?? "")} placeholder="如：木质回廊，午后斜阳，靠窗长桌，墙上挂着旧地图" onChange={(e) => set(cur, { scenePrompt: e.target.value || undefined })} />
                 </label>
                 <div className="grid gap-1.5 sm:grid-cols-2">
-                  <div className="block"><span className={lbl}>场景背景图（进入此地显示 · 9:16 / 1080×1920）</span>
+                  <div className="block"><span className={lbl}>进入此地时显示的背景图（竖版）</span>
                     <ImagePicker
                       value={r.bg}
                       onChange={(bg) => set(cur, { bg })}
@@ -406,7 +406,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
                       platformAssetPurpose="location_scene"
                       aiGen={{
                         size: LOCATION_SCENE_GEN_SIZE,
-                        placeholder: "只写这个地点的空间：布局、光线、陈设（9:16 竖图）…",
+                        placeholder: "写这个地点的空间：布局、光线、陈设…",
                         initialParts: buildLocationScenePromptParts(
                           { name: r.name, scenePrompt: r.scenePrompt },
                           imageGen?.settings,
@@ -415,7 +415,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
                       }}
                     />
                   </div>
-                  <label className="block"><span className={lbl}>BGM（进入此地自动切换）</span>
+                  <label className="block"><span className={lbl}>背景音乐（走进这里时切换）</span>
                     <select className={inp} value={bgmVal} onChange={(e) => set(cur, { bgm: e.target.value || undefined })}>
                       <option value="">不切换</option>
                       {tracks.map((t) => {
@@ -427,7 +427,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
                   </label>
                 </div>
                 <label className="flex cursor-pointer items-center gap-2 text-[12px] text-ink">
-                  <input data-author-field="author-field-start-room" type="radio" className="accent-jade" checked={startRoom === cur} onChange={() => commit(allRooms, cur)} />设为开局地点<span className="text-ink-soft">（可以是任意一层子地点）</span>
+                  <input data-author-field="author-field-start-room" type="radio" className="accent-jade" checked={startRoom === cur} onChange={() => commit(allRooms, cur)} />设为开局落脚点<span className="text-ink-soft">（玩家一开局就在这里）</span>
                 </label>
               </div>
             )}
@@ -478,10 +478,10 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
               <div className="space-y-1.5">
                 <div className="grid gap-1 sm:grid-cols-2">
                   {([
-                    ["hidden", "隐藏", "不在上层入口里出现，到访过或已解锁后才显示"],
-                    ["locked", "上锁 / 需单独解锁", `规则变量 unlock:${cur} ≥ 1 才能进入；解锁父地点不连带`],
-                    ["noNpcVisit", "不允许 NPC 自主到访", "漫游的人物不会走进来"],
-                    ["inheritEvents", "沿用父地点的活动", "缺省各层独立；勾选后叠加上层的可执行活动"],
+                    ["hidden", "先藏起来", "平时不在列表里出现，去过或解锁后才显示"],
+                    ["locked", "需要解锁才能进", "未解锁时玩家进不来；解锁上级地点不会自动解开这里"],
+                    ["noNpcVisit", "人物不会自己走进来", "四处走动的 NPC 不会主动到这里"],
+                    ["inheritEvents", "也显示上级地点的活动", "默认各自独立；勾选后会带上上级可做的事"],
                   ] as const).map(([k, t, d]) => (
                     <label key={k} className="flex cursor-pointer items-start gap-2 rounded-2xl border border-line bg-paper px-3 py-2 text-[12px] text-ink">
                       <input type="checkbox" className="mt-0.5 accent-jade" checked={!!r[k]} onChange={(e) => set(cur, { [k]: e.target.checked || undefined })} />
@@ -491,7 +491,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
                 </div>
                 {r.locked && <input className={inp} value={r.lockNote ?? ""} placeholder="上锁提示，如：小阁的门上了铜锁，钥匙不知在谁手里。" onChange={(e) => set(cur, { lockNote: e.target.value || undefined })} />}
                 <div className="space-y-1 rounded-2xl border border-line bg-paper p-2">
-                  <p className="text-[12px] font-bold text-ink">准入条件 <span className="font-normal text-ink-soft">· 全部满足才能进入</span></p>
+                  <p className="text-[12px] font-bold text-ink">进入条件 <span className="font-normal text-ink-soft">· 下面都满足才能进来</span></p>
                   {reqs.map((q2, i) => (
                     <div key={i} className="flex flex-wrap gap-1">
                       <input className={`${inp} !w-36 font-mono`} value={q2.metric} placeholder="fame / c:属性 / flag:变量" onChange={(e) => setReqs(reqs.map((x, j) => (j === i ? { ...x, metric: e.target.value } : x)))} />
@@ -514,7 +514,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
           </div>
         )}
         {!cur && (
-          <EmptyState>当前大地图还没有地点。点左侧「＋ 顶层地点」，或从地点库添加一张带地点树的大地图。</EmptyState>
+          <EmptyState>这张大地图还没有地点。点左侧「＋ 添加地点」，或从地点库整图导入。</EmptyState>
         )}
       </div>
       {libPicker}

@@ -10,7 +10,7 @@ const THEME_KEY = 'funloom.theme';
 const MODE_KEY = 'funloom.themeMode';
 const CHANGE_EVENT = 'funloom:theme-change';
 const DEFAULT_THEME: ThemeId = 'default';
-const DEFAULT_MODE: ThemeMode = 'dark';
+const DEFAULT_MODE: ThemeMode = 'light';
 
 const read = (key: string) => {
     try { return localStorage.getItem(key); } catch { return null; }

@@ -14,7 +14,10 @@ const CreatorWorkDetailSections: React.FC<CreatorWorkDetailSectionsProps> = ({ d
   const { t } = useTranslation();
 
   const topActiveHours = useMemo(() => {
-    const sorted = [...detail.activeHours]
+    // 功能注释：全 0 时不标红，避免 0:00–4:00 被误当成高峰
+    const withActivity = detail.activeHours.filter((bucket) => (Number(bucket.count) || 0) > 0);
+    if (withActivity.length === 0) return new Set<number>();
+    const sorted = [...withActivity]
       .sort((left, right) => right.count - left.count || left.hour - right.hour)
       .slice(0, TOP_ACTIVE_HOUR_COUNT);
     return new Set(sorted.map((bucket) => bucket.hour));

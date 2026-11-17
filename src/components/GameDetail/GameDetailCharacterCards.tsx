@@ -49,7 +49,7 @@ const Portrait: React.FC<{ card: CharacterCard }> = ({ card }) => (
     )
 );
 
-/** 剧情简介下的角色大卡：横滑预览下一张，点开放大看全文 */
+/** 剧情简介下的竖长斜四边形角色卡：横滑预览下一张，点开放大看全文 */
 const GameDetailCharacterCards: React.FC<Props> = ({ fileId }) => {
     const { t } = useTranslation();
     const [cards, setCards] = useState<CharacterCard[]>([]);
@@ -121,9 +121,9 @@ const GameDetailCharacterCards: React.FC<Props> = ({ fileId }) => {
                             <Portrait card={card} />
                         </div>
                         <span className={styles.copy}>
+                            {/* 功能注释：小卡只放姓名+身份，简介进点开详情，避免斜四边卡被字糊满 */}
                             <span className={styles.name}>{card.name}</span>
                             {card.role ? <span className={styles.role}>{card.role}</span> : null}
-                            {card.bio ? <span className={styles.bio}>{card.bio}</span> : null}
                         </span>
                     </button>
                 ))}

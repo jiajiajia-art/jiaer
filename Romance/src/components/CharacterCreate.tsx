@@ -711,7 +711,7 @@ export default function CharacterCreate() {
     setup: <div className="space-y-3">{needSigning && stepSign}{stepFactions}{stepSetup}</div>,
   };
 
-  // 功能注释：底栏走 Modal.footer，钉在 85% 框底；滚动只发生在 ui-dialog-body，属性不被按钮盖住
+  // 功能注释：底栏走 Modal.footer；弹窗高度随内容（最高 85dvh），短表单不撑空白；溢出才在 body 内滚
   // 第一步：作者预览可退出；有存档可读取；不再回封面开始菜单
   const wizardFoot = (
     <div className="ui-sheet-foot">

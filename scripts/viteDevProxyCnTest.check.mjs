@@ -1,5 +1,5 @@
 /**
- * 功能注释：本地联调只改 devApiPresets.ts 的 ACTIVE_DEV_API；含 gogo/neo/qqq
+ * 功能注释：本地联调只改 devApiPresets.ts 的 ACTIVE_DEV_API；含 gogo/neo/qqq/abc
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -17,9 +17,10 @@ import {
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const presetsSrc = readFileSync(join(root, 'devApiPresets.ts'), 'utf8');
 
-test('devApiPresets_应含正式测试同事三套与cf-local', () => {
+test('devApiPresets_应含正式测试同事机与cf-local', () => {
   const expected = [
     'cf-test2',
+    'cn-abc',
     'cn-gogo',
     'cn-neo',
     'cn-prod',
@@ -65,4 +66,12 @@ test('vite日志指引须指向单一文件ACTIVE_DEV_API', () => {
   assert.match(vite, /ACTIVE_DEV_API/);
   assert.match(vite, /devApiPresets\.ts/);
   assert.doesNotMatch(vite, /改 \.env\.development 的 VITE_DEV_API/);
+});
+
+test('romance文档请求须回主站index避免figma标题占位', () => {
+  const vite = readFileSync(join(root, 'vite.config.ts'), 'utf8');
+  assert.match(vite, /romanceDocumentToSpaIndex/);
+  assert.match(vite, /figma:title/);
+  assert.match(vite, /\$\{base\}\/__spa/);
+  assert.match(vite, /Auth Handler/);
 });

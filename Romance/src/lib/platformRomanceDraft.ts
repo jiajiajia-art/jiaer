@@ -27,6 +27,54 @@ export function readRomancePlatformDraftId(
   }
 }
 
+/** 功能注释：把平台草稿 id 写回地址栏（replaceState），续编 / 发布共用同一 fileId。 */
+export function writeRomancePlatformDraftId(fileId: string): void {
+  const id = String(fileId || "").trim();
+  if (!id || typeof location === "undefined" || typeof history === "undefined") return;
+  try {
+    const url = new URL(location.href);
+    url.searchParams.set("draftId", id);
+    history.replaceState(history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * 功能注释：入口未带 draftId 时补建一条平台草稿（POST /drafts/romance），成功后写回 URL。
+ * 正常路径仍应由创作者中心入口先 create；这里只兜底「本机进向导后仍要发布」的情况。
+ */
+export async function ensureRomancePlatformDraftId(
+  apiBase = resolveFunloomApiBase(),
+): Promise<string> {
+  const existing = readRomancePlatformDraftId();
+  if (existing) return existing;
+  const token = readFunloomAuthToken();
+  if (!token) return "";
+  const base = String(apiBase || "").trim().replace(/\/$/, "");
+  try {
+    const res = await fetch(`${base}/api/auth/games/drafts/romance`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+    });
+    const json = (await res.json().catch(() => null)) as {
+      success?: boolean;
+      data?: { fileId?: string } | null;
+    } | null;
+    const id = String(json?.data?.fileId || "").trim();
+    if (!res.ok || !json?.success || !id) return "";
+    writeRomancePlatformDraftId(id);
+    return id;
+  } catch {
+    return "";
+  }
+}
+
 /** 功能注释：书架展示标题；空名回落未命名，截断与后端一致。 */
 export function resolveRomanceDraftTitle(name: string | null | undefined): string {
   const t = String(name ?? "").trim();

@@ -11,12 +11,15 @@ import {
   AVATAR_AGE_GROUPS,
   AVATAR_ASSET_GENDERS,
   AVATAR_BACKGROUNDS,
+  AVATAR_STYLE_PACKS,
   avatarAgeLabel,
   avatarBackgroundLabel,
   avatarGenderLabel,
+  avatarStylePackLabel,
   formatAvatarCardSummary,
   resolveAvatarCardTitle,
   type AvatarLibraryItem,
+  type AvatarTagDimension,
   type AvatarTagOption,
 } from '../../lib/galgame/avatarLibrary';
 import { invalidateAvatarTagOptionsCache, useAvatarTagOptions } from '../../hooks/useAvatarTagOptions';
@@ -104,6 +107,7 @@ const AdminPublicAvatarManager: React.FC = () => {
     options: tagOptions,
     ageOptions,
     backgroundOptions,
+    stylePackOptions,
     reload: reloadTagOptions,
   } = useAvatarTagOptions(token, { includeDisabled: true });
   const [mainTab, setMainTab] = useState<MainTab>('library');
@@ -116,14 +120,17 @@ const AdminPublicAvatarManager: React.FC = () => {
   const [gender, setGender] = useState('');
   const [ageGroup, setAgeGroup] = useState('');
   const [backgroundType, setBackgroundType] = useState('');
+  const [stylePack, setStylePack] = useState('');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadKind, setUploadKind] = useState<UploadKind>('public');
   const [formGender, setFormGender] = useState('female');
   const [formAge, setFormAge] = useState('adult');
   const [formBg, setFormBg] = useState('modern');
+  const [formStyle, setFormStyle] = useState('anime');
   const [formTitle, setFormTitle] = useState('');
   const [newAgeLabel, setNewAgeLabel] = useState('');
   const [newBgLabel, setNewBgLabel] = useState('');
+  const [newStyleLabel, setNewStyleLabel] = useState('');
   const [uploading, setUploading] = useState(false);
   const [batchBoardOpen, setBatchBoardOpen] = useState(false);
   const [batchBoard, setBatchBoard] = useState<BatchBoardItem[]>([]);
@@ -138,6 +145,7 @@ const AdminPublicAvatarManager: React.FC = () => {
   const [editGender, setEditGender] = useState('female');
   const [editAge, setEditAge] = useState('adult');
   const [editBg, setEditBg] = useState('modern');
+  const [editStyle, setEditStyle] = useState('anime');
   const [editTitle, setEditTitle] = useState('');
   const [editSaving, setEditSaving] = useState(false);
 
@@ -155,6 +163,7 @@ const AdminPublicAvatarManager: React.FC = () => {
         gender: gender || undefined,
         ageGroup: ageGroup || undefined,
         backgroundType: backgroundType || undefined,
+        stylePack: stylePack || undefined,
       });
       if (!res.success) {
         toast.error(res.message || '加载失败');
@@ -168,11 +177,18 @@ const AdminPublicAvatarManager: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [token, mainTab, listScope, q, kindFilter, statusFilter, gender, ageGroup, backgroundType]);
+  }, [token, mainTab, listScope, q, kindFilter, statusFilter, gender, ageGroup, backgroundType, stylePack]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!stylePackOptions.length) return;
+    if (!stylePackOptions.some((o) => o.id === formStyle)) {
+      setFormStyle(stylePackOptions[0].id);
+    }
+  }, [stylePackOptions, formStyle]);
 
   useEffect(() => {
     if (!configOpen) return undefined;
@@ -189,6 +205,7 @@ const AdminPublicAvatarManager: React.FC = () => {
       gender: formGender,
       ageGroup: formAge,
       backgroundType: formBg,
+      stylePack: formStyle,
       title: formTitle.trim() || undefined,
       kind: uploadKind,
       crop: payload.crop,
@@ -390,6 +407,7 @@ const AdminPublicAvatarManager: React.FC = () => {
     setEditGender(item.gender || 'female');
     setEditAge(item.ageGroup || 'adult');
     setEditBg(item.backgroundType || 'modern');
+    setEditStyle(item.stylePack || stylePackOptions[0]?.id || 'anime');
     setEditTitle(item.title || '');
   };
 
@@ -401,6 +419,7 @@ const AdminPublicAvatarManager: React.FC = () => {
         gender: editGender,
         ageGroup: editAge,
         backgroundType: editBg,
+        stylePack: editStyle,
         title: editTitle.trim(),
       });
       if (!res.success) {
@@ -463,6 +482,7 @@ const AdminPublicAvatarManager: React.FC = () => {
             ]}
             onChange={setStatusFilter}
           />
+          <SegOptions label="风格包" value={stylePack} options={stylePackOptions} allowEmpty emptyLabel="全部" onChange={setStylePack} />
           <SegOptions label="性别" value={gender} options={AVATAR_ASSET_GENDERS} allowEmpty emptyLabel="全部" onChange={setGender} />
           <SegOptions label="年龄" value={ageGroup} options={ageOptions} allowEmpty emptyLabel="全部" onChange={setAgeGroup} />
           <SegOptions label="背景" value={backgroundType} options={backgroundOptions} allowEmpty emptyLabel="全部" onChange={setBackgroundType} />
@@ -588,8 +608,10 @@ const AdminPublicAvatarManager: React.FC = () => {
                   options={tagOptions}
                   newAgeLabel={newAgeLabel}
                   newBgLabel={newBgLabel}
+                  newStyleLabel={newStyleLabel}
                   setNewAgeLabel={setNewAgeLabel}
                   setNewBgLabel={setNewBgLabel}
+                  setNewStyleLabel={setNewStyleLabel}
                   onChanged={async () => {
                     invalidateAvatarTagOptionsCache();
                     await reloadTagOptions(true);
@@ -672,6 +694,7 @@ const AdminPublicAvatarManager: React.FC = () => {
                       placeholder="可选，便于检索"
                     />
                   </label>
+                  <SegOptions label="风格包" value={formStyle} options={stylePackOptions} onChange={setFormStyle} />
                   <SegOptions label="性别" value={formGender} options={AVATAR_ASSET_GENDERS} onChange={setFormGender} />
                   <SegOptions label="年龄" value={formAge} options={ageOptions} onChange={setFormAge} />
                   <SegOptions label="背景" value={formBg} options={backgroundOptions} onChange={setFormBg} />
@@ -898,11 +921,12 @@ const AdminPublicAvatarManager: React.FC = () => {
                       placeholder="可选，便于检索"
                     />
                   </label>
+                  <SegOptions label="风格包" value={editStyle} options={stylePackOptions} onChange={setEditStyle} />
                   <SegOptions label="性别" value={editGender} options={AVATAR_ASSET_GENDERS} onChange={setEditGender} />
                   <SegOptions label="年龄" value={editAge} options={ageOptions} onChange={setEditAge} />
                   <SegOptions label="背景" value={editBg} options={backgroundOptions} onChange={setEditBg} />
                   <p className={styles.editMeta}>
-                    当前：{avatarGenderLabel(editItem.gender)} · {avatarAgeLabel(editItem.ageGroup, tagOptions)} · {avatarBackgroundLabel(editItem.backgroundType, tagOptions)}
+                    当前：{avatarStylePackLabel(editItem.stylePack || '', tagOptions)} · {avatarGenderLabel(editItem.gender)} · {avatarAgeLabel(editItem.ageGroup, tagOptions)} · {avatarBackgroundLabel(editItem.backgroundType, tagOptions)}
                   </p>
                   <div className={styles.actionsRow}>
                     <button type="button" className={styles.primaryBtn} disabled={editSaving} onClick={() => void onSaveEdit()}>
@@ -958,7 +982,7 @@ const AdminPublicAvatarManager: React.FC = () => {
 };
 
 function builtinTagOptions(
-  dimension: 'age_group' | 'background_type',
+  dimension: AvatarTagDimension,
   seeds: readonly { id: string; label: string }[],
 ): AvatarTagOption[] {
   return seeds.map((seed, index) => ({
@@ -973,7 +997,7 @@ function builtinTagOptions(
 
 function visibleTagOptions(
   options: readonly AvatarTagOption[],
-  dimension: 'age_group' | 'background_type',
+  dimension: AvatarTagDimension,
   seeds: readonly { id: string; label: string }[],
 ): AvatarTagOption[] {
   const saved = options.filter((option) => option.dimension === dimension);
@@ -985,28 +1009,39 @@ function tagActionError(message: string | undefined, fallback: string): string {
   return message || fallback;
 }
 
-/** 功能注释：后台维护年龄/背景选项；已用选项只能停用不能删；改名不改 id。接口没数据时先展示平台正在用的默认项。 */
+/** 功能注释：后台维护年龄/背景/风格包；已用选项只能停用不能删；改名不改 id。接口没数据时先展示平台正在用的默认项。 */
 function AdminTagOptionsEditor({
   token,
   options,
   newAgeLabel,
   newBgLabel,
+  newStyleLabel,
   setNewAgeLabel,
   setNewBgLabel,
+  setNewStyleLabel,
   onChanged,
 }: {
   token?: string | null;
   options: AvatarTagOption[];
   newAgeLabel: string;
   newBgLabel: string;
+  newStyleLabel: string;
   setNewAgeLabel: (v: string) => void;
   setNewBgLabel: (v: string) => void;
+  setNewStyleLabel: (v: string) => void;
   onChanged: () => Promise<void>;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState('');
   const ages = visibleTagOptions(options, 'age_group', AVATAR_AGE_GROUPS);
   const bgs = visibleTagOptions(options, 'background_type', AVATAR_BACKGROUNDS);
+  const stylesList = visibleTagOptions(options, 'style_pack', AVATAR_STYLE_PACKS);
+
+  const listForDimension = (dimension: AvatarTagDimension) => {
+    if (dimension === 'age_group') return ages;
+    if (dimension === 'style_pack') return stylesList;
+    return bgs;
+  };
 
   const startRename = (opt: AvatarTagOption) => {
     setEditingId(opt.id);
@@ -1057,7 +1092,7 @@ function AdminTagOptionsEditor({
     await onChanged();
   };
 
-  const add = async (dimension: 'age_group' | 'background_type', label: string, clear: () => void) => {
+  const add = async (dimension: AvatarTagDimension, label: string, clear: () => void) => {
     if (!token) return;
     const text = label.trim();
     if (!text) {
@@ -1074,9 +1109,9 @@ function AdminTagOptionsEditor({
     await onChanged();
   };
 
-  const move = async (dimension: 'age_group' | 'background_type', id: string, dir: -1 | 1) => {
+  const move = async (dimension: AvatarTagDimension, id: string, dir: -1 | 1) => {
     if (!token) return;
-    const list = (dimension === 'age_group' ? ages : bgs).map((o) => o.id);
+    const list = listForDimension(dimension).map((o) => o.id);
     const idx = list.indexOf(id);
     const swap = idx + dir;
     if (idx < 0 || swap < 0 || swap >= list.length) return;
@@ -1089,7 +1124,7 @@ function AdminTagOptionsEditor({
     await onChanged();
   };
 
-  const renderGroup = (title: string, list: AvatarTagOption[], dimension: 'age_group' | 'background_type') => (
+  const renderGroup = (title: string, list: AvatarTagOption[], dimension: AvatarTagDimension) => (
     <div className={styles.tagGroup}>
       <p className={styles.fieldLabel}>{title}</p>
       <ul className={styles.tagList}>
@@ -1139,6 +1174,19 @@ function AdminTagOptionsEditor({
 
   return (
     <div className={styles.tagEditor}>
+      {renderGroup('风格包', stylesList, 'style_pack')}
+      <div className={styles.tagAddRow}>
+        <input
+          className={styles.titleInput}
+          value={newStyleLabel}
+          onChange={(e) => setNewStyleLabel(e.target.value)}
+          placeholder="新增风格包名称，如：暗黑幻想"
+          maxLength={40}
+        />
+        <button type="button" className={styles.secondaryBtn} onClick={() => void add('style_pack', newStyleLabel, () => setNewStyleLabel(''))}>
+          新增风格包
+        </button>
+      </div>
       {renderGroup('年龄段', ages, 'age_group')}
       <div className={styles.tagAddRow}>
         <input
@@ -1165,7 +1213,7 @@ function AdminTagOptionsEditor({
           新增背景
         </button>
       </div>
-      <p className={styles.sub}>已被头像使用的选项不能删除，只能停用；性别固定为男 / 女 / 通用，不可在此配置。</p>
+      <p className={styles.sub}>风格包用于平台素材分类上传与浏览筛选；已被头像使用的选项不能删除，只能停用；性别固定为男 / 女 / 通用，不可在此配置。</p>
     </div>
   );
 }

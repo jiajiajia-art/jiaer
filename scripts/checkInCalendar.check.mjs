@@ -203,6 +203,9 @@ test('补签卡重复领取使用后端结果文案且异常后刷新校准', ()
 });
 
 test('统一资产流水的全部标签只请求织梦豆和 KK 币', () => {
-  assert.match(assetDetailsSource, /return ['"]wallet['"]/);
+  // 功能注释：旧接口不认 wallet；全部用 all，再滤成织梦豆和 KK 币
+  assert.match(assetDetailsSource, /tab === ['"]all['"] \? ['"]all['"] : tab/);
+  assert.match(assetDetailsSource, /item\.currency === ['"]points['"] \|\| item\.currency === ['"]diamonds['"]/);
   assert.doesNotMatch(assetDetailsSource, /return ['"]fenghua['"]/);
+  assert.doesNotMatch(assetDetailsSource, /currency === ['"]fenghua['"]/);
 });

@@ -69,7 +69,7 @@ export default function ModCarsEditor({ cars, travel, rooms, statLabels, world, 
     <div className="space-y-2.5">
       <div className="flex items-center justify-between gap-2 rounded-xl bg-gradient-to-r from-jade/10 to-coral/10 px-3 py-2">
         <p className="text-[11.5px] leading-snug text-ink-soft">不想手动配？让 AI 按这个世界的物价与时代感，生成出行方式和可购买的交通工具。</p>
-        <button className={`${btn} shrink-0 !border-transparent bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] !text-white`} disabled={busy} onClick={aiGen}>{busy ? "生成中…" : "AI 生成"}</button>
+        <button type="button" className="wg-ai-action shrink-0 rounded-full bg-jade px-3.5 py-1.5 text-[12px] font-bold text-white shadow-sm transition hover:brightness-105 disabled:opacity-40" disabled={busy} onClick={aiGen}>{busy ? "生成中…" : "AI 生成"}</button>
       </div>
       {err && <p className="text-[11px] text-danger">{err}</p>}
 

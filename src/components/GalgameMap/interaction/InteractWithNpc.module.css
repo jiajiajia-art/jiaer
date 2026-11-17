@@ -660,15 +660,13 @@
     right: 0;
     width: 100%;
     height: auto;
-    min-height: 12.5rem;
+    /* 功能注释：随文案伸缩，避免空底部仍糊住大片场景 */
+    min-height: 0;
     background: linear-gradient(to top,
-            color-mix(in srgb, var(--color-shadow) 85%, transparent) 0%,
-            color-mix(in srgb, var(--color-shadow) 82%, transparent) 8%,
-            color-mix(in srgb, var(--color-shadow) 75%, transparent) 18%,
-            color-mix(in srgb, var(--color-shadow) 70%, transparent) 32%,
-            color-mix(in srgb, var(--color-shadow) 60%, transparent) 50%,
-            color-mix(in srgb, var(--color-shadow) 55%, transparent) 82%,
-            color-mix(in srgb, var(--color-shadow) 30%, transparent) 92%,
+            color-mix(in srgb, var(--color-shadow) 88%, transparent) 0%,
+            color-mix(in srgb, var(--color-shadow) 72%, transparent) 28%,
+            color-mix(in srgb, var(--color-shadow) 42%, transparent) 58%,
+            color-mix(in srgb, var(--color-shadow) 18%, transparent) 82%,
             transparent 100%);
     z-index: 150;
     pointer-events: none;
@@ -991,6 +989,7 @@
         max-width: none;
         max-height: none;
         min-height: 100%;
+        min-height: 100dvh;
     }
 
     .characterContainer {
@@ -1001,20 +1000,17 @@
         max-height: none;
     }
 
-    .messageContainer {
-        bottom: 5rem;
-    }
-
     .buttonContainer {
         padding: 0.625rem 1.125rem;
         padding-right: 5.625rem;
-        padding-bottom: max(0.625rem, env(safe-area-inset-bottom));
+        padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
         gap: 1rem;
         margin-bottom: 0;
+        overflow-y: visible;
     }
 
     .gameContentWrapper {
-        padding-bottom: max(3.75rem, env(safe-area-inset-bottom));
+        padding-bottom: max(4.25rem, calc(3.25rem + env(safe-area-inset-bottom, 0px)));
     }
 }
 

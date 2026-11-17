@@ -361,7 +361,7 @@ const GameGrid: React.FC<GameGridProps> = ({
                                     </p>
                                 );
                             })()}
-                            {/* 功能注释：左作者署名、右收藏徽标，同一行左右布局 */}
+                            {/* 功能注释：作者署名（首页不再展示「N人收藏」胶囊） */}
                             <div className={styles.goodsMetaRow}>
                                 <div className={styles.goodsAuthor} title={author.name}>
                                     <img
@@ -373,10 +373,6 @@ const GameGrid: React.FC<GameGridProps> = ({
                                     />
                                     <span className={styles.goodsAuthorName}>{author.name}</span>
                                 </div>
-                                {/* 功能注释：右侧收藏徽标与作者同一行，实心酒红胶囊 */}
-                                {body.collectBadge ? (
-                                    <span className={styles.goodsCollectBadge}>{body.collectBadge}</span>
-                                ) : null}
                             </div>
                         </div>
                     </div>

@@ -42,6 +42,8 @@ export type PlatformAvatarMineItem = {
   gender: string;
   ageGroup: string;
   backgroundType: string;
+  /** 风格包；私人上传可选，公共/系统必填 */
+  stylePack?: string;
   imageUrl: string;
   thumbUrl?: string;
   title?: string;
@@ -63,7 +65,7 @@ export async function listPlatformAvatars(scope: "mine" | "public" | "system", q
 /** 功能注释：私人头像上传（正方形裁剪由调用方先做完再传 File） */
 export async function uploadPrivateAvatar(
   file: File,
-  meta: { gender: string; ageGroup: string; backgroundType: string; title?: string },
+  meta: { gender: string; ageGroup: string; backgroundType: string; stylePack?: string; title?: string },
 ): Promise<PlatformAvatarMineItem> {
   const token = readFunloomAuthToken();
   if (!token) throw new Error("请先登录后使用云端素材库");
@@ -73,6 +75,7 @@ export async function uploadPrivateAvatar(
   form.append("ageGroup", meta.ageGroup);
   form.append("backgroundType", meta.backgroundType);
   form.append("kind", "private");
+  if (meta.stylePack) form.append("stylePack", meta.stylePack);
   if (meta.title) form.append("title", meta.title);
   const res = await fetch(`${apiBase()}/api/avatar-library/upload`, {
     method: "POST",
@@ -254,10 +257,16 @@ export async function deleteRomanceCloudAsset(id: string): Promise<void> {
   await parseJson(res);
 }
 
-/** 功能注释：有 token 时把采用/上传结果写入云端「我的 · 通用图」；失败不阻断本地写入 */
+/** 功能注释：是否已登录，可供本机配额满时仍判定「已尝试入库」 */
+export function canSyncCreatorAssetsToCloud(): boolean {
+  return !!readFunloomAuthToken();
+}
+
+/** 功能注释：有 token 时把采用/上传结果写入云端「我的 · 通用图」；本机写失败也要尝试，失败不阻断调用方 */
 export function syncRememberToCloud(url: string, name = "图片", opts?: { temp?: boolean }): void {
-  if (!url || !readFunloomAuthToken()) return;
+  if (!url || !canSyncCreatorAssetsToCloud()) return;
+  // 功能注释：超大 dataURL 云端也可能拒；仍发起请求，失败静默，素材库会落本机或下次重试
   void upsertRomanceCloudAsset({ url, name: name.slice(0, 24) || "图片", temp: opts?.temp, at: Date.now() }).catch(() => {
-    /* 本机已记住；云端失败由下次打开素材库再提示 */
+    /* 本机可能已记住；云端失败由下次打开素材库再提示 */
   });
 }

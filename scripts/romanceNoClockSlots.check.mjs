@@ -40,8 +40,9 @@ test('logic_日始日终应忽略内容槽_只用引擎 travel 默认', () => {
 test('ModRoomTreeEditor_应从地点库添加且空态仍提示至少一个地点', () => {
   const src = read('Romance/src/components/ModRoomTreeEditor.tsx');
   assert.match(src, /从地点库添加/);
-  assert.match(src, /listActivePlatformLocations/);
-  assert.match(src, /添加顶层地点/);
+  assert.match(src, /CreatorAssetLibrary/);
+  assert.match(src, /locationPack/);
+  assert.match(src, /添加地点/);
   assert.match(src, /emptyHint/);
   assert.doesNotMatch(src, /autoSeed|LOCATIONS\.forEach|seedRoomsFrom/);
 });

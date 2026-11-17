@@ -82,9 +82,9 @@ export default function ModPreviewPanel({ modContent, baseContent, onPlaytest, p
       {onPlaytest && (
         <div className="wg-playtest-card rounded-2xl border border-line px-3 py-2.5">
           <button type="button" onClick={onPlaytest} className="wg-playtest-btn inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-jade px-3 py-2 text-[12.5px] font-bold text-white">
-            <IconPlay size={13} />进入试玩（叠加到世界真实开一局）
+            <IconPlay size={13} />进入试玩
           </button>
-          {playtestIssues?.length ? <p className="mt-1.5 text-[11px] text-danger">{playtestIssues.slice(0, 3).join("；")}</p> : <p className="mt-1.5 text-center text-[10.5px] leading-relaxed text-ink-soft">试玩存档与正式存档隔离，退出试玩回到工坊</p>}
+          {playtestIssues?.length ? <p className="mt-1.5 text-[11px] text-danger">{playtestIssues.slice(0, 3).join("；")}</p> : <p className="mt-1.5 text-center text-[10.5px] leading-relaxed text-ink-soft">试玩不会动到正式存档，退出后回到这里</p>}
         </div>
       )}
 
@@ -97,7 +97,7 @@ export default function ModPreviewPanel({ modContent, baseContent, onPlaytest, p
         ))}
       </div>
 
-      {total === 0 && <p className="rounded-xl border border-dashed border-line px-3 py-4 text-center text-[11.5px] text-ink-soft">还没有玩法内容。对话生成后，这里实时显示效果。</p>}
+      {total === 0 && <p className="rounded-xl border border-dashed border-line px-3 py-3 text-center text-[11.5px] text-ink-soft">还没有内容。聊几句或点上方步骤后，这里会显示效果。</p>}
 
       <div className="min-h-0 space-y-2 overflow-y-auto">
         {tab === "attrs" && (

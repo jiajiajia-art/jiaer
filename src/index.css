@@ -4,6 +4,10 @@
   --app-desktop-gutter: clamp(24px, 2vw, 40px);
   --app-desktop-navbar-height: 80px;
   --app-mobile-navbar-height: 72px;
+  /* 功能注释：PC 右侧「加入群聊」悬浮条占位，首页/分类内容两侧按此避让，避免挡住「查看更多」 */
+  --app-floating-dock-width: 64px;
+  --app-floating-dock-right: clamp(12px, 1.5vw, 24px);
+  --app-floating-dock-reserve: calc(var(--app-floating-dock-width) + var(--app-floating-dock-right) + 20px);
   /* 功能注释：内容避让用「栏高 + 安全区」；中间滚动区 top/bottom 读这两个，禁止各页再写死上边距 */
   --app-navbar-offset: calc(var(--app-desktop-navbar-height) + env(safe-area-inset-top, 0px));
   --app-bottom-nav-offset: 0px;

@@ -39,8 +39,12 @@ void mirrorCloud;
 export const DB_NAME = "gameSaveDB"; // 独立数据库实例名
 export const DB_STORE = "saves"; // 对象仓库名
 export const SAVE_DEBOUNCE_MS = 300; // 防抖存档延迟（毫秒）
-export const MAX_SLOTS = 6; // 手动存档位上限
-export const AUTO_SLOT_ID = "autosave"; // 自动存档专用槽位 id
+/**
+ * 功能注释：本机手动槽展示上限 = 会员云配额上限（20）。
+ * 真正能否「新建」以云端 quota.limit（普通 10 / 会员 20）为准，见 cloudSaves。
+ */
+export const MAX_SLOTS = 20;
+export const AUTO_SLOT_ID = "autosave"; // 自动存档专用槽位 id；不占 10/20 配额
 /* ─────────────────────────────────────────────────────── */
 
 /* 单一实例：只放玩家游戏存档、历史对话、角色属性、道具数据（无草稿库） */

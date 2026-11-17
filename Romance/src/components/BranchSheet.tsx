@@ -107,7 +107,7 @@ export default function BranchSheet() {
             {confirm ? (
               <div className="flex items-center gap-2 text-[12px]">
                 <span className="text-ink-soft">结束后回到主线，本段存入剧情志</span>
-                <button onClick={leaveBranch} disabled={busy} className="ui-btn ui-btn-primary ui-btn-sm tone-coral">确认结束</button>
+                <button onClick={leaveBranch} disabled={busy} className="ui-btn ui-btn-primary ui-btn-sm">确认结束</button>
                 <button onClick={() => setConfirm(false)} className="ui-btn ui-btn-sm">再想想</button>
               </div>
             ) : (
