@@ -169,7 +169,8 @@ export function validateMod(raw: unknown): string[] {
   if (ct.rooms && typeof ct.rooms === "object") {
     const ids = new Set(Object.keys(ct.rooms));
     for (const [rid, r] of Object.entries(ct.rooms)) {
-      if (!r || typeof r !== "object") { errs.push(`rooms.${rid} 须为对象`); continue; }
+      // 功能注释：数组也是 object；旧清洗曾把 id=shop 收成 [{…}]，须显式拒绝
+      if (!r || typeof r !== "object" || Array.isArray(r)) { errs.push(`rooms.${rid} 须为对象`); continue; }
       if (typeof r.desc !== "string") errs.push(`rooms.${rid}.desc 缺失`);
       for (const [d, to] of Object.entries(r.exits ?? {})) if (to && !ids.has(to as string)) errs.push(`rooms.${rid}.exits.${d} 指向不存在的房间「${to}」`);
     }

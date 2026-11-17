@@ -18,6 +18,7 @@ export type CreatorPlayMode =
   | 'customif'
   | 'st'
   | 'interactive-video'
+  | 'ROMANCE'
   | '';
 
 function normalizeRawGameType(value?: string | null): string {
@@ -42,6 +43,8 @@ export function normalizeCreatorPlayMode(
   if (normalizedEngine === 'ST') return 'st';
   if (normalizedEngine === 'IVG') return 'interactive-video';
   if (normalizedEngine === 'NOVEL') return 'NOVEL';
+  // 功能注释：Romance 与详情页进局一致，创作台测玩须识别，避免「未知的游戏类型」
+  if (normalizedEngine === 'ROMANCE') return 'ROMANCE';
   if (normalizedEngine === 'TXT' || normalizedEngine === 'AVG' || normalizedEngine === 'RPG') {
     return normalizedEngine === 'RPG' ? 'TXT' : (normalizedEngine as 'TXT' | 'AVG');
   }
@@ -50,11 +53,20 @@ export function normalizeCreatorPlayMode(
   if (normalizedTags === 'CUSTOM') return 'customif';
   if (normalizedTags === 'IVG') return 'interactive-video';
   if (normalizedTags === 'NOVEL') return 'NOVEL';
+  if (normalizedTags === 'ROMANCE') return 'ROMANCE';
   if (normalizedTags === 'TXT' || normalizedTags === 'AVG' || normalizedTags === 'RPG') {
     return normalizedTags === 'RPG' ? 'TXT' : (normalizedTags as 'TXT' | 'AVG');
   }
 
   return '';
+}
+
+/**
+ * 功能注释：创作台 / 详情页 Romance 测玩路径，与 GameDetail play=1 约定一致（读已发布包）。
+ */
+export function buildRomanceCreatorPlayPath(fileId: string): string {
+  const id = String(fileId || '').trim();
+  return `/romance/?play=1&fileId=${encodeURIComponent(id)}`;
 }
 
 /**

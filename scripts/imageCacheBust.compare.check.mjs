@@ -15,6 +15,15 @@ test('imageCache_须导出stripImageCacheBust并去掉查询串', () => {
   assert.match(src, /split\(\/\[\?#\]\/\)/);
 });
 
+test('withCacheBust_不得给data或blob拼时间戳', () => {
+  const src = readFileSync(join(root, 'src/utils/imageCache.ts'), 'utf8');
+  // 功能注释：列表卡 addImageTimestamp 会走这里；拼 ?t= 会毁掉 Romance data: 封面
+  assert.match(src, /export const withCacheBust/);
+  assert.match(src, /startsWith\(\s*['"]data:['"]\s*\)/);
+  assert.match(src, /startsWith\(\s*['"]blob:['"]\s*\)/);
+  assert.match(src, /data:\/blob:/);
+});
+
 test('useGalgameController_旁路立绘比较须用stripImageCacheBust', () => {
   const src = readFileSync(join(root, 'src/hooks/galgame/useGalgameController.ts'), 'utf8');
   assert.match(src, /stripImageCacheBust\(prev\.characterImage\)/);

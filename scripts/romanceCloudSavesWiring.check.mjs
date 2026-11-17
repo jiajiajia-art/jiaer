@@ -27,4 +27,7 @@ test('storage_本地槽应按gameFileId隔离并镜像云端', () => {
   assert.match(src, /CLOUD_AUTOSAVE_MIN_MS|15_000/);
   const boot = read('Romance/src/components/PlayerPlayBootstrap.tsx');
   assert.match(boot, /setStorageGameFileId\(fileId\)/);
+  assert.match(boot, /requestPlatformPlay/);
+  const ctx = read('Romance/src/store/GameContext.tsx');
+  assert.match(ctx, /PLATFORM_PLAY_START/);
 });

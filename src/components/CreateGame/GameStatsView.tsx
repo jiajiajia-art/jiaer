@@ -31,6 +31,7 @@ import { isMiniProgramEnv } from '../../utils/miniProgram';
 import { prefetchGalgameDocument } from '../../lib/galgame/galgameDocumentCache';
 import {
     buildCreatorPlaySessionRequest,
+    buildRomanceCreatorPlayPath,
     normalizeCreatorPlayMode,
     parseOpticalPlaySessionId,
     shouldOpenCreatorStartOptions,
@@ -167,6 +168,11 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
 
             if (normalized === 'interactive-video') {
                 return { sessionId: null, redirectUrl: `/interactive-video/${fileId}?testMode=creator&restart=1` };
+            }
+
+            // 功能注释：Romance 不走 optical 会话，直接进子应用 play 包（与详情页一致）
+            if (normalized === 'ROMANCE') {
+                return { sessionId: null, redirectUrl: buildRomanceCreatorPlayPath(fileId) };
             }
 
             if (normalized === 'TXT') {

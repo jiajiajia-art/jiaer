@@ -36,6 +36,11 @@ import {
   type AuthorPreviewSession,
   type AuthorRequiredIssue,
 } from "../lib/authorPreview";
+import {
+  assessRomancePublishReady,
+  isPublishCoverError,
+  type RomancePublishReadyIssue,
+} from "../lib/romancePublishReady";
 import type { Mod, ModKind, PromptFragments, TermKey } from "../mods/types";
 import type { Option } from "../game/data";
 import type { Dir, PersonContent, RoomContent } from "../worlds/star2005/content";
@@ -369,7 +374,10 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
   const [savedTip, setSavedTip] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [previewFatal, setPreviewFatal] = useState<string[]>([]);
-  const [requiredGate, setRequiredGate] = useState<{ action: "预览" | "保存并离开" | "发布"; issues: AuthorRequiredIssue[] } | null>(null);
+  const [requiredGate, setRequiredGate] = useState<{
+    action: "预览" | "保存并离开" | "发布";
+    issues: Array<AuthorRequiredIssue | RomancePublishReadyIssue>;
+  } | null>(null);
   // —— 撤销 / 重做：连续输入（700ms 内）合并为一步；rev 变化时重挂表单，让各子编辑器的本地输入框同步 ——
   const hist = useRef<{ past: Mod[]; future: Mod[]; at: number }>({ past: [], future: [], at: 0 });
   const [rev, setRev] = useState(0);
@@ -427,7 +435,8 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
   const goGroup = (k: GroupKey) => { setGroup(k); setQ(""); rootRef.current?.scrollIntoView({ block: "start", behavior: "smooth" }); };
   /** 功能注释：必填弹窗点某项 → 切到对应页签、滚到建角字段并高亮；开局资金须落在①基础·建角行。 */
   const [focusAuthorField, setFocusAuthorField] = useState<string | null>(null);
-  const goRequiredIssue = (issue: AuthorRequiredIssue) => {
+  /** 功能注释：预览必填与发布就绪（含封面/题材）共用定位跳转。 */
+  const goRequiredIssue = (issue: AuthorRequiredIssue | RomancePublishReadyIssue) => {
     setRequiredGate(null);
     setGroup(issue.group);
     setQ("");
@@ -444,7 +453,10 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
     }, 60);
   };
   const blockIfRequiredMissing = (action: "预览" | "保存并离开" | "发布") => {
-    const issues = assessAuthorRequiredFields(m);
+    // 功能注释：预览/离开仍用作者必填；发布额外拦封面与题材，与后端 publish 400 对齐
+    const issues = action === "发布"
+      ? assessRomancePublishReady(m)
+      : assessAuthorRequiredFields(m);
     if (!issues.length) return false;
     setRequiredGate({ action, issues });
     return true;
@@ -913,12 +925,15 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishBusy, setPublishBusy] = useState(false);
   const [publishNote, setPublishNote] = useState<{ ok: boolean; text: string } | null>(null);
-  /** 功能注释：发布先过作者必填拦截，再保存草稿并打开平台审核协议弹窗。 */
+  /** 功能注释：「同意并提交」失败时审核弹层会挡住页内横幅，改用弹窗展示接口/校验错误。 */
+  const [publishError, setPublishError] = useState<string | null>(null);
+  /** 功能注释：发布先过作者必填拦截与就绪门禁，再保存草稿并打开平台审核协议弹窗。 */
   const startPublish = () => {
     if (!onPublish) return;
     if (blockIfRequiredMissing("发布")) return;
     if (!save(true)) return;
     setPublishNote(null);
+    setPublishError(null);
     setPublishOpen(true);
   };
   const submitPublish = async (input: RomancePublishInput) => {
@@ -928,10 +943,24 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
     setPublishBusy(false);
     if (r.ok) {
       setPublishOpen(false);
+      setPublishError(null);
       setPublishNote({ ok: true, text: r.pendingReview ? "已提交审核，结果会通知到消息中心" : "发布成功，作品已上架" });
     } else {
-      setPublishNote({ ok: false, text: r.message });
+      // 功能注释：关闭审核弹层并弹窗展示错误，避免「缺少封面」等提示被同意并提交层挡住
+      setPublishOpen(false);
+      setPublishNote(null);
+      setPublishError(r.message || "提交失败，请稍后再试");
     }
+  };
+  /** 功能注释：封面类发布失败时关弹窗并跳到作品封面字段，方便立刻补传横竖封面。 */
+  const dismissPublishErrorToCover = () => {
+    setPublishError(null);
+    goRequiredIssue({
+      field: "cover",
+      label: "作品封面（发布需要横竖封面，保存后会同步到平台）",
+      group: "base",
+      target: "author-field-cover",
+    });
   };
 
   const otherMods = mods.filter((x) => x.id !== m.id);
@@ -967,6 +996,35 @@ export default function ModEditorPanel({ onPublish, initial, isNew, onClose, onA
           onSubmit={(input) => void submitPublish(input)}
         />
       )}
+      {publishError ? (
+        <Modal
+          title="无法提交发布审核"
+          onClose={() => setPublishError(null)}
+          heavyBackdrop
+          footer={
+            <div className="flex items-center justify-end gap-2">
+              {isPublishCoverError(publishError) ? (
+                <button
+                  type="button"
+                  onClick={dismissPublishErrorToCover}
+                  className="rounded-full bg-jade px-5 py-2 text-[13px] font-bold text-white shadow-sm transition hover:brightness-110"
+                >
+                  去上传封面
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setPublishError(null)}
+                className="rounded-full border border-line px-4 py-2 text-[13px] font-semibold text-ink-soft transition hover:text-ink"
+              >
+                知道了
+              </button>
+            </div>
+          }
+        >
+          <p data-publish-error-modal="1" className="text-[13px] leading-relaxed text-ink">{publishError}</p>
+        </Modal>
+      ) : null}
       {requiredGate && (
         <Modal title={`${requiredGate.action}前还需补全`} onClose={() => setRequiredGate(null)} heavyBackdrop>
           <div className="settings-fixed">

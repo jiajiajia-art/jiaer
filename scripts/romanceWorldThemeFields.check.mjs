@@ -85,6 +85,8 @@ test('ModEditorPanel_基本信息挂WorldThemeFields_并向玩法商店和手机
   assert.match(panel, /fetchPlatformThemeTags\(\)/);
   assert.match(panel, /applyPlatformThemeToMod\(latest, theme\)/);
   const fields = read('components/WorldThemeFields.tsx');
+  // 功能注释：跳转锚点在 WorldThemeFields 根节点，供发布门禁定位
+  assert.match(fields, /data-author-field="author-field-theme"/);
   assert.match(fields, /题材 \*/);
   assert.match(fields, /data-world-theme-tag/);
   assert.match(fields, /只能勾选|平台题材/);
@@ -97,7 +99,18 @@ test('PlayerPlayBootstrap_进局前补平台题材_失败不阻断', () => {
   const src = read('components/PlayerPlayBootstrap.tsx');
   assert.match(src, /fetchPlatformGameTheme\(fileId\)/);
   assert.match(src, /applyPlatformThemeToMod\(mod, theme\)/);
+  // 功能注释：正式 play 走 requestPlatformPlay；审核预览才 requestAuthorPreview
+  assert.match(src, /requestPlatformPlay\(playMod\)/);
+  assert.match(src, /mode === ["']reviewPreview["']/);
   assert.match(src, /requestAuthorPreview\(playMod,/);
+  assert.doesNotMatch(
+    src,
+    /requestAuthorPreview\(playMod,\s*mode === ["']reviewPreview["']/,
+  );
+  const play = read('lib/platformPlay.ts');
+  assert.match(play, /beginAuthorPreviewMod/);
+  assert.match(play, /PLATFORM_PLAY_START/);
+  assert.doesNotMatch(play, /requestAuthorPreview\(/);
   const lib = read('lib/platformThemeTags.ts');
   assert.match(lib, /\/api\/auth\/games\/info\?fileId=/);
   assert.match(lib, /gameThemeInflight/);

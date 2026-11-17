@@ -48,8 +48,11 @@ export default function WorldThemeFields({
       : null;
 
   return (
+    // 功能注释：data-author-field 供发布门禁定位滚动；题材只能从平台列表勾选
     <div
+      data-author-field="author-field-theme"
       data-world-theme-fields
+      tabIndex={-1}
       className={compact ? "space-y-1.5" : "mt-2 space-y-2 rounded-xl border border-line/70 bg-paper-2/40 p-2.5"}
     >
       {!compact ? <p className="text-[12px] font-bold text-ink">世界题材</p> : null}

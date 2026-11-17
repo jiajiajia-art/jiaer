@@ -28,6 +28,7 @@ import {
   isAuthorPreview, reportAuthorPreviewFatal, type AuthorPreviewSession,
 } from "../lib/authorPreview";
 import { markAuthorPreviewReady, resetAuthorPreviewBoot } from "../lib/authorPreviewBoot.ts";
+import { PLATFORM_PLAY_START } from "../lib/platformPlay";
 import { clearAuthorPreviewSave } from "../lib/storage";
 import { buildOpeningPlotPrompt, DEFAULT_OPENING_DIRECTIVE, pickOpeningPromptEvents } from "../lib/openingPlotPrompt";
 import { activeLookKey, resolveLook, type LookPatch } from "../lib/plotLook";
@@ -427,15 +428,23 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setScreen("create");
       markAuthorPreviewReady();
     };
+    // 功能注释：正式 play=1 只切到建角/读档，禁止清档、禁止挂作者预览 session
+    const onPlatformPlay = () => {
+      resetTransient();
+      setSaveEpoch((n) => n + 1);
+      setScreen("create");
+    };
     window.addEventListener(AUTHOR_PREVIEW_START, onStart);
     window.addEventListener(AUTHOR_PREVIEW_END, onEnd);
     window.addEventListener(AUTHOR_PREVIEW_CLEAR, onClear);
     window.addEventListener(AUTHOR_PREVIEW_RESTART, onRestart);
+    window.addEventListener(PLATFORM_PLAY_START, onPlatformPlay);
     return () => {
       window.removeEventListener(AUTHOR_PREVIEW_START, onStart);
       window.removeEventListener(AUTHOR_PREVIEW_END, onEnd);
       window.removeEventListener(AUTHOR_PREVIEW_CLEAR, onClear);
       window.removeEventListener(AUTHOR_PREVIEW_RESTART, onRestart);
+      window.removeEventListener(PLATFORM_PLAY_START, onPlatformPlay);
     };
   }, []);
   // 读档 / 开新局：清空上一局遗留的瞬时状态，并丢弃尚未落库的旧局自动存档

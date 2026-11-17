@@ -3,10 +3,14 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   buildCreatorPlaySessionRequest,
   buildGalgameContinueNavigate,
+  buildRomanceCreatorPlayPath,
   normalizeCreatorPlayMode,
   parseOpticalPlaySessionId,
   resolveContinuePlayFileId,
@@ -15,6 +19,12 @@ import {
   shouldRestartPlaySession,
   shouldReuseExistingPlaySession,
 } from '../src/utils/creatorContinuePlay.ts';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const gameStatsViewSrc = readFileSync(
+  join(root, 'src/components/CreateGame/GameStatsView.tsx'),
+  'utf8',
+);
 
 test('normalizeCreatorPlayMode maps TXT / NOVEL / AVG / custom', () => {
   assert.equal(normalizeCreatorPlayMode('TXT', null), 'TXT');
@@ -25,7 +35,30 @@ test('normalizeCreatorPlayMode maps TXT / NOVEL / AVG / custom', () => {
   assert.equal(normalizeCreatorPlayMode('CUSTOM', null), 'customif');
   assert.equal(normalizeCreatorPlayMode('ST', null), 'st');
   assert.equal(normalizeCreatorPlayMode('IVG', null), 'interactive-video');
+  assert.equal(normalizeCreatorPlayMode('ROMANCE', null), 'ROMANCE');
+  assert.equal(normalizeCreatorPlayMode(null, 'ROMANCE'), 'ROMANCE');
   assert.equal(normalizeCreatorPlayMode('', ''), '');
+});
+
+test('buildRomanceCreatorPlayPath_与详情页play约定一致', () => {
+  assert.equal(
+    buildRomanceCreatorPlayPath('abc123'),
+    '/romance/?play=1&fileId=abc123',
+  );
+  assert.equal(
+    buildRomanceCreatorPlayPath('a b/c'),
+    `/romance/?play=1&fileId=${encodeURIComponent('a b/c')}`,
+  );
+  assert.equal(buildRomanceCreatorPlayPath(''), '/romance/?play=1&fileId=');
+});
+
+test('GameStatsView_须分发ROMANCE进romance玩法页', () => {
+  assert.match(gameStatsViewSrc, /buildRomanceCreatorPlayPath/);
+  assert.match(gameStatsViewSrc, /normalized\s*===\s*['"]ROMANCE['"]/);
+  assert.doesNotMatch(
+    gameStatsViewSrc,
+    /normalized\s*===\s*['"]ROMANCE['"][\s\S]{0,200}unknownGameType/,
+  );
 });
 
 test('shouldOpenCreatorStartOptions only for AI文游 TXT', () => {
@@ -34,6 +67,7 @@ test('shouldOpenCreatorStartOptions only for AI文游 TXT', () => {
   assert.equal(shouldOpenCreatorStartOptions('NOVEL', 'NOVEL'), false);
   assert.equal(shouldOpenCreatorStartOptions('AVG', null), false);
   assert.equal(shouldOpenCreatorStartOptions('CUSTOM', null), false);
+  assert.equal(shouldOpenCreatorStartOptions('ROMANCE', null), false);
 });
 
 test('shouldContinuePlayOnEdit only for NOVEL (AI文游 TXT goes to settings editor)', () => {

@@ -231,6 +231,34 @@ test('prepareModForSave_脏gameRules缺branches与脏opening_自愈后通过vali
   assert.deepEqual(gameRulesOpeningShapeErrs(mod.content), []);
 });
 
+test('prepareModForSave_数组型shop房间_自愈后有desc且为人话可跳地点', () => {
+  const dirty = {
+    id: 'shop-world',
+    name: '杂货铺世界',
+    version: '0.1.0',
+    kind: 'world',
+    content: {
+      rooms: {
+        shop: [{ name: '杂货铺', desc: '货架上摆满零食。', exits: {} }],
+        items: [{ name: '仓库' }],
+      },
+      startRoom: 'shop',
+    },
+  };
+  const { mod, notes } = heal.prepareModForSave(dirty);
+  assert.equal(Array.isArray(mod.content.rooms.shop), false);
+  assert.equal(mod.content.rooms.shop.desc, '货架上摆满零食。');
+  assert.equal(Array.isArray(mod.content.rooms.items), false);
+  assert.equal(typeof mod.content.rooms.items.desc, 'string');
+  assert.ok(mod.content.rooms.items.desc.includes('仓库') || mod.content.rooms.items.desc.length > 0);
+  assert.ok(notes.some((n) => /地点/.test(n)));
+  assert.equal(heal.humanizeSaveError('rooms.shop.desc 缺失'), '地点「shop」还缺进入场景描述');
+  assert.deepEqual(heal.resolveSaveErrorJump('rooms.shop.desc 缺失'), {
+    group: 'base',
+    target: 'author-field-rooms',
+  });
+});
+
 test('ModEditorPanel_保存前prepareModForSave且错误条可点跳', () => {
   const panel = read('components/ModEditorPanel.tsx');
   assert.match(panel, /prepareModForSave/);
@@ -242,6 +270,7 @@ test('ModEditorPanel_保存前prepareModForSave且错误条可点跳', () => {
   assert.doesNotMatch(panel, /还有 \{errors\.length\} 处需要修改才能保存/);
   assert.match(panel, /target="world-book"/);
   assert.match(panel, /target="fixed-events"/);
+  assert.match(panel, /target="author-field-rooms"/);
   const saveFn = panel.slice(panel.indexOf('const save = (stay = false)'), panel.indexOf('const cancel ='));
   assert.match(saveFn, /prepareModForSave\(cleaned\)/);
   assert.match(saveFn, /worldBookMissingDepsErrors\(out\.content\.worldBook\)/);

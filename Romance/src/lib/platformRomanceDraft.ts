@@ -151,7 +151,7 @@ export function resolveRomanceDraftCoverUrl(
 
 /**
  * 功能注释：PATCH 更新已有草稿；失败返回 false，禁止回落到 create。
- * coverUrl 有值时写回 games.cover_url，书架卡片与编辑器封面一致。
+ * coverUrl 有值时写回 games.cover_url，并镜像 portrait_cover_url（Romance 单封面满足发布双封面校验）。
  */
 export async function patchRomancePlatformDraft(
   fileId: string,
@@ -163,10 +163,18 @@ export async function patchRomancePlatformDraft(
   const token = readFunloomAuthToken();
   if (!token) return false;
   try {
-    const body: { title: string; cover_url?: string | null } = {
+    const body: {
+      title: string;
+      cover_url?: string | null;
+      portrait_cover_url?: string | null;
+    } = {
       title: resolveRomanceDraftTitle(title),
     };
-    if (coverUrl !== undefined) body.cover_url = coverUrl || null;
+    if (coverUrl !== undefined) {
+      body.cover_url = coverUrl || null;
+      // 功能注释：单封面镜像竖版，避免发布接口因缺 portrait_cover_url 返回 400
+      body.portrait_cover_url = coverUrl || null;
+    }
     const res = await fetch(romanceDraftUpdateUrl(id), {
       method: "PATCH",
       headers: {
@@ -179,6 +187,43 @@ export async function patchRomancePlatformDraft(
     if (!res.ok) return false;
     const json = await res.json().catch(() => null) as { success?: boolean } | null;
     return json?.success === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 功能注释：发布前把 mod.themeTagId 全量写到平台 game_tag_map，并顺带写入面向人群。
+ * 失败返回 false；调用方应阻止继续 publish，避免题材缺失 400。
+ */
+export async function syncRomancePlatformThemeTags(
+  fileId: string,
+  themeTagId: number,
+  audienceType: "male" | "female" | "all",
+  apiBase = resolveFunloomApiBase(),
+): Promise<boolean> {
+  const id = String(fileId || "").trim();
+  const tagId = Number(themeTagId);
+  if (!id || !Number.isFinite(tagId) || tagId <= 0) return false;
+  const token = readFunloomAuthToken();
+  if (!token) return false;
+  const base = String(apiBase || "").trim().replace(/\/$/, "");
+  try {
+    const res = await fetch(`${base}/api/auth/games/tags`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        fileId: id,
+        tagIds: [tagId],
+        audienceType,
+      }),
+    });
+    const json = await res.json().catch(() => null) as { success?: boolean } | null;
+    return res.ok && json?.success === true;
   } catch {
     return false;
   }
@@ -449,20 +494,51 @@ export type RomancePublishResult =
   | { ok: true; pendingReview: boolean }
   | { ok: false; message: string };
 
+export type RomancePublishPrep = {
+  /** 功能注释：用于同步封面与题材；缺封面/题材时提前失败，对齐后端 400 */
+  mod: Mod;
+  title?: string;
+};
+
 /**
  * 功能注释：提交发布审核；走主站同一 /api/auth/games/publish，先审作品返回 pending_review。
+ * 真实场景：先镜像双封面 + 同步题材到平台，再 POST publish，避免「弹窗可提交但接口 400」。
  * 调用前须已把最新正文 PUT 到同一 fileId，否则审核看到的是旧版本。
  */
 export async function publishRomancePlatformDraft(
   fileId: string,
   input: RomancePublishInput,
-  apiBase = resolveFunloomApiBase(),
+  prepOrApiBase?: RomancePublishPrep | string,
+  apiBaseArg = resolveFunloomApiBase(),
 ): Promise<RomancePublishResult> {
+  const prep = typeof prepOrApiBase === "object" && prepOrApiBase ? prepOrApiBase : null;
+  const apiBase = typeof prepOrApiBase === "string" ? prepOrApiBase : apiBaseArg;
   const id = String(fileId || "").trim();
   if (!id) return { ok: false, message: "这个作品还没有关联平台草稿，无法发布" };
   const token = readFunloomAuthToken();
   if (!token) return { ok: false, message: "请先登录后再发布" };
   const base = String(apiBase || "").trim().replace(/\/$/, "");
+
+  if (prep?.mod) {
+    const coverUrl = resolveRomanceDraftCoverUrl(prep.mod);
+    if (!coverUrl) {
+      return { ok: false, message: "请先设置作品封面后再提交发布审核" };
+    }
+    const themeTagId = Number(prep.mod.themeTagId);
+    if (!Number.isFinite(themeTagId) || themeTagId <= 0) {
+      return { ok: false, message: "请先选择作品题材后再提交发布审核" };
+    }
+    const title = prep.title || prep.mod.name || "";
+    const coverOk = await patchRomancePlatformDraft(id, title, coverUrl);
+    if (!coverOk) {
+      return { ok: false, message: "同步封面到平台失败，请检查网络后重试" };
+    }
+    const tagsOk = await syncRomancePlatformThemeTags(id, themeTagId, input.audienceType, base);
+    if (!tagsOk) {
+      return { ok: false, message: "同步作品题材失败，请检查网络后重试" };
+    }
+  }
+
   try {
     const res = await fetch(`${base}/api/auth/games/publish`, {
       method: "POST",
@@ -474,7 +550,7 @@ export async function publishRomancePlatformDraft(
       body: JSON.stringify({
         fileId: id,
         priceAmount: 0,
-        description: input.description,
+        description: typeof input.description === "string" ? input.description : "",
         versionNotes: input.versionNotes || null,
         notifyFavoritedUsers: !!input.notifyFavoritedUsers,
         audienceType: input.audienceType,
@@ -492,7 +568,10 @@ export async function publishRomancePlatformDraft(
       return { ok: false, message: json?.message || "提交失败，请稍后再试" };
     }
     const status = json.data?.moderation_status ?? json.data?.moderationStatus ?? "";
-    return { ok: true, pendingReview: status === "pending_review" };
+    return {
+      ok: true,
+      pendingReview: status === "pending_review" || status === "update_pending_review",
+    };
   } catch {
     return { ok: false, message: "网络异常，提交失败" };
   }

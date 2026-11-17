@@ -1228,10 +1228,11 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
                 const fileId = await ensureRomancePlatformDraftId();
                 if (!fileId) return { ok: false, message: "无法关联平台草稿，请先登录或从创作者中心重新进入" };
                 const current = modRef.current ?? mod;
-                // 功能注释：先确认最新正文已落平台，审核才看得到这一版
+                // 功能注释：先确认最新正文已落平台，审核才看得到这一版；再同步双封面/题材后提审
                 const synced = await commitRomancePlatformDraftWithContent(fileId, { title: current.name, mod: current, draft: draftRef.current ?? draft, s1 });
                 if (!synced) return { ok: false, message: "保存到平台失败，请检查网络后重试" };
-                return publishRomancePlatformDraft(fileId, input);
+                // 功能注释：带上本地 mod，发布前再校验封面/题材并同步到平台
+                return publishRomancePlatformDraft(fileId, input, { mod: current, title: current.name });
               }}
               onAiChat={(m) => setWorkshop({ mod: m, isNew: true })}
               onClose={(savedName) => {
