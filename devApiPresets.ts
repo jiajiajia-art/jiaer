@@ -4,7 +4,7 @@
  */
 
 /** ↓↓↓ 只改这里（合法值见下方注释）↓↓↓ */
-export const ACTIVE_DEV_API = 'cn-neo'
+export const ACTIVE_DEV_API = 'cn-gogo'
 /** ↑↑↑ 只改这里 ↑↑↑ */
 
 /**
@@ -44,9 +44,9 @@ export const DEV_API_PRESETS: Record<string, DevApiPreset> = {
   },
   'cn-gogo': {
     label: '同事 gogo',
-    apiOrigin: 'http://gogo.kurangames.cn',
+    apiOrigin: 'https://gogo.kurangames.cn',
     apiPathPrefix: '',
-    publicOrigin: 'http://gogo.kurangames.cn',
+    publicOrigin: 'https://gogo.kurangames.cn',
     secure: false,
   },
   'cn-neo': {
