@@ -46,8 +46,13 @@ function normalize(raw: unknown): PlatformAudio | null {
 export function loadPlatformAudioFromApi(force = false): Promise<void> {
   if (loading && !force) return loading;
   const token = readFunloomAuthToken();
+  // 功能注释：接口要求登录；无 token 时不发请求，避免控制台 401，直接用内置兜底
+  if (!token) {
+    loading = Promise.resolve();
+    return loading;
+  }
   const base = String(resolveFunloomApiBase() || "").replace(/\/$/, "");
-  loading = fetch(`${base}/api/audio-library`, { headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) } })
+  loading = fetch(`${base}/api/audio-library`, { headers: { Accept: "application/json", Authorization: `Bearer ${token}` } })
     .then((r) => (r.ok ? r.json() : null))
     .then((j) => {
       const items: unknown[] = Array.isArray(j?.data) ? j.data : Array.isArray(j?.data?.items) ? j.data.items : [];
