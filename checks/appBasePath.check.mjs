@@ -23,8 +23,8 @@ test('appBasePath_从BASE_URL推导', () => {
   assert.match(src, /export function appPath/);
 });
 
-test('main_navigateToHome用appPath', () => {
-  const main = fs.readFileSync(path.join(root, 'src/main.tsx'), 'utf8');
-  assert.match(main, /appPath\(['"]home['"]\)/);
-  assert.doesNotMatch(main, /origin \+ '\/funloom\/home'/);
+test('bootstrapGoogleAuth_navigateToHome用appPath', () => {
+  const bootstrap = fs.readFileSync(path.join(root, 'src/bootstrapGoogleAuth.ts'), 'utf8');
+  assert.match(bootstrap, /appPath\(['"]home['"]\)/);
+  assert.doesNotMatch(bootstrap, /origin \+ '\/funloom\/home'/);
 });

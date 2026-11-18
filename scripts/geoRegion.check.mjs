@@ -67,6 +67,8 @@ test('App_启动应hydrateFromIp且用户已选语言时不覆盖', () => {
 test('AuthModal_应按运行时语言决定Google-only', () => {
   const auth = read('src/components/AuthModal.tsx');
   assert.match(auth, /i18n\.language/);
+  // 功能注释：国内 Aliyun 关闭 Google，即便 en/ja 也走手机号
+  assert.match(auth, /isGoogleAuthEnabled/);
   assert.doesNotMatch(auth, /config\.LANGUAGE/);
   assert.doesNotMatch(auth, /import\s*\{[^}]*LANGUAGE[^}]*\}\s*from\s*['"].*config/);
 });

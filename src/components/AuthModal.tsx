@@ -10,6 +10,7 @@ import gamePromotionApi from '../api/promotion/gamePromotionApi';
 import { getOrCreatePromoAnonId } from '../utils/promoAnonId';
 import { authModalStore, useAuthStore } from '../store/useAuthStore';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
+import { isGoogleAuthEnabled } from '../lib/googleAuthPolicy';
 import { isPrivacyAgreementAccepted } from '../lib/privacyPolicy';
 import {
     REGISTRATION_AGREEMENT_VERSION,
@@ -63,9 +64,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         (state) => state.pendingAuthErrorCode,
     );
     const requestedAuthMode = authModalStore.getState().authModalMode;
-    // 功能注释：按运行时语言决定 Google-only（海外语种：英文/日文），不用编译期 LANGUAGE
+    // 功能注释：仅海外开启 Google；国内即便切到 en/ja 也走手机号，避免拉 apis.google.com
     const runtimeLang = String(i18n.language || '').toLowerCase();
-    const isGoogleOnly = runtimeLang.startsWith('en') || runtimeLang.startsWith('ja');
+    const googleAuthEnabled = isGoogleAuthEnabled();
+    const isGoogleOnly = googleAuthEnabled
+        && (runtimeLang.startsWith('en') || runtimeLang.startsWith('ja'));
     // 在微信小程序环境中不渲染
     if (isWebViewEnv()) {
         return null;

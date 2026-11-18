@@ -154,9 +154,15 @@ export default defineConfig(({ mode }) => {
   // 功能注释：Figma 预览环境没有本机 wrangler，固定连阿里云测试；本地开发仍以 devApiPresets.ts 为准
   const presetKey = process.env.FIGMA ? 'cn-test' : resolveDevApiPresetKey()
   const preset = getDevApiPreset(presetKey)
+  // 功能注释：本地联调 cn-* 时视为国内运行时，关闭 Google/Firebase 外网请求
+  const viteRuntime = String(env.VITE_RUNTIME || process.env.VITE_RUNTIME || '').trim()
+    || (mode === 'development' && String(preset.key).startsWith('cn-') ? 'aliyun' : '')
 
   return {
     base: viteBase,
+    define: {
+      'import.meta.env.VITE_RUNTIME': JSON.stringify(viteRuntime),
+    },
     plugins: [
       react(),
       tailwindcss(),
