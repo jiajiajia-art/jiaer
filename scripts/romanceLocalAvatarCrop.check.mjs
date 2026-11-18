@@ -22,7 +22,8 @@ test('romance_本地上传头像_裁切与预览已挂载', () => {
   assert.match(flow, /裁切并预览|使用此头像|重新裁切/);
   assert.match(flow, /allowClose|须完成裁切/);
   assert.match(lib, /exportSquareDataUrl|isApproxSquare|LOCAL_AVATAR_TARGET_SIDE/);
-  assert.match(picker, /从本地上传/);
+  // 本地上传按钮文案现为「本地上传」
+  assert.match(picker, />本地上传</);
   assert.match(picker, /保存/);
   assert.match(picker, /标签筛选|genderFilter|ageFilter/);
   assert.match(picker, /setSelected|selected/);

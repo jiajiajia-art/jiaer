@@ -28,9 +28,13 @@ test('warehouseCardAvatar_生图后台且不锁其它按钮', () => {
   assert.match(job, /startWarehouseCardAvatarBackgroundGen/);
   assert.match(job, /WAREHOUSE_CARD_AVATAR_GEN_CLIENT_TIMEOUT_MS/);
   assert.match(job, /生图超时，请稍后重试/);
-  assert.match(field, /后台生成中/);
+  // 后台生成中与可继续编辑文案锁在 warehouse.cards
+  assert.match(field, /warehouse\.cards\.avatarGeneratingBackground/);
   assert.match(persona, /startWarehouseCardAvatarBackgroundGen/);
-  assert.match(persona, /可继续编辑或保存/);
+  assert.match(persona, /t\('warehouse\.cards\.imageGenBackground'\)/);
+  const zh = readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8');
+  assert.match(zh, /"avatarGeneratingBackground": "后台生成中…"/);
+  assert.match(zh, /"imageGenBackground": "图像后台生成中，可继续编辑或保存"/);
   assert.match(job, /avatarStyle:\s*opts\.payload\.avatarStyle/);
   assert.match(job, /promptSupplement:\s*opts\.payload\.promptSupplement/);
   assert.match(persona, /WarehouseAvatarGenerateConfirm/);

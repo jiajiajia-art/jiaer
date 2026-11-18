@@ -84,11 +84,11 @@ test('WeChatApp_品牌串全部走brand_外壳带data-comms-skin_letter隐藏现
   assert.doesNotMatch(src, /label="绿信安全中心"/);
   assert.doesNotMatch(src, /title="关于绿信"/);
   assert.doesNotMatch(src, /label: "绿信"/);
-  // 书信风：朋友圈改用书信术语（commTerm）、隐藏摇一摇；视频号已整体下线
+  // 书信风：朋友圈改用书信术语；视频号只在现代皮（!letterSkin）渲染
   assert.match(src, /letterSkin = useCommsBrand\(\)\.skin === "letter"/);
   assert.match(src, /!letterSkin && .*label="朋友圈"/s);
   assert.match(src, /letterSkin && \(\s*<div><Item.*?label=\{commTerm\("moments"\)\}/s);
-  assert.doesNotMatch(src, /label="视频号"/);
+  assert.match(src, /!letterSkin && \(\s*<div>\s*<Item[\s\S]*?label="视频号"/);
   assert.match(src, /!letterSkin && \(\s*<div>\s*<Item.*?label="摇一摇"/s);
 });
 
@@ -107,8 +107,9 @@ test('index_css_letter皮肤_纸笺背景_不改modern', () => {
 
 test('useCommsBrand_读世界合并链', () => {
   const src = read('components/phone/commsBrand.ts');
-  // 功能注释：品牌与 commTerm / 古风样式共用 worldPhoneCommSkinSet 一个开关，避免标题与正文用语不一致
-  assert.match(src, /resolveCommsBrand\(\{ override: worldPhoneCommSkinSet\(\) \? "letter" : "modern" \}\)/);
+  // 未显式选皮肤时强制 modern；选了则链上 letter 用链，否则 override letter
+  assert.match(src, /if \(!worldPhoneCommSkinSet\(\)\) return resolveCommsBrand\(\{ override: "modern" \}\)/);
+  assert.match(src, /return fromChain\.skin === "letter" \? fromChain : resolveCommsBrand\(\{ override: "letter" \}\)/);
 });
 
 test('chat_绿信语音视频红包转账串走brand_不写死', () => {

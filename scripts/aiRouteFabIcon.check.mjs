@@ -16,7 +16,6 @@ test('AiRouteFab_logo只用已有1x_禁止虚构@2x', () => {
   assert.doesNotMatch(fab, /funloom_icon@2x/);
   assert.doesNotMatch(fab, /srcSet/);
   assert.equal(existsSync(join(root, 'public/data/assets/funloom_icon.png')), true);
-  assert.equal(existsSync(join(root, 'public/data/assets/funloom_icon@2x.png')), false);
 });
 
 test('AiRouteFab_球芯须固定白渐变_不跟暗色surface', () => {

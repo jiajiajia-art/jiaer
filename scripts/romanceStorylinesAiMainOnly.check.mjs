@@ -21,7 +21,9 @@ test('StorylinesEditor_主线节点去掉奖励与激活事件', () => {
   assert.doesNotMatch(ed, /label="失败分支事件"/);
   assert.doesNotMatch(ed, /EffectRow/);
   assert.doesNotMatch(ed, /name: "新节点"/);
-  assert.match(ed, /主线节点不配奖励/);
+  // 主线节点只配目标说明与完成/失败条件，编辑器不再提供奖励入口
+  assert.match(ed, /主线节点只配目标说明与完成\/失败条件/);
+  assert.match(ed, /不再提供奖励或激活事件入口/);
 });
 
 test('SidelinesEditor_默认折叠且空态提示不手写生成', () => {

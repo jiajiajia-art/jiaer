@@ -77,7 +77,8 @@ test('FixedEventsPanel_空库不渲染全部导入_模组走resolveModEventLibra
   const src = read('components/FixedEventsPanel.tsx');
   assert.match(src, /resolveModEventLibrary/);
   assert.match(src, /emptyLib/);
-  assert.match(src, /不会预置娱乐圈事件/);
+  // 空库文案改为回到编辑新建或套用模板，不再写「不会预置娱乐圈事件」
+  assert.match(src, /事件库还是空的。回到「编辑」新建，或用「我的模板」套用。/);
   assert.match(src, /emptyLib \? \([\s\S]*EmptyState[\s\S]*\) : \([\s\S]*全部导入/);
   assert.doesNotMatch(src, ENT_PRESET);
   // 模组模式必须走本作品解析，禁止用 getWorld* 当库源

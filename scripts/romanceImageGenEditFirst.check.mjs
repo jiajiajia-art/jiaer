@@ -26,7 +26,8 @@ test('AiImageGen_三态文案与参考图上限', () => {
   assert.match(gen, /phase === "busy"/);
   assert.match(gen, /开始生成/);
   assert.match(gen, /生成中…/);
-  assert.match(gen, /取消生成/);
+  // 生成中按钮文案现为「取消」
+  assert.match(gen, />\s*取消\s*</);
   assert.match(gen, /重新生成/);
   assert.match(gen, /使用这张图/);
   assert.match(gen, /生成结果/);

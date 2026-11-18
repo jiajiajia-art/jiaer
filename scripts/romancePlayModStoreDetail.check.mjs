@@ -47,8 +47,14 @@ test('playModCatalog_每项须有作者下载量详细说明与预览图', async
     assert.ok(String(item.authorName || '').trim(), `${item.slug} 缺作者`);
     assert.ok(Number(item.downloadCount) >= 0, `${item.slug} 缺下载量`);
     assert.ok(String(item.detailDescription || '').trim().length >= 8, `${item.slug} 详细说明过短`);
-    // 预览图必须由作者上传，本地种子不得造 local: 占位图
-    assert.ok(Array.isArray(item.previewImages) && item.previewImages.every((u) => /^https?:\/\//.test(u)), `${item.slug} 不得用占位预览图`);
+    // 官方种子预览用包图标的 data:image/svg+xml，不得用 local: 占位
+    assert.ok(
+      Array.isArray(item.previewImages)
+        && item.previewImages.length >= 1
+        && item.previewImages.every((u) => String(u).startsWith('data:image/svg+xml')),
+      `${item.slug} 预览须为图标 data URL`,
+    );
+    assert.ok(!item.previewImages.some((u) => String(u).startsWith('local:')), `${item.slug} 不得用 local: 占位`);
   }
   const cars = cat.catalogBySlug('pack-cars');
   assert.deepEqual(cat.missingPlayModDepNames(cars, []), ['出行与交通']);

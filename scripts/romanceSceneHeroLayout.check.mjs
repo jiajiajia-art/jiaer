@@ -49,14 +49,11 @@ test('LocationHero_小说fill_竖屏铺满_内容卡用皮肤圆角', () => {
   // 功能注释：内容卡底色由 novel-read-card + --story-panel-a 驱动，不再写死 bg-paper
   assert.match(cardBlock[0], /novel-read-card/);
   assert.doesNotMatch(cardBlock[0], /bg-paper/);
-  // 功能注释：阅读弹层高度 = 预览/场景区 85%，勿 flex-1 顶满
-  assert.match(cardBlock[0], /h-\[85%\]/);
-  assert.match(cardBlock[0], /max-h-\[85%\]/);
-  assert.match(cardBlock[0], /justify-center/);
-  assert.doesNotMatch(cardBlock[0], /novel-read-card[^>]*flex-1/);
-  // 功能注释：左右各 20px（px-5）露出场景，禁止贴边的 px-3
-  assert.match(cardBlock[0], /justify-center px-5 py-2/);
-  assert.doesNotMatch(cardBlock[0], /justify-center px-3 py-2/);
+  // 功能注释：阅读卡铺满场景区，顶边露出场景，底边留给输入坞
+  assert.match(cardBlock[0], /h-full/);
+  assert.match(cardBlock[0], /novel-read-card[^"]*flex-1/);
+  assert.match(cardBlock[0], /px-4 pb-2 pt-3/);
+  assert.doesNotMatch(cardBlock[0], /h-\[85%\]/);
   assert.match(cardBlock[0], /\{mapBtn\}/);
   assert.match(hero, /外出/);
 });
@@ -75,8 +72,8 @@ test('HomeTab_小说模式启用fill与内容卡_游戏模式矮横幅', () => {
   assert.match(home, /novelFill \? "absolute inset-0"/);
   assert.match(home, /data-tour="scene-prose"/);
   assert.match(home, /场景铺满 \+ 内容卡|小说模式铺满|矮场景图 \+ 正文叠在图上/);
-  assert.doesNotMatch(home, /overlay=\{peopleStrip/);
-  assert.match(home, /peopleStrip\(false\)/);
+  assert.doesNotMatch(home, /peopleStrip\(/);
+  assert.match(home, /spots=\{isNovel \? \[\] : spots\}/);
   assert.match(home, /-mx-4 w-\[calc\(100%\+2rem\)\]/);
   assert.doesNotMatch(home, /function GalPlayer/);
   assert.doesNotMatch(home, /正文在图下累积/);

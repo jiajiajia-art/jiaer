@@ -19,8 +19,12 @@ test('OperatorPanel_应有地点库与地点素材库页签', () => {
   assert.match(panel, /\/operator\/locations/);
   assert.match(panel, /\/operator\/location-assets/);
   // 功能注释：侧栏文案在 AdminShell 导航，面板只负责路由/渲染
-  assert.match(nav, /label: '地点库'/);
-  assert.match(nav, /label: '地点素材库'/);
+  assert.match(nav, /key: 'assetCenter'/);
+  assert.match(nav, /\/operator\/locations/);
+  assert.match(nav, /\/operator\/location-assets/);
+  const zh = read('src/i18n/locales/zh.json');
+  assert.match(zh, /"locations": "地点库"/);
+  assert.match(zh, /"locationAssets": "地点素材库"/);
   const app = read('src/App.tsx');
   assert.match(app, /path="\/operator\/locations"/);
   assert.match(app, /path="\/operator\/location-assets"/);

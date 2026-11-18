@@ -14,12 +14,16 @@ test('生图运行配置应提供逐业务场景模型选择并隐藏 legacy', (
   assert.match(panel, /expectedUpdatedAt/);
   assert.match(panel, /resolutions\.map/);
   assert.doesNotMatch(panel, /legacy 生图服务/);
-  assert.match(panel, /请选择兼容模型/);
-  assert.match(panel, /业务配置已保存/);
+  assert.match(panel, /aiModelCenter\.imageBusiness\.pickModel/);
+  assert.match(panel, /aiModelCenter\.imageBusiness\.saveOk/);
+  const zhBiz = readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8');
+  assert.match(zhBiz, /"pickModel": "请选择兼容模型"/);
+  assert.match(zhBiz, /"saveOk": "业务配置已保存"/);
+  assert.match(zhBiz, /"ai_text_creation": "AI 文游创作"/);
+  assert.match(zhBiz, /"ai_text_play": "AI 文游游玩"/);
+  assert.match(zhBiz, /"platform": "平台"/);
+  assert.match(panel, /categoryLabel/);
   assert.doesNotMatch(panel, /Select a compatible model|Business configuration saved/);
-  assert.match(panel, /AI 文游创作/);
-  assert.match(panel, /AI 文游游玩/);
-  assert.match(panel, /平台/);
   assert.match(panel, /groupedItems/);
   for (const scenarioKey of [
     'visual_character',
@@ -52,7 +56,8 @@ test('生图模型价格与业务场景价格统一展示为织梦豆每张', ()
   const panel = readFileSync(join(root, 'src/components/ImageBusinessConfigPanel.tsx'), 'utf8');
   assert.match(dialog, /用户价格（织梦豆 \/ 张）/);
   assert.doesNotMatch(dialog, /用户价格（KK \/ 张）/);
-  assert.match(panel, /织梦豆\/张/);
+  assert.match(panel, /aiModelCenter\.imageBusiness\.pointsPerImage/);
+  assert.match(readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8'), /"pointsPerImage": "\{\{ratio\}\}: \{\{points\}\}织梦豆\/张"/);
   assert.doesNotMatch(panel, /points\/image/);
 });
 

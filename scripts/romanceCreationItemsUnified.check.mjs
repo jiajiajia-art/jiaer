@@ -98,7 +98,9 @@ test("ModCreationFieldsEditor_统一添加与系统四项置顶", () => {
   assert.match(editor, /AttrDefForm/);
   // 功能注释：范围/开局/隐藏/状态栏在 AttrDefForm；统一列表必须挂上该表单
   assert.match(attrsEd, /建角页隐藏/);
-  assert.match(attrsEd, /显示在顶部状态栏/);
+  // 顶栏勾选文案改为「顶栏主属性」，说明锁在小说顶栏名字下方
+  assert.match(attrsEd, /顶栏主属性（最多 \{pinLimit\} 个）/);
+  assert.match(attrsEd, /显示在小说顶栏名字下方/);
   // 功能注释：渲染顺序——BUILTINS.map → 开局资金 row → 统一添加（避开「＋ 添加性别」等其它按钮）
   const builtinsMap = editor.indexOf("{BUILTINS.map");
   const money = editor.indexOf('row("startMoney"');
@@ -109,7 +111,9 @@ test("ModCreationFieldsEditor_统一添加与系统四项置顶", () => {
 test("AttrDef_支持hidden且表单含范围开局隐藏状态栏", () => {
   assert.match(types, /hidden\?: boolean/);
   assert.match(attrsEd, /建角页隐藏/);
-  assert.match(attrsEd, /显示在顶部状态栏/);
+  // 顶栏勾选文案改为「顶栏主属性」，说明锁在小说顶栏名字下方
+  assert.match(attrsEd, /顶栏主属性（最多 \{pinLimit\} 个）/);
+  assert.match(attrsEd, /显示在小说顶栏名字下方/);
   assert.match(attrsEd, /开局取值/);
   assert.match(attrsEd, /固定数值/);
   assert.doesNotMatch(attrsEd, />投骰子</);

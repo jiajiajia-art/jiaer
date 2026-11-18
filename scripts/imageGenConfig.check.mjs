@@ -42,16 +42,22 @@ test('AdminPanel_应包含 AI 模型中心与兼容路由', () => {
   const panel = readFileSync(join(root, 'src/page/AdminPanel.tsx'), 'utf8');
   // 侧栏文案已抽到 admin-shell/adminNavigation.tsx
   const nav = readFileSync(join(root, 'src/components/admin-shell/adminNavigation.tsx'), 'utf8');
-  assert.match(nav, /label: 'AI 模型中心'/);
+  assert.match(nav, /key: 'aiModelCenter'/);
+  assert.match(nav, /adminUi\.nav\.items\.aiModelCenter/);
+  assert.match(readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8'), /"aiModelCenter": "AI 模型中心"/);
   assert.match(panel, /aiModelCenter/);
   assert.match(panel, /\/admin\/image-gen/);
   assert.match(panel, /AiModelCenter/);
 
   const hub = readFileSync(join(root, 'src/components/ModelConfigHub.tsx'), 'utf8');
+  const zh = readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8');
   assert.match(hub, /role="tablist"/);
-  assert.match(hub, /生图配置/);
-  assert.match(hub, /生文配置/);
-  assert.match(hub, /保存并拉取模型/);
+  assert.match(hub, /aiModelCenter\.configHub\.imageConfigTab/);
+  assert.match(hub, /aiModelCenter\.configHub\.textConfigTab/);
+  assert.match(hub, /aiModelCenter\.configHub\.saveAndFetch/);
+  assert.match(zh, /"imageConfigTab": "生图配置"/);
+  assert.match(zh, /"textConfigTab": "生文配置"/);
+  assert.match(zh, /"saveAndFetch": "保存并拉取模型"/);
   assert.match(hub, /ModelImportDialog/);
   assert.match(hub, /ModelCatalogCards/);
   assert.doesNotMatch(hub, /toImageGenModelsPayload|handleImageModelChange/);

@@ -50,10 +50,11 @@ test('cloud_手动槽立即上传带token_作者预览槽不传', async () => {
   c.queueCloudPush('g1', { id: 's1', name: 'a', updatedAt: 1, state: { x: 1 } }, false);
   c.queueCloudPush('g1', { id: '__author_preview_auto', name: 'p', updatedAt: 1, state: {} }, false);
   await tick();
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].method, 'PUT');
-  assert.match(calls[0].url, /\/api\/romance\/saves\/s1\?gameFileId=g1$/);
-  assert.equal(calls[0].auth, 'Bearer tk');
+  const puts = calls.filter((call) => call.method === 'PUT');
+  assert.equal(puts.length, 1, '手动槽只上传一次，作者预览槽不传');
+  assert.equal(calls.some((call) => call.url.includes('__author_preview')), false);
+  assert.match(puts[0].url, /\/api\/romance\/saves\/s1\?gameFileId=g1$/);
+  assert.equal(puts[0].auth, 'Bearer tk');
   assert.equal(c.getCloudStatus().kind, 'ok');
 });
 

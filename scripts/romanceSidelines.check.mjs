@@ -137,12 +137,15 @@ test('ModEditorPanel_剧情线一页纵向合并_不再拆主线与目标和结�
   for (const label of ['"主线"', '"支线"', '"结局"']) assert.ok(tabs.includes(label), label);
   // 功能注释：同页纵向展示，不再用互斥 tab 把主线/结局拆成看不见的另一页
   assert.doesNotMatch(tabs, /role="tablist"/);
-  assert.match(tabs, /space-y-5/);
+  // 剧情线同页纵向间距现为 space-y-4
+  assert.match(tabs, /space-y-4/);
 });
 
 test('SidelinesEditor_复用条件与奖励组件_空状态文案', () => {
   const ed = read('components/SidelinesEditor.tsx');
-  assert.match(ed, /还没有支线。点「新建支线」添加/);
+  // 空状态常量现为「还没有支线」，按钮仍是新建支线
+  assert.match(ed, /export const SIDELINES_EMPTY_TEXT = "还没有支线"/);
+  assert.match(ed, /＋ 新建支线/);
   assert.match(ed, /\bCondRow\b/);
   assert.match(ed, /\bEffectRow\b/);
   assert.match(ed, /\bEventPicks\b/);
@@ -209,7 +212,8 @@ test('引擎接线_日结在主线之后结算支线_条件可读支线_AI读sim
 });
 
 test('人物线路空状态文案未改动', () => {
+  // 空状态现为先去建角添加属性再回来绑定
   const hits = ['components/ModEditorPanel.tsx', 'components/EndingsPanel.tsx', 'components/FixedEventsPanel.tsx']
-    .some((p) => read(p).includes('本作品还没有自定义属性或人物线路词条'));
-  assert.ok(hits, '原文案须保留');
+    .some((p) => read(p).includes('本作品还没有建角属性。先在「建角」里添加属性，再回来绑定。'));
+  assert.ok(hits, '空状态文案须保留');
 });

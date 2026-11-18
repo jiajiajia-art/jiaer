@@ -26,8 +26,7 @@ test('ModEditorPanel_地点页已移除最多可选势力块', () => {
   // 功能注释：势力整块（含最多可选）已从地点页删除
   const panel = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../Romance/src/components/ModEditorPanel.tsx'), 'utf8');
   assert.doesNotMatch(panel, /最多可选/);
-  // 功能注释：势力放在「① 基础」建角下方、人物线路之前
-  assert.match(panel, /<Section g="base" title="势力"/);
-  assert.doesNotMatch(panel, /<Section g="role" title="势力"/);
-  assert.ok(panel.indexOf('title="建角"') < panel.indexOf('title="势力"') && panel.indexOf('title="势力"') < panel.indexOf('title="人物线路"'), '势力须在建角之后、人物线路之前');
+  // 势力不再单独成 Section
+  assert.doesNotMatch(panel, /<Section[^>]*title="势力"/);
+  assert.match(panel, /势力块已从地点页撤下/);
 });

@@ -15,7 +15,7 @@ const romance = join(root, 'Romance/src');
 const wizUi = readFileSync(join(romance, 'components/WorldGenWizard.tsx'), 'utf8');
 
 test('生成模组区_删除顶部说明与扩展玩法展开块', () => {
-  const idx = wizUi.indexOf('本次需要 AI 生成的模组');
+  const idx = wizUi.indexOf('生成内容');
   assert.ok(idx >= 0);
   const section = wizUi.slice(idx, wizUi.indexOf('world-gen-dock', idx));
 
@@ -25,14 +25,16 @@ test('生成模组区_删除顶部说明与扩展玩法展开块', () => {
   assert.doesNotMatch(section, /展开扩展玩法/);
   assert.doesNotMatch(section, /收起扩展玩法/);
   assert.doesNotMatch(section, /含扩展全选/);
-  assert.doesNotMatch(section, /selectAllIncludingExtended/);
-  assert.doesNotMatch(section, /showExtendedModules/);
+  assert.doesNotMatch(wizUi, /selectAllIncludingExtended/);
+  assert.doesNotMatch(wizUi, /showExtendedModules/);
   assert.doesNotMatch(section, /tieredModules\.extended/);
 
-  assert.match(section, /全选基础/);
-  assert.match(section, /取消全选/);
-  assert.match(section, /基础世界（默认）/);
-  assert.match(section, /tieredModules\.core/);
+  // 勾选区现为「生成内容」+ 全选/清空，只渲染基础世界 core
+  assert.match(section, />\s*全选\s*</);
+  assert.match(section, />\s*清空\s*</);
+  assert.match(section, /renderModulePicker\(\)/);
+  assert.match(wizUi, /tieredModules\.core/);
+  assert.match(wizUi, /全选 = 基础世界模组/);
   assert.match(section, /已选 \{selectedCount\}\/\{allCount\}/);
   assert.doesNotMatch(section, /基础默认 \{coreCount\}/);
 });

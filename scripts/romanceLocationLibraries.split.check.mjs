@@ -13,20 +13,24 @@ const romance = join(root, "Romance/src");
 test("ModRoomTreeEditor_大地图按钮同行_无简介_素材库走平台用途", () => {
   const src = readFileSync(join(romance, "components/ModRoomTreeEditor.tsx"), "utf8");
   assert.match(src, /从地点库添加/);
-  assert.match(src, /＋ 大地图/);
+  // 新增大地图按钮现为「＋ 新大地图」
+  assert.match(src, /＋ 新大地图/);
   // 功能注释：＋大地图与从地点库须与页签同一 flex 行，禁止再单独一行按钮区夹在页签与表单之间
   assert.doesNotMatch(src, /简介（可选）/);
   assert.doesNotMatch(src, /给创作者自己看的备注/);
   assert.match(src, /platformAssetPurpose="world_map"/);
   assert.match(src, /platformAssetPurpose="location_scene"/);
-  assert.match(src, /作者库兰号/);
+  // 大地图封面文案现为可上传 / AI 生成 / 素材库，整包走统一素材库
+  assert.match(src, /可上传 \/ AI 生成 \/ 素材库/);
+  assert.match(src, /地点整包走统一素材库/);
 });
 
 test("ImagePicker_平台素材库与本地库分离", () => {
   const src = readFileSync(join(romance, "components/ImagePicker.tsx"), "utf8");
   assert.match(src, /platformAssetPurpose/);
-  assert.match(src, /PlatformLocationAssetPicker/);
-  assert.match(src, /setPlatformLibOpen\(true\)/);
+  // 素材库入口现为 CreatorAssetLibrary，打开 setAssetLibOpen
+  assert.match(src, /CreatorAssetLibrary/);
+  assert.match(src, /setAssetLibOpen\(true\)/);
 });
 
 test("PlatformLocationAssetPicker_只选图不改结构", () => {
@@ -38,10 +42,9 @@ test("PlatformLocationAssetPicker_只选图不改结构", () => {
 
 test("ModEditorPanel_地点页不再有势力整块", () => {
   const panel = readFileSync(join(romance, "components/ModEditorPanel.tsx"), "utf8");
-  // 功能注释：势力放在「① 基础」建角下方、人物线路之前
-  assert.match(panel, /<Section g="base" title="势力"/);
-  assert.doesNotMatch(panel, /<Section g="role" title="势力"/);
-  assert.ok(panel.indexOf('title="建角"') < panel.indexOf('title="势力"') && panel.indexOf('title="势力"') < panel.indexOf('title="人物线路"'), '势力须在建角之后、人物线路之前');
+  // 势力不再单独成 Section，地点页只留撤下注释
+  assert.doesNotMatch(panel, /<Section[^>]*title="势力"/);
+  assert.match(panel, /势力块已从地点页撤下/);
   assert.doesNotMatch(panel, /最多可选/);
   assert.doesNotMatch(panel, /＋ 新增势力/);
 });
@@ -53,8 +56,9 @@ test("locationAssetLibrary_api与运营入口", () => {
   const panel = readFileSync(join(root, "src/page/operator/OperatorPanel.tsx"), "utf8");
   const nav = readFileSync(join(root, "src/components/admin-shell/adminNavigation.tsx"), "utf8");
   // 功能注释：侧栏文案在 AdminShell 导航，面板负责挂载管理组件
-  assert.match(nav, /label: '地点库'/);
-  assert.match(nav, /label: '地点素材库'/);
+  assert.match(nav, /key: 'assetCenter'/);
+  assert.match(nav, /\/operator\/locations/);
+  assert.match(nav, /\/operator\/location-assets/);
   assert.match(panel, /AdminLocationAssetLibraryManager/);
   assert.match(panel, /\/operator\/location-assets/);
 });

@@ -55,6 +55,7 @@ test('ModEditorPanel_作者态删除作品ID与合并说明', () => {
   assert.doesNotMatch(simplifyBranch, /GM 开场白/);
   assert.doesNotMatch(simplifyBranch, /世界观设定 \/ 叙事口吻/);
   assert.doesNotMatch(simplifyBranch, /由原「GM/);
-  assert.match(panel, /名称 · 简介 · 剧本基调/);
+  // 作者态基本信息 hint 现含作品封面与题材
+  assert.match(panel, /作品封面 · 名称 · 题材 · 简介 · 剧本基调/);
   assert.doesNotMatch(panel, /名称 · 简介 · 作品 ID/);
 });

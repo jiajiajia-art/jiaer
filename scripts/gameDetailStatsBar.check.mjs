@@ -33,7 +33,7 @@ test('GameDetail_统计条应描边横排且使用内联图标组件', () => {
   assert.doesNotMatch(tsx, /statsBar[\s\S]{0,800}icon_share\.(svg|webp)/);
   assert.doesNotMatch(tsx, /styles\.statsIconWrap/);
   assert.match(css, /\.statsItem[\s\S]*flex-direction:\s*row/);
-  assert.match(css, /\.statsItem[\s\S]*border-radius:\s*11\.5px/);
+  assert.match(css, /\.statsItem[\s\S]*border-radius:\s*14px/);
   assert.match(css, /\.statsItem[\s\S]*border:\s*1px\s+solid/);
   assert.match(css, /\.statsItem[\s\S]*background:\s*var\(--detail-card\)/);
   assert.match(css, /\.statsBar[\s\S]*gap:\s*0\.55rem/);

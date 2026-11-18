@@ -82,15 +82,16 @@ test('Navbar_GameDetail_GameGrid_应接线assetsv2_home图标', () => {
   assert.match(navbar, /assetsv2\/home/);
   assert.match(navbar, /nav_search\.webp/);
   assert.match(navbar, /nav_message\.webp/);
-  assert.match(navbar, /nav_btn_bg\.webp/);
+  assert.doesNotMatch(navbar, /nav_btn_bg\.webp/);
   assert.doesNotMatch(navbar, /IoSearch|IoMailOutline/);
   const navbarCss = read('src/components/Layout/Navbar.module.css');
-  /* 顶栏搜索/消息图标按效果图为 14px；圆形按钮用 nav_btn_bg */
+  /* 顶栏搜索/消息图标为 14px；消息圆钮用主题底，不用几乎全透明的 nav_btn_bg.webp */
   assert.match(navbarCss, /\.searchIcon img,\s*\n\s*\.messageButton img\s*\{[^}]*width:\s*14px/);
   assert.match(navbarCss, /\.navAssetIcon\s*\{[^}]*width:\s*14px/);
-  assert.match(navbarCss, /--navbar-btn-circle-bg/);
-  assert.match(navbarCss, /\.messageButton\s*\{[^}]*background-image:\s*var\(--navbar-btn-circle-bg\)/);
-  assert.doesNotMatch(navbarCss, /\.searchIcon\s*\{[^}]*background-image:\s*var\(--navbar-btn-circle-bg\)/);
+  assert.match(navbarCss, /不用 nav_btn_bg\.webp/);
+  assert.doesNotMatch(navbarCss, /--navbar-btn-circle-bg/);
+  assert.match(navbarCss, /\.messageButton\s*\{[^}]*background:\s*var\(--navbar-action-bg\)/);
+  assert.doesNotMatch(navbarCss, /\.messageButton\s*\{[^}]*background-image:/);
   assert.match(navbarCss, /\.searchIcon\s*\{[^}]*background:\s*var\(--navbar-search-icon-bg\)/);
   assert.doesNotMatch(navbarCss, /\.searchIcon img,\s*\n\s*\.messageButton img\s*\{[^}]*width:\s*28px/);
   assert.match(detail, /assetsv2\/home/);
@@ -100,7 +101,7 @@ test('Navbar_GameDetail_GameGrid_应接线assetsv2_home图标', () => {
   assert.match(detail, /DetailHeartIcon/);
   assert.match(detail, /DetailStarIcon/);
   assert.match(detail, /icon_gamepad\.webp/);
-  assert.match(detail, /icon_filmstrip\.webp/);
+  assert.match(detail, /MdOutlineAutoStories/);
   assert.match(detail, /styles\.statsBar/);
   assert.match(detail, /styles\.pageTitle/);
   assert.match(detail, /styles\.coverTypeBadge/);
@@ -116,8 +117,10 @@ test('Navbar_GameDetail_GameGrid_应接线assetsv2_home图标', () => {
   assert.match(icons, /icon_flame_pink\.webp/);
   assert.match(icons, /icon_heart\.webp/);
   assert.match(icons, /maskImage|WebkitMaskImage/);
-  assert.match(promo, /icon_hot\.webp/);
-  assert.match(promo, /icon_my_submissions\.webp/);
+  // 功能注释：活动中心 Tab 用内联 SVG 跟 currentColor，避免 webp 发糊发灰
+  assert.match(promo, /TabHotIcon/);
+  assert.match(promo, /TabSubmissionIcon/);
+  assert.doesNotMatch(promo, /icon_hot\.webp|icon_my_submissions\.webp/);
   assert.match(messages, /icon_mark_all_read\.webp/);
 });
 
@@ -128,8 +131,11 @@ test('GameGrid_封面应为竖版圆角且标题白色', () => {
   assert.match(css, /\.goodsTitle[\s\S]*color:\s*(?:#FFFFFF|var\(--|color-mix\()/);
   assert.match(css, /\.goodsCard[\s\S]*border-radius:\s*16px/);
   assert.match(css, /\.goodsImgPlaceholder/);
-  assert.match(grid, /goodsImgPlaceholder/);
-  assert.doesNotMatch(grid, /welcome\.png/);
+  assert.match(css, /\.goodsImgDefaultCover/);
+  // 功能注释：无封面回退默认图 welcome.png，占位渐变类留给其它入口，列表卡本身不渲染空底
+  assert.match(grid, /goodsImgDefaultCover/);
+  assert.match(grid, /data\/events\/welcome\.png/);
+  assert.doesNotMatch(grid, /goodsImgPlaceholder/);
 });
 
 test('Create_不再重复显示作品栏_作品栏样式保留给书架', () => {
@@ -282,10 +288,12 @@ test('FooterArea_应对齐全站暗色壳避免底部白条', () => {
   assert.match(css, /\.title\s*\{[\s\S]*?color:\s*var\(--footer-title\)/);
   assert.doesNotMatch(css, /background-color:\s*#f7f7f7/);
   assert.doesNotMatch(css, /\.title\s*\{[^}]*color:\s*#4c4c4c/);
-  // 功能注释：页脚与顶栏共用白字 LOGO2，避免暗底上 LOGO.png 黑字不可见
+  // 功能注释：浅色黑字 LOGO.png，深色白字 LOGO2.png，避免浅底上看不见、暗底上黑字不可见
   assert.match(tsx, /LOGO2\.png/);
-  assert.doesNotMatch(tsx, /LOGO\.png/);
+  assert.match(tsx, /LOGO\.png/);
+  assert.match(tsx, /isDarkMode \? 'data\/assets\/LOGO2\.png' : 'data\/assets\/LOGO\.png'/);
   assert.match(navbar, /LOGO2\.png/);
+  assert.match(navbar, /LOGO\.png/);
   /* 功能注释：页脚全宽底部；壳宽居中；手机端仍显示但收成法律一行 */
   assert.match(css, /\.container\s*\{[\s\S]*?width:\s*min\(var\(--app-desktop-shell-max\)/);
   assert.match(css, /\.container\s*\{[\s\S]*?margin:\s*0\s+auto/);
@@ -409,8 +417,8 @@ test('CreateGameModals_类型行应有区分色调的模式图标', () => {
   const tsx = read('src/page/CreateType.tsx');
   /* 功能注释：禁止空 thumb；含创作游戏（Romance）共六种模式各有图标 + 色调 class */
   assert.match(tsx, /icon=\{MdAutoStories\}/);
-  assert.match(tsx, /icon=\{MdOutlineAutoAwesome\}/);
-  assert.match(tsx, /icon=\{HiOutlineUserGroup\}/);
+  assert.match(tsx, /icon=\{MdAutoAwesome\}/);
+  assert.match(tsx, /icon=\{HiUserGroup\}/);
   assert.match(tsx, /icon=\{MdOutlineMovie\}/);
   assert.match(tsx, /icon=\{HiOutlinePuzzle\}/);
   assert.match(tsx, /icon=\{MdSportsEsports\}/);
@@ -516,9 +524,10 @@ test('Document_文档中心应对齐白顶栏加墨黑阅读区', () => {
   assert.match(tsx, /funloom_icon\.png/);
   assert.match(tsx, /mobileMenuButton/);
   assert.match(tsx, /模板下载/);
-  /* 功能注释：顶栏不再放 guide tabs / 返回键，避免与效果图冲突 */
+  /* 功能注释：顶栏不再放 guide tabs；返回键留在左侧 */
   assert.doesNotMatch(tsx, /topNavCenter/);
-  assert.doesNotMatch(tsx, /topNavBackButton/);
+  assert.match(tsx, /topNavBackButton/);
+  assert.match(css, /\.topNavBackButton\s*\{/);
   /* 功能注释：手机文档配图须去掉固定宽高并由 CSS 等比缩进版心 */
   assert.match(tsx, /imgElement\.removeAttribute\('width'\)/);
   assert.match(tsx, /imgElement\.removeAttribute\('height'\)/);

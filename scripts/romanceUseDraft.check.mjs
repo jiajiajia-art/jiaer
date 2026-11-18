@@ -64,10 +64,15 @@ test('peekDraft_相同则清键返回null_不同则带cursor', async () => {
 test('ModEditorPanel_草稿文案与入口选定契约', async () => {
   const { readFileSync } = await import('node:fs');
   const panel = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8');
-  assert.match(panel, /继续填写草稿/);
-  assert.match(panel, /从已保存版本开始/);
-  assert.doesNotMatch(panel, />恢复草稿</);
-  assert.doesNotMatch(panel, />使用已保存版本</);
+  const choice = readFileSync(join(romance, 'components/DraftConflictChoice.tsx'), 'utf8');
+  // 选定文案在 DraftConflictChoice：用这份继续 / 用这份开始
+  assert.match(panel, /DraftConflictChoice/);
+  assert.match(choice, /用这份继续/);
+  assert.match(choice, /用这份开始/);
+  assert.match(choice, /已保存版本/);
+  assert.doesNotMatch(choice, />恢复草稿</);
+  assert.doesNotMatch(choice, />使用已保存版本</);
+  assert.doesNotMatch(choice, /从已保存版本开始/);
   assert.match(panel, /resumeDraftChoice/);
   assert.match(panel, /选完版本前不打开表单/);
   assert.match(panel, /onCommitted/);

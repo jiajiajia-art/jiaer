@@ -71,8 +71,9 @@ test('HomeTab_正文在场景区_输入可进内容卡_无逐句对话框', () =
   assert.doesNotMatch(home, /paceActive/);
   assert.doesNotMatch(home, /novelProse/);
   assert.match(home, /写下你的行动，或说一句台词/);
-  assert.match(home, /底部：游戏模式放输入|底部：只留输入框与行动选项/);
-  assert.match(home, /正文已叠在场景图上|正文叠在图上|场景铺满 \+ 内容卡/);
+  // 底部只留输入与行动选项；小说模式是场景铺满 + 内容卡
+  assert.match(home, /底部只留输入与行动选项/);
+  assert.match(home, /场景铺满 \+ 内容卡|正文仍直接叠图/);
   assert.match(home, /playPrefs\.mode === "novel"/);
   assert.match(home, /isAuthorPreview\(\)/);
   assert.match(home, /fill=\{novelFill\}/);

@@ -7,6 +7,7 @@ import { asModArray } from "./asModArray.ts";
 import { asTrimmedString } from "./asTrimmedString.ts";
 import { formatStartDate, parseStartDateParts } from "./startDateFields.ts";
 import { coerceWorldGenStartDate } from "./worldGenStartDate.ts";
+import { WORLD_GEN_AUTO_COND_NODES } from "./worldGenPlayability.ts";
 
 /** 功能注释：软校验的「宽松区间」上限——建议条数之外仍接受，但防止灌爆；下限只要求非空。 */
 export const WORLD_GEN_NPCS_SOFT_MAX = 12;
@@ -118,14 +119,15 @@ function normalizeRefRow(row: Rec, refs: WorldGenRefIds, flags: RefFlags, roomKi
   const room = resolveAlias(key, refs.roomIds, refs.roomAlias);
   const faction = flags.allowFaction && refs.factionIds.has(key) ? key : "";
   const kind = rawKind === "attr" || rawKind === "attribute" ? "stat" : rawKind;
-  // 功能注释：跨批契约保留 kind:stat + 建角属性 id。局内 fixAttrRef 结算时再认自定义属性；
-  // 这里改成 metric:c: 会让清洗结果带上 fame 以外的改写，单测与「没有 fame 绝不写 fame」对不上。
-  if ((kind === "stat" || kind === "metric") && attr) return { ...row, kind: "stat", key: attr };
+  // 功能注释：建角属性在引擎里是 metric + c: 前缀。只改写对得上的属性，fame 等编造 key 仍丢弃。
+  if ((kind === "stat" || kind === "metric") && attr) {
+    return { ...row, kind: "metric", key: attr.startsWith("c:") ? attr : `c:${attr}` };
+  }
   if (kind === "rel" && npc) return { ...row, key: npc };
   if (kind === roomKind && room) return { ...row, key: room };
   if (kind === "faction" && faction) return row;
   if (!kind) {
-    if (attr) return { ...row, kind: "stat", key: attr };
+    if (attr) return { ...row, kind: "metric", key: attr.startsWith("c:") ? attr : `c:${attr}` };
     if (npc) return { ...row, kind: "rel", key: npc };
     if (room) return { ...row, kind: roomKind, key: room };
   }
@@ -302,22 +304,32 @@ export function applyWorldGenEventRefs(patch: Rec, refs: WorldGenRefIds, flags: 
   return out;
 }
 
-/** 功能注释：主线节点条件只认已有属性 / 人物 / 地点 / 同批事件；筛空了就留空数组，不自动补名气、天数或事件 */
+/** 功能注释：主线节点条件只认已有属性 / 人物 / 地点 / 同批事件。筛空后按天数兜底，避免节点永远完不成；不补名气。 */
 export function applyWorldGenQuestRefs(patch: Rec, refs: WorldGenRefIds, flags: RefFlags): Rec {
   if (!Array.isArray(patch.storylines) || !refs.known) return patch;
   const out: Rec = { ...patch };
-  out.storylines = objList(patch.storylines).map((line) => ({
-    ...line,
-    nodes: objList(line.nodes).map((node) => {
-      const next: Rec = { ...node, conds: filterWorldGenCondsByRefs(node.conds, refs, flags) };
-      if (Array.isArray(node.failConds)) {
-        const fail = filterWorldGenCondsByRefs(node.failConds, refs, flags);
-        if (fail.length) next.failConds = fail;
-        else delete next.failConds;
-      }
-      return next;
-    }),
-  }));
+  out.storylines = objList(patch.storylines).map((line) => {
+    let fallbackN = 0;
+    return {
+      ...line,
+      nodes: objList(line.nodes).map((node) => {
+        const kept = filterWorldGenCondsByRefs(node.conds, refs, flags);
+        const next: Rec = { ...node };
+        if (kept.length) next.conds = kept;
+        else {
+          fallbackN += 1;
+          next.conds = [{ kind: "time", unit: "day", op: "gte", value: 7 * fallbackN }];
+          WORLD_GEN_AUTO_COND_NODES.add(next);
+        }
+        if (Array.isArray(node.failConds)) {
+          const fail = filterWorldGenCondsByRefs(node.failConds, refs, flags);
+          if (fail.length) next.failConds = fail;
+          else delete next.failConds;
+        }
+        return next;
+      }),
+    };
+  });
   return out;
 }
 

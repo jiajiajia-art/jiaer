@@ -1,0 +1,150 @@
+﻿src/components/admin-shell/AdminShell.tsx(31,11): error TS2554: Expected 3 arguments, but got 2.
+src/components/admin/AdminArtStyleLibraryManager.tsx(47,58): error TS2353: Object literal may only specify known properties, and 'q' does not exist in type '{ includeDisabled?: boolean | undefined; }'.
+src/components/CheckInModal.tsx(299,35): error TS18048: 'calibratedStatus.month' is possibly 'undefined'.
+src/components/GalgameMap/NextRoundButton.tsx(2,1): error TS6133: 'useTranslation' is declared but its value is never read.
+src/components/GameSettingEditor/CharactersPanel/CharacterAttributesPanel.tsx(2,1): error TS6133: 'useTranslation' is declared but its value is never read.
+src/components/GameSettingEditor/CharactersPanel/CharacterAttributesPanel.tsx(205,25): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/CharactersPanel/CharacterAttributesPanel.tsx(279,25): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/CharactersPanel/CharacterAttributesPanel.tsx(367,27): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/CharactersPanel/CharacterAttributesPanel.tsx(386,27): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/CharactersPanel/CharacterAttributesPanel.tsx(419,25): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/CharactersPanel/CharacterAttributesPanel.tsx(623,72): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/CharactersPanel/CharacterAttributesPanel.tsx(623,150): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/CharactersPanel/CharacterAttributesPanel.tsx(674,70): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/CharactersPanel/CharacterAttributesPanel.tsx(692,24): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/CharactersPanel/CharacterAttributesPanel.tsx(694,36): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/CharactersPanel/CharacterAttributesPanel.tsx(695,35): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/MapTab.tsx(2,1): error TS6133: 'useTranslation' is declared but its value is never read.
+src/components/GameSettingEditor/MapPanel/MapTab.tsx(336,25): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/MapTab.tsx(341,25): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/MapTab.tsx(363,29): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/MapTab.tsx(367,25): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/MapTab.tsx(367,120): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/MapTab.tsx(396,26): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/MapTab.tsx(449,42): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/MapTab.tsx(536,31): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/SceneTab.tsx(2,1): error TS6133: 'useTranslation' is declared but its value is never read.
+src/components/GameSettingEditor/MapPanel/SceneTab.tsx(295,29): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/SceneTab.tsx(304,29): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/SceneTab.tsx(310,29): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/SceneTab.tsx(315,31): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/SceneTab.tsx(330,35): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/SceneTab.tsx(337,33): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/SceneTab.tsx(341,29): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/SceneTab.tsx(341,102): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/SceneTab.tsx(349,25): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/SceneTab.tsx(354,25): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/SceneTab.tsx(359,25): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/SceneTab.tsx(381,29): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/SceneTab.tsx(385,25): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/SceneTab.tsx(385,120): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/SceneTab.tsx(419,48): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/MapPanel/SceneTab.tsx(481,42): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(2,1): error TS6133: 'useTranslation' is declared but its value is never read.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(40,15): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(162,48): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(189,23): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(335,47): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(480,29): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(486,27): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(510,25): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(518,25): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(525,25): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(541,35): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(545,29): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(549,25): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(549,120): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(565,25): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(570,25): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(617,63): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(625,63): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(668,41): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(668,104): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(671,25): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(671,120): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(708,58): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(717,69): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(726,58): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(769,46): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(845,46): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(889,46): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(902,46): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(915,41): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(915,76): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(926,24): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(928,36): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx(929,35): error TS2304: Cannot find name 't'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(295,23): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(313,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(318,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(330,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(349,29): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(355,31): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(371,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(597,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(618,29): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(662,31): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(672,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(682,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(734,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(738,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(744,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(757,27): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(775,29): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(789,27): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(793,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(800,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(804,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(829,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(833,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(895,54): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(895,100): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(931,48): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(931,98): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(979,31): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(982,29): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(986,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1012,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1028,31): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1038,29): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1042,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1056,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1060,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1074,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1078,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1086,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1092,29): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1096,29): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1100,29): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1111,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1118,23): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1133,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1137,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1193,35): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1217,35): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1227,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1237,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1258,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1265,31): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1274,29): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1278,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1286,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1305,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1311,31): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1318,29): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1322,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1439,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1683,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1720,19): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1734,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1743,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/components/GameSettingEditor/ScenesPanel/handlers.ts(1754,25): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/page/Galgame.tsx(1782,58): error TS2345: Argument of type '"play_back"' is not assignable to parameter of type 'ScriptButtonType'.
+src/page/warehouse/WarehouseCharacterCards.tsx(472,35): error TS2345: Argument of type '"全部" | "恋爱" | "奇幻" | "校园" | "日常" | "冒险" | "悬疑" | "治愈"' is not assignable to parameter of type 'SetStateAction<"全部">'.
+  Type '"恋爱"' is not assignable to type 'SetStateAction<"全部">'.
+src/page/warehouse/WarehousePersonaCards.tsx(471,35): error TS2345: Argument of type '"全部" | "恋爱" | "奇幻" | "校园" | "日常" | "冒险" | "悬疑" | "治愈"' is not assignable to parameter of type 'SetStateAction<"全部">'.
+  Type '"恋爱"' is not assignable to type 'SetStateAction<"全部">'.
+src/page/warehouse/WarehousePublicCards.tsx(135,35): error TS2345: Argument of type '"全部" | "恋爱" | "奇幻" | "校园" | "日常" | "冒险" | "悬疑" | "治愈"' is not assignable to parameter of type 'SetStateAction<"全部">'.
+  Type '"恋爱"' is not assignable to type 'SetStateAction<"全部">'.
+src/page/warehouse/WarehouseResourceLibrary.tsx(403,35): error TS2345: Argument of type '"全部" | "恋爱" | "奇幻" | "校园" | "日常" | "冒险" | "悬疑" | "治愈"' is not assignable to parameter of type 'SetStateAction<"全部">'.
+  Type '"恋爱"' is not assignable to type 'SetStateAction<"全部">'.

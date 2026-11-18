@@ -121,6 +121,8 @@ test('external authorization pages let signed-in users switch Funloom accounts',
     assert.match(source, /handleSwitchAccount/);
     assert.match(source, /logout\(\)/);
     assert.match(source, /setAuthOpen\(true\)/);
-    assert.match(source, /切换 Funloom 账号/);
+    assert.match(source, /t\('pagesExternal\.(?:oauth|cli)\.switchAccount'\)/);
   }
+  const zh = readProjectFile('src/i18n/locales/zh.json');
+  assert.match(zh, /"switchAccount":\s*"切换 Funloom 账号"/);
 });

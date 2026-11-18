@@ -32,5 +32,6 @@ test('美化页_音乐区块仍在皮肤美化之后', () => {
   const musicIdx = panel.indexOf('title="音乐"');
   assert.ok(skinIdx > 0 && musicIdx > skinIdx, '音乐应保留且排在皮肤美化后面');
   assert.match(panel, /ModBgmEditor/);
-  assert.match(panel, /上传 · 链接 · 本机库 · 作品引用 · 平台曲库/);
+  // 音乐区 hint 现为可上传、贴链接，或从素材库 / 平台曲库选用
+  assert.match(panel, /可上传、贴链接，或从素材库 \/ 平台曲库选用/);
 });

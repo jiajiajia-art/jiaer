@@ -72,12 +72,14 @@ test('AuthModal_拖选输入框内容时不应被遮罩点击关闭', () => {
   assert.match(src, /window\.getSelection\(\)/);
 });
 
-test('Create_作品Tab栏应使用与其他模块一致的圆角', () => {
+test('Create_作品Tab栏用底边分隔而非灰底圆角盒子', () => {
   const css = readFileSync(join(import.meta.dirname, '../src/page/Create.module.css'), 'utf8');
   const block = css.match(/\.worksTabBar\s*\{[\s\S]*?\n\}/);
   assert.ok(block, 'worksTabBar block missing');
-  assert.match(block[0], /border-radius:\s*(10px|var\(--creator-radius\))/);
-  assert.doesNotMatch(block[0], /border-radius:\s*0/);
+  // 功能注释：轻量底边分隔，去掉灰底盒子感
+  assert.match(block[0], /border-radius:\s*0/);
+  assert.match(block[0], /border-bottom:\s*1px solid/);
+  assert.match(block[0], /background:\s*transparent/);
   assert.doesNotMatch(block[0], /width:\s*calc\(100% \+ 40px\)/);
   assert.doesNotMatch(block[0], /overflow:\s*hidden/);
 });

@@ -17,14 +17,16 @@ test('MobileBottomNavIcons_应按设计稿导出五枚图标且创作固定红�
   assert.match(src, /export function BottomNavCreateIcon/);
   assert.match(src, /export function BottomNavRankingsIcon/);
   assert.match(src, /export function BottomNavProfileIcon/);
-  assert.match(src, /stroke="currentColor"/);
+  // 功能注释：线框图标统一 24 viewBox，描边走 currentColor 对象展开，避免设计稿切片大小不一
+  assert.match(src, /stroke: 'currentColor'/);
+  assert.match(src, /viewBox: '0 0 24 24'/);
   assert.match(src, /fill="(?:#D52D49"|var\(--|color-mix\()/);
   assert.match(src, /stroke="white"/);
-  assert.match(src, /M179\.5 21H187\.5M187\.5 21H195\.5M187\.5 21V13M187\.5 21V29/);
-  assert.match(src, /M48\.8333 31\.4995V22\.6576/);
-  assert.match(src, /M106 31H127M107 11H111/);
-  assert.match(src, /M267\.3 17\.7016/);
-  assert.match(src, /M329\.5 22\.1111/);
+  assert.match(src, /M3\.5 10\.2L12 3\.5l8\.5 6\.7/);
+  assert.match(src, /M4 20\.5h16/);
+  assert.match(src, /M12 16h8m0 0h8m-8 0V8m0 8v8/);
+  assert.match(src, /M4\.5 19\.5h15/);
+  assert.match(src, /M5\.5 19\.5c0-3\.1 2\.9-5\.5 6\.5-5\.5s6\.5 2\.4 6\.5 5\.5/);
 });
 
 test('MobileBottomNav_应改用内联设计图标而非 assetsv2 img', () => {
@@ -40,8 +42,8 @@ test('MobileBottomNav_应改用内联设计图标而非 assetsv2 img', () => {
   assert.doesNotMatch(tsx, /<img\s/);
   assert.match(css, /\.navItemActive[\s\S]*color:\s*(?:#F16C83|var\(--|color-mix\()/);
   assert.match(css, /\.createIcon/);
-  // 功能注释：创作钮必须按稿 40×32，禁止再缩回与两侧线框接近的尺寸
-  assert.match(css, /\.createIcon\s*\{[^}]*width:\s*40px/);
+  // 功能注释：创作钮略大于两侧线框，锁在 42×32，禁止再缩回 30×24
+  assert.match(css, /\.createIcon\s*\{[^}]*width:\s*42px/);
   assert.match(css, /\.createIcon\s*\{[^}]*height:\s*32px/);
   assert.doesNotMatch(css, /\.createIcon\s*\{[^}]*(?:width:\s*30px|height:\s*24px)/);
   assert.match(css, /\.navItemCreate/);

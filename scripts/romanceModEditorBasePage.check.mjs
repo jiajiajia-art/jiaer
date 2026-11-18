@@ -161,10 +161,9 @@ test('时间与推进_删除换地点扣点与日程叙事字数配置', () => {
 
 test('编辑器文案_简介与基调说明对齐图注需求', () => {
   const panel = read('Romance/src/components/ModEditorPanel.tsx');
-  assert.match(panel, /按世界观摘要的约 100 字简介/);
-  assert.match(panel, /默认是世界观摘要，不是创作者长设定原文/);
-  assert.match(panel, /生成世界时由 AI 写出并填入/);
-  assert.match(panel, /超出 5000 字标红，不能照常保存/);
+  // 简介占位现为约 100 字，作者态与高级态各一句
+  assert.match(panel, /约 100 字简介（列表 \/ 开局页展示，可改）/);
+  assert.match(panel, /约 100 字简介（可改，最多 200 字）/);
   // 功能注释：开局日期下灰字已删，只留年/月/日选择
   assert.doesNotMatch(panel, /格式固定为年\.月\.日，只选数字/);
   assert.doesNotMatch(panel, /这天是周/);

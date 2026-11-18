@@ -41,7 +41,10 @@ test('个人能力_非娱乐圈没写stats_order不补八维', () => {
   // 功能注释：没写 stats.order 一律不补内置八维（娱乐圈原版自身也是 order: [] 且隐藏八维）
   assert.match(body, /if \(ordered\.length\) return ordered;/);
   assert.match(body, /return \[\];/);
-  assert.doesNotMatch(body, /RAW_STAT_ORDER/);
+  // 非娱乐圈空 order 先 return []；RAW_STAT_ORDER 只给娱乐圈回落
+  assert.match(body, /if \(currentWorldId\(\) !== "ent"\) return \[\];/);
+  assert.match(body, /return RAW_STAT_ORDER\.filter\(\(k\) => !hid\.has\(k\)\)/);
+  assert.doesNotMatch(body, /if \(ordered\.length\) return ordered;\s*return RAW_STAT_ORDER/);
   const fields = read('components/personFields.tsx');
   assert.match(fields, /本作品尚未配置个人能力/);
 });

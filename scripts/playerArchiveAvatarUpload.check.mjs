@@ -59,13 +59,17 @@ test('buildPlayerArchiveAvatarBasePrompt_对齐后端主角映射', () => {
 });
 
 test('PlayerArchiveSection_确认弹窗有风格选择与外貌补充_无英文只读底稿', () => {
-  assert.match(archiveSrc, /画风与提示词/);
+  // 画风与提示词文案锁在 playerArchive.avatar.showPrompt
+  assert.match(archiveSrc, /t\('galgameUi\.playerArchive\.avatar\.showPrompt'\)/);
+  assert.match(readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8'), /"showPrompt": "画风与提示词"/);
   assert.match(archiveSrc, /风格选择/);
   assert.match(archiveSrc, /外貌补充（可选）/);
   assert.match(archiveSrc, /AVATAR_STYLE_OPTIONS/);
   assert.match(archiveSrc, /avatarStyle/);
   assert.match(archiveSrc, /promptSupplement/);
-  assert.match(archiveSrc, /确认生成头像/);
+  assert.match(archiveSrc, /t\('galgameUi\.playerArchive\.confirm\.avatarTitle'\)/);
+  const zhArchive = readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8');
+  assert.match(zhArchive, /"avatarTitle": "确认生成头像"/);
   // 扣费改为按后端实时价格展示（avatarChargeText），不再写死常量
   assert.match(archiveSrc, /将扣除 \$\{[^}]*avatarChargeText\} 生成 AI 头像/);
   assert.doesNotMatch(archiveSrc, /当前提示词/);
@@ -75,12 +79,14 @@ test('PlayerArchiveSection_确认弹窗有风格选择与外貌补充_无英文�
 });
 
 test('PlayerArchiveSection_支持上传图片入口', () => {
-  assert.match(archiveSrc, /上传图片/);
+  // 上传图片文案锁在 galgameUi.common.uploadImage；压缩说明写不做抠图
+  assert.match(archiveSrc, /t\('galgameUi\.common\.uploadImage'\)/);
+  assert.match(readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8'), /"uploadImage": "上传图片"/);
   assert.match(archiveSrc, /compressImageFileToWebpUnderMaxBytes/);
   assert.match(archiveSrc, /uploadPlayerAvatar/);
   assert.match(archiveSrc, /PLAYER_UPLOAD_AVATAR_MAX_BYTES/);
   assert.match(archiveSrc, /≤1MB|1MB/);
-  assert.match(archiveSrc, /不做背景处理/);
+  assert.match(archiveSrc, /不做抠图/);
 });
 
 test('playerAvatarBackgroundJob_payload含promptSupplement', () => {

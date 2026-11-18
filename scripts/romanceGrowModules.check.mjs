@@ -70,8 +70,8 @@ test('编辑器_总养成开关合并三块_无经济与收官', () => {
   assert.match(panel, /isGrowModuleOn\(c, "gameRules"\)/);
   assert.doesNotMatch(panel, /isGrowModuleOn\(c, "growRules"\)/);
   assert.doesNotMatch(panel, /title="养成模块"/);
-  // 功能注释：玩法规则独立成块，仅在勾选 gameRules 子项后出现
-  assert.match(panel, /isGrowModuleOn\(c, "gameRules"\) && \(\s*<Section g="grow" title="玩法规则"/);
+  // 玩法规则独立成块，标题现为「规则列表」，须总开关与 gameRules 都开
+  assert.match(panel, /isGrowEnabled\(c\) && isGrowModuleOn\(c, "gameRules"\) && \(\s*<Section g="grow" title="规则列表"/);
   assert.doesNotMatch(panel, /title="引擎规则"/);
   assert.doesNotMatch(panel, /title="经济与收官"/);
   assert.doesNotMatch(panel, /title="养成规则"/);

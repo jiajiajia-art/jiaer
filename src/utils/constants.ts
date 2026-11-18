@@ -8,6 +8,7 @@ export {
 } from './displayCoverUrl';
 export { preferCharacterPortraitWebp } from './characterPortraitUrl';
 import { preferCharacterPortraitWebp } from './characterPortraitUrl';
+import { preferUserAvatarWebp } from './userAvatarUrl';
 
 // ==================== 积分相关常量 ====================
 /** 局内角色档案字段 AI 生成（关系/简介/态度），对齐后端 txt_npc_profile_field */
@@ -45,7 +46,7 @@ export const getImageUrl = (imagePath: string | null | undefined): string => {
   if (!path) return "";
 
   // 功能注释：NPC/玩家立绘展示优先同名 webp（历史 png 由后端懒转）
-  const displayPath = preferCharacterPortraitWebp(path);
+  const displayPath = preferUserAvatarWebp(preferCharacterPortraitWebp(path));
 
   if (displayPath.startsWith("http://") || displayPath.startsWith("https://")) {
     return displayPath;

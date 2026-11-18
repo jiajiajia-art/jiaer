@@ -216,8 +216,10 @@ test('新建条件效果默认值与规则预设_走本作品引用池', () => {
 });
 
 test('视角文案_题材中性_编辑器帮助文案不举片场例子', () => {
-  assert.doesNotMatch(read('components/PlayPrefsPicker.tsx'), /走进片场/);
-  assert.match(read('components/PlayPrefsPicker.tsx'), /走进场景/);
+  const picker = read('components/PlayPrefsPicker.tsx');
+  // 叙事视角只留人称名称，不再写走进场景/片场这类举例
+  assert.match(picker, /aria-label="叙事视角"/);
+  assert.doesNotMatch(picker, /走进片场|走进场景/);
   assert.doesNotMatch(read('components/EventAdvanced.tsx'), /去片场/);
   assert.doesNotMatch(read('components/AiEventWriter.tsx'), /改到片场/);
 });

@@ -13,14 +13,18 @@ const statsOverview = readFileSync(join(root, 'src/components/stats/StatsOvervie
 const zh = readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8');
 
 test('排行榜在互动榜右侧配置作者榜 Tab', () => {
-  assert.match(rankingsPage, /labelZh:\s*'互动榜'/);
-  assert.match(rankingsPage, /labelZh:\s*'作者榜'/);
-  const romanceIdx = rankingsPage.indexOf("labelZh: '互动榜'");
-  const authorsIdx = rankingsPage.indexOf("labelZh: '作者榜'");
+  // 功能注释：Tab 文案走 pagesRankings.tabs，不再在页面里写死 labelZh
+  assert.doesNotMatch(rankingsPage, /labelZh:/);
+  assert.match(rankingsPage, /t\(`pagesRankings\.tabs\.\$\{tab\.key\}`\)/);
+  assert.match(zh, /"romance":\s*"互动榜"/);
+  assert.match(zh, /"authors":\s*"作者榜"/);
+  const romanceIdx = rankingsPage.indexOf("{ key: 'romance' }");
+  const authorsIdx = rankingsPage.indexOf("{ key: 'authors' }");
   assert.ok(romanceIdx >= 0 && authorsIdx > romanceIdx, '作者榜应出现在互动榜之后');
   assert.match(rankingsPage, /key:\s*'authors'/);
   assert.match(rankingsPage, /getAuthorRankings/);
-  assert.match(rankingsPage, /游玩轮次/);
+  assert.match(rankingsPage, /pagesRankings\.playRounds/);
+  assert.match(zh, /"playRounds":\s*"游玩轮次 \{\{count\}\}"/);
 });
 
 test('作者榜 API 使用 type=authors 且类型含 play_rounds', () => {

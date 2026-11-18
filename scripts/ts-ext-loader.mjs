@@ -20,6 +20,14 @@ function tryResolveFile(absNoExt) {
 }
 
 export async function resolve(specifier, context, nextResolve) {
+  // 功能注释：Windows 上 import('E:\\...\\file.ts') 会被当成 e: 协议。先改成 file URL 再交给 Node。
+  if (/^[a-zA-Z]:[\\/]/.test(specifier)) {
+    // 功能注释：检查脚本用绝对路径加 ?t= 打破缓存。? 不能算进文件名，否则会被编成 %3F。
+    const cut = specifier.search(/[?#]/);
+    const pathPart = cut >= 0 ? specifier.slice(0, cut) : specifier;
+    const suffix = cut >= 0 ? specifier.slice(cut) : '';
+    return nextResolve(pathToFileURL(pathPart).href + suffix, context);
+  }
   const parent = context.parentURL;
   if (!parent || (!specifier.startsWith('./') && !specifier.startsWith('../'))) {
     return nextResolve(specifier, context);

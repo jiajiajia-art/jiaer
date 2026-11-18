@@ -21,8 +21,10 @@ test('AdminPanel_应注册组件管理页签', () => {
   assert.match(admin, /AdminPlayModManager/);
   assert.match(admin, /\/admin\/components/);
   // 功能注释：侧栏文案迁入 AdminShell 导航配置，不再写死在 AdminPanel
-  assert.match(nav, /label: '组件管理'/);
+  assert.match(nav, /key: 'components'/);
+  assert.match(nav, /adminUi\.nav\.items\.components/);
   assert.match(nav, /path: '\/admin\/components'/);
+  assert.match(readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8'), /"components": "组件管理"/);
 });
 
 test('App_应注册components路由', () => {
@@ -35,7 +37,8 @@ test('OperatorPanel_运营中心侧栏须有组件管理', () => {
   const nav = readFileSync(join(root, 'src/components/admin-shell/adminNavigation.tsx'), 'utf8');
   assert.match(op, /\/operator\/components/);
   assert.match(op, /AdminPlayModManager/);
-  assert.match(nav, /label: '组件管理'/);
+  assert.match(nav, /key: 'components'/);
+  assert.match(nav, /adminUi\.nav\.items\.components/);
   assert.match(nav, /path: '\/operator\/components'/);
 });
 

@@ -44,7 +44,12 @@ for (const name of ['app-icons', 'app-icons-2']) {
 
   test(`雪碧图_${name}_png_须带alpha`, () => {
     const rel = `Romance/src/assets/${name}.png`;
-    assert.ok(existsSync(join(root, rel)), `${rel} 缺失`);
+    const abs = join(root, rel);
+    // 功能注释：运行时雪碧图已改走 webp；png 还在时仍必须带 alpha
+    if (!existsSync(abs)) {
+      assert.ok(existsSync(join(root, `Romance/src/assets/${name}.webp`)), `${rel} 缺失且没有 webp`);
+      return;
+    }
     assert.ok(pngHasAlpha(read(rel)), `${rel} 非 RGBA/tRNS`);
   });
 }

@@ -20,7 +20,8 @@ test('人物Section_人物卡在前_ContactsPanel全作品共用单独成块在�
   const endAt = editor.indexOf('title="总养成开关"', peopleAt);
   const peopleBlock = editor.slice(peopleAt, endAt > peopleAt ? endAt : peopleAt + 8000);
   assert.match(peopleBlock, /ContactsPanel/);
-  assert.ok(peopleBlock.indexOf('<ContactsPanel') > peopleBlock.indexOf('npcs.map'), '人物卡（姓名）须在关系档位之前');
+  // 关系档位 ContactsPanel 现在排在人物卡 npcs.map 之前
+  assert.ok(peopleBlock.indexOf('<ContactsPanel') >= 0 && peopleBlock.indexOf('<ContactsPanel') < peopleBlock.indexOf('npcs.map'), '关系档位须在人物卡之前');
   assert.match(read('Romance/src/components/ContactsPanel.tsx'), /关系档位 · 全作品共用/);
 });
 

@@ -50,7 +50,9 @@ test('C0_三处入口文案不得出现生成或拥有专属SDK', () => {
   // 上传按钮写「玩法包 / 应用草稿」
   assert.match(shell, /上传玩法包/);
   assert.doesNotMatch(shell, /请先登录后再上传 SDK/);
-  assert.match(createApp, /上传应用草稿/);
+  // 上传应用草稿文案锁在 pagesCreatePlatform.uploadDraft
+  assert.match(createApp, /t\('pagesCreatePlatform\.uploadDraft'\)/);
+  assert.match(read('src/i18n/locales/zh.json'), /"uploadDraft": "上传应用草稿"/);
   assert.match(createApp, /保存草稿/);
 });
 

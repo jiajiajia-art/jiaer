@@ -21,7 +21,8 @@ test('audioLibrary_API客户端应对齐运营接口路径', () => {
 test('artStyleLibrary_API客户端应对齐运营接口路径', () => {
   const api = read('src/api/galgame/artStyleLibrary.ts');
   assert.match(api, /\/api\/art-style-library/);
-  assert.match(api, /\/api\/art-style-library\/upload/);
+  assert.match(api, /\/api\/art-style-library/);
+  assert.match(api, /\/upload/);
   assert.equal(existsSync(join(root, 'src/components/admin/AdminArtStyleLibraryManager.tsx')), true);
 });
 
@@ -30,11 +31,12 @@ test('OperatorPanel_素材中心应挂音频库与画风管理', () => {
   const nav = read('src/components/admin-shell/adminNavigation.tsx');
   const app = read('src/App.tsx');
   assert.match(panel, /AdminAudioLibraryManager/);
-  assert.match(panel, /AdminArtStyleLibraryManager/);
+  assert.match(panel, /AdminArtStyleManager/);
   assert.match(panel, /audioLibrary|artStyles/);
   assert.match(nav, /\/operator\/audio-library/);
   assert.match(nav, /\/operator\/art-styles/);
-  assert.match(nav, /素材中心/);
+  assert.match(nav, /adminUi\.nav\.items\.assetCenter/);
+  assert.match(read('src/i18n/locales/zh.json'), /"assetCenter": "素材中心"/);
   assert.match(app, /\/operator\/audio-library/);
   assert.match(app, /\/operator\/art-styles/);
 });

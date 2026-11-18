@@ -34,7 +34,8 @@ test('buildSessionNpcAvatarPrompt_固定风格动态禁止词齐全', () => {
     gender: 'male',
   });
   assert.match(prompt, /Create a single full-body character sprite/i);
-  assert.match(prompt, /Japanese anime visual novel/i);
+  // 默认 A 风格现为 Japanese visual novel CG illustration
+  assert.match(prompt, /Japanese visual novel CG illustration/i);
   assert.match(prompt, /Gender: male/);
   assert.match(prompt, /gender must strictly remain/i);
   assert.match(prompt, /硬性要求/);
@@ -54,5 +55,6 @@ test('buildPlayerArchiveAvatarBasePrompt_人设进动态Appearance', () => {
   assert.match(prompt, /Gender: female/);
   assert.match(prompt, /Relationship to player: 主角/);
   assert.match(prompt, /Appearance and role: 江南世家嫡女/);
-  assert.match(prompt, /ancient Chinese watercolor/i);
+  // D 风格现为 Chinese guofeng watercolor painting
+  assert.match(prompt, /Chinese guofeng watercolor painting/i);
 });

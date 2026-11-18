@@ -47,7 +47,8 @@ test('TopbarView_剧情模式头像与状态同行且主线点开任务弹窗', 
   assert.match(tb, /打开人物档案/);
   assert.match(tb, /行动/);
   assert.match(tb, /questProgress/);
-  assert.match(tb, /rounded-\[var\(--radius-ui\)\]/);
+  // 剧情顶栏圆角现为 10px，不再用 --radius-ui
+  assert.match(tb, /rounded-\[10px\]/);
   assert.match(tb, /bg-jade/);
   assert.match(tb, /text-ink/);
   // 功能注释：小说顶栏固定圆角方头像；名牌单行，不另起「查看档案」
@@ -55,14 +56,20 @@ test('TopbarView_剧情模式头像与状态同行且主线点开任务弹窗', 
   const novelBlock = tb.slice(tb.indexOf('novelLayout && !compact'), tb.indexOf('} else {'));
   assert.doesNotMatch(novelBlock, /查看档案/);
   // 功能注释：日/行动/金钱与头像同一行，不再单独占第二行；不展示第N周
-  assert.match(tb, /novelProfile\}\{novelStatus\}\{novelMenu/);
+  // 日/行动/金钱并成 novelMetrics，与头像、菜单同一行
+  assert.match(tb, /novelProfile\}[\s\S]*?\{novelMetrics\}[\s\S]*?\{novelMenu/);
   assert.doesNotMatch(novelBlock, /weekLabel|第\$\{/);
   // 功能注释：主线行展示标题；点开派发任务弹窗，不再本地折叠
-  assert.match(tb, /questLineName\?\.trim\(\) \|\| data\.questStep/);
+  // 主线标题优先步骤名，其次线路名
+  assert.match(tb, /const questTitle = questStep \|\| questLine \|\| "暂无主线目标"/);
+  assert.match(tb, /data\.questLineName\?\.trim\(\)/);
+  assert.match(tb, /data\.questStep\?\.trim\(\)/);
   assert.match(tb, /openQuest\(\)/);
   assert.match(tb, /aria-label="打开任务主线"/);
   assert.doesNotMatch(tb, /setQuestOpen/);
-  assert.match(tb, /flex-1 overflow-hidden rounded-full bg-line/);
+  // 主线进度是细条加百分比，不再用 rounded-full bg-line 胶囊
+  assert.match(tb, /h-0\.5 min-w-0 flex-1 overflow-hidden rounded-sm bg-jade\/12/);
+  assert.match(tb, /\{pct\}%/);
   // 小说排版不硬编码 mock 粉色
   assert.doesNotMatch(tb.slice(tb.indexOf('novelLayout && !compact'), tb.indexOf('} else {')), /#f[0-9a-f]{5}|pink|rose-|#e8d/i);
 });
@@ -84,7 +91,10 @@ test('HomeTab_小说内容卡地点天气外出与输入', () => {
   assert.match(home, /novelCard=\{isNovel\}/);
   assert.match(home, /data-novel-card="1"/);
   assert.match(home, /novel-read-card/);
-  assert.match(home, /footer=\{isNovel \? actionInput/);
+  // 输入坞在内容卡下方单独渲染，不再塞进 LocationHero footer
+  assert.match(home, /\{actionInput\}/);
+  assert.match(home, /底边留给下方输入坞/);
+  assert.doesNotMatch(home, /footer=\{isNovel \? actionInput/);
   assert.match(home, /rounded-\[var\(--radius-ui-lg\)\]/);
   // 功能注释：内容卡底色改由 --story-panel-a 驱动，不再写死 bg-paper/92
   assert.match(home, /novel-read-card/);
@@ -94,11 +104,11 @@ test('HomeTab_小说内容卡地点天气外出与输入', () => {
   assert.match(home, /!isNovel && !isAuthorPreview\(\)/);
   // 功能注释：小说模式不渲染「心事」块
   assert.match(home, /!isNovel && <Thoughts/);
-  // 功能注释：阅读卡高度 = 场景区 85%，垂直居中，勿 flex-1 顶满
-  assert.match(home, /h-\[85%\]/);
-  assert.match(home, /max-h-\[85%\]/);
-  assert.match(home, /justify-center/);
-  assert.doesNotMatch(home, /novel-read-card[^>]*flex-1/);
+  // 阅读卡铺满场景区，用 flex-1，不再限高 85%
+  assert.match(home, /阅读卡铺满场景区/);
+  assert.match(home, /novel-read-card[^"]*flex-1/);
+  assert.doesNotMatch(home, /h-\[85%\]/);
+  assert.doesNotMatch(home, /max-h-\[85%\]/);
   // 内容卡顶栏有地点 + 外出；子地点与外出同行，面包屑另起一行；不在卡片下方
   const heroStart = home.indexOf('function LocationHero');
   const heroEnd = home.indexOf('/* 人物档案卡', heroStart);

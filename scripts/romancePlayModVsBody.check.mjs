@@ -19,8 +19,9 @@ test('作者态_隐藏模组底座依赖并清空world底座', () => {
   assert.doesNotMatch(panel, /showModDepsAdvanced/);
   assert.doesNotMatch(panel, /当前底座依赖/);
   assert.match(panel, /authorSimplify && out\.kind === "world"\) out\.dependencies = \[\]/);
-  assert.match(panel, /本剧本体/);
-  assert.match(panel, /娱乐圈 \/ 校园等世界观底子不是玩法/);
+  // 玩法说明指向上面各栏；底座勾选对作者隐藏
+  assert.match(panel, /人物、地点、建角请到上面各栏去配，不用在这里勾/);
+  assert.match(panel, /作者态永不展示 registry 底座勾选/);
 });
 
 test('玩法目录_只有可选玩法不含骨架与头衔扩展底子', async () => {

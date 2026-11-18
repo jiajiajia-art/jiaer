@@ -185,9 +185,12 @@ test('书架页接线_路由底栏真实接口且无原生弹窗与mock', () => 
     assert.doesNotMatch(src, /\b(window\.)?(alert|confirm|prompt)\(/);
     assert.doesNotMatch(src, /mock/i);
   }
-  assert.match(page, /去发现剧本/);
+  assert.match(page, /t\('pagesBookshelf\.discover'\)/);
+  const shelfZh = read('src/i18n/locales/zh.json');
+  assert.match(shelfZh, /"discover":\s*"去发现剧本"/);
   assert.match(page, /setIsAuthModalOpen\(true\)/);
-  assert.match(page, /加载失败/);
+  assert.match(page, /pagesBookshelf\.loadFailed/);
+  assert.match(shelfZh, /"loadFailed":\s*"\{\{tab\}\}加载失败"/);
   assert.match(page, /restoreShelfItems/);
   assert.match(page, /AppPageShell/);
   assert.match(page, /data-app-page-main/);

@@ -140,18 +140,27 @@ test('profile VIP badge opens separate week and month status modal', () => {
 
   assert.match(source, /hasActiveVip/);
   assert.match(source, /className=\{`?\$?\{?styles\.creatorVipBadge\}/);
-  assert.match(source, />\s*VIP\s*</);
+  assert.match(source, /t\('profile\.vip'\)/);
+  assert.match(readSource('src/i18n/locales/zh.json'), /"vip": "VIP"/);
   assert.match(source, /<VipStatusModal/);
   assert.match(source, /setIsMembershipRechargeModalOpen\(true\)/);
   assert.match(styles, /\.creatorVipBadge/);
-  assert.match(modal, /周卡/);
-  assert.match(modal, /月卡/);
-  assert.match(modal, /生效时间/);
-  assert.match(modal, /到期时间/);
-  assert.match(modal, /剩余时长/);
-  // 会员弹窗改为周卡 / 月卡页签 + 「续费X / 立即开通X」按钮
-  assert.match(modal, /续费\$\{selectedPlan\.name\}|立即开通\$\{selectedPlan\.name\}/);
-  assert.match(modal, /正式发布的 AI 文游/);
+  const zh = readSource('src/i18n/locales/zh.json');
+  assert.match(modal, /profile\.vipStatus\.week/);
+  assert.match(modal, /profile\.vipStatus\.month/);
+  assert.match(modal, /profile\.vipStatus\.effectiveTime/);
+  assert.match(modal, /profile\.vipStatus\.expiryTime/);
+  assert.match(modal, /profile\.vipStatus\.remainingTime/);
+  assert.match(modal, /profile\.vipStatus\.renew/);
+  assert.match(modal, /profile\.vipStatus\.activate/);
+  assert.match(zh, /"week": "周卡"/);
+  assert.match(zh, /"month": "月卡"/);
+  assert.match(zh, /"effectiveTime": "生效时间"/);
+  assert.match(zh, /"expiryTime": "到期时间"/);
+  assert.match(zh, /"remainingTime": "剩余时长"/);
+  assert.match(zh, /"renew": "续费\{\{name\}\}"/);
+  assert.match(zh, /"activate": "立即开通\{\{name\}\}"/);
+  assert.match(zh, /正式发布的 AI 文游/);
   assert.match(modal, /className=\{styles\.planTabs\}/);
 });
 
@@ -188,26 +197,23 @@ test('recharge and membership UI only exposes the new plans and benefits', () =>
   assert.match(source, /月卡/);
   assert.match(source, /85\s*折|85%|8\.5折/);
   assert.match(source, /rechargeTabs/);
-  assert.match(source, /orderSummary/);
+  assert.match(source, /confirmHero/);
   assert.match(source, /confirmationPanel/);
   assert.doesNotMatch(source, /membershipStatusCard/);
   assert.doesNotMatch(source, /VIP|AI\s*排队优先/);
   assert.doesNotMatch(source, /系统自动匹配/);
-  assert.match(source, /membershipBenefitsCard/);
-  assert.match(source, /membershipBenefitRow/);
-  assert.match(source, /membershipRulesCard/);
+  assert.match(source, /membershipPerksCard/);
+  assert.match(source, /membershipPerkStrip/);
+  assert.match(source, /开通即享/);
   assert.ok(
-    source.indexOf('className={styles.plansList}') < source.indexOf('className={styles.membershipBenefitsCard}'),
+    source.indexOf('className={styles.plansList}') < source.indexOf('className={styles.membershipPerksCard}'),
     '会员套餐卡应位于会员权益卡之前',
   );
   assert.ok(
-    source.indexOf('className={styles.membershipBenefitsCard}') < source.indexOf('className={styles.paymentSection}'),
+    source.indexOf('className={styles.membershipPerksCard}') < source.indexOf('className={styles.paymentSection}'),
     '会员权益卡应位于支付方式之前',
   );
-  assert.ok(
-    source.indexOf('styles.membershipSubmitBtn') < source.indexOf('className={styles.membershipRulesCard}'),
-    '领取规则应位于会员支付按钮之后',
-  );
+  assert.match(source, /membershipSubmitBtn/);
   // 功能注释：档位卡用 tileCoins 展示基础币；首充角标 + tileBonus「首充得」
   assert.match(source, /plan\.baseDiamonds[\s\S]{0,40}KK币/);
   assert.match(source, /tileRibbon[\s\S]{0,20}首充|tileBonus[\s\S]{0,120}firstBonusDiamonds|首充得/);
@@ -215,14 +221,12 @@ test('recharge and membership UI only exposes the new plans and benefits', () =>
   assert.doesNotMatch(source, /const matchedPlan = rechargePlans/);
   assert.match(styles, /\.plansList\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s);
   assert.match(styles, /@media\s*\(max-width:\s*768px\)[^]*\.plansList\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s);
-  assert.match(styles, /\.membershipBenefitsCard,\s*\.membershipRulesCard\s*\{[^}]*border:/s);
-  assert.match(styles, /\.membershipBenefitRow\s*\{[^}]*display:\s*grid/s);
-  assert.match(styles, /\.membershipRulesCard\s*\{[^}]*padding:/s);
-  assert.match(source, /会员币需每日登录并完成签到后领取，到账后永久有效。/);
-  assert.match(source, /周卡每日 77 币、最后一天 78 币，7 天累计 540 币。/);
-  assert.match(source, /月卡每日 66 币、最后一天 86 币，30 天累计 2,000 币。/);
-  assert.match(source, /周卡与月卡同时有效时分别领取；同档重复购买直接延长有效期。/);
-  assert.match(source, /当日未签到不自动发放，可补签后领取对应日期奖励。/);
+  assert.match(styles, /\.membershipPerksCard\s*\{[^}]*border:/s);
+  assert.match(styles, /\.membershipFootNote\s*\{/);
+  assert.match(source, /每日 \$\{selectedMembershipPlan\.dailyReward\} 币/);
+  assert.match(source, /AI 文游 85 折/);
+  assert.match(source, /需每日签到领取；周卡\/月卡可同时持有，未签到可补签后领取。/);
+  assert.match(source, /每日登录签到领取/);
   assert.match(styles, /\.title\s*\{[^}]*flex-shrink:\s*0/s);
   assert.match(styles, /\.regionSummary\s*\{[^}]*flex-shrink:\s*0/s);
   assert.match(styles, /\.rechargeTabs\s*\{[^}]*flex-shrink:\s*0/s);

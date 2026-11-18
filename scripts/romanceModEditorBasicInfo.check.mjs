@@ -49,7 +49,8 @@ test('ModEditorPanel_玩法页应展示玩法依赖且作者态隐藏底座依�
   assert.doesNotMatch(panel, /高级设置 · 模组底座依赖/);
   assert.doesNotMatch(panel, /收起 · 高级：模组底座依赖/);
   assert.doesNotMatch(panel, /showModDepsAdvanced/);
-  assert.match(panel, /基础设定、建角、地点、人物、事件、档案是本剧本体/);
+  // 玩法页说明现为人物地点建角去上面各栏，不在这里勾
+  assert.match(panel, /人物、地点、建角请到上面各栏去配，不用在这里勾/);
   assert.match(panel, /authorSimplify && out\.kind === "world"\) out\.dependencies = \[\]/);
   assert.match(panel, /removePlayInstall/);
   assert.match(panel, /orphanedAutoPlayDeps/);

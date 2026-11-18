@@ -35,11 +35,9 @@ test('npcEditor_标签选择器与代表作按玩法显示', () => {
   assert.doesNotMatch(panel, /placeholder="人物标签，用顿号或逗号分隔/);
   assert.match(picker, /PLATFORM_NPC_TAGS\.map/);
   assert.match(picker, /自定义标签/);
-  // 功能注释：地点页已撤势力整块；人物仍可读所属势力字段
-  // 功能注释：势力放在「① 基础」建角下方、人物线路之前
-  assert.match(panel, /<Section g="base" title="势力"/);
-  assert.doesNotMatch(panel, /<Section g="role" title="势力"/);
-  assert.ok(panel.indexOf('title="建角"') < panel.indexOf('title="势力"') && panel.indexOf('title="势力"') < panel.indexOf('title="人物线路"'), '势力须在建角之后、人物线路之前');
+  // 势力不再单独成 Section；人物卡仍选所属势力
+  assert.doesNotMatch(panel, /<Section[^>]*title="势力"/);
+  assert.match(panel, /aria-label="所属势力（可选）"/);
   assert.match(panel, /所属势力/);
   assert.match(panel, /factionId/);
   assert.match(panel, /onMergeNpcs/);

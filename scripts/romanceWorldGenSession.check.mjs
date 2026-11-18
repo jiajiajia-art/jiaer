@@ -97,7 +97,9 @@ test('App与Wizard_刷新续开会话契约', () => {
 
   assert.match(wiz, /loadWorldGenSession|bootFromSession/);
   assert.match(wiz, /saveWorldGenSession/);
-  assert.match(wiz, /继续编辑已有内容/);
+  // 已有草稿时底栏按钮为「继续编辑」
+  assert.match(wiz, /continueExistingWork/);
+  assert.match(wiz, />\s*继续编辑\s*</);
   assert.match(wiz, /onCommitted|onEditorCommitted/);
   assert.match(wiz, /resumeEditor/);
   assert.match(wiz, /loadWorldGenSessionAsync/);

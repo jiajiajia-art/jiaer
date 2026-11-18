@@ -77,9 +77,10 @@ test('Modal调用方_不再传wide或xl', () => {
 
 test('人物交谈_在统一框内_名字快捷句输入都在框里_不铺满屏', () => {
   const talk = src('components/TalkPanel.tsx');
-  assert.match(talk, /className="ui-sheet ui-dialog ui-dialog-game animate-pop"/);
+  // 交谈框现为 ui-sheet ui-dialog animate-pop，不再带 ui-dialog-game
+  assert.match(talk, /className="ui-sheet ui-dialog animate-pop"/);
   assert.doesNotMatch(talk, /h-\[100dvh\]|h-\[90dvh\]|max-w-3xl/);
-  const box = talk.slice(talk.indexOf('ui-dialog ui-dialog-game animate-pop'));
+  const box = talk.slice(talk.indexOf('ui-dialog animate-pop'));
   // 名片栏（含名字）→ 消息区（含快捷句）→ 底部输入，依次位于同一个框内
   const iName = box.indexOf('{name}</h3>');
   const iBody = box.indexOf('ui-dialog-body');
@@ -135,7 +136,8 @@ test('角色创建_滚动复位作用在框内滚动区', () => {
 
 test('草稿冲突弹窗走统一Modal_高度随内容', () => {
   const panel = src('components/ModEditorPanel.tsx');
-  assert.match(panel, /<Modal title="发现本机未保存的草稿"/);
+  // 草稿冲突走统一 Modal，标题为「要接着哪份写？」
+  assert.match(panel, /<Modal[\s\S]*?title="要接着哪份写？"/);
   assert.match(src('index.css'), /height:\s*auto/);
   assert.doesNotMatch(src('index.css'), /height:\s*70dvh/);
 });
