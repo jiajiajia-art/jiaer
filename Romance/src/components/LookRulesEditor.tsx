@@ -171,7 +171,7 @@ export function PlotLookPanel() {
   const accept = theme.plotLook !== false;
   return (
     <div className="space-y-3">
-      <p className="text-[12px] leading-relaxed text-ink-soft">条件满足时外观自动切换，条件不再满足即恢复，不会改动你保存的美化设置。条件与固定事件同一套：属性、指标、关系、地点、日期、当日时段、规则变量……</p>
+      <p className="text-[12px] leading-relaxed text-ink-soft">条件满足时外观自动切换，条件不再满足即恢复，不会改动你保存的美化设置。条件与固定事件同一套：属性、指标、关系、地点、日期、当日时段、计数器……</p>
 
       <div className="rounded-xl border border-line bg-paper px-3 py-2">
         <p className="text-[11px] font-bold tracking-[0.16em] text-ink-soft">此刻生效</p>

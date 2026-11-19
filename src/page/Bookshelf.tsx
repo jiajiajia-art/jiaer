@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import styles from '../components/Bookshelf/Bookshelf.module.css';
@@ -62,8 +63,8 @@ interface PickerState {
 const getScrollRoot = (): HTMLElement | null =>
   (document.querySelector('[data-app-page-main="1"]') as HTMLElement | null) || document.getElementById('root');
 
-const TAB_LABEL: Record<ShelfTab, string> = { recent: '最近游玩', favorites: '我的收藏' };
-const BATCH_ACTION_LABEL: Record<ShelfTab, string> = { recent: '移出最近游玩', favorites: '取消收藏' };
+const TAB_LABEL_KEY: Record<ShelfTab, string> = { recent: 'pagesBookshelf.tabRecent', favorites: 'pagesBookshelf.tabFavorites' };
+const BATCH_ACTION_LABEL_KEY: Record<ShelfTab, string> = { recent: 'pagesBookshelf.batchRemoveRecent', favorites: 'pagesBookshelf.batchUnfavorite' };
 /** 功能注释：「我的 Mod」页签不走书架列表接口，单独记住是否停留在该页签（从编辑器返回时恢复） */
 const SHELF_MODS_VIEW_KEY = 'shelf-view-mods';
 const readModsView = () => {
@@ -75,6 +76,7 @@ const readModsView = () => {
  * 数据全部来自后端 /auth/bookshelf/*（身份取自 token）；「继续游玩」交给详情页执行，复用其登录、更新提示与付费校验。
  */
 const Bookshelf: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { setIsAuthModalOpen } = authModalStore();
@@ -253,7 +255,7 @@ const Bookshelf: React.FC = () => {
         saves = Array.isArray(resp.data?.items) ? resp.data.items : [];
       } catch (error) {
         console.error('[Bookshelf] list saves failed:', error);
-        toast.error('读取存档失败，请稍后重试');
+        toast.error(t('pagesBookshelf.loadSavesFailed'));
         return;
       } finally {
         setContinuingId(null);
@@ -302,13 +304,13 @@ const Bookshelf: React.FC = () => {
         ? await bookshelfApi.removeRecent(ids)
         : await bookshelfApi.removeFavorites(ids);
       if (!resp.data?.success) throw new Error(resp.data?.message || 'batch failed');
-      toast.success(target === 'recent' ? `已移出 ${ids.length} 部，存档仍保留` : `已取消收藏 ${ids.length} 部`);
+      toast.success(target === 'recent' ? t('pagesBookshelf.batchRemoved', { count: ids.length }) : t('pagesBookshelf.batchUnfavorited', { count: ids.length }));
       if (next.length === 0) setManaging(false);
     } catch (error) {
       console.error('[Bookshelf] batch action failed:', error);
       patchList(target, (prev) => ({ items: restoreShelfItems(prev.items, removed) }));
       setSelected(ids);
-      toast.error(`${BATCH_ACTION_LABEL[target]}失败，请重试`);
+      toast.error(t('pagesBookshelf.batchFailed', { action: t(BATCH_ACTION_LABEL_KEY[target]) }));
     } finally {
       setBatchBusy(false);
     }
@@ -328,7 +330,7 @@ const Bookshelf: React.FC = () => {
         type="button"
         className={`${styles.cover} ${item.canPlay ? '' : styles.coverDimmed}`}
         onClick={() => (managing ? setSelected((s) => toggleShelfSelection(s, item.fileId)) : openDetail(item))}
-        aria-label={managing ? `选择 ${item.title}` : `查看 ${item.title} 详情`}
+        aria-label={managing ? t('pagesBookshelf.selectAria', { title: item.title }) : t('pagesBookshelf.viewDetailAria', { title: item.title })}
       >
         {coverPath && (
           <img
@@ -362,15 +364,15 @@ const Bookshelf: React.FC = () => {
         {renderCover(item)}
         <div className={styles.cardBody}>
           <button type="button" className={styles.cardTitle} onClick={() => (managing ? setSelected((s) => toggleShelfSelection(s, item.fileId)) : openDetail(item))}>
-            {item.title || '未命名剧本'}
+            {item.title || t('pagesBookshelf.unnamedScript')}
           </button>
           <div className={styles.cardLine}>{item.author || '\u00a0'}</div>
-          <div className={styles.cardLine}>{playedAt ? `${playedAt}玩过` : (tab === 'favorites' ? '还没玩过' : '\u00a0')}</div>
+          <div className={styles.cardLine}>{playedAt ? t('pagesBookshelf.playedAt', { time: playedAt }) : (tab === 'favorites' ? t('pagesBookshelf.neverPlayed') : '\u00a0')}</div>
           <div className={`${styles.cardLine} ${styles.cardProgress}`}>{progress || '\u00a0'}</div>
           {!managing && (
             <div className={styles.cardActions}>
               {tab === 'favorites' && (
-                <button type="button" className={styles.ghostButton} onClick={() => openDetail(item)}>查看详情</button>
+                <button type="button" className={styles.ghostButton} onClick={() => openDetail(item)}>{t('pagesBookshelf.viewDetail')}</button>
               )}
               {showContinue && (
                 <button
@@ -380,7 +382,7 @@ const Bookshelf: React.FC = () => {
                   title={item.canPlay ? undefined : shelfBlockedReason(item)}
                   onClick={() => void handleContinue(item)}
                 >
-                  {isContinuing ? '读取中…' : '继续游玩'}
+                  {isContinuing ? t('pagesBookshelf.reading') : t('pagesBookshelf.continuePlay')}
                 </button>
               )}
             </div>
@@ -406,8 +408,8 @@ const Bookshelf: React.FC = () => {
     if (!isLoggedIn) {
       return (
         <div className={styles.stateBox}>
-          <span>{modsView ? '登录后查看并编辑你创作的玩法 Mod 和手机应用' : '登录后查看你的最近游玩与收藏'}</span>
-          <button type="button" className={styles.stateButton} onClick={() => setIsAuthModalOpen(true)}>登录 / 注册</button>
+          <span>{modsView ? t('pagesBookshelf.loginHintMods') : t('pagesBookshelf.loginHintShelf')}</span>
+          <button type="button" className={styles.stateButton} onClick={() => setIsAuthModalOpen(true)}>{t('pagesBookshelf.loginRegister')}</button>
         </div>
       );
     }
@@ -426,19 +428,19 @@ const Bookshelf: React.FC = () => {
     if (current.status === 'error') {
       return (
         <div className={styles.stateBox}>
-          <span>{TAB_LABEL[tab]}加载失败</span>
-          <button type="button" className={styles.stateButton} onClick={() => setReloadSeq((n) => n + 1)}>重试</button>
+          <span>{t('pagesBookshelf.loadFailed', { tab: t(TAB_LABEL_KEY[tab]) })}</span>
+          <button type="button" className={styles.stateButton} onClick={() => setReloadSeq((n) => n + 1)}>{t('pagesBookshelf.retry')}</button>
         </div>
       );
     }
     if (current.items.length === 0) {
       if (keyword) {
-        return <div className={styles.stateBox}><span>没有找到与「{keyword}」相关的剧本</span></div>;
+        return <div className={styles.stateBox}><span>{t('pagesBookshelf.noSearch', { keyword })}</span></div>;
       }
       return (
         <div className={styles.stateBox}>
-          <span>{tab === 'recent' ? '还没有玩过的剧本' : '还没有收藏的剧本'}</span>
-          <button type="button" className={styles.stateButton} onClick={() => navigate('/home')}>去发现剧本</button>
+          <span>{tab === 'recent' ? t('pagesBookshelf.emptyRecent') : t('pagesBookshelf.emptyFavorites')}</span>
+          <button type="button" className={styles.stateButton} onClick={() => navigate('/home')}>{t('pagesBookshelf.discover')}</button>
         </div>
       );
     }
@@ -446,11 +448,11 @@ const Bookshelf: React.FC = () => {
       <>
         <div className={styles.grid}>{current.items.map(renderCard)}</div>
         <div ref={sentinelRef} className={styles.listFooter}>
-          {current.loadingMore && '加载中…'}
+          {current.loadingMore && t('pagesBookshelf.loading')}
           {current.loadMoreFailed && (
-            <>加载失败，<button type="button" onClick={() => void loadMore()}>点击重试</button></>
+            <>{t('pagesBookshelf.loadMoreFailed')}<button type="button" onClick={() => void loadMore()}>{t('pagesBookshelf.clickRetry')}</button></>
           )}
-          {!current.hasMore && !current.loadingMore && current.items.length > SHELF_PAGE_SIZE && '已经到底了'}
+          {!current.hasMore && !current.loadingMore && current.items.length > SHELF_PAGE_SIZE && t('pagesBookshelf.endOfList')}
         </div>
       </>
     );
@@ -469,7 +471,7 @@ const Bookshelf: React.FC = () => {
                 className={`${styles.tab} ${!modsView && tab === key ? styles.tabActive : ''}`}
                 onClick={() => switchTab(key)}
               >
-                {TAB_LABEL[key]}
+                {t(TAB_LABEL_KEY[key])}
               </button>
             ))}
             <button
@@ -488,16 +490,16 @@ const Bookshelf: React.FC = () => {
                 <input
                   value={keywordInput}
                   onChange={(e) => setKeywordInput(e.target.value)}
-                  placeholder={modsView ? (modKind === 'app' ? '搜索我的手机应用' : '搜索我的玩法') : '搜索剧本 / 作者'}
+                  placeholder={modsView ? (modKind === 'app' ? t('pagesBookshelf.searchApps') : t('pagesBookshelf.searchPlayMods')) : t('pagesBookshelf.searchScripts')}
                   maxLength={50}
-                  aria-label={modsView ? '按名称搜索我的 Mod' : '按剧本名称或作者搜索'}
+                  aria-label={modsView ? t('pagesBookshelf.searchModsAria') : t('pagesBookshelf.searchScriptsAria')}
                 />
                 {keywordInput && (
-                  <button type="button" className={styles.searchClear} onClick={() => setKeywordInput('')} aria-label="清空搜索">×</button>
+                  <button type="button" className={styles.searchClear} onClick={() => setKeywordInput('')} aria-label={t('pagesBookshelf.clearSearch')}>×</button>
                 )}
               </label>
               {modsView ? (
-                <button type="button" className={styles.headerButton} onClick={() => { persistView(); navigate(modKind === 'app' ? PHONE_APP_CREATE_PATH : PLAY_MOD_CREATE_PATH); }}>{modKind === 'app' ? '新建应用' : '新建玩法'}</button>
+                <button type="button" className={styles.headerButton} onClick={() => { persistView(); navigate(modKind === 'app' ? PHONE_APP_CREATE_PATH : PLAY_MOD_CREATE_PATH); }}>{modKind === 'app' ? t('pagesBookshelf.createApp') : t('pagesBookshelf.createPlayMod')}</button>
               ) : (
               <>
               <button
@@ -506,9 +508,9 @@ const Bookshelf: React.FC = () => {
                 onClick={toggleManage}
                 disabled={current.status !== 'ready' || (current.items.length === 0 && !managing)}
               >
-                {managing ? '完成' : '管理'}
+                {managing ? t('pagesBookshelf.done') : t('pagesBookshelf.manage')}
               </button>
-              <button type="button" className={styles.headerButton} onClick={() => setSaveManagerOpen(true)}>存档管理</button>
+              <button type="button" className={styles.headerButton} onClick={() => setSaveManagerOpen(true)}>{t('pagesBookshelf.saveManager')}</button>
               </>
               )}
             </div>
@@ -519,14 +521,17 @@ const Bookshelf: React.FC = () => {
       {managing && (
         <div className={styles.manageBar}>
           <div className={styles.manageInfo}>
-            <strong>{BATCH_ACTION_LABEL[tab]}</strong>
-            已选 {selected.length} 部 · {tab === 'recent' ? '只移除记录，不删除存档' : '不删除存档，不影响购买'}
+            <strong>{t(BATCH_ACTION_LABEL_KEY[tab])}</strong>
+            {t('pagesBookshelf.selectedCount', {
+              count: selected.length,
+              hint: tab === 'recent' ? t('pagesBookshelf.hintRecent') : t('pagesBookshelf.hintFavorites'),
+            })}
           </div>
           <button type="button" className={styles.manageSelectAll} onClick={toggleSelectAll}>
-            {allSelected ? '取消全选' : '全选'}
+            {allSelected ? t('pagesBookshelf.cancelSelectAll') : t('pagesBookshelf.selectAll')}
           </button>
           <button type="button" className={styles.manageAction} disabled={selected.length === 0 || batchBusy} onClick={() => void runBatch()}>
-            {batchBusy ? '处理中…' : BATCH_ACTION_LABEL[tab]}
+            {batchBusy ? t('pagesBookshelf.processing') : t(BATCH_ACTION_LABEL_KEY[tab])}
           </button>
         </div>
       )}

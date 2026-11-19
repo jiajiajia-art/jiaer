@@ -23,8 +23,10 @@ const data = read("game/data.ts");
 const createSec = panel.slice(panel.indexOf('title="建角"'), panel.indexOf('title="地点"'));
 
 test("creationItems_添加类型固定为文本单选数值日期货币", () => {
-  assert.deepEqual(items.CREATION_ITEM_ADD_TYPES.map((t) => t.id), ["text", "radio", "number", "date", "currency"]);
-  assert.deepEqual(items.CREATION_ITEM_ADD_TYPES.map((t) => t.label), ["文本", "单选", "数值", "日期", "货币"]);
+  assert.deepEqual(items.CREATION_ITEM_ADD_TYPES.map((t) => t.id), ["text", "radio", "number", "skill", "date", "currency"]);
+  assert.deepEqual(items.CREATION_ITEM_ADD_TYPES.map((t) => t.label), ["文本", "单选", "数值", "技能（分档）", "日期", "货币"]);
+  // 功能注释：技能 = 带五档的数值
+  assert.equal(items.newSkillAttr("s1").tiers.length, 5);
   assert.match(items.CURRENCY_ATTR_DESC, /这是货币/);
   const num = items.newNumberAttr("a1");
   assert.equal(num.label, "新数值");
@@ -78,7 +80,8 @@ test("ModCreationFieldsEditor_统一添加与系统四项置顶", () => {
   assert.match(editor, /开局资金/);
   assert.match(editor, /authorField: "author-field-start-money"/);
   assert.match(editor, /货币名称/);
-  assert.match(editor, /Badge tone="gold">必填/);
+  assert.match(editor, /Badge tone="gold">玩家必填/);
+  assert.match(editor, /Badge tone="gold">创作者必填/);
   assert.doesNotMatch(editor, /Badge tone="jade">货币/);
   assert.match(editor, /货币名称/);
   assert.match(editor, /＋ 添加</);
@@ -98,7 +101,9 @@ test("ModCreationFieldsEditor_统一添加与系统四项置顶", () => {
   assert.match(editor, /AttrDefForm/);
   // 功能注释：范围/开局/隐藏/状态栏在 AttrDefForm；统一列表必须挂上该表单
   assert.match(attrsEd, /建角页隐藏/);
-  assert.match(attrsEd, /显示在顶部状态栏/);
+  // 顶栏勾选文案改为「顶栏主属性」，说明锁在小说顶栏名字下方
+  assert.match(attrsEd, /顶栏主属性（最多 \{pinLimit\} 个）/);
+  assert.match(attrsEd, /显示在小说顶栏名字下方/);
   // 功能注释：渲染顺序——BUILTINS.map → 开局资金 row → 统一添加（避开「＋ 添加性别」等其它按钮）
   const builtinsMap = editor.indexOf("{BUILTINS.map");
   const money = editor.indexOf('row("startMoney"');
@@ -109,7 +114,9 @@ test("ModCreationFieldsEditor_统一添加与系统四项置顶", () => {
 test("AttrDef_支持hidden且表单含范围开局隐藏状态栏", () => {
   assert.match(types, /hidden\?: boolean/);
   assert.match(attrsEd, /建角页隐藏/);
-  assert.match(attrsEd, /显示在顶部状态栏/);
+  // 顶栏勾选文案改为「顶栏主属性」，说明锁在小说顶栏名字下方
+  assert.match(attrsEd, /顶栏主属性（最多 \{pinLimit\} 个）/);
+  assert.match(attrsEd, /显示在小说顶栏名字下方/);
   assert.match(attrsEd, /开局取值/);
   assert.match(attrsEd, /固定数值/);
   assert.doesNotMatch(attrsEd, />投骰子</);

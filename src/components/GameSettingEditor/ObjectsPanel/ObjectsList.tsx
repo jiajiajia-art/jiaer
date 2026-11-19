@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './ObjectsList.module.css';
 import sharedStyles from './shared.module.css';
 import { RiDeleteBin5Line } from 'react-icons/ri';
@@ -21,6 +22,8 @@ const ObjectsList: React.FC<ObjectsListProps> = ({
     onDeleteClick,
     onCreateClick,
 }) => {
+    const { t } = useTranslation();
+
     return (
         <div className={styles.objectsList}>
             <div className={styles.objectsListHeader}>
@@ -33,7 +36,7 @@ const ObjectsList: React.FC<ObjectsListProps> = ({
                 {objects.length === 0 ? (
                     <div className={styles.emptyState}>
                         <p>暂无物品</p>
-                        <p className={styles.emptyHint}>点击"创建"添加新的物品</p>
+                        <p className={styles.emptyHint}>点击t('createGame.create')添加新的物品</p>
                     </div>
                 ) : (
                     objects.map((obj) => {
@@ -59,7 +62,7 @@ const ObjectsList: React.FC<ObjectsListProps> = ({
                                                 <img
                                                     key={`img-${obj.item_id}-${iconUrl}`}
                                                     src={imageSrc}
-                                                    alt={obj.name || '物品'}
+                                                    alt={obj.name || t('gameSettingEditor.objectsPanel.objectsList.s5c2475c0b4')}
                                                     onError={(e) => {
                                                         // 图片加载失败时隐藏
                                                         (e.target as HTMLImageElement).style.display = 'none';
@@ -71,13 +74,13 @@ const ObjectsList: React.FC<ObjectsListProps> = ({
                                     })()}
                                 </div>
                                 <div className={styles.objectCardInfo}>
-                                    <div className={styles.objectCardName}>{obj.name || '新建物品'}</div>
+                                    <div className={styles.objectCardName}>{obj.name || t('gameSettingEditor.objectsPanel.objectDetail.safc6fc22e9')}</div>
                                     <div className={styles.objectCardCategory}>{categoryText}</div>
                                 </div>
                                 <button
                                     className={styles.objectCardDelete}
                                     onClick={(e) => onDeleteClick(obj.item_id, e)}
-                                    aria-label="删除"
+                                    aria-label={t('warehouse.cards.delete')}
                                 >
                                     <RiDeleteBin5Line size={18} />
                                 </button>

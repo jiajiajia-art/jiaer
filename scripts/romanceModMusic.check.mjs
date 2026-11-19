@@ -24,9 +24,10 @@ const look = {
 
 test('基础里只有一块音乐_不再挂美化也不叠两个折叠区', () => {
   // 功能注释：C1.2 音乐进①基础，⑤美化不得再有音乐区块
-  assert.match(panel, /g="base" title="音乐"/);
+  // 功能注释：音乐并入①基础「基本信息」底部
+  assert.match(panel, /音乐并入基本信息底部/);
   assert.doesNotMatch(panel, /g="look" title="音乐"/);
-  assert.match(panel, /hint: "作品封面、名称与简介、剧本基调、时间与推进、头像、建角、人物线路、地点、音乐、已添加的玩法"/);
+  assert.match(panel, /hint: "作品封面、名称与简介、系统提示词、时间与推进、头像、建角、人物线路、地点、音乐、已添加的玩法"/);
   // ⑤ 美化分组说明已去掉「剧情美化」；关键是美化里不得再出现音乐
   const lookHint = panel.match(/k: "look", label: "⑤ 美化", hint: "([^"]*)"/)?.[1] ?? '';
   assert.match(lookHint, /手机外观、皮肤美化、开场页外观/);

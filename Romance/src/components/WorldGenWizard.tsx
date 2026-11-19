@@ -6,13 +6,12 @@
  * 再进入：已生成完成（step2）刷新直达编辑器；未生成则停设定入口。按用户+作品隔离会话。
  */
 import AiRoutePicker from "./AiRoutePicker";
-import { useAiRoutes } from "../lib/platformAiRoutes";
 import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Mod } from "../mods/types";
 import {
   DEFAULT_WORLD_GEN_EDITOR_STEP_IDS,
-  WORLD_GEN_ENGINES,
   WORLD_FORBID_MAX,
+  WORLD_GEN_PICKER_HIDDEN_STEP_IDS,
   WORLD_SETTING_MAX,
   WORLD_TITLE_MAX,
   contentIdsFromEditorSteps,
@@ -24,9 +23,8 @@ import {
   normalizeWorldGenStep1,
   validateWorldGenStep1,
   WORLD_GEN_SCOPE_VERSION,
+  worldGenPickerVisibleStepIds,
   type WorldGenDraft,
-  type WorldGenEngineId,
-  type WorldGenEditorStep,
   type WorldGenStep1,
 } from "../lib/worldGenWizard";
 import {
@@ -60,20 +58,31 @@ import {
   loadWorldGenSessionAsync,
   saveWorldGenSession,
   wantsResumeEditor,
+  setWorldGenResumeQuery,
   worldGenLocalDraftStorageId,
 } from "../lib/worldGenSession";
 import { sanitizeModStrings } from "../lib/sanitizeModStrings";
 import { readFunloomAuthToken } from "../lib/platformAvatarLibrary";
-import { discardDraftById, fmtDraftTime, peekDraft, resolveSavedVersionAt, writeSavedVersionAt } from "../lib/useDraft";
+import {
+  clearDraftSoftContinue,
+  discardDraftById,
+  fmtDraftTime,
+  peekDraft,
+  resolveSavedVersionAt,
+  writeSavedVersionAt,
+} from "../lib/useDraft";
+import toast from "react-hot-toast";
 import {
   buildRomancePlatformDraftContent,
   commitRomancePlatformDraftWithContent,
+  ensureRomancePlatformDraftId,
   publishRomancePlatformDraft,
-  fetchRomancePlatformDraftContent,
+  loadRomancePlatformDraftContent,
   putRomancePlatformDraftContent,
   readRomancePlatformDraftId,
   resolveRomanceDraftCoverUrl,
   scheduleRomancePlatformDraftSync,
+  shouldFetchRomancePlatformDraftContent,
 } from "../lib/platformRomanceDraft";
 import {
   fitWorldGenSettingTextarea,
@@ -88,6 +97,8 @@ import {
 import { IconCheck } from "../lib/icons";
 import { useConfirm } from "./EditorKit";
 import { Modal } from "./ui";
+import DraftConflictChoice from "./DraftConflictChoice";
+import { IconClock } from "../lib/icons";
 
 /** 功能注释：编辑器/工坊拆 chunk；发版后旧 hash 404 时自动硬刷，避免「继续填写草稿」红屏 */
 const ModEditorPanel = lazy(() => importWithStaleChunkReload(() => import("./ModEditorPanel")));
@@ -135,8 +146,6 @@ type Props = {
   /** 保存/关闭编辑器后回调（上层可清状态）；savedName 有值表示已保存 */
   onComplete: (mod: Mod, draft: WorldGenDraft, savedName?: string) => void;
 };
-
-const hint = "text-[11.5px] leading-relaxed text-ink-soft";
 
 /** 功能注释：进度态文案——完成用「已完成」（绿）；进行中不单写「进行中」，具体产出见 detail 行 */
 function moduleStatusLabel(status: string) {
@@ -209,7 +218,6 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
   const boot = useMemo(() => bootFromSession(), []);
   const [step, setStep] = useState<1 | 2>(boot.step);
   const [s1, setS1] = useState<WorldGenStep1>(boot.s1);
-  const platformRoutes = useAiRoutes("text");
   const [mod, setMod] = useState<Mod | null>(boot.mod);
   const [draft, setDraft] = useState<WorldGenDraft | null>(boot.draft);
   const [workshop, setWorkshop] = useState<{ mod: Mod; isNew: boolean } | null>(null);
@@ -253,6 +261,9 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
   const draftRef = useRef<WorldGenDraft | null>(boot.draft);
   /** 功能注释：会话基线 = 上次生成或点保存的版本；未保存填写不得写入此 ref */
   const modRef = useRef<Mod | null>(boot.mod);
+  /** 功能注释：异步补齐基线时读实时步骤，避免闭包里的旧 step 把编辑中表单冲掉 */
+  const stepRef = useRef(step);
+  stepRef.current = step;
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /** 功能注释：把向导进度写入会话；刷新后 App 凭此重开向导停在入口，而非游戏 */
@@ -285,6 +296,13 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
     schedulePersist();
   }, [step, s1, mod, draft, schedulePersist]);
 
+  // 功能注释：编辑器打开期间保持 URL resume=1，页面被回收重载后直回编辑器（B-06）
+  const inEditor = step === 2 && !!mod && !!draft;
+  useEffect(() => {
+    if (resumeLoad !== "idle") return;
+    setWorldGenResumeQuery(inEditor);
+  }, [inEditor, resumeLoad]);
+
   // 功能注释：进向导就预取编辑器 chunk；旧 tab 握着失效 hash 时立刻硬刷，不必等点「继续填写草稿」才红屏
   useEffect(() => {
     void importWithStaleChunkReload(() => import("./ModEditorPanel"));
@@ -314,11 +332,19 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
       const localOk = !!(full?.mod && full?.draft);
       const localAt = localOk ? Number(full?.updatedAt || 0) : 0;
 
-      let remote: Awaited<ReturnType<typeof fetchRomancePlatformDraftContent>> = null;
-      if (platformDraftId && (wantResume || !localOk || boot.pendingHeavy)) {
-        remote = await fetchRomancePlatformDraftContent(platformDraftId);
+      // 功能注释：新建只有 draftId、内容未 PUT 时禁止 GET；续编/IDB 重载才拉（空壳现为 200 empty，不再红 404）
+      let remoteLoad: Awaited<ReturnType<typeof loadRomancePlatformDraftContent>> | null = null;
+      if (
+        shouldFetchRomancePlatformDraftContent({
+          platformDraftId,
+          wantResume,
+          pendingHeavy: boot.pendingHeavy,
+        })
+      ) {
+        remoteLoad = await loadRomancePlatformDraftContent(platformDraftId);
         if (cancelled) return;
       }
+      const remote = remoteLoad?.status === "ready" ? remoteLoad.content : null;
       const remoteOk = !!(remote?.mod && remote?.draft);
       const remoteAt = remoteOk ? Number(remote?.updatedAt || 0) : 0;
 
@@ -329,6 +355,11 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
         updatedAt: number,
         pushRemote: boolean,
       ) => {
+        // 功能注释：编辑器已打开时勿用异步补齐覆盖表单，否则重挂载会把刚写的本机草稿当成「冲突」弹窗
+        if (stepRef.current === 2 && modRef.current && draftRef.current && !wantResume) {
+          setResumeLoad("idle");
+          return;
+        }
         modRef.current = clean;
         draftRef.current = d;
         setS1(nextS1);
@@ -385,6 +416,18 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
         applyBaseline(clean, d, nextS1, localAt || Date.now(), !!platformDraftId && localAt > remoteAt);
         return;
       }
+      // 功能注释：书架点到空壳草稿 → 打开创作第 1 步续写，禁止「打不开」死胡同
+      if (wantResume && remoteLoad?.status === "empty") {
+        modRef.current = null;
+        draftRef.current = null;
+        setMod(null);
+        setDraft(null);
+        setStep(1);
+        setResumeLoad("idle");
+        toast("这份草稿还没生成过内容，已打开创作页继续填写");
+        return;
+      }
+      // 功能注释：草稿已删/无权/网络失败 → 明确打不开；无 platform 拉取结果时同处理
       if (wantResume) {
         setResumeLoad("missing");
         return;
@@ -525,9 +568,11 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
 
   const tieredModules = useMemo(() => groupWorldGenEditorStepsByTier(), []);
   const selected = useMemo(() => new Set(s1.editorStepIds ?? []), [s1.editorStepIds]);
-  // 功能注释：勾选区只渲染基础世界；计数 = 已勾 / 基础可选总数
+  // 功能注释：勾选区只渲染可见基础模组；隐藏项（如开局资金）不计入「已选」
   const { selectedCount, allCount } = useMemo(() => {
-    const coreIds = tieredModules.core.flatMap((g) => g.steps.map((s) => s.id));
+    const coreIds = worldGenPickerVisibleStepIds(
+      tieredModules.core.flatMap((g) => g.steps.map((s) => s.id)),
+    );
     return {
       selectedCount: coreIds.filter((id) => selected.has(id)).length,
       allCount: coreIds.length,
@@ -540,12 +585,17 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
   };
 
   const toggleModule = (id: string) => {
-    // 功能注释：扩展玩法不在此勾选生成，忽略误触
-    if (!isWorldGenCoreStep(id)) return;
+    // 功能注释：扩展玩法不在此勾选生成，忽略误触；隐藏项不可点
+    if (!isWorldGenCoreStep(id) || WORLD_GEN_PICKER_HIDDEN_STEP_IDS.has(id)) return;
     setS1((prev) => {
       const set = new Set(prev.editorStepIds ?? []);
       if (set.has(id)) set.delete(id);
       else set.add(id);
+      // 功能注释：建角开则带上开局资金；建角关则一并去掉（勾选区不单独展示资金）
+      if (id === "creation") {
+        if (set.has("creation")) set.add("startResources");
+        else set.delete("startResources");
+      }
       const editorStepIds = DEFAULT_WORLD_GEN_EDITOR_STEP_IDS.filter((x) => set.has(x));
       return {
         ...prev,
@@ -570,35 +620,39 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
     patch1({ editorStepIds: [], contentIds: [] });
   };
 
-  const renderModuleGroup = (groups: { group: string; steps: WorldGenEditorStep[] }[]) =>
-    groups.map(({ group, steps }) => (
-      <div key={group}>
-        <p className="mb-1.5 text-[11px] font-bold tracking-wide text-ink-soft">{group}</p>
-        <div className="space-y-1.5">
-          {steps.map((s) => {
-            const on = selected.has(s.id);
-            return (
-              <button
-                key={s.id}
-                type="button"
-                role="checkbox"
-                aria-checked={on}
-                onClick={() => toggleModule(s.id)}
-                className={`world-gen-choice ${on ? "is-on" : ""}`}
-              >
-                <span className="world-gen-choice-check" aria-hidden>
-                  {on ? <IconCheck size={11} /> : null}
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-[13px] font-bold text-ink">{s.name}</span>
-                  <span className={`block ${hint}`}>{s.desc}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    ));
+  /** 功能注释：扁平勾选——只展示模块名；隐藏已并入他处的项 */
+  const coreModuleSteps = useMemo(
+    () =>
+      tieredModules.core
+        .flatMap((g) => g.steps)
+        .filter((s) => !WORLD_GEN_PICKER_HIDDEN_STEP_IDS.has(s.id)),
+    [tieredModules],
+  );
+
+  const renderModulePicker = () => (
+    <div className="world-gen-mod-grid" role="group" aria-label="要生成的模块">
+      {coreModuleSteps.map((s) => {
+        const on = selected.has(s.id);
+        return (
+          <button
+            key={s.id}
+            type="button"
+            role="checkbox"
+            aria-checked={on}
+            aria-label={s.desc ? `${s.name}：${s.desc}` : s.name}
+            title={s.desc || s.name}
+            onClick={() => toggleModule(s.id)}
+            className={`world-gen-mod-pick${on ? " is-on" : ""}`}
+          >
+            <span className="world-gen-mod-pick-check" aria-hidden>
+              {on ? <IconCheck size={11} /> : null}
+            </span>
+            <span className="world-gen-mod-pick-name">{s.name}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
 
   // 功能注释：本机自动草稿按平台 draftId 隔离，禁止多部作品共用 mod.new
   const worldGenDraftId = useMemo(
@@ -610,6 +664,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
     // 功能注释：重新生成进入时清掉旧本机草稿，避免拿过期草稿盖住新生成的已保存基线
     if (opts?.wipeLocalDraft || opts?.draftChoice === "saved") {
       discardDraftById(worldGenDraftId);
+      clearDraftSoftContinue(worldGenDraftId);
     }
     setMod(m);
     setDraft(d);
@@ -848,30 +903,47 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
     openEditor(m, d, { wipeLocalDraft: true });
   };
 
-  /** 功能注释：未登录时「知道了」要拉起平台登录，不能只关掉提示 */
+  /** 功能注释：关弹窗后按错误类型继续——登录 / 去填设定，避免只关掉却不知道下一步 */
   const dismissErr = () => {
     const needLogin = /请先登录平台账号/.test(err);
+    const needFillSetting = /故事设定|作品名称|请填写/.test(err);
     setErr("");
     if (needLogin && typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("funloom:open-auth"));
+      return;
+    }
+    if (needFillSetting) {
+      requestAnimationFrame(() => {
+        const el = settingRef.current;
+        if (!el) return;
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.focus();
+      });
     }
   };
 
-  /** 功能注释：校验失败用居中弹窗，避免底栏旁小字条被挡住、难发现。 */
+  /** 功能注释：校验失败用居中弹窗；正文只说缺什么，按钮直接「去填写 / 去登录」，不再叠重复副标题假输入框 */
+  const errIsLogin = /请先登录平台账号/.test(err);
+  const errIsFill = /故事设定|作品名称|请填写/.test(err);
+  const errActionLabel = errIsLogin ? "去登录" : errIsFill ? "去填写" : "知道了";
   const errModal = err ? (
-    <Modal title="还差一步" onClose={() => setErr("")} heavyBackdrop>
-      <p className="text-[14px] leading-relaxed text-ink" role="alert">
-        {err}
-      </p>
-      <div className="mt-5 flex justify-end">
-        <button
-          type="button"
-          autoFocus
-          onClick={dismissErr}
-          className="rounded-full bg-ink px-5 py-2 text-[13.5px] font-bold text-paper transition hover:brightness-110"
-        >
-          知道了
-        </button>
+    <Modal
+      title="还差一步"
+      onClose={dismissErr}
+      heavyBackdrop
+      panelClassName="ui-dialog-compact world-gen-err-dialog"
+      footer={
+        <div className="ui-sheet-foot flex justify-end">
+          <button type="button" autoFocus onClick={dismissErr} className="ui-btn ui-btn-primary ui-btn-lg min-w-[7.5rem]">
+            {errActionLabel}
+          </button>
+        </div>
+      }
+    >
+      <div className="world-gen-err-body" role="alert">
+        <p className="world-gen-err-tip-text">{err}</p>
+        {errIsFill ? <p className="world-gen-err-hint">补全后就可以继续生成世界。</p> : null}
+        {errIsLogin ? <p className="world-gen-err-hint">登录后会使用平台创作额度生成。</p> : null}
       </div>
     </Modal>
   ) : null;
@@ -942,9 +1014,12 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
               </div>
             ) : null}
           </div>
-          <p className="world-gen-lead" style={{ marginTop: "0.65rem" }}>
-            {progress.label}
-          </p>
+          {/* 功能注释：生成中只保留进度条与「已完成 x/y」，不展示「串联生成中：…」技术文案 */}
+          {!running && progress.label ? (
+            <p className="world-gen-lead" style={{ marginTop: "0.65rem" }}>
+              {progress.label}
+            </p>
+          ) : null}
 
           {!running && progressHasStaleChunkFailure(progress) ? (
             <div
@@ -1140,12 +1215,13 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
       );
     }
     return (
-      /* 功能注释：第 2 步完整编辑器 · 平台暗色壳；fluid 适配手机，禁止整页横滑 / 奶油底 */
-      <div className="world-gen-shell world-gen-editor min-h-screen overflow-x-hidden px-3 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-4">
+      /* 功能注释：第 2 步完整编辑器 · 平台暗色壳；顶栏贴顶，禁止上方再留一截底色 */
+      <div className="world-gen-shell world-gen-editor min-h-screen overflow-x-hidden px-3 pt-0 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-5">
         <EditorTrimBoundary s1={s1} onDemote={demoteFromEditorTrim}>
           <Suspense fallback={<p className="p-8 text-center text-sm text-ink-soft">加载编辑器…</p>}>
             <ModEditorPanel
-              key={`${worldGenDraftId}:${mod.id || "world-gen-new"}`}
+              /* 功能注释：key 只跟平台草稿键，禁止因 mod.id 变化整页重挂载再弹冲突窗 */
+              key={worldGenDraftId}
               initial={mod}
               isNew
               fluid
@@ -1155,14 +1231,17 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
               savedVersionAt={resolveSavedVersionAt(worldGenDraftId, loadWorldGenSession()?.updatedAt ?? null)}
               onLiveChange={onEditorLiveChange}
               onCommitted={onEditorCommitted}
-              onPublish={readRomancePlatformDraftId() ? async (input) => {
-                const fileId = readRomancePlatformDraftId();
+              onPublish={async (input) => {
+                // 功能注释：顶栏「发布」始终可点；无 draftId 时先补建平台草稿再同步正文提交审核
+                const fileId = await ensureRomancePlatformDraftId();
+                if (!fileId) return { ok: false, message: "无法关联平台草稿，请先登录或从创作者中心重新进入" };
                 const current = modRef.current ?? mod;
-                // 功能注释：先确认最新正文已落平台，审核才看得到这一版
+                // 功能注释：先确认最新正文已落平台，审核才看得到这一版；再同步双封面/题材后提审
                 const synced = await commitRomancePlatformDraftWithContent(fileId, { title: current.name, mod: current, draft: draftRef.current ?? draft, s1 });
                 if (!synced) return { ok: false, message: "保存到平台失败，请检查网络后重试" };
-                return publishRomancePlatformDraft(fileId, input);
-              } : undefined}
+                // 功能注释：带上本地 mod，发布前再校验封面/题材并同步到平台
+                return publishRomancePlatformDraft(fileId, input, { mod: current, title: current.name });
+              }}
               onAiChat={(m) => setWorkshop({ mod: m, isNew: true })}
               onClose={(savedName) => {
                 onComplete(modRef.current ?? mod, draft, savedName);
@@ -1182,25 +1261,18 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
 
   return (
     <div className="world-gen-shell">
-      <div className="mx-auto flex min-h-screen w-full max-w-xl flex-col px-4 pb-28 pt-7 sm:px-6">
-        <header className="mb-6">
-          <p className="world-gen-kicker">创作游戏 · 第 1/2 步</p>
-          <h1 className="world-gen-title">生成世界</h1>
-          <p className="world-gen-lead">
-            填写作品名称、故事设定并选择创作引擎，勾选本次需要 AI 生成的模组；进入完整编辑器时会调用平台 AI（按模组扣 KK
-            币），无需单独配置密钥。
-          </p>
+      <div className="world-gen-page">
+        <header className="world-gen-topbar">
+          <button type="button" onClick={onBack} className="world-gen-back">
+            ← 返回
+          </button>
+          <h1 className="world-gen-title">创作游戏</h1>
         </header>
 
-        <div className="space-y-4">
+        <div className="world-gen-stack">
+          {/* 功能注释：首卡无「设定」标题；禁止生成直接展示，不收进更多选项 */}
           <section className="world-gen-card">
-            <div className="world-gen-card-head">
-              <h2 className="world-gen-card-title">
-                <span className="world-gen-card-index">01</span>
-                核心设定
-              </h2>
-            </div>
-            <label className="mb-4 block">
+            <label className="world-gen-field">
               <div className="world-gen-field-label">
                 {/* 功能注释：作品名称为必填；红 * 与校验「请填写作品名称」对齐，禁止生成不加 */}
                 <span>
@@ -1223,7 +1295,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
                 onChange={(e) => patch1({ title: e.target.value })}
               />
             </label>
-            <label className="block">
+            <label className="world-gen-field">
               <div className="world-gen-field-label">
                 {/* 功能注释：故事设定为必填；红 * 与校验「请填写故事设定」对齐 */}
                 <span>
@@ -1253,11 +1325,7 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
                 }}
               />
             </label>
-            <p className={`mt-2 ${hint}`}>
-              这段内容将作为 AI 创作的主要依据。你可以补充玩法、角色关系与世界规则。上限 {WORLD_SETTING_MAX}{" "}
-              字；超出后计数标红，未勾选 AI 整理时提交会先确认截断。
-            </p>
-            <label className="mt-4 block">
+            <label className="world-gen-field">
               <div className="world-gen-field-label">
                 <span>禁止生成</span>
                 <span
@@ -1272,138 +1340,83 @@ export default function WorldGenWizard({ onBack, onComplete }: Props) {
                 className="world-gen-textarea"
                 value={s1.forbidGen}
                 rows={2}
-                placeholder="例如：不要出现现代娱乐圈通告；不要生成未成年恋爱；不要出现血腥虐杀。"
+                placeholder="例如：不要出现血腥虐杀；不要生成未成年恋爱。"
                 onChange={(e) => {
                   patch1({ forbidGen: e.target.value });
                   fitWorldGenSettingTextarea(e.currentTarget);
                 }}
               />
+              <p className="world-gen-field-hint">不会被「由 AI 整理设定」改写，会写入生成规则。</p>
             </label>
-            <p className={`mt-2 ${hint}`}>
-              写清楚不要出现的内容、不要生成的设定。生成世界与后续 AI 补全都会遵守；不会被「由 AI
-              整理设定」改写。
-            </p>
             <button
               type="button"
               role="checkbox"
               aria-checked={s1.aiPolish}
               onClick={() => patch1({ aiPolish: !s1.aiPolish })}
-              className={`world-gen-choice mt-3 ${s1.aiPolish ? "is-on" : ""}`}
+              className={`world-gen-polish ${s1.aiPolish ? "is-on" : ""}`}
             >
-              <span className="world-gen-choice-check" aria-hidden>
-                {s1.aiPolish ? <IconCheck size={12} /> : null}
+              <span className="world-gen-polish-mark" aria-hidden>
+                {s1.aiPolish ? <IconCheck size={14} /> : null}
               </span>
-              <span>
-                <span className="block text-[13px] font-bold text-ink">由 AI 整理设定</span>
-                <span className={hint}>保留原意，补全结构并优化表达（作品名称也可润色）</span>
+              <span className="world-gen-polish-copy">
+                <span className="world-gen-polish-title">由 AI 整理设定</span>
+                <span className="world-gen-polish-desc">顺带润色作品名称，让设定更完整好读</span>
               </span>
             </button>
           </section>
 
-          <section className="world-gen-card">
-            <div className="world-gen-card-head">
-              <h2 className="world-gen-card-title">
-                <span className="world-gen-card-index">02</span>
-                选择创作引擎
-              </h2>
-            </div>
-            <p className={`mb-3 ${hint}`}>每种引擎的擅长方向与消耗倍率不同，最终按实际生成用量扣除 KK 币。</p>
-            {/* 后台配了线路就用后台线路与倍率；接口未上线时沿用内置三档 */}
-            {platformRoutes.routes.length > 0 ? <AiRoutePicker capability="text" title="平台线路" /> : (
-            <div className="space-y-2">
-              {WORLD_GEN_ENGINES.map((e) => {
-                const on = s1.engineId === e.id;
-                return (
-                  <button
-                    key={e.id}
-                    type="button"
-                    onClick={() => patch1({ engineId: e.id as WorldGenEngineId })}
-                    className={`world-gen-choice ${on ? "is-on" : ""}`}
-                  >
-                    <span className="world-gen-choice-mark" aria-hidden />
-                    <span className="min-w-0 flex-1">
-                      <span className="flex flex-wrap items-center gap-2">
-                        <span className="text-[14px] font-bold text-ink">{e.name}</span>
-                        <span className="world-gen-chip !px-2 !py-0.5 text-[10.5px]">{e.tag}</span>
-                      </span>
-                      <span className={`mt-0.5 block ${hint}`}>{e.desc}</span>
-                      <span className="mt-1 block text-[11.5px] font-semibold text-jade">
-                        KK 币倍率 {e.rate.toFixed(1)}x
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            )}
-          </section>
+          {/* 功能注释：创作引擎 = 后台线路；无线路时整卡仍显示，文案写明联系平台配置 */}
+          <AiRoutePicker capability="text" embedded asCard title="创作引擎" />
 
           <section className="world-gen-card">
             <div className="world-gen-card-head">
-              <h2 className="world-gen-card-title">
-                <span className="world-gen-card-index">03</span>
-                本次需要 AI 生成的模组
-              </h2>
+              <h2 className="world-gen-card-title">生成内容</h2>
               <span className="world-gen-field-count">
                 已选 {selectedCount}/{allCount}
               </span>
             </div>
-            <div className="mb-3 flex flex-wrap gap-2">
+            <div className="world-gen-chip-row">
               <button type="button" onClick={selectAllModules} className="world-gen-chip">
-                全选基础
+                全选
               </button>
               <button type="button" onClick={clearAllModules} className="world-gen-chip">
-                取消全选
+                清空
               </button>
             </div>
-            <div className="max-h-72 space-y-3 overflow-y-auto pr-0.5">
-              <p className="text-[11px] font-bold text-jade">基础世界（默认）</p>
-              {renderModuleGroup(tieredModules.core)}
+            <div className="world-gen-mod-scroll">
+              {renderModulePicker()}
             </div>
           </section>
         </div>
       </div>
 
       <div className="world-gen-dock">
-        <div className="mx-auto flex max-w-xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <button type="button" onClick={onBack} className="world-gen-ghost">
-            ← 上一步
-          </button>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {mod && draft ? (
-              <button type="button" onClick={continueExistingWork} disabled={generating} className="world-gen-ghost">
-                继续编辑已有内容
-              </button>
-            ) : null}
-            <button type="button" onClick={() => void goEditor()} disabled={generating} className="world-gen-cta">
-              {mod && draft ? "重新生成并进入编辑器 →" : "进入完整编辑器 →"}
+        <div className="world-gen-dock-row world-gen-dock-row--end">
+          {mod && draft ? (
+            <button type="button" onClick={continueExistingWork} disabled={generating} className="world-gen-ghost shrink-0">
+              继续编辑
             </button>
-          </div>
+          ) : null}
+          <button type="button" onClick={() => void goEditor()} disabled={generating} className="world-gen-cta shrink-0">
+            {mod && draft ? "重新生成" : "下一步"}
+          </button>
         </div>
       </div>
       {entranceDraftGate ? (
-        <Modal title="发现本机未保存的草稿" locked onClose={() => { /* 只能点两个按钮 */ }}>
-          <p className="text-[13px] leading-relaxed text-ink-soft">
-            {(() => {
-              const savedBit = entranceDraftGate.savedAt != null
-                ? `已保存的版本（${fmtDraftTime(entranceDraftGate.savedAt)}）`
-                : "已保存的版本";
-              return <>这部作品在浏览器里有一份自动保存的草稿（{fmtDraftTime(entranceDraftGate.pendingAt)}），与{savedBit}不一致。请先选择，再打开表单。</>;
-            })()}
-            {entranceDraftGate.stale ? (
-              <b className="mt-1 block font-semibold text-danger">
-                注意：草稿生成之后，已保存的版本又被修改过，继续填写草稿会覆盖那些修改。
-              </b>
-            ) : null}
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" autoFocus onClick={acceptEntranceDraft} className="ui-btn ui-btn-primary ui-btn-sm">
-              继续填写草稿
-            </button>
-            <button type="button" onClick={acceptEntranceSaved} className="ui-btn ui-btn-sm">
-              从已保存版本开始
-            </button>
-          </div>
+        <Modal
+          title="要接着哪份写？"
+          titleIcon={<IconClock size="md" className="shrink-0 text-jade" />}
+          panelClassName="ui-dialog-compact"
+          locked
+          onClose={() => { /* 只能点两张卡 */ }}
+        >
+          <DraftConflictChoice
+            draftAtLabel={fmtDraftTime(entranceDraftGate.pendingAt)}
+            savedAtLabel={entranceDraftGate.savedAt != null ? fmtDraftTime(entranceDraftGate.savedAt) : ""}
+            stale={entranceDraftGate.stale}
+            onPickDraft={acceptEntranceDraft}
+            onPickSaved={acceptEntranceSaved}
+          />
         </Modal>
       ) : null}
       {confirmEl}

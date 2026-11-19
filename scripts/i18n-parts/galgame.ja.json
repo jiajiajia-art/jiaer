@@ -1,0 +1,373 @@
+{
+  "galgameUi": {
+    "common": {
+      "requestFailed": "リクエストに失敗しました",
+      "notSet": "未設定",
+      "none": "なし",
+      "enabled": "有効",
+      "disabled": "無効",
+      "selected": "選択中",
+      "select": "選択",
+      "add": "追加",
+      "delete": "削除",
+      "importConfirm": "インポートを確定",
+      "importing": "インポート中…",
+      "done": "完了",
+      "edit": "編集",
+      "confirmGenerate": "生成を確定",
+      "generateFailed": "生成に失敗しました",
+      "saveFailed": "保存に失敗しました",
+      "importFailed": "インポートに失敗しました",
+      "loginAndEnterSession": "ログインしてプレイセッションに入ってください",
+      "generating": "生成中…",
+      "aiGenerate": "AI生成 · {{charge}}",
+      "uploading": "アップロード中…",
+      "uploadImage": "画像をアップロード",
+      "confirm": "OK",
+      "unknownCharacter": "不明なキャラクター",
+      "chooseAction": "行動を選んでください",
+      "continueGame": "続ける",
+      "storyUnfolding": "ストーリー展開中",
+      "emptyContent": "コンテンツがありません",
+      "customInputOr": "または自由入力",
+      "customInput": "自由入力",
+      "customInputPlaceholder": "言いたいこと・行動を入力…",
+      "inputPlaceholderShort": "入力してください…",
+      "send": "送信",
+      "narration": "ナレーション",
+      "invalidEntry": "無効な項目です",
+      "alreadyExists": "既に存在します",
+      "maxCount": "最大 {{max}} 件",
+      "unnamedWorldBook": "名称未設定の世界書",
+      "entrySettingsCount": "設定 {{count}} 件",
+      "disabledBadge": " · 無効",
+      "entryCountBadge": " · {{count}} 件",
+      "constantTrigger": "常時",
+      "keywordTrigger": "キーワードで発動",
+      "noRouteSelected": "未選択",
+      "changingRoute": "切り替え中…",
+      "confirmChangeRoute": "切り替えを確定",
+      "deleteAria": "{{word}} を削除",
+      "cardInitial": "カ",
+      "uploadCompressing": "圧縮アップロード中…",
+      "uploadCompressingDetail": "圧縮アップロード中（≤1MB、背景処理なし）…",
+      "avatar": "アバター",
+      "zoom": "拡大",
+      "portrait": "立ち絵",
+      "notAvailable": "—"
+    },
+    "currency": {
+      "dreamBeans": "ドリームビーン",
+      "kkCoins": "KKコイン",
+      "insufficientDreamBeans": "ドリームビーンが不足しています（必要 {{need}}、所持 {{current}}）",
+      "insufficientKkCoins": "KKコインが不足しています"
+    },
+    "serverAttributes": {
+      "empty": "属性パネルはまだありません"
+    },
+    "playPanel": {
+      "backAria": "戻る"
+    },
+    "gameConfirm": {
+      "defaultTitle": "確認",
+      "defaultMessage": "この操作を続行しますか？",
+      "confirm": "確認",
+      "closeAria": "閉じる"
+    },
+    "attributes": {
+      "importCardTitle": "キャラクターカードをインポート",
+      "importCardSubtitle": "ライブラリから選んでセッションのプロフィールを上書き",
+      "importPreviewTitle": "インポートプレビュー",
+      "attrSectionTitle": "ステータス",
+      "attrSectionAria": "ステータス"
+    },
+    "route": {
+      "currentSection": "現在の開始ルート",
+      "currentHint": "開始ルートを表示します。切り替えると以降の物語の制約が変わります",
+      "changeTitle": "ルート変更",
+      "changeMessage": "この開始ルートに切り替えますか？以降の物語は新ルートに従います。",
+      "changeOk": "切り替えを確定",
+      "progressDesc": "ストーリールートと進行",
+      "routeRemark": "ルートメモ（任意）",
+      "routeRemarkPlaceholder": "切り替え理由や期待する展開",
+      "switchedToast": "ルートを切り替えました：{{title}}",
+      "confirmSwitchTitle": "ルート変更の確認",
+      "optionalRoutes": "選択可能なルート",
+      "stageNote": "段階の説明",
+      "currentRoute": "現在のルート"
+    },
+    "systems": {
+      "toast": {
+        "loadWorldBookFailed": "マイ世界書の読み込みに失敗しました",
+        "cannotSaveServer": "現在サーバーに保存できません",
+        "worldBookSaved": "世界書を保存しました",
+        "selectTemplate": "テンプレートを選択してください",
+        "selectMyWorldBook": "世界書を選択してください",
+        "importedCount": "{{count}} 件をインポートしました。続けて編集できます",
+        "fileReadConfirmImport": "ファイルを読み込みました。インポートを確定してください",
+        "readFileFailed": "ファイルの読み込みに失敗しました",
+        "enterAvoidWord": "回避ワードを入力してください",
+        "avoidWordsUpdated": "回避ワードを更新しました",
+        "positionSaved": "ポジションを保存しました",
+        "positionGenerated": "{{field}}を生成しました（−{{billing}}）",
+        "confirmGeneratePositionTitle": "{{field}}を生成しますか？",
+        "confirmGeneratePositionMessage": "{{charge}} を消費して「{{field}}」を生成します。続行しますか？"
+      },
+      "nav": {
+        "worldBook": "世界書",
+        "worldBookDesc": "読み込んだ項目とルール",
+        "writingStyle": "文体設定",
+        "writingStyleDesc": "文体の好みと回避ワード",
+        "position": "プレイヤーの現在位置",
+        "positionDesc": "現在の身分と立場",
+        "editEntry": "項目を編集",
+        "newEntry": "項目を追加",
+        "importWorldBook": "世界書をインポート",
+        "avoidWords": "回避ワード",
+        "worldBookRules": "読み込んだ項目とルール",
+        "importWorldBookHint": "貼り付け・アップロード・テンプレート・マイ世界書から",
+        "writingStyleHint": "文体 / テンポ / 視点 / 描写 / プロット",
+        "avoidEditHint": "ドラッグ並び替えは二期；ここで追加・削除",
+        "positionHint": "現在の身分と立場",
+        "positionEditHint": "身分と立場を編集"
+      },
+      "actions": {
+        "importWorldBook": "世界書をインポート",
+        "addEntry": "項目を追加",
+        "editAvoidWords": "回避ワードを編集",
+        "emptyWorldBook": "世界書の項目がありません。追加またはインポートしてください",
+        "keywordsPrefix": "トリガーキーワード：",
+        "loaded": "読み込み済み",
+        "editPosition": "ポジションを編集",
+        "changeRoute": "ルートを変更"
+      },
+      "form": {
+        "title": "タイトル",
+        "entryTitlePlaceholder": "項目タイトル",
+        "content": "内容",
+        "entryContentPlaceholder": "要約 / ルール本文",
+        "triggerKeywords": "トリガーキーワード",
+        "keywordsPlaceholder": "カンマ区切り",
+        "constant": "常時含める",
+        "status": "状態",
+        "pasteWorldBookLabel": "世界書を貼り付け（JSON またはテキスト）",
+        "pasteWorldBookPlaceholder": "JSON 配列 / {entries} / エディタ morePromptForms、または空行区切りテキスト",
+        "pickJsonFile": ".json またはテキストファイルを選択",
+        "pickFileHint": "ドラッグ前にファイルを選択してください",
+        "tabMine": "マイ世界書",
+        "tabPaste": "貼り付け",
+        "tabUpload": "ファイルをアップロード",
+        "tabTemplate": "テンプレート",
+        "loadingMyWorldBook": "マイ世界書を読み込み中…",
+        "noWorldBookInWarehouse": "ライブラリに世界書がありません。「マイリソース → マイ世界書」で作成するか、貼り付け/テンプレートをご利用ください。",
+        "pace": "テンポ",
+        "avoidWordsSection": "回避ワード",
+        "noAvoidWords": "回避ワードはまだありません",
+        "avoidWordsHint": "回避ワードは文脈に合う自然な言い換えをします。××や空白での置換はしません。改名後のキャラは自動で現名称が使われます。",
+        "avoidWordsEditHint": "ナレーションは自然な言い換えでこれらの語を避けます。××、xx、無意味な空白は使用しません。",
+        "addAvoidWord": "回避ワードを追加",
+        "avoidWordPlaceholder": "入力して追加",
+        "avoidEmpty": "リストが空です",
+        "identity": "現在の身分",
+        "traits": "現在の立場",
+        "identityPlaceholder": "例：冷宮の妃 / 浪人",
+        "traitsPlaceholder": "外から見える立場，例：穏やか、某派へ",
+        "secretHint": "「秘密」は創作台で設定しプレイヤーには表示しません。物語はそれに従います。NPC は原則として知りません。"
+      },
+      "positionField": {
+        "traits": "現在の立場"
+      }
+    },
+    "playerArchive": {
+      "gender": {
+        "female": "女性",
+        "male": "男性",
+        "other": "その他"
+      },
+      "toast": {
+        "profileInvalid": "プロフィールが無効です",
+        "profileUpdated": "プロフィールを更新しました",
+        "identityChangeNextLine": "{{content}}（次の行から新しい身分）",
+        "abPromptAvatar": "試験：新しい身分のアバターを生成してください（{{currency}} を消費）",
+        "abPromptAvatarRole": "試験：新しい役のアバターを生成してください（{{currency}} を消費）",
+        "nameRequiredAvatar": "アバター生成前に名前を入力してください",
+        "avatarGenerating": "アバター生成中—保存や離脱が可能です。完了後に反映されます",
+        "avatarGenerateFailed": "アバター生成に失敗しました",
+        "avatarUploadFailed": "アバターのアップロードに失敗しました",
+        "avatarUploaded": "アバターをアップロードしました",
+        "nameRequiredPersona": "生成前に名前を入力してください",
+        "personaGenerateFailed": "人設の生成に失敗しました",
+        "personaGenerated": "人設を生成しました（−{{billing}}）",
+        "loginToImport": "カードをインポートするにはログインしてください",
+        "loadLibraryFailed": "カードライブラリの読み込みに失敗しました",
+        "selectPersonaCard": "人設カードを選択してください。役カードはキャラクター档案でインポート",
+        "cannotImport": "インポートできません",
+        "sessionUnavailable": "セッションを利用できません",
+        "profileOverwritten": "このセッションのプレイヤープロフィールを上書きしました"
+      },
+      "confirm": {
+        "avatarTitle": "アバターを生成しますか？",
+        "avatarMessage": "AIアバター生成に {{charge}} を消費します。続行しますか？",
+        "personaTitle": "人設を生成しますか？",
+        "personaMessage": "人設の生成に {{charge}} を消費します。続行しますか？"
+      },
+      "avatar": {
+        "togglePrompt": "画風とプロンプトを閉じる",
+        "showPrompt": "画風とプロンプト",
+        "promptAria": "画風とプロンプト",
+        "styleLabel": "スタイル選択",
+        "styleHint": "タップで選択 · デフォルト A",
+        "styleAria": "立ち絵の画風",
+        "appearanceOptional": "外見メモ（任意）",
+        "appearancePlaceholder": "ショートヘア、制服、色白…",
+        "viewAvatarAria": "主人公アバターを表示",
+        "noAvatarAria": "アバターなし",
+        "generatingBadge": "生成中…",
+        "backgroundHint": "保存や離脱が可能です。完了後に反映されます",
+        "regenOrUpload": "再生成またはセッション内アバターをアップロード",
+        "genOrUpload": "生成またはアバターをアップロード",
+        "clickToPreview": "立ち絵タップでプレビュー",
+        "backgroundGenerating": "バックグラウンドで生成中…",
+        "generateAvatar": "アバターを生成",
+        "regenerateAvatar": "再生成"
+      },
+      "edit": {
+        "title": "マイプロフィールを編集",
+        "closeAria": "閉じる",
+        "name": "名前",
+        "namePlaceholder": "あなたの名前",
+        "gender": "性別",
+        "genderAria": "性別",
+        "persona": "人設",
+        "personaPlaceholder": "性格・身分・経歴…",
+        "personaAria": "人設"
+      },
+      "overview": {
+        "title": "マイプロフィール",
+        "editProfile": "プロフィールを編集",
+        "importCard": "カードをインポート"
+      },
+      "import": {
+        "searchPlaceholder": "名前・キーワードで検索",
+        "libraryEmpty": "ライブラリが空です。先にアカウントでカードを作成してください",
+        "noPersona": "人設なし",
+        "cardSection": "キャラクターカード",
+        "attrPreviewTitle": "ステータスプレビュー（インポートで現在の数値を上書き）",
+        "noAttrValues": "このカードにカスタム数値はありません",
+        "afterImportValue": "インポート後の数値",
+        "previewWithAvatar": "インポートでプロフィールを上書きしカード立ち絵を使用します。後からアバター再生成できます。",
+        "previewNoAvatar": "プロフィールを入力または上書きします。立ち絵がなければインポート後に生成できます。",
+        "selectCardFirst": "先にキャラクターカードを選択してください",
+        "backToList": "一覧に戻る"
+      }
+    },
+    "map": {
+      "controlBar": {
+        "player": "プレイヤー",
+        "history": "履歴",
+        "text": "テキスト",
+        "auto": "自動",
+        "settings": "設定"
+      },
+      "npcModal": {
+        "npcAttributes": "NPCステータス",
+        "inventory": "インベントリ",
+        "incompleteData": "相互作用データが不完全です。戻って再試行してください。",
+        "requestFailedTitle": "リクエスト失敗",
+        "requestTimeoutTitle": "リクエストタイムアウト"
+      },
+      "scene": {
+        "subSceneDefault": "サブシーン",
+        "mainSceneDefault": "メインシーン",
+        "questAlt": "クエスト",
+        "loadingMap": "マップを読み込み中...",
+        "initMap": "マップを初期化中...",
+        "noSceneData": "シーンデータがありません",
+        "loadingScene": "シーンを読み込み中...",
+        "noSubScenes": "このエリアにサブシーンはありません"
+      },
+      "nextRound": {
+        "start": "次のラウンドを開始",
+        "loading": "次のラウンドを開始中..."
+      },
+      "timeout": {
+        "choice": "選択へのAI応答が60秒以内に返りません。更新して再試行しますか？",
+        "interact": "相互作用へのAI応答が60秒以内に返りません。更新して再試行しますか？",
+        "abilityNode": "機能NPCのリクエストが60秒でタイムアウトしました。更新して再試行しますか？"
+      },
+      "errors": {
+        "networkError": "ネットワークエラー。接続を確認して再試行してください。",
+        "serverError": "サーバーエラー。しばらくしてから再試行してください。",
+        "timeout": "リクエストがタイムアウトしました。再試行してください。",
+        "unknownError": "不明なエラー。再試行してください。",
+        "retryFailed": "再試行に失敗しました。ページを更新してください。",
+        "choiceFailed": "選択の送信に失敗しました。再試行してください。",
+        "interactFailed": "相互作用リクエストに失敗しました。再試行してください。",
+        "noRetryRequest": "再試行できるリクエストがありません",
+        "handleFailed": "処理に失敗しました。再試行してください。",
+        "requestFailedRetry": "リクエストに失敗しました。再試行してください。",
+        "responseBodyLocked": "レスポンスボディがロックされています",
+        "eventStateStale": "イベントは完了しましたがUI状態が古いです。ページを更新してください。",
+        "choiceNetwork": "選択に失敗しました。ネットワークを確認するか後で再試行してください。",
+        "pollTimeout": "ポーリングがタイムアウトし履歴を取得できませんでした。再試行またはキャンセルしてください。",
+        "pollNetwork": "ポーリングに失敗しました。接続を確認して再試行してください。",
+        "missingSessionEvent": "sessionId・eventId・fileId が不足しておりリクエストを送信できません。",
+        "missingSessionOrEvent": "sessionId または eventId が不足しておりリクエストを送信できません。",
+        "requestHttpFailed": "リクエスト失敗: {{status}}",
+        "requestErrorUnknown": "リクエストエラー: {{message}}",
+        "interactTimeout": "ゲーム開始リクエストが60秒でタイムアウトしました。更新して再試行しますか？",
+        "startGameFailed": "ゲーム開始に失敗しました。ネットワークを確認するか後で再試行してください。"
+      }
+    },
+    "hooks": {
+      "memoryDebugLoadFailed": "メモリデバッグ情報の読み込みに失敗しました。",
+      "replayEmpty": "リプレイが空です",
+      "replayLoadFailed": "リプレイの読み込みに失敗しました",
+      "noSessionToStart": "sessionId がありません。ゲームを開始できません",
+      "startGameFailed": "ゲーム開始に失敗しました。再試行してください。",
+      "autoStressSessionOnly": "自動ストレステストはプレイ可能なセッションでのみ利用できます。",
+      "startGameBeforeStress": "自動ストレステストの前にゲームを開始してください。",
+      "autoStressEmptyChoice": "自動ストレステスト停止：空の選択肢です。",
+      "noRetryAction": "再試行できる前回の操作がありません",
+      "retryFailedLater": "再試行に失敗しました。後でもう一度お試しください。",
+      "pollFailed": "ポーリングに失敗しました。接続を確認して再試行してください。",
+      "abilityRetryFailed": "再試行に失敗しました。後でもう一度お試しください。"
+    },
+    "npcProfile": {
+      "fields": {
+        "relationship": "関係",
+        "summary": "紹介",
+        "attitudeToPlayer": "あなたへの態度",
+        "detailedBio": "詳細紹介",
+        "name": "名前",
+        "gender": "性別",
+        "importance": "重要度",
+        "survival": "生存状態"
+      },
+      "gender": {
+        "male": "男",
+        "female": "女",
+        "other": "その他",
+        "unknown": "不明"
+      },
+      "importance": {
+        "major": "重要",
+        "minor": "脇役",
+        "extra": "通行人"
+      },
+      "survival": {
+        "alive": "生存",
+        "dead": "死亡",
+        "unknown": "不明"
+      },
+      "generateFailed": "{{field}}の生成に失敗しました",
+      "generated": "{{field}}を生成しました（-{{billing}}）",
+      "confirmGenerateTitle": "{{field}}を生成しますか",
+      "confirmGenerateMessage": "{{charge}}を消費して「{{field}}」を生成します。続行しますか？",
+      "confirmAvatarTitle": "アバターを生成しますか",
+      "confirmAvatarMessage": "{{charge}}を消費してAIアバターを生成します。続行しますか？",
+      "addCharacter": "キャラを追加",
+      "editPersona": "設定を編集"
+    }
+  }
+}

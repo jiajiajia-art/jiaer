@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import AdminShell from '../../components/admin-shell/AdminShell';
+import AdminSectionTabs from '../../components/admin-shell/AdminSectionTabs';
 import PromotionAdminManager from '../../components/PromotionAdminManager';
 import CreatorIncentiveAdminManager from '../../components/CreatorIncentiveAdminManager';
 import CreatorBenefitsAdminManager from '../../components/CreatorBenefitsAdminManager';
@@ -29,6 +30,8 @@ import ContentReportAdminManager from '../../components/admin/ContentReportAdmin
 import ContentAppealAdminManager from '../../components/admin/ContentAppealAdminManager';
 import PublishReviewAdminManager from '../../components/admin/PublishReviewAdminManager';
 import SiteFeedbackAdminManager from '../../components/admin/SiteFeedbackAdminManager';
+import OperatorDirectMessageAdminManager from '../../components/admin/OperatorDirectMessageAdminManager';
+import MessageAnnouncementsHubPanel from '../../components/admin/MessageAnnouncementsHubPanel';
 import BusinessCoopAdminManager from '../../components/admin/BusinessCoopAdminManager';
 import GameIssueAdminManager from '../../components/admin/GameIssueAdminManager';
 import adminStyles from '../AdminPanel.module.css';
@@ -58,7 +61,7 @@ type OperatorTab =
   | 'contentReports'
   | 'appeals'
   | 'publishQueue'
-  | 'feedback'
+  | 'messages'
   | 'businessCoop'
   | 'gameIssues';
 
@@ -89,16 +92,23 @@ const resolveOperatorTab = (pathname: string): OperatorTab => {
   if (pathname.startsWith('/operator/content-reports')) return 'contentReports';
   if (pathname.startsWith('/operator/appeals')) return 'appeals';
   if (pathname.startsWith('/operator/publish-queue')) return 'publishQueue';
-  if (pathname.startsWith('/operator/feedback')) return 'feedback';
+  if (pathname.startsWith('/operator/messages') || pathname.startsWith('/operator/feedback')) return 'messages';
   if (pathname.startsWith('/operator/business-coop')) return 'businessCoop';
   if (pathname.startsWith('/operator/game-issues')) return 'gameIssues';
   return 'stats';
+};
+
+const resolveMessagesView = (pathname: string): 'announcements' | 'feedback' | 'direct' => {
+  if (pathname.includes('/messages/announcements')) return 'announcements';
+  if (pathname.includes('/messages/direct') || pathname.endsWith('/direct')) return 'direct';
+  return 'feedback';
 };
 
 const OperatorPanel: React.FC = () => {
   const { t } = useTranslation();
   const location = useLocation();
   const activeTab = resolveOperatorTab(location.pathname);
+  const messagesView = resolveMessagesView(location.pathname);
   const isAdmin = isAdminRole(useAuthStore((state) => state.user?.user?.role));
 
   const [recruitmentOverview, setRecruitmentOverview] = useState<RecruitmentOverview | null>(null);
@@ -253,6 +263,7 @@ const OperatorPanel: React.FC = () => {
       <div className={adminStyles.pageBody}>
         <div className={adminStyles.workspace}>
           <section className={adminStyles.contentArea}>
+            <AdminSectionTabs badges={{ promotions: promotionPendingReviewCount, platformWorks: appealPendingCount }} />
             {isLoading ? <div className={styles.emptyState}>{t('creatorStats.loading')}</div> : null}
             {activeTab === 'stats' ? <OperatorSiteStats /> : null}
             {!isLoading && activeTab === 'reports' ? <OperatorReports /> : null}
@@ -282,7 +293,9 @@ const OperatorPanel: React.FC = () => {
             {activeTab === 'contentReports' ? <ContentReportAdminManager /> : null}
             {activeTab === 'appeals' ? <ContentAppealAdminManager /> : null}
             {activeTab === 'publishQueue' ? <PublishReviewAdminManager /> : null}
-            {activeTab === 'feedback' ? <SiteFeedbackAdminManager /> : null}
+            {activeTab === 'messages' && messagesView === 'announcements' ? <MessageAnnouncementsHubPanel /> : null}
+            {activeTab === 'messages' && messagesView === 'feedback' ? <SiteFeedbackAdminManager /> : null}
+            {activeTab === 'messages' && messagesView === 'direct' ? <OperatorDirectMessageAdminManager /> : null}
             {activeTab === 'businessCoop' ? <BusinessCoopAdminManager /> : null}
             {activeTab === 'gameIssues' ? <GameIssueAdminManager /> : null}
           </section>

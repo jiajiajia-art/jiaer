@@ -13,6 +13,7 @@ import {
   creationAttrKindLabel,
   newCurrencyAttr,
   newNumberAttr,
+  newSkillAttr,
   type CreationItemAddType,
 } from "../lib/creationItems";
 
@@ -207,6 +208,12 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
       setOpen(a.id);
       return;
     }
+    if (kind === "skill") {
+      const a = newSkillAttr(attrUid());
+      setAttrs([...attrList, a]);
+      setOpen(a.id);
+      return;
+    }
     if (kind === "currency") {
       const a = newCurrencyAttr(attrUid());
       setAttrs([...attrList, a]);
@@ -221,15 +228,41 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
 
   return (
     <div className="space-y-2">
-      {/* 功能注释：标题下列表即玩家要填的字段；不写系统规则长说明 */}
-      <p className="mb-1 text-[12px] font-bold text-ink">建角字段</p>
+      {/* 功能注释：明确这里配的是玩家主角，不是 NPC；「必填」分清是玩家建角时必填还是创作者发布前必填 */}
+      <p className="mb-1 text-[12px] font-bold text-ink">建角字段 · 玩家角色（主角）</p>
+      <p className="mb-1 rounded-lg border border-line/60 bg-paper-2/50 px-2.5 py-1.5 text-[11px] leading-relaxed text-ink-soft">
+        这里配置的是<b className="font-semibold text-ink">玩家自己扮演的主角</b>在开局时要填写或选择的内容。NPC（游戏里的其他人物）请到「② 角色 · 人物」里配置。
+        标签说明：<span className="text-gold">玩家必填</span> = 玩家建角时必须填写；<span className="text-gold">创作者必填</span> = 你发布作品前必须设置好。
+      </p>
+      <label className="block">
+        <span className={lbl}>创作者备注（显示在玩家建角页顶部，可不填）</span>
+        <textarea className={inp} rows={2} value={cc.playerNote ?? ""} maxLength={200} placeholder="如：你将扮演初到小镇的新农场主，名字和外貌可以自由决定"
+          onChange={(e) => commit({ playerNote: e.target.value.trim() ? e.target.value : undefined })} />
+      </label>
 
       {BUILTINS.map((b) => {
         const c = cfg(b.k);
         return (
           row(b.k, b.k, c.label || b.label, TYPE_LABEL[b.type],
-            <><Badge tone="jade">系统字段</Badge><Badge tone="gold">必填</Badge></>, <>
-            <label><span className={lbl}>显示名称</span><input className={inp} value={c.label ?? ""} placeholder={b.label} onChange={(e) => setCfg(b.k, { label: e.target.value })} /></label>
+            <><Badge tone="jade">系统字段</Badge><Badge tone="gold">玩家必填</Badge>{c.value ? <Badge tone="soft">{c.locked ? "已锁定" : "有预设"}</Badge> : null}</>, <>
+            {(b.k === "name" || b.k === "gender") ? (
+              <div className="space-y-1.5">
+                {/* 功能注释：姓名 / 性别不再改显示名；改为创作者预设默认值，可锁定为固定值 */}
+                {b.k === "name" ? (
+                  <label><span className={lbl}>预设姓名（玩家开局默认，留空 = 随机起名）</span>
+                    <input className={inp} value={c.value ?? ""} maxLength={24} placeholder="如：Arthur / 苏晚" onChange={(e) => setCfg("name", { value: e.target.value })} /></label>
+                ) : (
+                  <label><span className={lbl}>预设性别（留空 = 随机）</span>
+                    <select className={inp} value={c.value ?? ""} onChange={(e) => setCfg("gender", { value: e.target.value })}>
+                      <option value="">随机</option>
+                      {normalizeGenderOptions(c.options).map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select></label>
+                )}
+                <Toggle on={!!c.locked} onClick={() => setCfg(b.k, { locked: !c.locked || undefined })}>锁定为预设值（玩家不能改）</Toggle>
+              </div>
+            ) : (
+              <label><span className={lbl}>显示名称</span><input className={inp} value={c.label ?? ""} placeholder={b.label} onChange={(e) => setCfg(b.k, { label: e.target.value })} /></label>
+            )}
             {b.k === "gender" && (() => {
               const genderOptions = normalizeGenderOptions(c.options);
               return <div className="space-y-1.5">
@@ -248,7 +281,7 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
 
       {/* 功能注释：开局资金与系统四项同级必填；类型位=可改货币名；金额默认 0 已算填好 */}
       {row("startMoney", "startMoney", "开局资金", (moneyLabel?.trim() || "请填货币名"),
-        <Badge tone="gold">必填</Badge>,
+        <Badge tone="gold">创作者必填</Badge>,
         <>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <label>
@@ -285,8 +318,8 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
 
       {attrList.map((a, i) => (
         row(a.id, a.id, a.label || "未命名", creationAttrKindLabel(a),
-          <>{a.pin && <Badge tone="jade">状态栏</Badge>}{a.hidden && <Badge tone="soft">隐藏</Badge>}{(a.tiers?.length ?? 0) > 0 && <Badge tone="soft">{`${a.tiers!.length} 档`}</Badge>}</>,
-          <AttrDefForm a={a} onChange={(p) => setAttr(a.id, p)} />,
+          <>{a.pin && <Badge tone="jade">顶栏主属性</Badge>}{a.hidden && <Badge tone="soft">隐藏</Badge>}{(a.tiers?.length ?? 0) > 0 && <Badge tone="soft">{`${a.tiers!.length} 档`}</Badge>}</>,
+          <AttrDefForm a={a} onChange={(p) => setAttr(a.id, p)} pinnedOthers={attrList.filter((x) => x.pin && x.id !== a.id).length} />,
           <>
             <button type="button" disabled={!i} className={`${btn} !px-1.5`} onClick={() => { const l = [...attrList]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; setAttrs(l); }} aria-label="上移">↑</button>
             <button type="button" className="px-1 text-ink-soft hover:text-coral" onClick={() => setAttrs(attrList.filter((x) => x.id !== a.id))} aria-label="删除"><IconClose size={14} /></button>
@@ -295,7 +328,7 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
 
       {fields.map((f, fieldIndex) => (
         row(f.id, f.id, f.label || "未命名字段", TYPE_LABEL[f.type] ?? f.type,
-          <>{f.required && <Badge tone="gold">必填</Badge>}{(f.paths || f.bgs) && <Badge tone="jade">条件出现</Badge>}</>, <>
+          <>{f.required && <Badge tone="gold">玩家必填</Badge>}{(f.paths || f.bgs) && <Badge tone="jade">条件出现</Badge>}</>, <>
           <div className="grid grid-cols-2 gap-2">
             <label><span className={lbl}>字段名</span><input className={inp} value={f.label} onChange={(e) => setField(f.id, { label: e.target.value })} placeholder="如：座右铭" /></label>
             <label><span className={lbl}>类型</span>

@@ -72,6 +72,36 @@ export function peekDraft<T>(id: string, baseline: string): DraftRecord<T> | nul
 
 export function discardDraftById(id: string): void {
   removeGlobal(draftStorageKey(id));
+  clearDraftSoftContinue(id);
+}
+
+/** 功能注释：本标签页正在编辑时记下；同页重挂载用这份草稿直接续写，禁止再弹「要接着哪份写」 */
+export function draftSoftContinueKey(id: string): string {
+  return `star:draftSoftContinue.${id}`;
+}
+
+export function markDraftSoftContinue(id: string): void {
+  try {
+    sessionStorage.setItem(draftSoftContinueKey(id), "1");
+  } catch {
+    /* 隐私模式 */
+  }
+}
+
+export function clearDraftSoftContinue(id: string): void {
+  try {
+    sessionStorage.removeItem(draftSoftContinueKey(id));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function shouldSoftContinueDraft(id: string): boolean {
+  try {
+    return sessionStorage.getItem(draftSoftContinueKey(id)) === "1";
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -99,7 +129,11 @@ export function useDraft<T>(id: string, value: T, baseline: string, dirty: boole
           value,
           ...(cur && (cur.group || typeof cur.scrollY === "number") ? { cursor: { ...cur } } : {}),
         };
-        if (saveGlobal(key, row)) setSavedAt(at);
+        if (saveGlobal(key, row)) {
+          setSavedAt(at);
+          // 功能注释：本标签页已在填表，后续若编辑器被重挂载则软续写，勿再弹冲突窗
+          markDraftSoftContinue(id);
+        }
       } else {
         removeGlobal(key);
         setSavedAt(null);
@@ -108,7 +142,7 @@ export function useDraft<T>(id: string, value: T, baseline: string, dirty: boole
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [key, value, baseline, dirty, pending, cursor?.group, cursor?.scrollY]);
+  }, [key, value, baseline, dirty, pending, cursor?.group, cursor?.scrollY, id]);
 
   // 有未保存改动时关闭 / 刷新页面，浏览器先提醒一次
   useEffect(() => {
@@ -129,16 +163,19 @@ export function useDraft<T>(id: string, value: T, baseline: string, dirty: boole
     restore: () => {
       const row = pending;
       setPending(null);
+      markDraftSoftContinue(id);
       return row ? { value: row.value, cursor: row.cursor } : null;
     },
     discard: () => {
       removeGlobal(key);
       setPending(null);
+      clearDraftSoftContinue(id);
     },
     clear: () => {
       if (timer.current) clearTimeout(timer.current);
       removeGlobal(key);
       setSavedAt(null);
+      clearDraftSoftContinue(id);
     },
   };
 }

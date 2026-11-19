@@ -1,5 +1,5 @@
 /**
- * ① 基础 · 简介 200 / 剧本基调（系统提示词）5000：
+ * ① 基础 · 简介 200 / 系统提示词8000：
  * 超限标红、拦截保存；作者态不展示作品 ID 与三栏合并说明。
  */
 import assert from 'node:assert/strict';
@@ -15,19 +15,19 @@ const panel = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8
 test('modBasicInfoLimits_字数闸门', async () => {
   const lim = await import(pathToFileURL(join(romance, 'lib/modBasicInfoLimits.ts')).href);
   assert.equal(lim.MOD_DESC_MAX, 200);
-  assert.equal(lim.SCRIPT_TONE_MAX, 5000);
+  assert.equal(lim.SCRIPT_TONE_MAX, 8000);
   assert.equal(lim.isModDescOverLimit('字'.repeat(200)), false);
   assert.equal(lim.isModDescOverLimit('字'.repeat(201)), true);
-  assert.equal(lim.isScriptToneOverLimit('字'.repeat(5000)), false);
-  assert.equal(lim.isScriptToneOverLimit('字'.repeat(5001)), true);
+  assert.equal(lim.isScriptToneOverLimit('字'.repeat(lim.SCRIPT_TONE_MAX)), false);
+  assert.equal(lim.isScriptToneOverLimit('字'.repeat(lim.SCRIPT_TONE_MAX + 1)), true);
   assert.equal(lim.validateModBasicInfoLimits({ description: '短', scriptTone: '短' }), null);
   assert.equal(
     lim.validateModBasicInfoLimits({ description: '字'.repeat(201), scriptTone: '短' }),
     '简介最多 200 字',
   );
   assert.equal(
-    lim.validateModBasicInfoLimits({ description: '短', scriptTone: '字'.repeat(5001) }),
-    '剧本基调最多 5000 字',
+    lim.validateModBasicInfoLimits({ description: '短', scriptTone: '字'.repeat(lim.SCRIPT_TONE_MAX + 1) }),
+    '系统提示词最多 8000 字',
   );
 });
 
@@ -38,7 +38,7 @@ test('ModEditorPanel_简介与基调计数标红并拦截保存', () => {
   assert.match(panel, /descOver \? "text-coral"/);
   assert.match(panel, /toneOver \? "text-coral"/);
   assert.match(panel, /max-h-\[9\.5rem\]/);
-  assert.match(panel, /剧本基调（系统提示词）/);
+  assert.match(panel, /系统提示词/);
   assert.match(panel, /rows=\{3\}/);
   assert.doesNotMatch(panel, /rows=\{8\}/);
 });
@@ -49,12 +49,13 @@ test('ModEditorPanel_作者态删除作品ID与合并说明', () => {
     panel.indexOf(') : (', panel.indexOf('authorSimplify ? (')),
   );
   assert.match(simplifyBranch, /简介/);
-  assert.match(simplifyBranch, /剧本基调（系统提示词）/);
+  assert.match(simplifyBranch, /系统提示词/);
   assert.doesNotMatch(simplifyBranch, /作品 ID/);
   assert.doesNotMatch(simplifyBranch, /保存时自动生成/);
   assert.doesNotMatch(simplifyBranch, /GM 开场白/);
   assert.doesNotMatch(simplifyBranch, /世界观设定 \/ 叙事口吻/);
   assert.doesNotMatch(simplifyBranch, /由原「GM/);
-  assert.match(panel, /名称 · 简介 · 剧本基调/);
+  // 作者态基本信息 hint 现含作品封面与题材
+  assert.match(panel, /作品封面 · 名称 · 题材 · 简介 · 系统提示词/);
   assert.doesNotMatch(panel, /名称 · 简介 · 作品 ID/);
 });

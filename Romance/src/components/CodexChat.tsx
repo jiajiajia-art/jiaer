@@ -439,11 +439,14 @@ export function PlusMenu({
   items,
   onPick,
   disabled,
+  showLabel = false,
 }: {
   title: string
   items: [string, string][]
   onPick: (prompt: string) => void
   disabled?: boolean
+  /** 底部输入坞用：加号旁带标题，避免只剩一个孤零零的 + */
+  showLabel?: boolean
 }) {
   return (
     <Pop
@@ -454,13 +457,20 @@ export function PlusMenu({
           disabled={disabled}
           aria-label={title}
           aria-expanded={open}
-          className={`grid h-7 w-7 place-items-center rounded-full transition disabled:opacity-40 ${
-            open
-              ? "bg-ink/[0.07] text-ink"
-              : "text-ink-soft hover:bg-ink/[0.05] hover:text-ink"
-          }`}
+          className={
+            showLabel
+              ? `inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-[12px] font-semibold transition disabled:opacity-40 ${
+                  open ? "bg-ink/[0.07] text-ink" : "text-ink-soft hover:text-ink"
+                }`
+              : `grid h-7 w-7 place-items-center rounded-full transition disabled:opacity-40 ${
+                  open
+                    ? "bg-ink/[0.07] text-ink"
+                    : "text-ink-soft hover:bg-ink/[0.05] hover:text-ink"
+                }`
+          }
         >
           <IconPlus width={16} height={16} />
+          {showLabel ? <span>{title}</span> : null}
         </button>
       )}
     >

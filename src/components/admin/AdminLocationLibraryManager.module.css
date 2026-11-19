@@ -191,3 +191,285 @@
   border: 1px dashed var(--loc-line);
   border-radius: 16px;
 }
+
+.swatch {
+  height: 72px;
+  width: 100%;
+}
+
+.styleHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.styleNote {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--loc-accent) 8%, transparent);
+  color: var(--loc-ink);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.styleGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.styleCard {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--loc-line);
+  border-radius: 16px;
+  background: var(--loc-surface);
+}
+
+.styleCard .body {
+  padding: 10px 2px 2px;
+  gap: 8px;
+}
+
+.styleCard .name {
+  font-size: 15px;
+}
+
+.styleCard .actions .btn {
+  width: 100%;
+  min-height: 36px;
+  text-align: center;
+}
+
+.portrait {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.portraitLarge {
+  width: 180px;
+  max-width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: 16px;
+  object-fit: cover;
+  justify-self: center;
+}
+
+.portraitEmpty {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 1px dashed var(--loc-line);
+  background: color-mix(in srgb, var(--color-surface) 88%, var(--loc-accent));
+  color: var(--loc-muted);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  padding: 8px;
+}
+
+button.portraitEmpty {
+  cursor: pointer;
+}
+
+button.portraitEmpty:hover {
+  border-color: var(--loc-accent);
+  color: var(--loc-ink);
+}
+
+.editorBody > .formRow {
+  width: 100%;
+  justify-items: center;
+  text-align: center;
+}
+
+.formPlain {
+  display: grid;
+  gap: 16px;
+}
+
+.formPlain .input,
+.formPlain .textarea {
+  min-height: 44px;
+  padding: 10px 12px;
+  font-size: 15px;
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.checkRow input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+
+.styleActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.stylePrimary,
+.styleGhost {
+  appearance: none;
+  min-height: 44px;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.stylePrimary {
+  border: 0;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.stylePrimary:disabled,
+.styleGhost:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.styleGhost {
+  border: 1px solid var(--loc-line);
+  background: var(--color-surface);
+  color: var(--loc-ink);
+}
+
+@media (min-width: 720px) {
+  .styleGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .styleHead .stylePrimary {
+    width: auto;
+  }
+
+  .dialog {
+    width: min(720px, calc(100% - 48px));
+    padding: 22px 24px 24px;
+  }
+
+  .editorBody {
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .portraitLarge {
+    width: 180px;
+  }
+
+  .styleActions {
+    justify-content: flex-end;
+    grid-template-columns: 120px 160px;
+  }
+}
+
+@media (max-width: 719px) {
+  .styleHead .stylePrimary {
+    width: 100%;
+  }
+
+  .dialog {
+    width: 100%;
+    max-height: min(92vh, 860px);
+    padding: 16px 16px 18px;
+    border-radius: 20px;
+  }
+
+  .editorBody {
+    display: grid;
+    justify-items: center;
+  }
+
+  .editorBody .formPlain {
+    width: 100%;
+  }
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--color-surface) 45%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.dialog {
+  width: min(640px, 100%);
+  max-height: min(86vh, 760px);
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 18px 18px 22px;
+  border-radius: 16px;
+  border: 1px solid var(--loc-line);
+  background: var(--color-bg);
+  color: var(--loc-ink);
+}
+
+.dialogHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.dialogTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.closeBtn {
+  appearance: none;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--loc-muted);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.fileBtn {
+  display: inline-flex;
+  align-items: center;
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--loc-muted);
+}

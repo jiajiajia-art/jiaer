@@ -39,8 +39,7 @@ import type { BannerItem } from '../api/banner/banner.type';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
 import specialThemeTagsApi from '../api/specialThemeTags/specialThemeTagsApi';
 import type { HomePromotionTicker } from '../api/promotion/promotion.type';
-import { flattenThemeTags, type FlatThemeTag } from '../utils/themeTags';
-import { localizeChineseByLanguage } from '../utils/chineseScript';
+import { flattenThemeTags, translateThemeLabel, type FlatThemeTag } from '../utils/themeTags';
 import type { SpecialThemeAutoSort, SpecialThemeTagRecord } from '../api/specialThemeTags/specialThemeTagsApi.type';
 import {
     DEFAULT_HOME_LIST_FILTERS,
@@ -55,6 +54,7 @@ import { resolveHomeFiltersForNovelThemeConflict } from '../utils/homeFilterNove
 import { openConfiguredLink } from '../utils/promotionNavigation';
 import { useExternalLinkCopyModal } from '../hooks/useExternalLinkCopyModal';
 import { normalizeGender } from '../utils/profileCompletion';
+import { localizeBannerDescription } from '../utils/localizeBannerDescription';
 
 /** 功能注释：加群横幅图标用下载切图原 SVG（组 9013），不用手写矢量 */
 const JOIN_GROUP_ICON = `${import.meta.env.BASE_URL}data/assetsv2/home/icon_community.svg`;
@@ -64,7 +64,6 @@ type CarouselItem = UserGameData | BannerItem;
 const isBannerCarouselItem = (item: CarouselItem): item is BannerItem => 'image_url' in item;
 const PROTECTED_PATH_PREFIXES = ['/analytics', '/create', '/createGame', '/warehouse', '/profile', '/account', '/promotions', '/admin', '/galgame', '/galgameMap', '/customif', '/interactive-video'];
 const DESKTOP_CAROUSEL_BREAKPOINT = 768;
-const MOBILE_NAVBAR_HEIGHT = 60;
 const DESKTOP_CAROUSEL_RATIO = 9 / 5;
 const CAROUSEL_AUTOPLAY_INTERVAL = 7000;
 
@@ -225,7 +224,6 @@ const Home: React.FC = () => {
         slideGap: 0,
     });
     const [isMobileViewport, setIsMobileViewport] = useState(() => window.innerWidth <= DESKTOP_CAROUSEL_BREAKPOINT);
-    const [isMobileHomeNavbarScrolled, setIsMobileHomeNavbarScrolled] = useState(false);
     const hasMultipleCarouselItems = carouselItems.length > 1;
     const isDesktopCarousel = desktopCarouselMetrics.isDesktop && desktopCarouselMetrics.slideWidth > 0;
     const mobileCarouselRenderItems = hasMultipleCarouselItems
@@ -286,9 +284,10 @@ const Home: React.FC = () => {
         if (allGamesFilters.mode !== 'all' && allGamesFilters.tagId != null) {
             const modeOption = HOME_LIST_MODE_OPTIONS.find((option) => option.value === allGamesFilters.mode);
             const modeLabel = modeOption?.labelKey ? t(modeOption.labelKey) : (modeOption?.label || allGamesFilters.mode);
-            const themeLabel = localizeChineseByLanguage(
+            const themeLabel = translateThemeLabel(
                 allThemeTags.find((tag) => Number(tag.id) === Number(allGamesFilters.tagId))?.name
                     || t('gameBrowse.theme'),
+                t,
                 i18n.resolvedLanguage || i18n.language,
             );
             return t('home.noMatchingWorksModeTheme', { mode: modeLabel, theme: themeLabel });
@@ -361,18 +360,6 @@ const Home: React.FC = () => {
     const updateMobileHomeNavbarState = useCallback(() => {
         const nextIsMobileViewport = window.innerWidth <= DESKTOP_CAROUSEL_BREAKPOINT;
         setIsMobileViewport((prev) => (prev === nextIsMobileViewport ? prev : nextIsMobileViewport));
-
-        if (!nextIsMobileViewport) {
-            setIsMobileHomeNavbarScrolled(false);
-            return;
-        }
-
-        const scrollTop = mainContentRef.current?.scrollTop ?? 0;
-        const bannerHeight = todayWrapRef.current?.offsetHeight ?? 0;
-        const overlayThreshold = Math.max(bannerHeight - MOBILE_NAVBAR_HEIGHT, 0);
-        const nextIsScrolled = scrollTop > overlayThreshold;
-
-        setIsMobileHomeNavbarScrolled((prev) => (prev === nextIsScrolled ? prev : nextIsScrolled));
     }, []);
 
     useEffect(() => {
@@ -436,11 +423,6 @@ const Home: React.FC = () => {
             window.removeEventListener('resize', handleResize);
         };
     }, [carouselItems.length, updateMobileHomeNavbarState]);
-
-    const handleMainContentScroll = useCallback(() => {
-        if (!isMobileViewport) return;
-        updateMobileHomeNavbarState();
-    }, [isMobileViewport, updateMobileHomeNavbarState]);
 
     const getDesktopCarouselDistance = useCallback((itemIndex: number) => (
         getCircularCarouselDistance(
@@ -1185,8 +1167,16 @@ const Home: React.FC = () => {
         void loadShowcaseGames(activeShowcaseTag);
     }, [activeShowcaseTag, loadShowcaseGames]);
 
+    const homeTickerText = useMemo(() => {
+        const text = homeTicker?.text?.trim() || '';
+        if (text === '参加推广活动，赚取海量积分和现金') {
+            return t('home.promotionTicker');
+        }
+        return text;
+    }, [homeTicker?.text, t]);
+
     const measureTickerOverflow = useCallback(() => {
-        const tickerText = homeTicker?.text?.trim();
+        const tickerText = homeTickerText;
         const viewportElement = homeTickerViewportRef.current;
         const textElement = homeTickerMeasureTextRef.current;
 
@@ -1201,10 +1191,10 @@ const Home: React.FC = () => {
         const nextOverflowing = textWidth > viewportWidth + 1;
 
         setIsTickerOverflowing((prev) => (prev === nextOverflowing ? prev : nextOverflowing));
-    }, [homeTicker?.text]);
+    }, [homeTickerText]);
 
     useEffect(() => {
-        if (!homeTicker?.text?.trim()) {
+        if (!homeTickerText) {
             setIsTickerOverflowing(false);
             return;
         }
@@ -1256,7 +1246,7 @@ const Home: React.FC = () => {
             }
             window.removeEventListener('resize', requestMeasure);
         };
-    }, [homeTicker?.text, isTickerOverflowing, measureTickerOverflow]);
+    }, [homeTickerText, isTickerOverflowing, measureTickerOverflow]);
 
     // 浣跨敤 libraryDataApi 鑾峰彇娓告垙鍒楄〃鏁版嵁锛堟棤璁烘槸鍚︾櫥褰曢兘鍔犺浇锛?
     useEffect(() => {
@@ -2026,7 +2016,13 @@ const Home: React.FC = () => {
 
     const handleHomeCheckInSuccess = useCallback(() => {
         updateUser({ hasSignedIn: true });
-    }, [updateUser]);
+        setShowCheckInModal(false);
+        const uid = user?.user?.id;
+        if (uid) {
+            const today = new Date().toDateString();
+            localStorage.setItem(`checkIn_${uid}_${today}`, today);
+        }
+    }, [updateUser, user?.user?.id]);
 
     const handleCloseAnnouncementModal = () => {
         if (latestAnnouncement?.id) {
@@ -2063,13 +2059,12 @@ const Home: React.FC = () => {
     return (
         <div className={styles.pageRoot}>
             {/* 椤堕儴鍥哄畾瀵艰埅 */}
-            <Navbar mobileVariant="home-overlay" mobileOverlayScrolled={isMobileHomeNavbarScrolled} />
+            <Navbar />
 
             {/* 涓讳綋 */}
             <div
                 ref={mainContentRef}
                 className={styles.mainContent}
-                onScroll={handleMainContentScroll}
             >
                 {/* 鍙充晶鍟嗗煄鍐呭 */}
                 <div className={styles.main}>
@@ -2134,7 +2129,12 @@ const Home: React.FC = () => {
                                                         <div className={styles.carouselContent}>
                                                             <div className={styles.carouselInfo}>
                                                                 <h2 className={styles.carouselTitle}>{item.title}</h2>
-                                                                <p className={styles.carouselDescription}>{item.description}</p>
+                                                                <p className={styles.carouselDescription}>
+                                                                    {localizeBannerDescription(item.description, {
+                                                                        theme: t('home.carousel.themeLabel'),
+                                                                        summary: t('home.carousel.summaryLabel'),
+                                                                    })}
+                                                                </p>
                                                                 {/* <button
                                                                     className={styles.carouselStartBtn}
                                                                     onClick={() =>
@@ -2209,12 +2209,12 @@ const Home: React.FC = () => {
 
                     <div className={styles.homeWideSections}>
                         {/* 实现移动端与 PC 共用热门题材展示 */}
-                        {homeTicker?.text?.trim() ? (
+                        {homeTickerText ? (
                             <button
                                 type="button"
                                 className={styles.homeTicker}
                                 onClick={handleHomeTickerClick}
-                                aria-label={t('home.carousel.openTicker', { text: homeTicker.text })}
+                                aria-label={t('home.carousel.openTicker', { text: homeTickerText })}
                             >
                                 {/* 功能注释：效果图公告条——左侧「公告」标签 + 分隔线 + 文案 + 右侧箭头 */}
                                 <span className={styles.homeTickerBadge}>{t('home.announcementBadge')}</span>
@@ -2223,11 +2223,11 @@ const Home: React.FC = () => {
                                     {isTickerOverflowing ? (
                                         <span className={`${styles.homeTickerTrack} ${styles.homeTickerTrackScrolling}`}>
                                             <span className={styles.homeTickerGroup}>
-                                                <span ref={homeTickerMeasureTextRef} className={styles.homeTickerText}>{homeTicker.text}</span>
+                                                <span ref={homeTickerMeasureTextRef} className={styles.homeTickerText}>{homeTickerText}</span>
                                                 <span className={styles.homeTickerDot} aria-hidden="true" />
                                             </span>
                                             <span className={styles.homeTickerGroup} aria-hidden="true">
-                                                <span className={styles.homeTickerText}>{homeTicker.text}</span>
+                                                <span className={styles.homeTickerText}>{homeTickerText}</span>
                                                 <span className={styles.homeTickerDot} aria-hidden="true" />
                                             </span>
                                         </span>
@@ -2236,7 +2236,7 @@ const Home: React.FC = () => {
                                             ref={homeTickerMeasureTextRef}
                                             className={`${styles.homeTickerText} ${styles.homeTickerTextStatic}`}
                                         >
-                                            {homeTicker.text}
+                                            {homeTickerText}
                                         </span>
                                     )}
                                 </span>
@@ -2264,7 +2264,7 @@ const Home: React.FC = () => {
                                         className={`${styles.themeShowcaseItem} ${activeShowcaseTagKey === tag.key ? styles.themeShowcaseItemActive : ''}`}
                                         onClick={() => handleThemeClick(tag)}
                                     >
-                                        {tag.code ? t(getShowcaseTagI18nCode(tag.code)!) || tag.name : localizeChineseByLanguage(tag.name, i18n.resolvedLanguage || i18n.language)}
+                                        {tag.code ? t(getShowcaseTagI18nCode(tag.code)!) || tag.name : translateThemeLabel(tag.name, t, i18n.resolvedLanguage || i18n.language)}
                                     </button>
                                 ))}
                             </div>

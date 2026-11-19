@@ -31,16 +31,21 @@ test('Modal与裁切弹窗挂到romancePortalRoot优先平台壳', () => {
 test('草稿与确认弹窗主按钮走ui-btn-primary不用硬编码bg-jade白字', () => {
   const editor = read('components/ModEditorPanel.tsx');
   const kit = read('components/EditorKit.tsx');
-  assert.match(editor, /发现本机未保存的草稿/);
-  assert.match(editor, /ui-btn ui-btn-primary/);
-  assert.doesNotMatch(editor, /继续填写草稿[\s\S]{0,80}bg-jade/);
+  // 草稿冲突主按钮在 DraftConflictChoice，标题为「要接着哪份写？」
+  const choice = read('components/DraftConflictChoice.tsx');
+  assert.match(editor, /title="要接着哪份写？"/);
+  assert.match(editor, /DraftConflictChoice/);
+  assert.match(choice, /用这份继续/);
+  assert.match(kit, /ui-btn ui-btn-sm ui-btn-primary/);
   assert.match(kit, /ui-btn-primary/);
   assert.doesNotMatch(kit, /close\(true\)[\s\S]{0,200}bg-jade/);
 });
 
 test('romance-platform弹窗色板收成--fl与--sheet变量', () => {
   const css = read('index.css');
-  assert.match(css, /--fl-wine:\s*#A8283C/);
+  // 平台酒红跟主站 --color-primary，暗色壳回退 #a8283c
+  assert.match(css, /--fl-wine:\s*var\(--color-primary,\s*#d42a2a\)/);
+  assert.match(css, /--fl-wine:\s*#a8283c/);
   assert.match(css, /--sheet-solid:\s*var\(--fl-sheet\)/);
   assert.match(css, /\.romance-platform \.ui-btn-primary/);
   assert.match(css, /\.romance-platform \.ui-sheet select/);

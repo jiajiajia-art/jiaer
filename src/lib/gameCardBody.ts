@@ -5,8 +5,10 @@
 import { isGameEngineStorageTag } from '../utils/gameTypeLabel.ts';
 
 export type GameCardBodySource = {
+  title?: unknown;
   subtitle?: unknown;
   description?: unknown;
+  version_notes?: unknown;
   theme_tag_names?: unknown;
   game_tags?: unknown;
   like_count?: unknown;
@@ -45,13 +47,25 @@ export function resolveGameCardCollectBadge(game: GameCardBodySource): string | 
   return `${count}人收藏`;
 }
 
-/** 功能注释：简介优先 subtitle，否则截取 description 纯文本。 */
+/**
+ * 功能注释：卡片简介。
+ * 很多作品 subtitle 被填成与标题相同，不能当简介；此时回落 description / version_notes。
+ */
 export function resolveGameCardSubtitle(game: GameCardBodySource): string {
+  const title = cleanText(game.title);
   const subtitle = cleanText(game.subtitle);
-  if (subtitle) return truncate(subtitle, MAX_SUBTITLE);
+  if (subtitle && subtitle !== title) {
+    return truncate(subtitle, MAX_SUBTITLE);
+  }
   const description = cleanText(game.description);
-  if (!description) return '';
-  return truncate(description, MAX_SUBTITLE);
+  if (description && description !== title) {
+    return truncate(description, MAX_SUBTITLE);
+  }
+  const versionNotes = cleanText(game.version_notes);
+  if (versionNotes && versionNotes !== title) {
+    return truncate(versionNotes, MAX_SUBTITLE);
+  }
+  return '';
 }
 
 export type SearchResultSecondarySource = GameCardBodySource & {

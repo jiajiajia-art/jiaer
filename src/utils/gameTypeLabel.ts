@@ -9,6 +9,7 @@ export const GAME_TYPE_LABEL_KEYS = {
     visualNovel: 'gameType.labels.visualNovel',
     ivg: 'gameType.labels.ivg',
     story: 'gameType.labels.story',
+    script: 'gameType.labels.script',
 } as const;
 
 type GameTypeLabelId = keyof typeof GAME_TYPE_LABEL_KEYS;
@@ -23,6 +24,7 @@ const FALLBACK_LABELS_ZH: Record<string, string> = {
     [GAME_TYPE_LABEL_KEYS.visualNovel]: '视觉小说',
     [GAME_TYPE_LABEL_KEYS.ivg]: '互动影游',
     [GAME_TYPE_LABEL_KEYS.story]: 'Story',
+    [GAME_TYPE_LABEL_KEYS.script]: '剧本',
 };
 
 const translateLabel = (key: string): string => {
@@ -63,6 +65,8 @@ const TYPE_LABEL_KEYS: Record<string, string> = {
     'ROLE-PLAYING': GAME_TYPE_LABEL_KEYS.aiWenyou,
     WORLD: GAME_TYPE_LABEL_KEYS.tavern,
     STORY: GAME_TYPE_LABEL_KEYS.story,
+    ROMANCE: GAME_TYPE_LABEL_KEYS.script,
+    '剧本': GAME_TYPE_LABEL_KEYS.script,
     '文字互动': GAME_TYPE_LABEL_KEYS.aiWenyou,
     '角色扮演': GAME_TYPE_LABEL_KEYS.aiWenyou,
     '世界互动': GAME_TYPE_LABEL_KEYS.tavern,

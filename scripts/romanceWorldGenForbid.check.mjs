@@ -77,7 +77,7 @@ test('worldGenForbid_落模组extraRules且生成提示注入', async () => {
   const mod = wiz.draftModFromWorldGen(draft);
   assert.match(mod.content.prompt.extraRules, /【禁止生成】/);
   assert.match(mod.content.prompt.extraRules, /不要现代通告/);
-  // 功能注释：故事设定不再进 worldIntro；短设定可作简介；剧本基调留给 AI
+  // 功能注释：故事设定不再进 worldIntro；短设定可作简介；系统提示词留给 AI
   assert.equal(mod.content.prompt.worldIntro, undefined);
   assert.equal(mod.description, '小镇女孩遇到男主');
   assert.equal(mod.content.prompt.scriptTone, undefined);

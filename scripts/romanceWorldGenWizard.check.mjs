@@ -35,21 +35,42 @@ test('Romance_App_应识别createWorld查询并挂载WorldGenWizard', () => {
   assert.match(app, /shouldResumeWorldGenSession/);
   assert.match(app, /ensureWorldGenQuery/);
   assert.match(app, /WorldGenWizard/);
-  // 平台表单对齐 funloom 暗色酒红创作壳，不跟局内可爱/宣纸浅色
+  // 平台表单对齐主站皮肤 token（浅底酒红），不跟局内可爱/宣纸浅色
   assert.match(app, /romance-platform/);
   assert.match(app, /data-platform-ui/);
   assert.match(app, /platformOnly/);
   assert.doesNotMatch(app, /platformOnly[\s\S]*classList\.add\("skin-cute"/);
   assert.doesNotMatch(app, /platformOnly[\s\S]*classList\.add\("accent-plum"/);
   assert.doesNotMatch(app, /platformOnly[\s\S]*classList\.add\("accent-jade"/);
+  // 功能注释：平台壳禁止再挂游戏字体 class / 自定义正文字体
+  {
+    const platformBlock = app.match(/if \(platformOnly\) \{[\s\S]*?\n      \}/);
+    assert.ok(platformBlock, '缺少 platformOnly 分支');
+    assert.doesNotMatch(platformBlock[0], /font-\$\{look\.font/);
+    assert.doesNotMatch(platformBlock[0], /ensureGameFontsLoaded/);
+    assert.match(platformBlock[0], /applyFreeStyle\(undefined/);
+    assert.match(platformBlock[0], /--font-ui|主站/);
+  }
   assert.match(css, /\.romance-platform\s*\{/);
-  assert.match(css, /\.romance-platform\s*\{[^}]*--fl-surface:\s*#0A0A0A/);
-  assert.match(css, /\.romance-platform\s*\{[^}]*--fl-wine:\s*#A8283C/);
+  assert.match(css, /\.romance-platform\s*\{[^}]*--fl-surface:\s*var\(--color-surface/);
+  assert.match(css, /\.romance-platform\s*\{[^}]*--fl-wine:\s*var\(--color-primary/);
   assert.match(css, /\.romance-platform\s*\{[^}]*--paper:\s*var\(--fl-surface\)/);
   assert.match(css, /\.romance-platform\s*\{[^}]*--jade:\s*var\(--fl-wine\)/);
   assert.match(css, /\.romance-platform\s*\{[^}]*--sheet-solid:\s*var\(--fl-sheet\)/);
   assert.doesNotMatch(css, /\.romance-platform\s*\{[^}]*--paper:\s*#f3e9d6/);
-  assert.match(wiz, /生成世界/);
+  // 功能注释：平台壳/弹窗统一 --font-ui，不再给校验弹窗单独开字体例外
+  assert.match(css, /\.modal-sheet[\s\S]{0,400}font-family:\s*var\(--font-ui\)/);
+  assert.match(css, /\[data-platform-ui="1"\][\s\S]{0,400}font-family:\s*var\(--font-ui\)/);
+  // 功能注释：页头只显示「创作游戏」，不再叠「生成世界」四字标题
+  assert.match(wiz, /world-gen-title["']?>创作游戏</);
+  assert.doesNotMatch(wiz, /world-gen-title["']?>生成世界</);
+  // 功能注释：创作引擎必须接后台 AI 线路；禁止再渲染内置平衡/深度/轻量三档
+  assert.match(wiz, /AiRoutePicker/);
+  assert.match(wiz, /embedded/);
+  assert.doesNotMatch(wiz, /WORLD_GEN_ENGINES\.map/);
+  assert.doesNotMatch(wiz, /平衡叙事|深度推演|轻量灵感/);
+  assert.match(css, /\.world-gen-page/);
+  assert.match(css, /\.world-gen-route-list/);
   // 向导不再包含游玩偏好选择页（建角页 / 局内设置已有）
   assert.doesNotMatch(wiz, /PlayPrefsPicker/);
   assert.doesNotMatch(wiz, /下一步：开局游玩偏好/);
@@ -60,15 +81,38 @@ test('Romance_App_应识别createWorld查询并挂载WorldGenWizard', () => {
   assert.doesNotMatch(wiz, /创作游戏 · 第 2\/2 步 · 完整编辑器/);
   assert.match(wiz, /onBackToWizard/);
   assert.match(wiz, /进入完整编辑器/);
-  // 校验失败用居中弹窗，禁止底栏旁难见的内联提示条
+  // 校验失败用居中弹窗；正文直说缺什么，按钮「去填写/去登录」，禁止「还差一点点」假输入框
   assert.match(wiz, /errModal/);
-  assert.match(wiz, /<Modal title="还差一步"/);
+  assert.match(wiz, /title="还差一步"/);
+  assert.match(wiz, /world-gen-err-dialog/);
+  assert.match(wiz, /world-gen-err-body/);
+  assert.match(wiz, /去填写/);
+  assert.match(wiz, /去登录/);
+  assert.doesNotMatch(wiz, /还差一点点/);
+  assert.doesNotMatch(wiz, /world-gen-err-tip-label/);
   assert.doesNotMatch(wiz, /border-coral\/40 bg-coral\/10/);
   // 禁止再渲染旧六项内容勾选；改为「本次需要 AI 生成的模组」+ 真实 AI 管线
   assert.doesNotMatch(wiz, /已选 \{contentCount\}/);
   assert.doesNotMatch(wiz, /WORLD_GEN_CONTENTS\.map/);
   assert.doesNotMatch(wiz, /配置编辑器模块/);
-  assert.match(wiz, /本次需要 AI 生成的模组/);
+  assert.match(wiz, /生成内容|勾选要生成的模块|AI 生成模组/);
+  // 功能注释：向导勾选区扁平展示模块名，禁止再渲染编辑器内部组名；开局资金并入建角不单独勾选
+  assert.match(wiz, /world-gen-mod-grid|renderModulePicker/);
+  assert.match(wiz, /WORLD_GEN_PICKER_HIDDEN_STEP_IDS|worldGenPickerVisibleStepIds/);
+  assert.match(wiz, /asCard/);
+  // 功能注释：首卡不要「设定」小标题；禁止生成直接展示，不收进更多选项
+  assert.doesNotMatch(wiz, /world-gen-card-title["']?>设定</);
+  assert.doesNotMatch(wiz, /world-gen-more|>更多选项</);
+  assert.match(wiz, /world-gen-polish/);
+  assert.match(wiz, /作品名称也可润色|顺带润色作品名称/);
+  // 功能注释：无线路须提示联系平台配置，禁止静默隐藏创作引擎
+  const picker = readFileSync(join(romance, 'components/AiRoutePicker.tsx'), 'utf8');
+  assert.match(picker, /联系平台/);
+  assert.match(picker, /配置 AI 线路/);
+  assert.doesNotMatch(picker, /hideWhenEmpty/);
+  assert.doesNotMatch(wiz, /world-gen-card-index/);
+  assert.doesNotMatch(wiz, /world-gen-mod-lead/);
+  assert.doesNotMatch(wiz, /mb-1\.5 text-\[11px\] font-bold tracking-wide text-ink-soft/);
   assert.match(wiz, /runWorldGenModules/);
   assert.match(wiz, /取消生成/);
   assert.doesNotMatch(wiz, /单独重试|单条重试|重试失败项/);
@@ -86,8 +130,8 @@ test('Romance_App_应识别createWorld查询并挂载WorldGenWizard', () => {
   assert.match(wiz, /scrollIntoView|pickWorldGenScrollTargetId/);
   assert.match(css, /\.world-gen-mod-row\.is-running/);
   // 功能注释：完成绿 / 失败红胶囊；文案「已完成」
-  assert.match(css, /\.world-gen-mod-status\.is-done[^}]*#3dd68c|\.world-gen-mod-status\.is-done[\s\S]{0,120}#3dd68c/);
-  assert.match(css, /\.world-gen-mod-status\.is-failed[^}]*#e23d55|\.world-gen-mod-status\.is-failed[\s\S]{0,120}#e23d55/);
+  assert.match(css, /\.world-gen-mod-status\.is-done[\s\S]{0,160}#22c55e|#166534/);
+  assert.match(css, /\.world-gen-mod-status\.is-failed[\s\S]{0,160}--color-danger|#e11d48/);
   assert.match(wiz, /status === "done"\) return "已完成"/);
   // 功能注释：进度页底部仅「进入编辑器」「返回」，去掉重试与旧括号文案
   assert.match(wiz, /进入编辑器/);
@@ -109,6 +153,20 @@ test('Romance_App_应识别createWorld查询并挂载WorldGenWizard', () => {
   assert.match(css, /\.romance-platform\s*\{[^}]*--color-jade:\s*var\(--fl-wine\)/);
   assert.match(css, /\.world-gen-shell\s*\{[^}]*--wg-bg:\s*var\(--fl-bg/);
   assert.doesNotMatch(css, /\.world-gen-shell\s*\{[^}]*--wg-bg:\s*#f3e9d6/);
+  // 功能注释：创作壳改为暖浅纯色，禁止再铺格子底图；伪元素须关掉
+  assert.match(css, /\.world-gen-shell\s*\{[^}]*background-color:\s*#faf6f4/);
+  assert.match(css, /\.world-gen-shell\s*\{[^}]*background-image:\s*none/);
+  assert.match(css, /不再铺格子底图/);
+  assert.doesNotMatch(css, /world-gen-shell-bg\.jpg/);
+  assert.match(css, /\.world-gen-shell::before,\s*\.world-gen-shell::after[\s\S]{0,120}content:\s*none/);
+  // 功能注释：编辑器纸面为实心色，跟随主站皮肤（--fl-host-surface，缺省 #ffffff），禁止半透玫瑰米色透出底纹
+  assert.match(css, /\.world-gen-editor\s*\{[^}]*--paper:\s*var\(--wg-sheet\)/);
+  assert.match(css, /--wg-sheet:\s*var\(--fl-host-surface,\s*#ffffff\)/);
+  // 功能注释：编辑器分区卡片为实心纸面底，禁止再回酒红半透磨砂
+  assert.match(css, /\.world-gen-editor details\.group[\s\S]{0,500}background:\s*var\(--wg-sheet\)/);
+  assert.match(css, /页底「上一步 \/ 下一步」/);
+  assert.doesNotMatch(css, /\.world-gen-shell::after[\s\S]{0,800}repeating-linear-gradient\(\s*-14deg/);
+  assert.doesNotMatch(css, /木质纹路/);
   assert.match(css, /\.world-gen-editor span\[class\*="rounded-full"\]\[class\*="bg-jade"\]/);
   // 功能注释：手机 100% 设备宽 + PC 最大 1200；禁止再整页横滑锁死最小 1200
   assert.match(wiz, /fluid/);
@@ -225,7 +283,7 @@ test('worldGenWizard_校验与内容映射编辑器模块', async () => {
   const built = mod.draftModFromWorldGen(draft);
   assert.equal(built.kind, 'world');
   assert.equal(built.name, '雾港来信');
-  // 功能注释：短设定可原样作简介；长设定禁止 slice(0,200) 原文照搬；剧本基调留给 AI
+  // 功能注释：短设定可原样作简介；长设定禁止 slice(0,200) 原文照搬；系统提示词留给 AI
   assert.equal(built.description, '玩家继承海边旅店。');
   assert.equal(built.content.prompt.worldIntro, undefined);
   assert.equal(built.content.prompt.scriptTone, undefined);
@@ -303,8 +361,9 @@ test('worldGenWizard_第2步须覆盖ModEditorPanel全部可生成Section', asyn
     头衔: ['头衔'],
     培训课程: ['培训课程'],
     '打工 · 周末活动': ['打工 · 周末活动'],
-    玩法规则: ['玩法规则'],
-    数值调节: ['引擎规则与经济'],
+    玩法规则: ['玩法规则', '规则列表'],
+    规则列表: ['规则列表', '玩法规则'],
+    数值调节: ['引擎规则与经济', '数值调节'],
   };
   const names = new Set(mod.WORLD_GEN_EDITOR_STEPS.map((s) => s.name));
   const covered = (t) => names.has(t) || (alias[t] ?? []).some((a) => names.has(a));
@@ -316,9 +375,10 @@ test('worldGenWizard_主线支线结局合并剧情线后为36项基础11项', a
   const mod = await import(pathToFileURL(join(romance, 'lib/worldGenWizard.ts')).href);
   const ids = mod.ALL_WORLD_GEN_EDITOR_STEP_IDS;
   assert.equal(new Set(ids).size, ids.length, '勾选 id 不得重复');
-  assert.equal(ids.length, 36);
+  // 功能注释：编辑器新增「玩法叫法」Section（content.terms），对应扩展步骤 playTerms；基础默认仍是 11 项
+  assert.equal(ids.length, 37);
   assert.equal(mod.DEFAULT_WORLD_GEN_EDITOR_STEP_IDS.length, 11);
-  assert.equal(mod.EXTENDED_WORLD_GEN_EDITOR_STEP_IDS.length, 25);
+  assert.equal(mod.EXTENDED_WORLD_GEN_EDITOR_STEP_IDS.length, 26);
   // 基础默认必须等于分栏里渲染的基础栏
   const tier = mod.groupWorldGenEditorStepsByTier();
   const coreRendered = tier.core.flatMap((g) => g.steps.map((s) => s.id));

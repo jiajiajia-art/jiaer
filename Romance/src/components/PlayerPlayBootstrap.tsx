@@ -1,9 +1,11 @@
 /**
  * 功能注释：玩家 play=1 / 审核 reviewPreview=1 进局引导。
- * 拉取发布镜像或待审快照后，走作者预览同款运行时；存档键与作者预览隔离（F1）。
+ * play=1：正式局（requestPlatformPlay，无 STUDIO 壳，用 fileId 正式存档）。
+ * reviewPreview=1：仍走作者预览隔离运行时（不写公开档）。
  */
 import { useEffect, useState } from "react";
 import { requestAuthorPreview, reportAuthorPreviewFatal } from "../lib/authorPreview";
+import { requestPlatformPlay } from "../lib/platformPlay";
 import type { Mod } from "../mods/types";
 import {
   fetchRomancePendingReviewContent,
@@ -13,6 +15,7 @@ import {
 } from "../lib/platformRomancePlay";
 import { applyPlatformThemeToMod, readWorldThemeHint } from "../lib/worldTheme";
 import { fetchPlatformGameTheme } from "../lib/platformThemeTags";
+import { setStorageGameFileId } from "../lib/storage";
 
 function asMod(content: unknown): Mod | null {
   if (!content || typeof content !== "object") return null;
@@ -35,6 +38,8 @@ export default function PlayerPlayBootstrap({
 
   useEffect(() => {
     let cancelled = false;
+    // 功能注释：进局先绑定本地存档命名空间，避免与其它作品槽位串档
+    setStorageGameFileId(fileId);
     void (async () => {
       setLoading(true);
       setError(null);
@@ -65,8 +70,20 @@ export default function PlayerPlayBootstrap({
         if (cancelled) return;
         playMod = applyPlatformThemeToMod(mod, theme);
       }
-      // 功能注释：审核预览与玩家进局复用预览运行时；session 带 fileId 前缀防串档
-      requestAuthorPreview(playMod, mode === "reviewPreview" ? ["审核预览 · 不写公开存档"] : [], 0);
+      if (mode === "reviewPreview") {
+        // 功能注释：审核预览继续隔离测试存档，不写玩家公开进度
+        requestAuthorPreview(playMod, ["审核预览 · 不写公开存档"], 0);
+      } else {
+        // 功能注释：过审正式游玩禁止挂 STUDIO PREVIEW；存档走 setStorageGameFileId(fileId)
+        const boot = requestPlatformPlay(playMod);
+        if (!boot.ok) {
+          const msg = boot.errors.join("；") || "无法启动正式游玩";
+          setError(msg);
+          setLoading(false);
+          reportAuthorPreviewFatal([msg]);
+          return;
+        }
+      }
       setLoading(false);
     })();
     return () => {

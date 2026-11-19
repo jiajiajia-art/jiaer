@@ -1,3 +1,4 @@
+import i18n from '../../../i18n';
 /**
  * 场景相关 API 调用辅助函数
  * 统一封装两种模式的 API 调用差异，消除 mode 判断
@@ -68,7 +69,7 @@ export const createSceneApiHelpers = (mode: string) => {
                 const sceneId = (response.headers['x-scene-id'] as string) || scene.id;
                 return { data: { success: true, blob: response.data, sceneId } };
             } catch (error) {
-                const message = await getAxiosErrorMessageAsync(error, '生成失败');
+                const message = await getAxiosErrorMessageAsync(error, i18n.t('saveModal.generationFailed'));
                 return { data: { success: false, message } };
             }
         },

@@ -83,8 +83,9 @@
 }
 
 .title {
-    font-size: 28px;
-    font-weight: 600;
+    font-size: var(--modal-fs-title);
+    font-weight: var(--modal-fw-title);
+    line-height: var(--modal-lh-title);
     color: var(--color-text);
     margin: 0;
 }
@@ -108,12 +109,12 @@
 }
 
 .message {
-    font-size: 24px;
-    color: var(--primary);
+    font-size: var(--modal-fs-body);
+    color: var(--color-text-secondary);
     margin: 0;
     text-align: center;
-    line-height: 1.6;
-    font-weight: 500;
+    line-height: var(--modal-lh-body);
+    font-weight: var(--modal-fw-body);
     /* 实现 弹窗文案换行显示 */
     white-space: pre-line;
 }
@@ -139,8 +140,8 @@
 .cancelButton {
     width: 260px;
     height: 60px;
-    font-size: 18px;
-    font-weight: 500;
+    font-size: var(--modal-fs-button);
+    font-weight: var(--modal-fw-button);
     cursor: pointer;
     transition: all 0.3s ease;
     border: none;
@@ -242,7 +243,7 @@
     }
 
     .title {
-        font-size: 20px;
+        font-size: var(--modal-fs-title);
     }
 
     .modalBody {
@@ -256,8 +257,8 @@
     }
 
     .message {
-        font-size: 16px;
-        line-height: 1.5;
+        font-size: var(--modal-fs-body);
+        line-height: var(--modal-lh-body);
     }
 
     .buttonGroup {
@@ -270,7 +271,7 @@
     .cancelButton {
         width: 100%;
         height: 50px;
-        font-size: 16px;
+        font-size: var(--modal-fs-button);
     }
 
     .closeButton {
@@ -296,7 +297,7 @@
     }
 
     .title {
-        font-size: 18px;
+        font-size: var(--modal-fs-title);
     }
 
     .icon {
@@ -309,7 +310,7 @@
     }
 
     .message {
-        font-size: 15px;
+        font-size: var(--modal-fs-body);
     }
 
     .buttonGroup {
@@ -319,7 +320,7 @@
     .confirmButton,
     .cancelButton {
         height: 48px;
-        font-size: 15px;
+        font-size: var(--modal-fs-button);
     }
 }
 
@@ -329,11 +330,12 @@
     --confirm-accent-hover: var(--color-primary);
     --confirm-accent-deep: var(--color-primary-bold);
     --confirm-muted: color-mix(in srgb, var(--color-on-media) 55%, transparent);
-    width: min(322px, calc(100vw - 20px));
-    max-width: 322px;
+    width: var(--modal-shell-width-sm);
+    max-width: var(--modal-shell-width-sm);
     min-width: 0;
     min-height: 0;
-    border-radius: 10px;
+    border-radius: var(--modal-shell-radius);
+    box-sizing: border-box;
     background:
         linear-gradient(0deg, color-mix(in srgb, var(--color-text) 15%, transparent), color-mix(in srgb, var(--color-text) 15%, transparent)),
         linear-gradient(180deg, var(--color-surface-2) 0%, color-mix(in srgb, var(--color-surface) 72%, transparent) 100%);
@@ -382,11 +384,11 @@
 .darkTitle {
     margin: 4px 0 0;
     padding: 0 40px;
-    font-size: 16px;
-    font-weight: 500;
+    font-size: var(--modal-fs-title);
+    font-weight: var(--modal-fw-title);
     color: var(--color-text);
     letter-spacing: 0;
-    line-height: normal;
+    line-height: var(--modal-lh-title);
     text-align: center;
 }
 
@@ -441,10 +443,10 @@
 }
 
 .darkMessage {
-    font-size: 13px;
-    font-weight: 400;
+    font-size: var(--modal-fs-body);
+    font-weight: var(--modal-fw-body);
     color: var(--confirm-muted);
-    line-height: 1.55;
+    line-height: var(--modal-lh-body);
     text-align: left;
 }
 
@@ -472,8 +474,8 @@
     height: auto;
     min-height: 44px;
     border-radius: 999px;
-    font-size: 15px;
-    font-weight: 600;
+    font-size: var(--modal-fs-button);
+    font-weight: var(--modal-fw-button);
     background-image: none;
 }
 
@@ -501,19 +503,19 @@
 
 @media (max-width: 768px) {
     .darkModal {
-        width: min(322px, calc(100vw - 20px));
-        max-width: 322px;
+        width: var(--modal-shell-width-sm);
+        max-width: var(--modal-shell-width-sm);
         min-width: 0;
-        padding: 18px 16px 16px;
-        border-radius: 10px;
+        padding: var(--modal-shell-padding);
+        border-radius: var(--modal-shell-radius);
     }
 
     .darkTitle {
-        font-size: 16px;
+        font-size: var(--modal-fs-title);
     }
 
     .darkMessage {
-        font-size: 13px;
+        font-size: var(--modal-fs-body);
     }
 
     .darkButtonGroup {
@@ -524,7 +526,7 @@
     .darkCancelButton {
         width: 100%;
         min-height: 44px;
-        font-size: 14px;
+        font-size: var(--modal-fs-button);
     }
 }
 
@@ -532,12 +534,13 @@
 .glassModal {
     --notice-accent: var(--color-primary-light);
     --notice-accent-deep: var(--color-primary);
-    width: min(400px, calc(100vw - 32px));
-    max-width: 400px;
+    width: var(--modal-shell-width);
+    max-width: var(--modal-shell-width);
     min-width: 0;
     min-height: 0;
     height: auto;
-    border-radius: 14px;
+    border-radius: var(--modal-shell-radius);
+    box-sizing: border-box;
     border: 0.68px solid transparent;
     background:
         linear-gradient(0deg, color-mix(in srgb, var(--color-text) 15%, transparent), color-mix(in srgb, var(--color-text) 15%, transparent)),
@@ -615,9 +618,9 @@
 .glassTitle {
     margin: 0;
     color: var(--color-text);
-    font-size: 18px;
-    font-weight: 700;
-    line-height: 1.35;
+    font-size: var(--modal-fs-title);
+    font-weight: var(--modal-fw-title);
+    line-height: var(--modal-lh-title);
     text-align: left;
 }
 
@@ -632,9 +635,9 @@
 .glassMessage {
     margin: 0;
     color: var(--color-text-secondary);
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 1.7;
+    font-size: var(--modal-fs-body);
+    font-weight: var(--modal-fw-body);
+    line-height: var(--modal-lh-body);
     text-align: left;
     white-space: pre-line;
 }
@@ -653,8 +656,8 @@
     background: var(--notice-accent-deep);
     background-image: none;
     color: var(--color-on-primary);
-    font-size: 14px;
-    font-weight: 700;
+    font-size: var(--modal-fs-button);
+    font-weight: var(--modal-fw-button);
     cursor: pointer;
 }
 
@@ -672,11 +675,11 @@
 
 @media (max-width: 768px) {
     .glassModal {
-        width: min(400px, calc(100vw - 32px));
-        max-width: 400px;
+        width: var(--modal-shell-width);
+        max-width: var(--modal-shell-width);
         min-width: 0;
         min-height: 0;
-        border-radius: 14px;
+        border-radius: var(--modal-shell-radius);
     }
 }
 
@@ -723,9 +726,9 @@
 .adminTitle {
     margin: 0;
     color: var(--color-text);
-    font-size: 18px;
-    font-weight: 700;
-    line-height: 1.35;
+    font-size: var(--modal-fs-title);
+    font-weight: var(--modal-fw-title);
+    line-height: var(--modal-lh-title);
     text-align: left;
 }
 
@@ -736,9 +739,9 @@
 .adminMessage {
     margin: 0;
     color: var(--color-text-secondary);
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 1.7;
+    font-size: var(--modal-fs-body);
+    font-weight: var(--modal-fw-body);
+    line-height: var(--modal-lh-body);
     text-align: left;
     white-space: pre-line;
 }
@@ -756,8 +759,8 @@
     min-width: 88px;
     padding: 0 18px;
     border-radius: 999px;
-    font-size: 13px;
-    font-weight: 700;
+    font-size: var(--modal-fs-button-sm);
+    font-weight: var(--modal-fw-button);
     cursor: pointer;
     background-image: none;
 }
@@ -813,10 +816,12 @@
 .modalOverlay { padding: 20px; box-sizing: border-box; }
 .card {
     position: relative;
-    width: min(380px, calc(100vw - 40px));
-    padding: 22px 20px 18px;
+    width: var(--modal-shell-width);
+    max-width: var(--modal-shell-width);
+    padding: var(--modal-shell-padding);
     border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
-    border-radius: 18px;
+    border-radius: var(--modal-shell-radius);
+    box-sizing: border-box;
     background: var(--color-surface);
     color: var(--color-text);
     box-shadow: 0 24px 64px color-mix(in srgb, var(--color-shadow) 50%, transparent);
@@ -828,16 +833,27 @@
     font-size: 18px; line-height: 1; cursor: pointer;
 }
 .cardClose:hover { background: color-mix(in srgb, var(--color-text) 12%, transparent); color: var(--color-text); }
-.cardTitle { margin: 0 0 10px; padding-right: 36px; font-size: 17px; font-weight: 700; line-height: 1.4; }
+.cardTitle {
+    margin: 0 0 10px;
+    padding-right: 36px;
+    font-size: var(--modal-fs-title);
+    font-weight: var(--modal-fw-title);
+    line-height: var(--modal-lh-title);
+}
 .cardMessage {
-    color: var(--color-text-secondary); font-size: 14px; line-height: 1.65;
-    white-space: pre-line; word-break: break-word;
+    color: var(--color-text-secondary);
+    font-size: var(--modal-fs-body);
+    line-height: var(--modal-lh-body);
+    white-space: pre-line;
+    word-break: break-word;
 }
 .cardMessage .amountHighlight { color: var(--color-text); font-weight: 800; }
 .cardActions { display: flex; gap: 10px; margin-top: 20px; }
 .cardConfirm, .cardCancel {
     flex: 1; height: 44px; border-radius: 12px;
-    font-size: 14px; font-weight: 600; cursor: pointer;
+    font-size: var(--modal-fs-button);
+    font-weight: var(--modal-fw-button);
+    cursor: pointer;
     transition: background 0.15s, transform 0.1s;
 }
 .cardConfirm { background: var(--color-primary); color: var(--color-on-primary); }

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import adminTextLlmConfigApi, { type AdminTextLlmConfigData } from '../api/admin/textLlmConfigApi';
@@ -18,6 +19,10 @@ type GatewayForm = { baseUrl: string; fallback: string; apiKey: string; apiKeySe
 const emptyGateway = (): GatewayForm => ({ baseUrl: '', fallback: '', apiKey: '', apiKeySet: false, apiKeyHint: '', clearApiKey: false });
 
 const ModelConfigHub: React.FC = () => {
+  const { t } = useTranslation();
+  const capabilityLabel = (cap: 'text' | 'image') => (
+    cap === 'text' ? t('aiModelCenter.catalog.capabilityText') : t('aiModelCenter.catalog.capabilityImage')
+  );
   const [pane, setPane] = useState<Pane>('text');
   const [textGateway, setTextGateway] = useState(emptyGateway);
   const [imageGateway, setImageGateway] = useState(emptyGateway);
@@ -53,9 +58,9 @@ const ModelConfigHub: React.FC = () => {
       if (textResponse.data.data) applyTextConfig(textResponse.data.data);
       if (imageResponse.data.data) applyImageConfig(imageResponse.data.data);
       setModels(modelsResponse.data.data?.items || []);
-    } catch (error) { toast.error(getApiErrorMessage(error, '运行配置加载失败')); }
+    } catch (error) { toast.error(getApiErrorMessage(error, t('aiModelCenter.configHub.loadFailed'))); }
     finally { setLoading(false); }
-  }, []);
+  }, [t]);
 
   useEffect(() => { void load(); }, [load]);
   const grouped = useMemo(() => toModelCatalogCards(models), [models]);
@@ -93,7 +98,7 @@ const ModelConfigHub: React.FC = () => {
       }
       setApiKeyVisible((current) => ({ ...current, [capability]: true }));
     } catch (error) {
-      toast.error(getApiErrorMessage(error, '密钥读取失败'));
+      toast.error(getApiErrorMessage(error, t('aiModelCenter.configHub.apiKeyReadFailed')));
     } finally {
       setApiKeyLoading(null);
     }
@@ -114,13 +119,13 @@ const ModelConfigHub: React.FC = () => {
       if (response.data.data) applyImageConfig(response.data.data);
     }
     setApiKeyVisible((current) => ({ ...current, [capability]: false }));
-    if (showToast) toast.success(`${capability === 'text' ? '生文' : '生图'}网关已保存`);
+    if (showToast) toast.success(t('aiModelCenter.configHub.gatewaySaved', { capability: capabilityLabel(capability) }));
   };
 
   const handleSave = async () => {
     setSaving(true);
     try { await saveGateway(pane); }
-    catch (error) { toast.error(getApiErrorMessage(error, '网关保存失败')); }
+    catch (error) { toast.error(getApiErrorMessage(error, t('aiModelCenter.configHub.gatewaySaveFailed'))); }
     finally { setSaving(false); }
   };
 
@@ -135,72 +140,72 @@ const ModelConfigHub: React.FC = () => {
       const ids = response.data.data?.models || [];
       setFetched((current) => ({ ...current, [pane]: ids }));
       setImportCapability(pane);
-    } catch (error) { toast.error(getApiErrorMessage(error, '模型拉取失败')); }
+    } catch (error) { toast.error(getApiErrorMessage(error, t('aiModelCenter.configHub.fetchModelsFailed'))); }
     finally { setSaving(false); }
   };
 
   const handleImport = async (capability: AiModelCapability, modelIds: string[]) => {
     try {
       await aiModelCatalogApi.importModels({ capability, modelIds });
-      toast.success(`已导入 ${modelIds.length} 个模型`);
+      toast.success(t('aiModelCenter.configHub.importedModels', { count: modelIds.length }));
       await load();
-    } catch (error) { throw new Error(getApiErrorMessage(error, '模型导入失败')); }
+    } catch (error) { throw new Error(getApiErrorMessage(error, t('aiModelCenter.configHub.importFailed'))); }
   };
 
   const handleActivate = async (model: AiModelCatalogCard) => {
     if (model.active) return;
-    if (!window.confirm(`确认将 ${model.displayName} 设为全平台${model.capability === 'text' ? '生文' : '生图'}模型？`)) return;
+    if (!window.confirm(t('aiModelCenter.configHub.activateConfirm', { name: model.displayName, capability: capabilityLabel(model.capability) }))) return;
     setActivatingId(model.id);
     try {
       await aiModelCatalogApi.activateModel(model.id, model.capability);
-      toast.success('模型已启用');
+      toast.success(t('aiModelCenter.configHub.modelActivated'));
       await load();
-    } catch (error) { toast.error(getApiErrorMessage(error, '模型启用失败')); }
+    } catch (error) { toast.error(getApiErrorMessage(error, t('aiModelCenter.configHub.activateFailed'))); }
     finally { setActivatingId(null); }
   };
 
   const handleDeactivate = async (model: AiModelCatalogCard) => {
-    if (!window.confirm(`确认停用生图模型 ${model.displayName}？正在被业务场景使用时将无法停用。`)) return;
+    if (!window.confirm(t('aiModelCenter.configHub.deactivateConfirm', { name: model.displayName }))) return;
     setDeactivatingId(model.id);
     try {
       await aiModelCatalogApi.deactivateModel(model.id);
-      toast.success('生图模型已停用');
+      toast.success(t('aiModelCenter.configHub.imageModelDeactivated'));
       await load();
-    } catch (error) { toast.error(getApiErrorMessage(error, '模型停用失败')); }
+    } catch (error) { toast.error(getApiErrorMessage(error, t('aiModelCenter.configHub.deactivateFailed'))); }
     finally { setDeactivatingId(null); }
   };
 
-  if (loading) return <div className={styles.loading}>加载运行配置…</div>;
+  if (loading) return <div className={styles.loading}>{t('aiModelCenter.configHub.loading')}</div>;
   return <div className={styles.root}>
     <header className={styles.masthead} data-watermark={pane === 'text' ? 'TXT' : 'IMG'}>
-      <div className={styles.mastTop}><span className={styles.badge}>运行配置 · MODEL HUB</span><div className={styles.rail} role="tablist" aria-label="模型能力切换"><span className={`${styles.railThumb} ${pane === 'image' ? styles.railThumbImage : styles.railThumbText}`} aria-hidden /><button type="button" role="tab" aria-selected={pane === 'text'} className={`${styles.railBtn} ${pane === 'text' ? styles.railBtnActive : ''}`} onClick={() => handlePaneChange('text')}>生文配置</button><button type="button" role="tab" aria-selected={pane === 'image'} className={`${styles.railBtn} ${pane === 'image' ? styles.railBtnActive : ''}`} onClick={() => handlePaneChange('image')}>生图配置</button></div></div>
-      <h2 className={styles.mastTitle}>{pane === 'text' ? '全平台统一生文模型' : '各业务场景独立选择生图模型'}</h2>
-      <p className={styles.mastDesc}>管理员维护 URL 与密钥，从上游拉取模型后导入目录。模型 ID 不允许手填；生文模型在价格生效后启用，生图模型由各业务场景独立选择。</p>
-      <div className={styles.mastActions}><button type="button" className={styles.ghostBtn} onClick={() => void load()} disabled={saving}>刷新</button><button type="button" className={styles.saveBtn} onClick={() => void handleSave()} disabled={saving}>{saving ? '处理中…' : '保存网关配置'}</button></div>
+      <div className={styles.mastTop}><span className={styles.badge}>{t('aiModelCenter.configHub.badge')}</span><div className={styles.rail} role="tablist" aria-label={t('aiModelCenter.configHub.capabilitySwitchAria')}><span className={`${styles.railThumb} ${pane === 'image' ? styles.railThumbImage : styles.railThumbText}`} aria-hidden /><button type="button" role="tab" aria-selected={pane === 'text'} className={`${styles.railBtn} ${pane === 'text' ? styles.railBtnActive : ''}`} onClick={() => handlePaneChange('text')}>{t('aiModelCenter.configHub.textConfigTab')}</button><button type="button" role="tab" aria-selected={pane === 'image'} className={`${styles.railBtn} ${pane === 'image' ? styles.railBtnActive : ''}`} onClick={() => handlePaneChange('image')}>{t('aiModelCenter.configHub.imageConfigTab')}</button></div></div>
+      <h2 className={styles.mastTitle}>{pane === 'text' ? t('aiModelCenter.configHub.textMastTitle') : t('aiModelCenter.configHub.imageMastTitle')}</h2>
+      <p className={styles.mastDesc}>{t('aiModelCenter.configHub.mastDesc')}</p>
+      <div className={styles.mastActions}><button type="button" className={styles.ghostBtn} onClick={() => void load()} disabled={saving}>{t('aiModelCenter.configHub.refresh')}</button><button type="button" className={styles.saveBtn} onClick={() => void handleSave()} disabled={saving}>{saving ? t('aiModelCenter.configHub.processing') : t('aiModelCenter.configHub.saveGateway')}</button></div>
     </header>
-    <div className={styles.pane} role="tabpanel" aria-label={pane === 'text' ? '生文运行配置' : '生图运行配置'}>
+    <div className={styles.pane} role="tabpanel" aria-label={pane === 'text' ? t('aiModelCenter.configHub.textPanelAria') : t('aiModelCenter.configHub.imagePanelAria')}>
       <div className={styles.mainCol}>
         <section className={styles.panel}>
-          <div className={styles.panelHead}><h3 className={styles.panelTitle}>{pane === 'text' ? '生文' : '生图'}请求设置</h3><p className={styles.panelHint}>密钥仅管理员可按需显示</p></div>
-          <label className={styles.fieldLabel}>API 地址<input className={styles.fieldInput} type="url" value={currentGateway.baseUrl} placeholder={currentGateway.fallback} onChange={(e) => setCurrentGateway({ ...currentGateway, baseUrl: e.target.value })} autoComplete="off" /></label>
-          <p className={styles.fieldHint}>留空时使用服务器默认地址：<strong>{currentGateway.fallback || '未配置'}</strong></p>
+          <div className={styles.panelHead}><h3 className={styles.panelTitle}>{t('aiModelCenter.configHub.requestSettings', { capability: capabilityLabel(pane) })}</h3><p className={styles.panelHint}>{t('aiModelCenter.configHub.apiKeyAdminHint')}</p></div>
+          <label className={styles.fieldLabel}>{t('aiModelCenter.configHub.apiUrl')}<input className={styles.fieldInput} type="url" value={currentGateway.baseUrl} placeholder={currentGateway.fallback} onChange={(e) => setCurrentGateway({ ...currentGateway, baseUrl: e.target.value })} autoComplete="off" /></label>
+          <p className={styles.fieldHint}>{t('aiModelCenter.configHub.defaultUrlHint')}<strong>{currentGateway.fallback || t('aiModelCenter.configHub.notConfigured')}</strong></p>
           <div className={styles.fieldLabel}>
-            <label htmlFor={`${pane}-gateway-api-key`}>API 密钥</label>
+            <label htmlFor={`${pane}-gateway-api-key`}>{t('aiModelCenter.configHub.apiKeyLabel')}</label>
             <div className={styles.apiKeyInputWrap}>
-              <input id={`${pane}-gateway-api-key`} className={`${styles.fieldInput} ${styles.fieldInputWithToggle}`} type={apiKeyVisible[pane] ? 'text' : 'password'} value={currentGateway.apiKey} placeholder={currentGateway.apiKeySet ? `已保存 ${currentGateway.apiKeyHint || '••••'}，留空不修改` : '请输入密钥'} onChange={(e) => setCurrentGateway({ ...currentGateway, apiKey: e.target.value, clearApiKey: false })} disabled={currentGateway.clearApiKey || apiKeyLoading === pane} autoComplete="new-password" />
-              <button type="button" className={styles.apiKeyToggle} onClick={() => void handleToggleApiKey()} disabled={currentGateway.clearApiKey || apiKeyLoading === pane} aria-busy={apiKeyLoading === pane} aria-label={apiKeyLoading === pane ? '正在读取 API 密钥' : apiKeyVisible[pane] ? '隐藏 API 密钥' : '显示 API 密钥'} title={apiKeyVisible[pane] ? '隐藏 API 密钥' : '显示 API 密钥'}>
+              <input id={`${pane}-gateway-api-key`} className={`${styles.fieldInput} ${styles.fieldInputWithToggle}`} type={apiKeyVisible[pane] ? 'text' : 'password'} value={currentGateway.apiKey} placeholder={currentGateway.apiKeySet ? t('aiModelCenter.configHub.apiKeySavedHint', { hint: currentGateway.apiKeyHint || '••••' }) : t('aiModelCenter.configHub.apiKeyPlaceholder')} onChange={(e) => setCurrentGateway({ ...currentGateway, apiKey: e.target.value, clearApiKey: false })} disabled={currentGateway.clearApiKey || apiKeyLoading === pane} autoComplete="new-password" />
+              <button type="button" className={styles.apiKeyToggle} onClick={() => void handleToggleApiKey()} disabled={currentGateway.clearApiKey || apiKeyLoading === pane} aria-busy={apiKeyLoading === pane} aria-label={apiKeyLoading === pane ? t('aiModelCenter.configHub.readingApiKeyAria') : apiKeyVisible[pane] ? t('aiModelCenter.configHub.hideApiKeyAria') : t('aiModelCenter.configHub.showApiKeyAria')} title={apiKeyVisible[pane] ? t('aiModelCenter.configHub.hideApiKeyAria') : t('aiModelCenter.configHub.showApiKeyAria')}>
                 {apiKeyLoading === pane ? <span className={styles.apiKeySpinner} aria-hidden /> : apiKeyVisible[pane] ? <FiEye size={18} /> : <FiEyeOff size={18} />}
               </button>
             </div>
           </div>
-          {currentGateway.apiKeySet ? <label className={styles.checkRow}><input type="checkbox" checked={currentGateway.clearApiKey} onChange={(e) => { setCurrentGateway({ ...currentGateway, clearApiKey: e.target.checked, apiKey: e.target.checked ? '' : currentGateway.apiKey }); if (e.target.checked) setApiKeyVisible((current) => ({ ...current, [pane]: false })); }} />清除已保存密钥</label> : null}
-          <div className={styles.modelFetchRow}><p className={styles.fieldHint} style={{ margin: 0, flex: 1 }}>“保存并拉取模型”会先保存当前网关，再读取上游模型列表供多选导入。</p><button type="button" className={styles.fetchBtn} onClick={() => void handleFetch()} disabled={saving}>{saving ? '处理中…' : '保存并拉取模型'}</button></div>
+          {currentGateway.apiKeySet ? <label className={styles.checkRow}><input type="checkbox" checked={currentGateway.clearApiKey} onChange={(e) => { setCurrentGateway({ ...currentGateway, clearApiKey: e.target.checked, apiKey: e.target.checked ? '' : currentGateway.apiKey }); if (e.target.checked) setApiKeyVisible((current) => ({ ...current, [pane]: false })); }} />{t('aiModelCenter.configHub.clearSavedKey')}</label> : null}
+          <div className={styles.modelFetchRow}><p className={styles.fieldHint} style={{ margin: 0, flex: 1 }}>{t('aiModelCenter.configHub.fetchHint')}</p><button type="button" className={styles.fetchBtn} onClick={() => void handleFetch()} disabled={saving}>{saving ? t('aiModelCenter.configHub.processing') : t('aiModelCenter.configHub.saveAndFetch')}</button></div>
         </section>
         <section className={styles.panel}>
-          <div className={styles.panelHead}><h3 className={styles.panelTitle}>{pane === 'text' ? '生文' : '生图'}模型目录</h3><p className={styles.panelHint}>{currentModels.length} 个模型</p></div>
+          <div className={styles.panelHead}><h3 className={styles.panelTitle}>{t('aiModelCenter.configHub.modelCatalog', { capability: capabilityLabel(pane) })}</h3><p className={styles.panelHint}>{t('aiModelCenter.configHub.modelCount', { count: currentModels.length })}</p></div>
           <ModelCatalogCards
             items={currentModels}
-            emptyText="尚无模型，请先保存网关并拉取模型。"
+            emptyText={t('aiModelCenter.configHub.emptyCatalog')}
             onEdit={setEditing}
             onActivate={pane === 'text' ? (model) => void handleActivate(model) : undefined}
             onDeactivate={pane === 'image' ? (model) => void handleDeactivate(model) : undefined}
@@ -210,7 +215,7 @@ const ModelConfigHub: React.FC = () => {
           />
         </section>
         {pane === 'image' ? <section className={styles.panel}>
-          <div className={styles.panelHead}><h3 className={styles.panelTitle}>业务模块配置</h3><p className={styles.panelHint}>保存后仅影响新请求</p></div>
+          <div className={styles.panelHead}><h3 className={styles.panelTitle}>{t('aiModelCenter.configHub.businessModule')}</h3><p className={styles.panelHint}>{t('aiModelCenter.configHub.businessModuleHint')}</p></div>
           <ImageBusinessConfigPanel />
         </section> : null}
       </div>

@@ -13,13 +13,17 @@ import { valueSources } from "../game/valueSources";
 import {
   defaultPathLockCond,
   formatPathLockHint,
+  isPathLockCond,
   PATH_LOCK_COND_KINDS,
+  PATH_LOCK_KIND_LABEL,
+  type PathLockCond,
   sanitizePathAttrNames,
   sanitizePathLockConds,
   type PathDepPools,
   type PathLockCondKind,
 } from "../lib/pathDeps";
 import { platformNpcTagsPromptLine, normalizeNpcTags } from "../lib/npcTags";
+import { asModArray } from "../lib/asModArray";
 import { improperPersonNameReason, sanitizeNpcFactionId } from "../lib/personName";
 import type { CmpOp, FixedCond } from "../lib/types";
 import { CMP_OPS } from "../lib/types";
@@ -124,11 +128,12 @@ const inp = "min-w-0 w-full rounded-lg border border-line bg-paper px-2 py-1 tex
 const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
 const num = (v: unknown) => Math.round(Number(v) || 0);
 
-export default function ModPathsEditor({ creation, identities, world, npcs = [], rooms = [], events = [], storylines = [], statsValue, attrsValue, onChange, onMergeNpcs }: {
+export default function ModPathsEditor({ creation, identities, world, npcs = [], rooms = [], events = [], endings = [], storylines = [], statsValue, attrsValue, onChange, onMergeNpcs }: {
   creation?: CreationCopy; identities?: Option[]; world: string;
   npcs?: { id: string; name: string }[]; // 可配开局人际 / 预设主角的固定人物
   rooms?: { id: string; name: string }[]; // 可选的开局地点
   events?: { id: string; name: string }[]; // 事件库（绑定开局事件）
+  endings?: { id: string; title: string }[]; // 结局（跨周目解锁条件）
   storylines?: RouteStoryline[]; // 主线（关联后按节点顺序生成路线图）
   statsValue?: import("../game/data").StatsSlot; attrsValue?: import("../lib/types").AttrDef[]; // 全局属性池来源（正在编辑的模组）
   onChange: (p: { creation: CreationCopy; identities: Option[] }) => void;
@@ -154,11 +159,9 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
   })();
   // 功能注释：线路解锁共用依赖池；选项必须来自本作品配置
   const depPools: PathDepPools = {
-    stats: STAT_ORDER.map((k) => ({ id: k, label: STAT_LABELS[k] || k })),
-    metrics: srcList.filter((s) => s.kind === "metric").map((s) => ({ id: s.key, label: s.label })),
-    people: peopleOpts.map((p) => ({ id: p.id, label: p.name })),
-    rooms: rooms.map((r) => ({ id: r.id, label: r.name })),
     events: events.map((e) => ({ id: e.id, label: e.name || e.id })),
+    endings: endings.map((e) => ({ id: e.id, label: e.title || e.id })),
+    routes: asModArray<{ id: string; name?: string }>(creation?.paths).map((p: { id: string; name?: string }) => ({ id: p.id, label: String(p.name || p.id) })),
   };
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -251,9 +254,10 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
 
   return (
     <div className="space-y-2.5">
-      <div className="flex items-center justify-between gap-2 rounded-xl bg-gradient-to-r from-jade/10 to-coral/10 px-3 py-2">
-        <p className="text-[11.5px] leading-snug text-ink-soft">让 AI 按这个世界观生成人物线路，并一并生成相关人物资料（姓名 / 年龄 / 性别 / 简介）。多条路径开局会让玩家选；只有一条则直接用。</p>
-        <button className={`${btn} shrink-0 inline-flex items-center gap-1 !border-transparent bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] !text-white`} disabled={busy} onClick={aiGen}>{busy ? "生成中…" : <><IconSpark size={14} /> AI 生成</>}</button>
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line/70 bg-paper-2/50 px-3 py-2.5">
+        <p className="min-w-0 flex-1 text-[11.5px] leading-snug text-ink-soft">按本作品设定生成人物线路，并附带相关人物资料。多条开局可选，一条则直接用。</p>
+        {/* 功能注释：用实心主色按钮，避免渐变 + !text-white 被 skin-cute / 创作壳洗成浅底白字看不见 */}
+        <button type="button" className="wg-ai-action shrink-0 inline-flex items-center gap-1 rounded-full bg-jade px-3.5 py-1.5 text-[12px] font-bold text-white shadow-sm transition hover:brightness-105 disabled:opacity-40" disabled={busy} onClick={aiGen}>{busy ? "生成中…" : <><IconSpark size={14} /> AI 生成</>}</button>
       </div>
       {err && <p className="text-[11px] text-danger">{err}</p>}
 
@@ -275,24 +279,15 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
                 className={`${btn} shrink-0 ${p.open ? "!border-jade bg-jade/10 !text-jade" : "!border-coral/50 bg-coral/10 !text-coral"}`}
                 onClick={() => setPath(i, { open: !p.open })}
               >
-                {p.open ? <><IconCheck size={14} /> 已解锁</> : <><IconLock size={14} /> {p.lockTag || "未解锁"}</>}
+                {p.open ? <><IconCheck size={14} /> 已解锁</> : <><IconLock size={14} /> 未解锁</>}
               </button>
               <button className={`${btn} shrink-0`} onClick={() => remove(i)} aria-label="删除"><IconClose size={14} /></button>
             </div>
             {!p.open && (
               <div className="space-y-1.5 rounded-lg border border-dashed border-coral/40 bg-coral/[0.04] p-2">
-                <label className="block text-[10.5px] text-ink-soft">
-                  未解锁角标
-                  <input
-                    className={`${inp} mt-0.5 max-w-[10rem]`}
-                    value={p.lockTag ?? ""}
-                    placeholder="未解锁"
-                    onChange={(e) => setPath(i, { lockTag: e.target.value || undefined })}
-                  />
-                </label>
                 <PathLockCondsEditor
                   value={Array.isArray(p.lockConds) ? p.lockConds : []}
-                  pools={depPools}
+                  pools={{ ...depPools, routes: depPools.routes.filter((o) => o.id !== p.id) }}
                   onChange={(lockConds) => {
                     const cleaned = sanitizePathLockConds(lockConds, depPools);
                     setPath(i, {
@@ -305,30 +300,34 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
             )}
             <textarea rows={2} className={inp} value={String(p.blurb ?? "")} placeholder="线路简介（卡片上显示，仅给玩家看）" onChange={(e) => setPath(i, { blurb: e.target.value })} />
             <textarea rows={3} className={inp} value={String(p.about ?? "")} placeholder="展开详情：开局处境（第二人称「你」，仅给玩家看）" onChange={(e) => setPath(i, { about: e.target.value })} />
-            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-              <AttrNamePick
-                title="可变自由决定"
-                hint="从本作品属性里选 · 不可手填"
-                value={Array.isArray(p.choose) ? p.choose : []}
-                options={attrOpts}
-                onChange={(choose) => setPath(i, { choose })}
-              />
-              <AttrNamePick
-                title="固定不可改"
-                hint="从本作品属性里选 · 不可手填"
-                value={Array.isArray(p.fixed) ? p.fixed : []}
-                options={attrOpts}
-                onChange={(fixed) => setPath(i, { fixed })}
-              />
-            </div>
+            <AttrNamePick
+              title="锁定属性"
+              hint="选这条线路时，这些属性固定为初始值，玩家不能改；没选的照常可调"
+              value={Array.isArray(p.fixed) ? p.fixed : []}
+              options={attrOpts}
+              onChange={(fixed) => setPath(i, { fixed })}
+            />
             <div className="space-y-1.5 rounded-lg border border-line/70 bg-paper p-2">
               <p className="text-[11px] text-ink-soft"><b className="font-semibold text-ink">开局状态</b> · 选这条线路时专属的主角与开局；没被选中的预设主角照常作为 NPC 生活</p>
               <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                 <label className="text-[10.5px] text-ink-soft">预设主角
-                  <select className={`${inp} mt-0.5`} value={p.hero ?? ""} onChange={(e) => setPath(i, { hero: e.target.value || undefined })}>
-                    <option value="">不绑定（玩家自建主角）</option>
+                  <select
+                    className={`${inp} mt-0.5`}
+                    value={p.hero ?? (p.heroCustom ? "__custom" : "")}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "__custom") setPath(i, { hero: undefined, heroCustom: p.heroCustom ?? { name: "" } });
+                      else setPath(i, { hero: v || undefined, heroCustom: undefined });
+                    }}
+                  >
+                    <option value="">不预设（玩家自建主角）</option>
+                    <option value="__custom">＋ 新建一位主角（不用已有人物）</option>
                     {p.hero && !npcs.some((x) => x.id === p.hero) && <option value={p.hero}>{p.hero}（已失效）</option>}
-                    {npcs.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                    {npcs.length > 0 && (
+                      <optgroup label="从已有人物中选">
+                        {npcs.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                      </optgroup>
+                    )}
                   </select>
                 </label>
                 <label className="text-[10.5px] text-ink-soft">开局地点
@@ -339,6 +338,14 @@ export default function ModPathsEditor({ creation, identities, world, npcs = [],
                   </select>
                 </label>
               </div>
+              {!p.hero && p.heroCustom && (
+                <div className="grid grid-cols-1 gap-1.5 rounded-lg border border-dashed border-line bg-paper-2/60 p-2 sm:grid-cols-[1fr_5rem_5rem]">
+                  <input className={`${inp} ${p.heroCustom.name?.trim() ? "" : "!border-danger"}`} value={p.heroCustom.name ?? ""} placeholder="主角姓名（必填）" onChange={(e) => setPath(i, { heroCustom: { ...p.heroCustom!, name: e.target.value } })} />
+                  <input className={inp} type="number" min={0} value={p.heroCustom.age ?? ""} placeholder="年龄" onChange={(e) => setPath(i, { heroCustom: { ...p.heroCustom!, age: e.target.value ? Number(e.target.value) : undefined } })} />
+                  <input className={inp} value={p.heroCustom.gender ?? ""} placeholder="性别" onChange={(e) => setPath(i, { heroCustom: { ...p.heroCustom!, gender: e.target.value || undefined } })} />
+                  <textarea rows={2} className={`${inp} sm:col-span-3`} value={p.heroCustom.bio ?? ""} placeholder="主角简介：身份、性格、处境（开局写进主角档案，玩家仍可微调）" onChange={(e) => setPath(i, { heroCustom: { ...p.heroCustom!, bio: e.target.value || undefined } })} />
+                </div>
+              )}
               <label className="block text-[10.5px] text-ink-soft">专属前置记忆（写进主角档案 · 仅文案，AI 可读）
                 <textarea rows={2} className={`${inp} mt-0.5`} value={p.memory ?? ""} placeholder="如：三年前在雨夜救过一只流浪猫，至今记得那家便利店" onChange={(e) => setPath(i, { memory: e.target.value || undefined })} />
               </label>
@@ -421,91 +428,61 @@ function DepNumRows<T extends { val: number }>({ title, hint, rows, nameOf, setN
   );
 }
 
-/** 功能注释：解锁条件编辑——从属性/人物/地点/事件选，填比较或勾选；禁止手打长文 */
+/** 功能注释：解锁条件编辑——跨周目判定（本机过往游戏记录），全部满足后这条线路出现在开局选择里 */
 export function PathLockCondsEditor({ value, pools, onChange }: {
-  value: FixedCond[]; pools: PathDepPools; onChange: (v: FixedCond[]) => void;
+  value: PathLockCond[]; pools: PathDepPools; onChange: (v: PathLockCond[]) => void;
 }) {
-  const set = (i: number, c: FixedCond) => onChange(value.map((x, j) => (j === i ? c : x)));
-  const hint = formatPathLockHint(value, pools);
-  const kindLabel: Record<PathLockCondKind, string> = {
-    stat: "主角属性", metric: "指标/自定义属性", rel: "人物好感", location: "当前地点", event: "已触发事件",
-  };
+  const list = value.filter(isPathLockCond);
+  const set = (i: number, c: PathLockCond) => onChange(list.map((x, j) => (j === i ? c : x)));
+  const hint = formatPathLockHint(list, pools);
+  const poolOf = (k: PathLockCondKind) => (k === "ending" ? pools.endings : k === "route" ? pools.routes : pools.events);
+  const emptyOf: Record<PathLockCondKind, string> = { clear: "", ending: "本作品还没有结局，先在「结局」里添加", route: "没有其他线路可选", event: "本作品还没有事件，先在「事件」里添加" };
   return (
     <div className="space-y-1.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[11px] text-ink-soft"><b className="font-semibold text-ink">解锁条件</b> · 从已有配置选择；未选中的不生效</p>
+        <p className="min-w-0 flex-1 text-[11px] leading-relaxed text-ink-soft">
+          <b className="font-semibold text-ink">解锁条件</b> · 按玩家<b className="font-semibold text-ink">以往的游戏记录</b>判定（跨周目），全部满足后这条线路才会出现在开局选择里
+        </p>
         <select
-          className={`${inp} !w-auto max-w-[11rem]`}
+          className={`${inp} !w-auto max-w-[13rem]`}
           value=""
           aria-label="添加解锁条件"
           onChange={(e) => {
             const kind = e.target.value as PathLockCondKind;
             if (!kind) return;
-            onChange([...value, defaultPathLockCond(kind, pools)]);
+            onChange([...list, defaultPathLockCond(kind, pools)]);
             e.target.value = "";
           }}
         >
           <option value="">＋ 添加条件…</option>
-          {PATH_LOCK_COND_KINDS.map((k) => <option key={k} value={k}>{kindLabel[k]}</option>)}
+          {PATH_LOCK_COND_KINDS.map((k) => (
+            <option key={k} value={k} disabled={k === "clear" ? list.some((c) => c.kind === "clear") : !poolOf(k).length}>{PATH_LOCK_KIND_LABEL[k]}</option>
+          ))}
         </select>
       </div>
-      {value.map((c, i) => {
-        if (!PATH_LOCK_COND_KINDS.includes(c.kind as PathLockCondKind)) return null;
-        const kind = c.kind as PathLockCondKind;
-        const opts = kind === "stat" ? pools.stats : kind === "metric" ? pools.metrics : kind === "rel" ? pools.people : kind === "location" ? pools.rooms : pools.events;
+      {list.map((c, i) => {
+        const k = c.kind;
+        const opts = k === "clear" ? [] : poolOf(k);
         const key = "key" in c ? c.key : "";
         return (
           <div key={i} className="flex flex-wrap items-center gap-1.5 rounded-lg bg-paper/60 px-2 py-1.5">
-            <span className="text-[11px] font-semibold text-ink-soft">{kindLabel[kind]}</span>
-            <select
-              className={inp}
-              value={key}
-              onChange={(e) => {
-                const nextKey = e.target.value;
-                if (kind === "stat") set(i, { kind: "stat", key: nextKey, op: ("op" in c ? c.op : "gte") as CmpOp, value: "value" in c ? Number(c.value) || 0 : 0 });
-                else if (kind === "metric") set(i, { kind: "metric", key: nextKey, op: ("op" in c ? c.op : "gte") as CmpOp, value: "value" in c ? Number(c.value) || 0 : 0 });
-                else if (kind === "rel") set(i, { kind: "rel", key: nextKey, op: ("op" in c ? c.op : "gte") as CmpOp, value: "value" in c ? Number(c.value) || 0 : 0 });
-                else if (kind === "location") set(i, { kind: "location", key: nextKey });
-                else set(i, { kind: "event", key: nextKey });
-              }}
-            >
-              <option value="">（请选择）</option>
-              {key && !opts.some((o) => o.id === key) && <option value={key}>{key}（已失效）</option>}
-              {opts.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-            </select>
-            {(kind === "stat" || kind === "metric" || kind === "rel") && (
-              <>
-                <select
-                  className={`${inp} !w-16`}
-                  value={"op" in c ? c.op : "gte"}
-                  onChange={(e) => {
-                    if (kind === "stat") set(i, { kind: "stat", key, op: e.target.value as CmpOp, value: "value" in c ? Number(c.value) || 0 : 0 });
-                    else if (kind === "metric") set(i, { kind: "metric", key, op: e.target.value as CmpOp, value: "value" in c ? Number(c.value) || 0 : 0 });
-                    else set(i, { kind: "rel", key, op: e.target.value as CmpOp, value: "value" in c ? Number(c.value) || 0 : 0 });
-                  }}
-                >
-                  {CMP_OPS.map((o) => <option key={o.v} value={o.v}>{o.t}</option>)}
-                </select>
-                <input
-                  type="number"
-                  className={`${inp} !w-20`}
-                  value={"value" in c ? c.value : 0}
-                  onChange={(e) => {
-                    const value = Number(e.target.value) || 0;
-                    const op = ("op" in c ? c.op : "gte") as CmpOp;
-                    if (kind === "stat") set(i, { kind: "stat", key, op, value });
-                    else if (kind === "metric") set(i, { kind: "metric", key, op, value });
-                    else set(i, { kind: "rel", key, op, value });
-                  }}
-                />
-              </>
+            <span className="text-[11px] font-semibold text-ink">{PATH_LOCK_KIND_LABEL[k]}</span>
+            {k === "clear" ? (
+              <span className="flex-1 text-[11px] text-ink-soft">玩家在本作品打出过任意一个结局</span>
+            ) : opts.length ? (
+              <select className={`${inp} min-w-0 flex-1`} value={key} onChange={(e) => set(i, { kind: k, key: e.target.value })}>
+                {key && !opts.some((o) => o.id === key) && <option value={key}>{key}（已失效）</option>}
+                {opts.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+              </select>
+            ) : (
+              <span className="flex-1 text-[11px] text-gold">{emptyOf[k]}</span>
             )}
-            <button type="button" className={`${btn} shrink-0`} onClick={() => onChange(value.filter((_, j) => j !== i))} aria-label="删除条件">×</button>
+            <button type="button" className={`${btn} shrink-0`} onClick={() => onChange(list.filter((_, j) => j !== i))} aria-label="删除条件">×</button>
           </div>
         );
       })}
-      {!value.length && <p className="text-[10.5px] text-ink-soft/80">（无条件 = 仅靠手动「已解锁 / 未解锁」开关）</p>}
-      {hint ? <p className="text-[10.5px] text-coral/90">解锁提示：{hint}</p> : null}
+      {!list.length && <p className="text-[10.5px] text-ink-soft/80">（无条件 = 一直锁着，只能手动改成「已解锁」）</p>}
+      {hint ? <p className="text-[10.5px] text-coral/90">玩家会看到：{hint}</p> : null}
     </div>
   );
 }

@@ -1,92 +1,82 @@
 /**
- * 人物线路依赖契约：解锁条件 / 开局数值只认已有配置（属性、人物、地点、事件）。
+ * 人物线路依赖契约：解锁条件（跨周目记录）/ 开局数值只认已有配置。
  * 未选中的依赖开局不生效；纯文案（简介、处境）不走本模块。
  */
-import type { CmpOp, FixedCond } from "./types.ts";
-import { CMP_OPS, cmpSym } from "./types.ts";
 import { normRouteFx, type RouteFx, type RouteFavor, type RouteNum } from "../game/routeFx.ts";
 
-/** 功能注释：线路解锁允许的条件种类（从已有配置选，禁止手打长文） */
-export const PATH_LOCK_COND_KINDS = ["stat", "metric", "rel", "location", "event"] as const;
+/**
+ * 功能注释：线路解锁 = 跨周目条件。建角时还没有本局数值，所以只认「本机过往游戏记录」：
+ * clear 二周目（通关任意结局一次）/ ending 达成过指定结局 / route 用指定线路通关过 / event 任意一局触发过指定事件（任务）。
+ */
+export const PATH_LOCK_COND_KINDS = ["clear", "ending", "route", "event"] as const;
 export type PathLockCondKind = (typeof PATH_LOCK_COND_KINDS)[number];
+export type PathLockCond =
+  | { kind: "clear" }
+  | { kind: "ending"; key: string }
+  | { kind: "route"; key: string }
+  | { kind: "event"; key: string };
 
 export type PathDepOption = { id: string; label: string };
 
 export type PathDepPools = {
-  stats: PathDepOption[];
-  metrics: PathDepOption[];
-  people: PathDepOption[];
-  rooms: PathDepOption[];
   events: PathDepOption[];
+  endings: PathDepOption[];
+  routes: PathDepOption[];
+  stats?: PathDepOption[];
+  metrics?: PathDepOption[];
+  people?: PathDepOption[];
+  rooms?: PathDepOption[];
 };
 
-const OP_LABEL: Record<string, string> = Object.fromEntries(CMP_OPS.map((o) => [o.v, o.t]));
+export const PATH_LOCK_KIND_LABEL: Record<PathLockCondKind, string> = {
+  clear: "二周目：通关过任意结局",
+  ending: "达成过指定结局",
+  route: "用指定线路通关过",
+  event: "完成过指定事件 / 任务",
+};
 
 function labelOf(opts: PathDepOption[], id: string): string {
   return opts.find((o) => o.id === id)?.label || id || "（未选）";
 }
 
-/** 功能注释：把结构化解锁条件编成建角卡片上的短提示；无条件则空串 */
-export function formatPathLockHint(
-  conds: FixedCond[] | null | undefined,
-  pools: PathDepPools,
-): string {
+/** 功能注释：建角卡片上的解锁提示；无条件则空串 */
+export function formatPathLockHint(conds: unknown, pools: PathDepPools): string {
   const list = (Array.isArray(conds) ? conds : []).filter(isPathLockCond);
   if (!list.length) return "";
   return list
     .map((c) => {
-      if (c.kind === "stat") return `${labelOf(pools.stats, c.key)} ${OP_LABEL[c.op] ?? cmpSym(c.op)} ${c.value}`;
-      if (c.kind === "metric") return `${labelOf(pools.metrics, c.key)} ${OP_LABEL[c.op] ?? cmpSym(c.op)} ${c.value}`;
-      if (c.kind === "rel") return `与${labelOf(pools.people, c.key)}好感 ${OP_LABEL[c.op] ?? cmpSym(c.op)} ${c.value}`;
-      if (c.kind === "location") return `当前地点为「${labelOf(pools.rooms, c.key)}」`;
-      if (c.kind === "event") return `已触发事件「${labelOf(pools.events, c.key)}」`;
-      return "";
+      if (c.kind === "clear") return "通关任意结局一次（二周目）";
+      if (c.kind === "ending") return `达成结局「${labelOf(pools.endings, c.key)}」`;
+      if (c.kind === "route") return `用「${labelOf(pools.routes, c.key)}」线路通关`;
+      return `在任意一局完成「${labelOf(pools.events, c.key)}」`;
     })
-    .filter(Boolean)
-    .join(" · ");
+    .join(" · ") + "后解锁";
 }
 
-export function isPathLockCond(c: FixedCond | null | undefined): c is Extract<FixedCond, { kind: PathLockCondKind }> {
-  return !!c && typeof c === "object" && (PATH_LOCK_COND_KINDS as readonly string[]).includes((c as FixedCond).kind);
+export function isPathLockCond(c: unknown): c is PathLockCond {
+  return !!c && typeof c === "object" && (PATH_LOCK_COND_KINDS as readonly string[]).includes((c as { kind?: string }).kind ?? "");
 }
 
-/** 功能注释：清洗解锁条件——只留允许种类，且 key 必须落在当前依赖池（没选中的丢掉） */
-export function sanitizePathLockConds(
-  raw: unknown,
-  pools: PathDepPools,
-): FixedCond[] {
+/** 功能注释：清洗解锁条件——只留跨周目种类，key 必须落在当前依赖池；旧版属性/地点条件（建角时无法判定）直接丢弃 */
+export function sanitizePathLockConds(raw: unknown, pools: PathDepPools): PathLockCond[] {
   if (!Array.isArray(raw)) return [];
-  const out: FixedCond[] = [];
-  for (const row of raw) {
-    if (!row || typeof row !== "object") continue;
-    const c = row as FixedCond;
+  const out: PathLockCond[] = [];
+  for (const c of raw) {
     if (!isPathLockCond(c)) continue;
-    if (c.kind === "stat") {
-      if (!pools.stats.some((o) => o.id === c.key)) continue;
-      out.push({ kind: "stat", key: c.key, op: (c.op as CmpOp) || "gte", value: Number(c.value) || 0 });
-      continue;
-    }
-    if (c.kind === "metric") {
-      if (!pools.metrics.some((o) => o.id === c.key)) continue;
-      out.push({ kind: "metric", key: c.key, op: (c.op as CmpOp) || "gte", value: Number(c.value) || 0 });
-      continue;
-    }
-    if (c.kind === "rel") {
-      if (!pools.people.some((o) => o.id === c.key)) continue;
-      out.push({ kind: "rel", key: c.key, op: (c.op as CmpOp) || "gte", value: Number(c.value) || 0 });
-      continue;
-    }
-    if (c.kind === "location") {
-      if (!pools.rooms.some((o) => o.id === c.key)) continue;
-      out.push({ kind: "location", key: c.key });
-      continue;
-    }
-    if (c.kind === "event") {
-      if (!pools.events.some((o) => o.id === c.key)) continue;
-      out.push({ kind: "event", key: c.key });
-    }
+    if (c.kind === "clear") { if (!out.some((x) => x.kind === "clear")) out.push({ kind: "clear" }); continue; }
+    const pool = c.kind === "ending" ? pools.endings : c.kind === "route" ? pools.routes : pools.events;
+    if (!pool.some((o) => o.id === c.key)) continue;
+    out.push({ kind: c.kind, key: c.key });
   }
   return out;
+}
+
+/** 功能注释：默认一条解锁条件（必须指向池内已有项） */
+export function defaultPathLockCond(kind: PathLockCondKind, pools: PathDepPools): PathLockCond {
+  if (kind === "clear") return { kind: "clear" };
+  if (kind === "ending") return { kind: "ending", key: pools.endings[0]?.id ?? "" };
+  if (kind === "route") return { kind: "route", key: pools.routes[0]?.id ?? "" };
+  return { kind: "event", key: pools.events[0]?.id ?? "" };
 }
 
 export type RouteFxKnownLookup = {
@@ -147,26 +137,6 @@ export function sanitizePathAttrNames(raw: unknown, opts: PathDepOption[]): stri
 export function makePersonLookup(people: PathDepOption[]): (target: string) => boolean {
   const set = new Set(people.flatMap((o) => [o.id, o.label].filter(Boolean)));
   return (target: string) => set.has(String(target ?? "").trim());
-}
-
-/** 功能注释：默认一条解锁条件（必须指向池内已有项） */
-export function defaultPathLockCond(kind: PathLockCondKind, pools: PathDepPools): FixedCond {
-  if (kind === "stat") {
-    const key = pools.stats[0]?.id ?? "";
-    return { kind: "stat", key, op: "gte", value: 100 };
-  }
-  if (kind === "metric") {
-    const key = pools.metrics[0]?.id ?? "";
-    return { kind: "metric", key, op: "gte", value: 10 };
-  }
-  if (kind === "rel") {
-    const key = pools.people[0]?.id ?? "";
-    return { kind: "rel", key, op: "gte", value: 20 };
-  }
-  if (kind === "location") {
-    return { kind: "location", key: pools.rooms[0]?.id ?? "" };
-  }
-  return { kind: "event", key: pools.events[0]?.id ?? "" };
 }
 
 export function emptyRouteNum(): RouteNum {

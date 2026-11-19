@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './NextRoundButton.module.css';
 import { MdCheckCircle } from 'react-icons/md';
 
@@ -14,6 +15,7 @@ const NextRoundButton: React.FC<NextRoundButtonProps> = ({
     disabled = false,
     isLoading = false,
 }) => {
+    const { t } = useTranslation();
     return (
         <div className={styles.nextRoundButtonWrapper}>
             <button
@@ -22,7 +24,7 @@ const NextRoundButton: React.FC<NextRoundButtonProps> = ({
                 className={styles.nextRoundButton}
             >
                 <MdCheckCircle />
-                <span>{isLoading ? '开启下一回合中...' : '开启下一回合'}</span>
+                <span>{isLoading ? t('galgameUi.nextRound.loading') : t('galgameUi.nextRound.start')}</span>
             </button>
         </div>
     );

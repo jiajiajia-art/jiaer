@@ -1,0 +1,334 @@
+{
+  "hash": "0812710d",
+  "configHash": "9a45d598",
+  "lockfileHash": "b96cc1a1",
+  "browserHash": "0cd4e2ea",
+  "optimized": {
+    "@ant-design/icons": {
+      "src": "../../node_modules/.pnpm/@ant-design+icons@6.3.4_react-dom@19.2.0_react@19.2.0__react@19.2.0/node_modules/@ant-design/icons/es/index.js",
+      "file": "@ant-design_icons.js",
+      "fileHash": "a86c8b0d",
+      "needsInterop": false
+    },
+    "@dnd-kit/core": {
+      "src": "../../node_modules/.pnpm/@dnd-kit+core@6.3.1_react-dom@19.2.0_react@19.2.0__react@19.2.0/node_modules/@dnd-kit/core/dist/core.esm.js",
+      "file": "@dnd-kit_core.js",
+      "fileHash": "e3d419c0",
+      "needsInterop": false
+    },
+    "@dnd-kit/sortable": {
+      "src": "../../node_modules/.pnpm/@dnd-kit+sortable@10.0.0_@dnd-kit+core@6.3.1_react-dom@19.2.0_react@19.2.0__react@19.2.0__react@19.2.0/node_modules/@dnd-kit/sortable/dist/sortable.esm.js",
+      "file": "@dnd-kit_sortable.js",
+      "fileHash": "21525a85",
+      "needsInterop": false
+    },
+    "@dnd-kit/utilities": {
+      "src": "../../node_modules/.pnpm/@dnd-kit+utilities@3.2.2_react@19.2.0/node_modules/@dnd-kit/utilities/dist/utilities.esm.js",
+      "file": "@dnd-kit_utilities.js",
+      "fileHash": "326d0f67",
+      "needsInterop": false
+    },
+    "@noble/ciphers/aes.js": {
+      "src": "../../node_modules/.pnpm/@noble+ciphers@1.3.0/node_modules/@noble/ciphers/esm/aes.js",
+      "file": "@noble_ciphers_aes__js.js",
+      "fileHash": "239bcf10",
+      "needsInterop": false
+    },
+    "@noble/ciphers/utils.js": {
+      "src": "../../node_modules/.pnpm/@noble+ciphers@1.3.0/node_modules/@noble/ciphers/esm/utils.js",
+      "file": "@noble_ciphers_utils__js.js",
+      "fileHash": "3715b7ef",
+      "needsInterop": false
+    },
+    "@noble/ciphers/webcrypto.js": {
+      "src": "../../node_modules/.pnpm/@noble+ciphers@1.3.0/node_modules/@noble/ciphers/esm/webcrypto.js",
+      "file": "@noble_ciphers_webcrypto__js.js",
+      "fileHash": "8d0eb92f",
+      "needsInterop": false
+    },
+    "antd": {
+      "src": "../../node_modules/.pnpm/antd@6.7.1_react-dom@19.2.0_react@19.2.0__react@19.2.0/node_modules/antd/es/index.js",
+      "file": "antd.js",
+      "fileHash": "bee720ec",
+      "needsInterop": false
+    },
+    "antd/locale/zh_CN": {
+      "src": "../../node_modules/.pnpm/antd@6.7.1_react-dom@19.2.0_react@19.2.0__react@19.2.0/node_modules/antd/locale/zh_CN.js",
+      "file": "antd_locale_zh_CN.js",
+      "fileHash": "c7358303",
+      "needsInterop": true
+    },
+    "axios": {
+      "src": "../../node_modules/.pnpm/axios@1.12.2/node_modules/axios/index.js",
+      "file": "axios.js",
+      "fileHash": "fca7fe0d",
+      "needsInterop": false
+    },
+    "firebase/auth": {
+      "src": "../../node_modules/.pnpm/firebase@12.18.0/node_modules/firebase/auth/dist/esm/index.esm.js",
+      "file": "firebase_auth.js",
+      "fileHash": "6265f9b1",
+      "needsInterop": false
+    },
+    "i18next": {
+      "src": "../../node_modules/.pnpm/i18next@26.4.1_typescript@5.9.3/node_modules/i18next/dist/esm/i18next.js",
+      "file": "i18next.js",
+      "fileHash": "0f530e7a",
+      "needsInterop": false
+    },
+    "jwt-decode": {
+      "src": "../../node_modules/.pnpm/jwt-decode@4.0.0/node_modules/jwt-decode/build/esm/index.js",
+      "file": "jwt-decode.js",
+      "fileHash": "cfd4e149",
+      "needsInterop": false
+    },
+    "lucide-react": {
+      "src": "../../node_modules/.pnpm/lucide-react@0.469.0_react@19.2.0/node_modules/lucide-react/dist/esm/lucide-react.js",
+      "file": "lucide-react.js",
+      "fileHash": "dba512c1",
+      "needsInterop": false
+    },
+    "opencc-js": {
+      "src": "../../node_modules/.pnpm/opencc-js@1.4.2/node_modules/opencc-js/dist/esm/full.js",
+      "file": "opencc-js.js",
+      "fileHash": "4e4d30a0",
+      "needsInterop": false
+    },
+    "react-color": {
+      "src": "../../node_modules/.pnpm/react-color@2.19.3_react@19.2.0/node_modules/react-color/es/index.js",
+      "file": "react-color.js",
+      "fileHash": "e62997eb",
+      "needsInterop": false
+    },
+    "react-dom": {
+      "src": "../../node_modules/.pnpm/react-dom@19.2.0_react@19.2.0/node_modules/react-dom/index.js",
+      "file": "react-dom.js",
+      "fileHash": "ab1b23d3",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/.pnpm/react-dom@19.2.0_react@19.2.0/node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "f6d9f2a4",
+      "needsInterop": true
+    },
+    "react-hot-toast": {
+      "src": "../../node_modules/.pnpm/react-hot-toast@2.6.0_react-dom@19.2.0_react@19.2.0__react@19.2.0/node_modules/react-hot-toast/dist/index.mjs",
+      "file": "react-hot-toast.js",
+      "fileHash": "1bd205a4",
+      "needsInterop": false
+    },
+    "react-i18next": {
+      "src": "../../node_modules/.pnpm/react-i18next@17.0.13_i18next@26.4.1_typescript@5.9.3__react-dom@19.2.0_react@19.2.0__react@19.2.0_typescript@5.9.3/node_modules/react-i18next/dist/es/index.js",
+      "file": "react-i18next.js",
+      "fileHash": "6fe72b7e",
+      "needsInterop": false
+    },
+    "react-icons/ai": {
+      "src": "../../node_modules/.pnpm/react-icons@5.5.0_react@19.2.0/node_modules/react-icons/ai/index.mjs",
+      "file": "react-icons_ai.js",
+      "fileHash": "ae88437c",
+      "needsInterop": false
+    },
+    "react-icons/bi": {
+      "src": "../../node_modules/.pnpm/react-icons@5.5.0_react@19.2.0/node_modules/react-icons/bi/index.mjs",
+      "file": "react-icons_bi.js",
+      "fileHash": "21ca81fd",
+      "needsInterop": false
+    },
+    "react-icons/bs": {
+      "src": "../../node_modules/.pnpm/react-icons@5.5.0_react@19.2.0/node_modules/react-icons/bs/index.mjs",
+      "file": "react-icons_bs.js",
+      "fileHash": "3d728a29",
+      "needsInterop": false
+    },
+    "react-icons/ci": {
+      "src": "../../node_modules/.pnpm/react-icons@5.5.0_react@19.2.0/node_modules/react-icons/ci/index.mjs",
+      "file": "react-icons_ci.js",
+      "fileHash": "47321197",
+      "needsInterop": false
+    },
+    "react-icons/fa": {
+      "src": "../../node_modules/.pnpm/react-icons@5.5.0_react@19.2.0/node_modules/react-icons/fa/index.mjs",
+      "file": "react-icons_fa.js",
+      "fileHash": "b1c4dbf4",
+      "needsInterop": false
+    },
+    "react-icons/fa6": {
+      "src": "../../node_modules/.pnpm/react-icons@5.5.0_react@19.2.0/node_modules/react-icons/fa6/index.mjs",
+      "file": "react-icons_fa6.js",
+      "fileHash": "254b489b",
+      "needsInterop": false
+    },
+    "react-icons/fc": {
+      "src": "../../node_modules/.pnpm/react-icons@5.5.0_react@19.2.0/node_modules/react-icons/fc/index.mjs",
+      "file": "react-icons_fc.js",
+      "fileHash": "cba2ab67",
+      "needsInterop": false
+    },
+    "react-icons/fi": {
+      "src": "../../node_modules/.pnpm/react-icons@5.5.0_react@19.2.0/node_modules/react-icons/fi/index.mjs",
+      "file": "react-icons_fi.js",
+      "fileHash": "8dbe584b",
+      "needsInterop": false
+    },
+    "react-icons/hi": {
+      "src": "../../node_modules/.pnpm/react-icons@5.5.0_react@19.2.0/node_modules/react-icons/hi/index.mjs",
+      "file": "react-icons_hi.js",
+      "fileHash": "8146ac06",
+      "needsInterop": false
+    },
+    "react-icons/io": {
+      "src": "../../node_modules/.pnpm/react-icons@5.5.0_react@19.2.0/node_modules/react-icons/io/index.mjs",
+      "file": "react-icons_io.js",
+      "fileHash": "2a999e3d",
+      "needsInterop": false
+    },
+    "react-icons/io5": {
+      "src": "../../node_modules/.pnpm/react-icons@5.5.0_react@19.2.0/node_modules/react-icons/io5/index.mjs",
+      "file": "react-icons_io5.js",
+      "fileHash": "db1c44f5",
+      "needsInterop": false
+    },
+    "react-icons/lu": {
+      "src": "../../node_modules/.pnpm/react-icons@5.5.0_react@19.2.0/node_modules/react-icons/lu/index.mjs",
+      "file": "react-icons_lu.js",
+      "fileHash": "1a16cba9",
+      "needsInterop": false
+    },
+    "react-icons/md": {
+      "src": "../../node_modules/.pnpm/react-icons@5.5.0_react@19.2.0/node_modules/react-icons/md/index.mjs",
+      "file": "react-icons_md.js",
+      "fileHash": "18c3ae3a",
+      "needsInterop": false
+    },
+    "react-icons/pi": {
+      "src": "../../node_modules/.pnpm/react-icons@5.5.0_react@19.2.0/node_modules/react-icons/pi/index.mjs",
+      "file": "react-icons_pi.js",
+      "fileHash": "f32420d5",
+      "needsInterop": false
+    },
+    "react-icons/ri": {
+      "src": "../../node_modules/.pnpm/react-icons@5.5.0_react@19.2.0/node_modules/react-icons/ri/index.mjs",
+      "file": "react-icons_ri.js",
+      "fileHash": "e0a193de",
+      "needsInterop": false
+    },
+    "react-icons/tb": {
+      "src": "../../node_modules/.pnpm/react-icons@5.5.0_react@19.2.0/node_modules/react-icons/tb/index.mjs",
+      "file": "react-icons_tb.js",
+      "fileHash": "3fe63457",
+      "needsInterop": false
+    },
+    "react-image-crop": {
+      "src": "../../node_modules/.pnpm/react-image-crop@11.1.2_react@19.2.0/node_modules/react-image-crop/dist/index.js",
+      "file": "react-image-crop.js",
+      "fileHash": "92d303ce",
+      "needsInterop": false
+    },
+    "react-markdown": {
+      "src": "../../node_modules/.pnpm/react-markdown@10.1.0_@types+react@19.2.2_react@19.2.0/node_modules/react-markdown/index.js",
+      "file": "react-markdown.js",
+      "fileHash": "05010d00",
+      "needsInterop": false
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/.pnpm/react-router-dom@7.9.4_react-dom@19.2.0_react@19.2.0__react@19.2.0/node_modules/react-router-dom/dist/index.mjs",
+      "file": "react-router-dom.js",
+      "fileHash": "a956b667",
+      "needsInterop": false
+    },
+    "react": {
+      "src": "../../node_modules/.pnpm/react@19.2.0/node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "5bcfb8f2",
+      "needsInterop": true
+    },
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/.pnpm/react@19.2.0/node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "e26fed86",
+      "needsInterop": true
+    },
+    "reactflow": {
+      "src": "../../node_modules/.pnpm/reactflow@11.11.4_@types+react@19.2.2_immer@11.1.18_react-dom@19.2.0_react@19.2.0__react@19.2.0/node_modules/reactflow/dist/esm/index.mjs",
+      "file": "reactflow.js",
+      "fileHash": "89a91be3",
+      "needsInterop": false
+    },
+    "recharts": {
+      "src": "../../node_modules/.pnpm/recharts@3.10.1_@types+react@19.2.2_react-dom@19.2.0_react@19.2.0__react-is@19.3.1_react@19.2.0_redux@5.0.1/node_modules/recharts/es6/index.js",
+      "file": "recharts.js",
+      "fileHash": "6ad61956",
+      "needsInterop": false
+    },
+    "showdown": {
+      "src": "../../node_modules/.pnpm/showdown@2.1.0/node_modules/showdown/dist/showdown.js",
+      "file": "showdown.js",
+      "fileHash": "eeae7880",
+      "needsInterop": true
+    },
+    "uuid": {
+      "src": "../../node_modules/.pnpm/uuid@13.0.0/node_modules/uuid/dist/index.js",
+      "file": "uuid.js",
+      "fileHash": "53da52b5",
+      "needsInterop": false
+    },
+    "zustand": {
+      "src": "../../node_modules/.pnpm/zustand@5.0.8_@types+react@19.2.2_immer@11.1.18_react@19.2.0_use-sync-external-store@1.6.0_react@19.2.0_/node_modules/zustand/esm/index.mjs",
+      "file": "zustand.js",
+      "fileHash": "d5163da2",
+      "needsInterop": false
+    },
+    "zustand/middleware": {
+      "src": "../../node_modules/.pnpm/zustand@5.0.8_@types+react@19.2.2_immer@11.1.18_react@19.2.0_use-sync-external-store@1.6.0_react@19.2.0_/node_modules/zustand/esm/middleware.mjs",
+      "file": "zustand_middleware.js",
+      "fileHash": "113d4963",
+      "needsInterop": false
+    },
+    "zustand/react/shallow": {
+      "src": "../../node_modules/.pnpm/zustand@5.0.8_@types+react@19.2.2_immer@11.1.18_react@19.2.0_use-sync-external-store@1.6.0_react@19.2.0_/node_modules/zustand/esm/react/shallow.mjs",
+      "file": "zustand_react_shallow.js",
+      "fileHash": "6edc15fa",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "DownloadOutlined-YfUhpJLa": {
+      "file": "DownloadOutlined-YfUhpJLa.js",
+      "isDynamicEntry": false
+    },
+    "chunk-BoAXSpZd": {
+      "file": "chunk-BoAXSpZd.js",
+      "isDynamicEntry": false
+    },
+    "client-CFgOE439": {
+      "file": "client-CFgOE439.js",
+      "isDynamicEntry": false
+    },
+    "clsx-gHrzR7rZ": {
+      "file": "clsx-gHrzR7rZ.js",
+      "isDynamicEntry": false
+    },
+    "core.esm-D42-VJOI": {
+      "file": "core.esm-D42-VJOI.js",
+      "isDynamicEntry": false
+    },
+    "iconBase-B4eXe2ak": {
+      "file": "iconBase-B4eXe2ak.js",
+      "isDynamicEntry": false
+    },
+    "react-is-CwNkPcOB": {
+      "file": "react-is-CwNkPcOB.js",
+      "isDynamicEntry": false
+    },
+    "shim-CL3xn5SZ": {
+      "file": "shim-CL3xn5SZ.js",
+      "isDynamicEntry": false
+    },
+    "string-DMfsLgSN": {
+      "file": "string-DMfsLgSN.js",
+      "isDynamicEntry": false
+    }
+  }
+}

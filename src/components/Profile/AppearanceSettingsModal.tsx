@@ -91,9 +91,14 @@ const AppearanceSettingsModal: React.FC<Props> = ({ isOpen, onClose }) => {
                             key={opt.code}
                             type="button"
                             className={styles.row}
-                            onClick={() => { void applyAppLanguage(opt.code, (lng) => i18n.changeLanguage(lng)); }}
+                            onClick={() => { void applyAppLanguage(opt.code, (lng) => i18n.changeLanguage(lng), { userChoice: true }); }}
                         >
-                            {opt.label}
+                            <span className={styles.rowText}>
+                              <span>{opt.label}</span>
+                              {opt.nativeLabel !== opt.label ? (
+                                <span className={styles.rowNative}>{opt.nativeLabel}</span>
+                              ) : null}
+                            </span>
                             {activeLang === opt.code && <MdCheck className={styles.rowCheck} />}
                         </button>
                     ))}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import panel from './WarehousePanel.module.css';
 import WarehouseEmptyIcon from './WarehouseEmptyIcon';
 
@@ -7,18 +8,21 @@ type Props = {
   description?: string;
 };
 
-const WarehouseComingSoon: React.FC<Props> = ({ title, description }) => (
-  <div className={panel.panelRoot}>
-    <header className={panel.header}>
-      <h1 className={panel.title}>{title}</h1>
-      <p className={panel.sub}>{description || '功能开发中，敬请期待'}</p>
-    </header>
-    <div className={panel.emptyStage}>
-      <WarehouseEmptyIcon kind="generic" />
-      <h2>即将开放</h2>
-      <p>界面骨架已就绪，能力模块正在接入。先去「玩家人设卡」或「公共卡库」逛逛吧。</p>
+const WarehouseComingSoon: React.FC<Props> = ({ title, description }) => {
+  const { t } = useTranslation();
+  return (
+    <div className={panel.panelRoot}>
+      <header className={panel.header}>
+        <h1 className={panel.title}>{title}</h1>
+        <p className={panel.sub}>{description || t('warehouse.comingSoon.defaultDescription')}</p>
+      </header>
+      <div className={panel.emptyStage}>
+        <WarehouseEmptyIcon kind="generic" />
+        <h2>{t('warehouse.comingSoon.title')}</h2>
+        <p>{t('warehouse.comingSoon.body')}</p>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default WarehouseComingSoon;

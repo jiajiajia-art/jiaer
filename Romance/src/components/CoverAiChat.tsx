@@ -1,4 +1,3 @@
-import { lazyPanel } from "../lib/lazyPanel";
 import { getWorld } from "../mods/registry";
 import { useEffect, useRef, useState } from "react";
 import { useGame } from "../store/gameCtx";
@@ -9,7 +8,8 @@ import { loadGlobal, saveGlobal } from "../lib/saveScope";
 import { loadAssets } from "../lib/freeStyle";
 import type { CoverCopy } from "../mods/types";
 import { applyCoverPatch, coverForPrompt, extractCoverJson, sanitizeCoverPatch } from "../lib/coverAi";
-const AIConfigPanel = lazyPanel(() => import("./AIConfigPanel"));
+import { hasPlatformPlayAuth } from "../lib/platformPlayAi";
+import AiRoutePicker from "./AiRoutePicker";
 import { IconChevronDown, IconUndo } from "../lib/icons";
 import { AssistantMsg, ChangeCard, ChatThread, Composer, LinePill, PlusMenu, StreamText, Suggestions, UserMsg, WorkLine, type ChatChange } from "./CodexChat";
 
@@ -135,7 +135,7 @@ export default function CoverAiChat({ d, setCover, author = false, storeKey = "p
   const send = async (text: string) => {
     const t = text.trim();
     if (!t || busy) return;
-    if (!ok) { setLine(true); setErr("先接入线路（AI 接口与模型），才能对话生成。"); return; }
+    if (!hasPlatformPlayAuth() && !ok) { setLine(true); setErr("请先登录平台账号，才能对话生成封面。"); return; }
     const hist: Turn[] = [...st.turns, { role: "user", text: t }];
     const t0 = Date.now();
     setSt((s) => ({ ...s, turns: hist })); setInput(""); setErr(""); setBusy("chat"); setLive(""); setStarted(t0);
@@ -211,12 +211,19 @@ export default function CoverAiChat({ d, setCover, author = false, storeKey = "p
         </button>}
       </div>
       {line && (
-        <div className="ui-card p-3">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="ui-label">线路设置</span>
+        <div className="ui-card space-y-3 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="ui-label">平台线路</span>
             <button type="button" onClick={() => setLine(false)} className={ghost}>完成</button>
           </div>
-          <AIConfigPanel />
+          {hasPlatformPlayAuth() ? (
+            <>
+              <AiRoutePicker capability="text" title="文案线路" />
+              <AiRoutePicker capability="image" compact title="生图线路" />
+            </>
+          ) : (
+            <p className="text-[12px] leading-relaxed text-ink-soft">请先登录平台账号，封面对话与生图走平台线路，不再填写个人 API Key。</p>
+          )}
         </div>
       )}
       {open && (

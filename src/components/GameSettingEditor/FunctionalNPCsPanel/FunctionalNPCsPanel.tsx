@@ -145,7 +145,7 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
                 } catch (error) {
                     // 自动保存失败，显示确认弹窗
                     console.error('自动保存图片失败:', error);
-                    toast.error('自动保存失败，请手动保存');
+                    toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCsPanel.s5ea19fd44b'));
                 }
             }
             
@@ -178,7 +178,7 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
                     } catch (error) {
                         // 自动保存失败，显示确认弹窗
                         console.error('自动保存图片失败:', error);
-                        toast.error('自动保存失败，请手动保存');
+                        toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCsPanel.s5ea19fd44b'));
                     }
                 }
                 
@@ -234,7 +234,7 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
         try {
             const resp = await worldEditor.deleteFunctionalNpc(fileId, nodeToDelete);
             if (resp.data?.success === false) {
-                toast.error(resp.data.message || '删除失败，请稍后重试');
+                toast.error(resp.data.message || t('gameRating.deleteFailed'));
                 return;
             }
 
@@ -243,12 +243,12 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
                 const remainingNodes = abilityNodes.filter(node => node.node_id !== nodeToDelete);
                 setActiveNodeId(remainingNodes.length > 0 ? remainingNodes[0].node_id : null);
             }
-            toast.success('删除成功');
+            toast.success(t('gameRating.deleteSuccess'));
             setDeleteModalOpen(false);
             setNodeToDelete(null);
         } catch (error: any) {
             console.error('删除功能性NPC失败:', error);
-            toast.error('删除失败，请检查网络连接');
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCsPanel.sdc451551cf'));
         }
     };
 
@@ -278,13 +278,13 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
                 setActiveNodeId(updatedNode.node_id);
                 setCreatingNode(null);
                 setIsNewNode(false);
-                toast.success('已创建功能配置');
+                toast.success(t('gameSettingEditor.functionalNPCsPanel.functionalNPCsPanel.scc80e5f0c6'));
             } else {
                 // 更新现有节点
                 setAbilityNodes(prev =>
                     prev.map(node => (node.node_id === updatedNode.node_id ? updatedNode : node))
                 );
-                toast.success('已保存功能配置');
+                toast.success(t('gameSettingEditor.functionalNPCsPanel.functionalNPCsPanel.s64e94a4b9a'));
             }
 
             // 触发数据刷新回调
@@ -293,14 +293,14 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
             }
         } catch (error: any) {
             console.error('更新功能性NPC状态失败:', error);
-            toast.error('更新失败，请检查网络连接');
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCsPanel.s28e51dba11'));
         }
     };
 
     // 打开一键生成全部图片的积分确认弹窗
     const openAllImagesCostModal = async () => {
         if (!fileId) {
-            toast.error('缺少必要数据，无法生成');
+            toast.error(t('gameSettingEditor.charactersPanel.handlers.sfd6f703bc8'));
             return;
         }
         try {
@@ -311,11 +311,11 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
                 setAllImagesCostPoints(points);
                 setAllImagesCostModalOpen(true);
             } else {
-                toast.error(response.data?.message || '获取织梦豆消耗失败');
+                toast.error(response.data?.message || t('gameSettingEditor.functionalNPCsPanel.functionalNPCsPanel.s7a95e47255'));
             }
         } catch (error: any) {
             console.error('获取功能性NPC生图积分消耗失败:', error);
-            toast.error('获取织梦豆消耗失败，请稍后重试');
+            toast.error(t('createGame.getPointsCostFailed'));
         } finally {
             setIsLoadingAllImagesCost(false);
         }
@@ -324,12 +324,12 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
     // 确认生成所有图片
     const handleConfirmGenerateAllImages = async () => {
         if (!fileId) {
-            toast.error('缺少必要数据，无法生成');
+            toast.error(t('gameSettingEditor.charactersPanel.handlers.sfd6f703bc8'));
             setAllImagesCostModalOpen(false);
             return;
         }
         if (allImagesCostPoints != null && userPoints < allImagesCostPoints) {
-            toast.error('织梦豆不足');
+            toast.error(t('gameDetail.ivgErrors.insufficientPoints'));
             return;
         }
         setAllImagesCostModalOpen(false);
@@ -337,17 +337,17 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
         try {
             const response = await worldEditor.generateAllAbilityNodeImages(fileId);
             if (response.data.success) {
-                toast.success('所有图片生成成功');
+                toast.success(t('gameSettingEditor.functionalNPCsPanel.functionalNPCsPanel.scaaccfa6c1'));
                 await refreshUserPoints();
                 if (onDataChange) {
                     onDataChange();
                 }
             } else {
-                toast.error(response.data?.message || '生成图片失败');
+                toast.error(response.data?.message || t('gameSettingEditor.functionalNPCsPanel.functionalNPCsPanel.s1a5e1383f6'));
             }
         } catch (error: any) {
             console.error('生成所有图片失败:', error);
-            toast.error('生成图片失败：' + (error.message || '请检查网络连接'));
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCsPanel.s198246f196') + (error.message || t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s73a13d2b99')));
         } finally {
             setIsGeneratingAllImages(false);
         }
@@ -374,7 +374,7 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
                     />
                     <div className={styles.buttonTextContainer}>
                         <span className={styles.buttonMainText}>
-                            {isGeneratingAllImages ? '生成中...' : '一键生成所有功能性NPC图片'}
+                            {isGeneratingAllImages ? t('createGame.generating') : t('gameSettingEditor.functionalNPCsPanel.functionalNPCsPanel.s37a4d954df')}
                         </span>
                         <span className={styles.buttonSubText}>{LEGACY_WORLD_ABILITY_NODE_GENERATION_COST}织梦豆/张</span>
                     </div>
@@ -415,10 +415,10 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
                 isOpen={deleteModalOpen}
                 onConfirm={handleConfirmDelete}
                 onCancel={handleCancelDelete}
-                title="删除功能性NPC"
+                title={t('gameSettingEditor.functionalNPCsPanel.functionalNPCsPanel.s79c1553c4b')}
                 message={nodeToDelete ? `确定要删除功能性NPC "${abilityNodes.find(n => n.node_id === nodeToDelete)?.authorNote || '未命名NPC'}" 吗？删除后不可恢复。` : '确定要删除此功能性NPC吗？删除后不可恢复。'}
-                confirmButtonText="确认删除"
-                cancelButtonText="取消"
+                confirmButtonText={t('createGame.confirmDelete')}
+                cancelButtonText={t('warehouse.cards.cancel')}
             />
 
             {/* 一键生成所有图片积分提示 */}
@@ -426,14 +426,14 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
                 isOpen={allImagesCostModalOpen}
                 onConfirm={handleConfirmGenerateAllImages}
                 onCancel={() => setAllImagesCostModalOpen(false)}
-                title="织梦豆扣除确认"
+                title={t('common.pointsDeductionConfirm')}
                 message={
                     allImagesCostPoints != null
-                        ? `本次一键生成功能性NPC图片将扣除 ${allImagesCostPoints} 织梦豆（当前织梦豆 ${userPoints}${allImagesCostPoints > userPoints ? '，织梦豆不足' : ''}），是否继续？`
+                        ? `本次一键生成功能性NPC图片将扣除 ${allImagesCostPoints} 织梦豆（当前织梦豆 ${userPoints}${allImagesCostPoints > userPoints ? t('common.insufficient') : ''}），是否继续？`
                         : `将扣除一定织梦豆（当前织梦豆 ${userPoints}），是否继续？`
                 }
-                confirmButtonText="确认生成"
-                cancelButtonText="取消"
+                confirmButtonText={t('warehouse.avatars.generateConfirm')}
+                cancelButtonText={t('warehouse.cards.cancel')}
             />
 
             {/* 一键生成全部图片加载遮罩 */}
@@ -455,7 +455,7 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
                             setIsBlockingSwitch(false);
                             executePendingAction();
                         } catch (error) {
-                            toast.error('保存失败，请重试');
+                            toast.error(t('createGame.saveFailedRetry'));
                             // 保存失败时不关闭弹窗，不执行待处理操作，保持表单数据
                         }
                     } else {
@@ -475,10 +475,10 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
                     setPendingAction(null);
                     setIsBlockingSwitch(false);
                 }}
-                title="未保存的修改"
-                message="您有未保存的修改，是否要保存？"
-                saveButtonText="保存"
-                discardButtonText="不保存"
+                title={t('createGame.unsavedChanges')}
+                message={t('createGame.unsavedChangesMessage')}
+                saveButtonText={t('warehouse.cards.save')}
+                discardButtonText={t('common.discard')}
             />
         </div>
     );

@@ -54,7 +54,9 @@ test('PlayerArchive_总览始终有生成头像按钮', () => {
 });
 
 test('PlayerArchive_生成头像确认含提示词补充_对齐添加角色', () => {
-  assert.match(src, /画风与提示词/);
+  // 画风与提示词文案锁在 playerArchive.avatar.showPrompt
+  assert.match(src, /t\('galgameUi\.playerArchive\.avatar\.showPrompt'\)/);
+  assert.match(readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8'), /"showPrompt": "画风与提示词"/);
   assert.match(src, /avatarPromptSupplement/);
   assert.match(src, /avatarStyleId/);
   assert.match(src, /AVATAR_STYLE_OPTIONS/);
@@ -66,7 +68,9 @@ test('PlayerArchive_生成头像确认含提示词补充_对齐添加角色', ()
 });
 
 test('PlayerArchive_支持用户上传头像_不抠图', () => {
-  assert.match(src, /上传图片/);
+  // 上传图片文案锁在 galgameUi.common.uploadImage
+  assert.match(src, /t\('galgameUi\.common\.uploadImage'\)/);
+  assert.match(readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8'), /"uploadImage": "上传图片"/);
   assert.match(src, /compressImageFileToWebpUnderMaxBytes/);
   assert.match(src, /uploadPlayerAvatar/);
 });

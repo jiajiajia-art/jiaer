@@ -1,8 +1,8 @@
-import { IconChevronUp, IconClose, IconSpark } from "../lib/icons";
+import { IconChevronUp, IconClose } from "../lib/icons";
 import { useState } from "react";
 import type { AttrDef, AttrTier } from "../lib/types";
 import { attrChoiceOptions, attrDiceProblem, attrStartMode, attrUsesRandomStart } from "../lib/attrInit";
-import { ColorPick } from "./EditorKit";
+import { TOPBAR_HERO_ATTR_LIMIT } from "../lib/topbarDiy";
 import { CURRENCY_ATTR_DESC, newCurrencyAttr, newNumberAttr } from "../lib/creationItems";
 
 /* 模组编辑器 · 数值/货币项详情（建角字段统一列表复用）。
@@ -54,15 +54,21 @@ function TierRows({ list, max, onChange, story }: { list: AttrTier[]; max: numbe
 }
 
 /**
- * 功能注释：单条数值/货币的展开表单——范围、开局值、是否隐藏、是否上状态栏，以及分档等进阶项。
+ * 功能注释：单条数值/货币的展开表单——范围、开局值、是否隐藏、是否上顶栏主属性，以及分档等进阶项。
  * 由统一「建角字段」列表展开调用，不再单独出现「添加属性」入口。
+ * pinnedOthers：其它已 pin 条数，用于顶栏主属性上限（默认 2）。
  */
-export function AttrDefForm({ a, onChange }: { a: AttrDef; onChange: (p: Partial<AttrDef>) => void }) {
+export function AttrDefForm({ a, onChange, pinnedOthers = 0, pinLimit = TOPBAR_HERO_ATTR_LIMIT }: {
+  a: AttrDef;
+  onChange: (p: Partial<AttrDef>) => void;
+  pinnedOthers?: number;
+  pinLimit?: number;
+}) {
   const set = (p: Partial<AttrDef>) => onChange(p);
+  const pinFull = !a.pin && pinnedOthers >= pinLimit;
   return (
     <div className="space-y-2">
       <div className="flex gap-1.5">
-        <input className={`${inp} w-12 text-center`} value={a.icon ?? ""} maxLength={2} onChange={(e) => set({ icon: e.target.value || undefined })} placeholder="" aria-label="图标" />
         <input className={`${inp} flex-1`} value={a.label} onChange={(e) => set({ label: e.target.value })} placeholder="名称" />
       </div>
       <div className="grid grid-cols-3 gap-1.5 text-[11px] text-ink-soft">
@@ -117,10 +123,14 @@ export function AttrDefForm({ a, onChange }: { a: AttrDef; onChange: (p: Partial
           </div>
         )}
       </div>
-      <div className="flex items-center gap-2 text-[11px] text-ink-soft">颜色<ColorPick value={a.color} fallback="coral" onChange={(color) => set({ color })} /></div>
+      {/* 功能注释：颜色不再让创作者选，统一按主题色 */}
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11.5px] text-ink-soft">
         <label className="flex items-center gap-1"><input type="checkbox" className="accent-jade" checked={!!a.hidden} onChange={(e) => set({ hidden: e.target.checked || undefined })} />建角页隐藏</label>
-        <label className="flex items-center gap-1"><input type="checkbox" className="accent-jade" checked={!!a.pin} onChange={(e) => set({ pin: e.target.checked || undefined })} />显示在顶部状态栏</label>
+        <label className={`flex items-center gap-1 ${pinFull ? "opacity-50" : ""}`} title={pinFull ? `顶栏主属性最多 ${pinLimit} 个，请先取消其它勾选` : "显示在小说顶栏名字下方（最多 2 个）"}>
+          <input type="checkbox" className="accent-jade" checked={!!a.pin} disabled={pinFull}
+            onChange={(e) => set({ pin: e.target.checked || undefined })} />
+          顶栏主属性（最多 {pinLimit} 个）{pinFull ? " · 已满" : ""}
+        </label>
         <label className="flex items-center gap-1"><input type="checkbox" className="accent-jade" checked={!!a.tierEvent} disabled={!a.tiers?.length} onChange={(e) => set({ tierEvent: e.target.checked || undefined })} />升档时触发剧情{a.tiers?.length ? "" : "（需先设分档）"}</label>
       </div>
       {/* 功能注释：属性说明须有标题；AI 按属性名预填，创作者可改 */}
@@ -160,16 +170,15 @@ export default function ModAttrsEditor({ attrs, onAttrs }: {
         return (
           <div key={a.id} className="rounded-lg border border-line bg-paper">
             <div className="flex items-center gap-2 px-2.5 py-2">
-              <span className="flex w-5 items-center justify-center text-center text-[15px]">{a.icon || <IconSpark size={14} />}</span>
               <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setOpen(isOpen ? null : a.id)}>
                 <p className="truncate text-[12.5px] font-bold text-ink">{a.label || "未命名"}</p>
-                <p className="truncate text-[10.5px] text-ink-soft">范围 {a.min ?? 0}~{a.max ?? "无上限"} · {({ random: "开局随机", locked: `锁定 ${a.init}`, choice: `玩家选择 ${attrChoiceOptions(a).length} 项`, custom: "玩家自定义" } as const)[attrStartMode(a)]}{a.tiers?.length ? ` · ${a.tiers.length} 档` : ""}{a.pin ? " · 顶栏" : ""}{a.hidden ? " · 隐藏" : ""}{a.tierEvent ? " · 升档剧情" : ""} · {DISPLAY.find((d) => d.v === (a.display ?? "both"))?.l}</p>
+                <p className="truncate text-[10.5px] text-ink-soft">范围 {a.min ?? 0}~{a.max ?? "无上限"} · {({ random: "开局随机", locked: `锁定 ${a.init}`, choice: `玩家选择 ${attrChoiceOptions(a).length} 项`, custom: "玩家自定义" } as const)[attrStartMode(a)]}{a.tiers?.length ? ` · ${a.tiers.length} 档` : ""}{a.pin ? " · 顶栏主属性" : ""}{a.hidden ? " · 隐藏" : ""}{a.tierEvent ? " · 升档剧情" : ""} · {DISPLAY.find((d) => d.v === (a.display ?? "both"))?.l}</p>
               </button>
               <button type="button" disabled={!i} className="text-[11px] text-ink-soft disabled:opacity-25" onClick={() => { const l = [...list]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; commit(l); }} aria-label="上移"><IconChevronUp size={12} /></button>
               <button type="button" className="text-[12px] text-ink-soft hover:text-coral" onClick={() => commit(list.filter((x) => x.id !== a.id))} aria-label="删除"><IconClose size={14} /></button>            </div>
             {isOpen && (
               <div className="border-t border-line px-2.5 py-2">
-                <AttrDefForm a={a} onChange={(p) => set(a.id, p)} />
+                <AttrDefForm a={a} onChange={(p) => set(a.id, p)} pinnedOthers={list.filter((x) => x.pin && x.id !== a.id).length} />
               </div>
             )}
           </div>

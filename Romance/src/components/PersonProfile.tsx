@@ -15,7 +15,6 @@ import {
   ProfileGroup,
   ProfileRelations,
   ProfileTabs,
-  StatBars,
   affiliationOf,
   relationRefsOf,
 } from "./personFields";
@@ -51,7 +50,6 @@ export default function PersonProfile({ pid, name, known = true }: { pid: string
   const family = isFamilyNpc(pid);
   const bound = hasPartner(s, pid) || !!s.spouses?.includes(pid);
   const rels = relationRefsOf(game, pid);
-  const stats = (profile?.stats ?? (n as { stats?: Record<string, number> } | undefined)?.stats) as Record<string, number> | undefined;
   const confess = canConfess(s, pid);
   // 功能注释：未添加「关系玩法」包时不展示表白入口
   const relationsPlayOn = feature("relationsPlay");
@@ -66,17 +64,17 @@ export default function PersonProfile({ pid, name, known = true }: { pid: string
       <div className="flex flex-col gap-3 pt-1">
         <section className="rounded-[var(--radius-ui-lg)] border border-line bg-paper p-3.5 shadow-[var(--shadow-ui)]">
           <div className="flex items-start gap-3.5">
-            <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-ui)] border border-line bg-paper-2">
-              <p className="font-serif text-[28px] font-black text-coral">?</p>
+            <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-ui)] border border-dashed border-line bg-paper-2">
+              <p className="font-serif text-[28px] font-black text-ink-soft/60">？</p>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-serif text-[22px] font-black text-ink">陌生人</p>
+              <p className="font-serif text-[22px] font-black tracking-[0.18em] text-ink">？？？</p>
               <Chip tone="gold">尚未结识</Chip>
             </div>
           </div>
         </section>
         <p className="rounded-[var(--radius-ui)] border border-line bg-paper/70 px-3.5 py-2.5 text-[13px] leading-[22px] text-ink/85">
-          还不认识这个人。上前搭话，也许能知道更多。
+          创作者已经写过这个人，但你还没结识——姓名与面目都用？？？遮住。去世界里走走、当面搭话，结识后才会揭开档案与叙述。
         </p>
       </div>
     );
@@ -205,14 +203,7 @@ export default function PersonProfile({ pid, name, known = true }: { pid: string
               body: (
                 <div>
                   {bio ? <p className="mb-3 text-[13px] leading-relaxed text-ink/85">{bio}</p> : null}
-                  {/* 只有带能力数值的人物（艺人等）才展示个人能力；普通 NPC 没有这套数值，不显示一排空条 */}
-                  {stats && Object.values(stats).some((v) => typeof v === "number") ? (
-                    <ProfileGroup title="个人能力">
-                      <div className="py-2">
-                        <StatBars stats={stats} />
-                      </div>
-                    </ProfileGroup>
-                  ) : null}
+                  {/* 功能注释：人物档案不再展示「个人能力」栏 */}
                 </div>
               ),
             },

@@ -17,7 +17,12 @@ test('warehouseCardPersona_FE入口与扣分对齐局内人设字段', () => {
   assert.match(persona, /NPC_PROFILE_FIELD_GENERATION_COST/);
   assert.match(persona, /generatePersona/);
   assert.match(persona, /fieldAiBtn/);
-  assert.match(persona, /确认生成人设/);
+  // 确认生成人设文案锁在 warehouse.persona.form.confirmGenerateTitle
+  assert.match(persona, /t\('warehouse\.persona\.form\.confirmGenerateTitle'\)/);
+  assert.match(
+    readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8'),
+    /"confirmGenerateTitle": "确认生成人设"/,
+  );
   assert.match(npc, /generatePersona/);
   assert.match(npc, /cardKind:\s*'npc'/);
   assert.doesNotMatch(persona, /CHARACTER_GENERATION_COST\} 积分生成「人设/);

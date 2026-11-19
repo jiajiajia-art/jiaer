@@ -3,7 +3,7 @@
 }
 
 @media (max-width: 768px) {
-    /* 功能注释：底栏按设计稿 — 黑底；选中 #F16C83；未选中 #B8B8C2；创作为红底白加号 */
+    /* 功能注释：底栏跟 data-mode——深色仍黑底（--color-bg），浅色用主题底；选中跟品牌色 */
     .container {
         display: flex;
         position: fixed;
@@ -12,7 +12,7 @@
         left: 0;
         right: 0;
         width: auto;
-        height: calc(72px + env(safe-area-inset-bottom));
+        height: calc(80px + env(safe-area-inset-bottom));
         padding-bottom: env(safe-area-inset-bottom);
         background: var(--color-bg);
         z-index: 999;
@@ -23,6 +23,7 @@
         box-sizing: border-box;
         /* 功能注释：禁止 overflow:hidden——圆角+裁切会把上凸的创作钮切掉，表现为底栏顶边「缺一角」 */
         overflow: visible;
+        box-shadow: 0 -8px 24px color-mix(in srgb, var(--color-shadow) 12%, transparent);
     }
 
     .navItem {
@@ -32,14 +33,14 @@
         align-items: center;
         justify-content: center;
         color: var(--color-text-secondary);
-        font-size: 12px;
-        font-weight: 600;
+        font-size: 13px;
+        font-weight: 650;
         background: transparent;
         border: none;
         cursor: pointer;
         padding: 10px 4px;
         transition: color 0.2s ease;
-        gap: 4px;
+        gap: 5px;
     }
 
     .navItemActive {
@@ -59,34 +60,47 @@
     }
 
     .icon {
-        width: 24px;
-        height: 24px;
+        /* 功能注释：描边项锁死同一视觉盒，避免各 SVG 路径视觉重心不一 */
+        width: 28px;
+        height: 28px;
         display: block;
         flex-shrink: 0;
         color: inherit;
+        overflow: visible;
     }
 
-    /* 功能注释：创作钮按底部icon.html 1:1 —— 40×32 红底圆角+白加号，明显大于两侧 24 线框 */
+    /* 功能注释：最右侧「我的」给一点右内边距，避免贴边/圆角裁切看起来缺角 */
+    .navItem:last-child {
+        padding-right: 6px;
+    }
+
+    .navItem:first-child {
+        padding-left: 6px;
+    }
+
+    /* 功能注释：创作中钮略大于两侧线框，但仍控制在同一排视觉重量内 */
     .createIcon {
-        width: 40px;
+        width: 42px;
         height: 32px;
         color: inherit;
     }
 
-    /* 功能注释：创作项少一点上下 padding，让 32 高的中钮相对两侧上移贴齐设计稿 */
     .navItemCreate {
-        padding-top: 6px;
-        padding-bottom: 6px;
+        padding-top: 8px;
+        padding-bottom: 8px;
     }
 
     .label {
         pointer-events: none;
         line-height: 1;
+        font-size: 13px;
+        font-weight: 650;
+        letter-spacing: 0.02em;
     }
 
     .userMenu {
         position: fixed;
-        bottom: 82px;
+        bottom: 92px;
         right: 16px;
         left: 16px;
         background: var(--color-surface);

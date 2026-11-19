@@ -76,13 +76,19 @@ export const insideTree = (a: string, b: string) => sameTree(ROOMS, a, b);
 export const inRange = (range: readonly string[], roomId: string) => range.some((r) => isWithin(ROOMS, roomId, r));
 
 /* 当前地点的直接子地点入口：隐藏的（未到访且未解锁）不出现；上锁 / 门槛不足的照常显示但标明原因 */
+/* 功能注释：「先藏起来」的地点在未到访、未解锁、玩家不在此处时对玩家不可见（子地点入口与舆图共用） */
+export function roomHiddenFrom(s: SimState, roomId: string): boolean {
+  const r = ROOMS[roomId];
+  if (!r?.hidden || s.room === roomId) return false;
+  if ((s.visited ?? []).includes(roomId)) return false;
+  return (s.flags?.[`unlock:${roomId}`] ?? 0) < 1;
+}
 export type ChildEntry = { id: string; name: string; desc: string; ok: boolean; note: string; visited: boolean };
 export function childEntries(s: SimState, roomId: string): ChildEntry[] {
   const visited = new Set(s.visited ?? []);
   return childrenOf(ROOMS, roomId).flatMap((id) => {
     const r = ROOMS[id];
-    const unlocked = (s.flags?.[`unlock:${id}`] ?? 0) >= 1;
-    if (r.hidden && !visited.has(id) && !unlocked) return [];
+    if (roomHiddenFrom(s, id)) return [];
     const acc = roomAccess(s, id);
     return [{ id, name: locOf(id)?.name ?? r.name ?? id, desc: r.intro ?? r.desc ?? "", ok: acc.ok, note: acc.note, visited: visited.has(id) }];
   });

@@ -15,5 +15,6 @@ test('ImagePicker_applyUrl非竖图也rememberAsset', () => {
   assert.match(picker, /rememberAsset\(url\)/);
   assert.match(picker, /rememberAsset\(fitted\)/);
   assert.doesNotMatch(ai, /如：二次元写实漫/);
-  assert.match(ai, /选填：可写画风；留空则按主体与设定生成/);
+  // 生图占位现为「这一张画什么」，不再写选填画风长句
+  assert.match(ai, /这一张画什么：主体、场景、光线/);
 });

@@ -844,9 +844,9 @@
 
 @media (max-width: 768px) {
     .pageBody {
-        width: calc(100% - 24px);
-        padding-top: 96px;
-        padding-bottom: 48px;
+        width: 100%;
+        padding-top: 0;
+        padding-bottom: 24px;
     }
 
     .title {
@@ -867,7 +867,11 @@
     }
 
     .card {
-        padding: 18px;
+        padding: 14px;
+    }
+
+    .emptyState {
+        padding: 12px;
     }
 
     .sectionHeader,
@@ -1443,4 +1447,52 @@
 .dangerButton:hover {
     transform: none;
     box-shadow: none;
+}
+
+/* 功能注释：手机上文档列表和说明上下排，避免右侧说明被挤成竖排 */
+@media (max-width: 768px) {
+    .documentManager {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .documentTreePanel {
+        position: static;
+        top: auto;
+        max-height: none;
+        padding: 14px;
+        border-radius: 16px;
+    }
+
+    .documentTreeTitle {
+        letter-spacing: 0;
+        font-size: 15px;
+    }
+
+    .documentEmptyState {
+        align-items: flex-start;
+        padding: 20px 16px;
+        text-align: left;
+    }
+
+    .documentEmptyIcon {
+        font-size: 32px;
+    }
+
+    .documentEmptyTitle {
+        font-size: 16px;
+    }
+
+    .documentPreviewHeader {
+        flex-direction: column;
+    }
+
+    .documentPreviewActions {
+        width: 100%;
+    }
+
+    .documentPreviewActions .actionButton,
+    .documentPreviewActions .dangerButton {
+        flex: 1;
+    }
 }

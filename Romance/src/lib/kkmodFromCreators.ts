@@ -3,6 +3,7 @@
  */
 import type { Mod } from "../mods/types.ts";
 import { packModFiles } from "../mods/kkmod/files.ts";
+import { KKAPP_TYPES, isKkApp, normalizeKkApp, validateKkApp, type KkAppType } from "../mods/kkmod/phoneApp.ts";
 import { PLAY_MOD_SDK_VERSION, derivePlayModEditorPanels, sanitizeConflictIds, stripForbiddenPlayFields } from "../mods/playModGuard.ts";
 import {
   packKkmod,
@@ -13,7 +14,23 @@ import {
 
 const SAFE_SLUG = /^[a-z0-9][a-z0-9_-]{1,48}$/;
 
-/** 功能注释：把任意标题收成 slug；空则用前缀+时间戳，保证 manifest.slug 合法。 */
+/** 功能注释：稳定短哈希（FNV-1a）；同一原始 id 每次打包得到同一 slug，重传才会更新同一组件 */
+function stableHash(raw: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < raw.length; i++) {
+    h ^= raw.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(36);
+}
+
+/** 功能注释：版本号收成 x.y.z（"v2" → "2.0.0"），与 SDK 版本比较规则一致 */
+export function normalizeSemver(raw: unknown, fallback = "0.1.0"): string {
+  const m = String(raw ?? "").trim().match(/(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
+  return m ? `${Number(m[1])}.${Number(m[2] ?? 0)}.${Number(m[3] ?? 0)}` : fallback;
+}
+
+/** 功能注释：把任意标题收成 slug；非英文 id 用「前缀-稳定哈希」，空 id 才用时间戳，保证 manifest.slug 合法。 */
 export function slugifyCreatorId(raw: string, fallbackPrefix: string): string {
   const base = String(raw || "")
     .trim()
@@ -22,7 +39,8 @@ export function slugifyCreatorId(raw: string, fallbackPrefix: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 40);
   if (SAFE_SLUG.test(base)) return base;
-  return `${fallbackPrefix}-${Date.now().toString(36)}`.slice(0, 48);
+  const src = String(raw || "").trim();
+  return `${fallbackPrefix}-${src ? stableHash(src) : Date.now().toString(36)}`.slice(0, 48);
 }
 
 function baseManifest(
@@ -43,10 +61,11 @@ function baseManifest(
 ): KkmodManifest {
   const slug = slugifyCreatorId(input.slug || input.id, kind === "phone_app" ? "app" : "play");
   return {
-    id: slugifyCreatorId(input.id || slug, kind === "phone_app" ? "app" : "play"),
+    // 功能注释：id 与 slug 同源，避免两次各取时间戳导致不一致
+    id: slug,
     slug,
     name: String(input.name || "未命名").trim().slice(0, 80) || "未命名",
-    version: String(input.version || "0.1.0").trim() || "0.1.0",
+    version: normalizeSemver(input.version),
     kind,
     description: String(input.description || "").trim().slice(0, 500),
     dependencies: input.dependencies ?? [],
@@ -128,6 +147,14 @@ export function kkmodPackageFromPhoneApp(app: {
   content?: unknown;
   version?: string;
 }): KkmodPackage {
+  const type: KkAppType = (KKAPP_TYPES as readonly string[]).includes(String(app.type)) ? (app.type as KkAppType) : "browse";
+  // 功能注释：kkapp 内容打包前校验 + 规范化，坏页面 / 断跳转不进商店
+  let content: unknown = app.content ?? {};
+  if (isKkApp(content)) {
+    const errs = validateKkApp(content);
+    if (errs.length) throw new Error(`应用内容有问题：${errs.slice(0, 5).join("；")}`);
+    content = normalizeKkApp(content, type) ?? content;
+  }
   const manifest = baseManifest("phone_app", {
     id: app.appId,
     slug: app.appId,
@@ -146,9 +173,9 @@ export function kkmodPackageFromPhoneApp(app: {
         name: app.name,
         summary: app.summary || "",
         icon: app.icon || "",
-        type: app.type || "browse",
+        type,
         category: app.category || "",
-        content: app.content ?? {},
+        content,
       },
     },
   };

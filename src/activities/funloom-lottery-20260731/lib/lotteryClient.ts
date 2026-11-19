@@ -98,29 +98,29 @@ export function evaluateClientDrawGate(input: {
   now?: Date | string | number;
 }): { ok: true } | { ok: false; code: string; message: string } {
   if (!input.isLoggedIn) {
-    return { ok: false, code: 'login_required', message: '请先登录后再抽奖' };
+    return { ok: false, code: 'login_required', message: '' };
   }
   if (!input.campaign) {
-    return { ok: false, code: 'no_campaign', message: '活动加载中' };
+    return { ok: false, code: 'no_campaign', message: '' };
   }
   if (input.campaign.status !== 'published') {
-    return { ok: false, code: 'campaign_unavailable', message: '活动未开放' };
+    return { ok: false, code: 'campaign_unavailable', message: '' };
   }
   if (!isCampaignActive(input.campaign, input.now)) {
-    return { ok: false, code: 'campaign_closed', message: '不在活动时间内' };
+    return { ok: false, code: 'campaign_closed', message: '' };
   }
   const limitType = input.campaign.drawLimitType || 'once_per_day';
   if (limitType === 'once_per_activity' && input.myDraw) {
-    return { ok: false, code: 'already_drawn', message: '本活动你已抽过奖' };
+    return { ok: false, code: 'already_drawn', message: '' };
   }
   if (limitType === 'once_per_day' && input.myTodayDraw) {
-    return { ok: false, code: 'already_drawn_today', message: '今日已抽过，明天再来' };
+    return { ok: false, code: 'already_drawn_today', message: '' };
   }
   if (input.canDrawFromServer === false) {
     return {
       ok: false,
-      code: 'cannot_draw',
-      message: limitType === 'once_per_activity' ? '本活动你已抽过奖或活动未开放' : '今日已抽过或活动未开放',
+      code: limitType === 'once_per_activity' ? 'cannot_draw_activity' : 'cannot_draw_day',
+      message: '',
     };
   }
   return { ok: true };
@@ -192,19 +192,19 @@ export function validateShippingForm(input: {
   recipientName: string;
   phone: string;
   address: string;
-}): { ok: true; data: { recipientName: string; phone: string; address: string } } | { ok: false; message: string } {
+}): { ok: true; data: { recipientName: string; phone: string; address: string } } | { ok: false; code: string } {
   const recipientName = String(input.recipientName || '').trim();
   const phone = String(input.phone || '').trim();
   const address = String(input.address || '').trim();
   if (!recipientName || recipientName.length > 40) {
-    return { ok: false, message: '请填写正确的收货人姓名' };
+    return { ok: false, code: 'invalid_name' };
   }
   if (!address || address.length > 200) {
-    return { ok: false, message: '请填写正确的收货地址' };
+    return { ok: false, code: 'invalid_address' };
   }
   const normalizedPhone = phone.replace(/^\+86/, '').replace(/\s|-/g, '');
   if (!/^1\d{10}$/.test(normalizedPhone)) {
-    return { ok: false, message: '请填写正确的手机号' };
+    return { ok: false, code: 'invalid_phone' };
   }
   return { ok: true, data: { recipientName, phone: normalizedPhone, address } };
 }

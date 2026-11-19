@@ -89,7 +89,7 @@ export type ModExt = {
 
 /* AI 提示片段：引擎拼系统提示词时按需取用 */
 export type PromptFragments = {
-  /** 剧本基调（作者只改这一处，整段发给模型）。旧模组无此字段时由 gmIntro+worldIntro+narratorPersona 并入 */
+  /** 系统提示词（作者只改这一处，整段发给模型）。旧模组无此字段时由 gmIntro+worldIntro+narratorPersona 并入 */
   scriptTone?: string;
   /** @deprecated 已并入 scriptTone；读档仍兼容 */
   gmIntro?: string;

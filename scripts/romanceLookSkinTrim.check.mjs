@@ -26,11 +26,11 @@ test('美化页_禁止试用条与面板皮肤动画编辑控件', () => {
   assert.doesNotMatch(panel, />自定义 CSS</);
 });
 
-test('美化页_音乐区块仍在皮肤美化之后', () => {
+test('音乐并入基本信息_仍可上传贴链接选曲库', () => {
   const panel = read('components/ModEditorPanel.tsx');
-  const skinIdx = panel.indexOf('title="皮肤美化"');
-  const musicIdx = panel.indexOf('title="音乐"');
-  assert.ok(skinIdx > 0 && musicIdx > skinIdx, '音乐应保留且排在皮肤美化后面');
+  // 功能注释：音乐已并入①基础「基本信息」底部
+  assert.match(panel, /音乐并入基本信息底部/);
   assert.match(panel, /ModBgmEditor/);
-  assert.match(panel, /上传 · 链接 · 本机库 · 作品引用 · 平台曲库/);
+  // 音乐区 hint 现为可上传、贴链接，或从素材库 / 平台曲库选用
+  assert.match(panel, /可上传、贴链接，或从素材库 \/ 平台曲库选用/);
 });

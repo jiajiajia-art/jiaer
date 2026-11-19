@@ -1,3 +1,4 @@
+import i18n from '../../../i18n';
 /**
  * 类型定义
  */
@@ -59,9 +60,9 @@ export interface PendingImage {
 }
 
 export const VARIATION_TYPES = [
-    { value: 'expression', label: '表情' },
-    { value: 'clothing', label: '服装' },
-    { value: 'pose', label: '姿势' },
+    { value: 'expression', label: i18n.t('createGame.variationTypeExpression') },
+    { value: 'clothing', label: i18n.t('createGame.variationTypeClothing') },
+    { value: 'pose', label: i18n.t('createGame.variationTypePose') },
 ] as const;
 
 export const DEFAULT_NPC_PORTRAIT = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultNpc.png`;

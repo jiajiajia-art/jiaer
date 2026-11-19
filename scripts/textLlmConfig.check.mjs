@@ -66,11 +66,15 @@ test('resolveModelConfigPane_按路由切换生图与文案', () => {
 
 test('ModelConfigHub_同页双轨配置且模型只能拉取导入', () => {
   const hub = readFileSync(join(root, 'src/components/ModelConfigHub.tsx'), 'utf8');
-  assert.match(hub, /全平台统一生文模型/);
-  assert.match(hub, /onActivate={pane === 'text'/);
+  const zh = readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8');
+  assert.match(hub, /aiModelCenter\.configHub\.textMastTitle/);
+  assert.match(zh, /"textMastTitle":\s*"全平台统一生文模型"/);
+  assert.match(hub, /onActivate=\{pane === 'text'/);
   assert.match(hub, /deactivateModel/);
-  assert.match(hub, /模型 ID 不允许手填/);
-  assert.match(hub, /保存并拉取模型/);
+  assert.match(hub, /aiModelCenter\.configHub\.mastDesc/);
+  assert.match(zh, /模型 ID 不允许手填/);
+  assert.match(hub, /aiModelCenter\.configHub\.saveAndFetch/);
+  assert.match(zh, /"saveAndFetch":\s*"保存并拉取模型"/);
   assert.match(hub, /baseUrl/);
   assert.match(hub, /listModels/);
   assert.match(hub, /ModelImportDialog/);

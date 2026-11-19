@@ -6,6 +6,7 @@ import { EmptyState, useConfirm } from "./EditorKit";
 import { TIMELINE_KIND_LABEL } from "../game/timeline";
 import { getCheckpoint, listCheckpointIds } from "../lib/storage";
 import { listManualSaves, saveToSlot, MAX_SLOTS } from "../lib/store";
+import { canCreateManualCloudSave, getCloudQuota } from "../lib/cloudSaves";
 
 const KIND_CLS: Record<TimelineKind, string> = {
   time: "bg-ink-soft/10 text-ink-soft", place: "bg-jade/12 text-jade", rel: "bg-coral/12 text-coral", stat: "bg-gold/15 text-gold",
@@ -27,9 +28,15 @@ export default function TimelinePanel({ onLeave }: { onLeave?: () => void }) {
     const st = await getCheckpoint(game.id, cp);
     if (!st) { setMsg("这个时间点的检查点已被清理。"); return; }
     if (branch) {
+      const q = getCloudQuota();
+      const limit = q?.limit ?? MAX_SLOTS;
+      if (!canCreateManualCloudSave(q, false)) {
+        setMsg(q ? `云存档已满（${q.used}/${q.limit}），先删除或覆盖腾位再开分支。` : "云存档位已满，先腾出一个再开分支。");
+        return;
+      }
       const used = new Set((await listManualSaves()).map((s) => s.id));
-      const free = Array.from({ length: MAX_SLOTS }, (_, i) => `slot-${i + 1}`).find((id) => !used.has(id));
-      if (!free) { setMsg(`手动存档位已满（${MAX_SLOTS} 个），先腾出一个再开分支。`); return; }
+      const free = Array.from({ length: limit }, (_, i) => `slot-${i + 1}`).find((id) => !used.has(id));
+      if (!free) { setMsg(`本作品手动槽已用完（${limit}），先腾出一个再开分支。`); return; }
       if (!(await saveToSlot(free, game, `分支前 · ${game.world.time || "当前进度"}`))) { setMsg("保存当前进度失败，未开分支。"); return; }
     } else if (!(await confirm("回到这个时间点？之后的进度会被覆盖（自动存档），建议先手动存档，或改用「开平行分支」。"))) return;
     loadState(st);

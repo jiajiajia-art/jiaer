@@ -6,7 +6,7 @@ import { useGame } from "../store/gameCtx";
 import type { AudioAsset, AudioKind } from "../lib/types";
 import { SKINS } from "../lib/skins";
 import { AUDIO_ACCEPT, AUDIO_KIND_LABEL, EMBED_MB, audioFileProblem, audioOptions, audioUid, delBlob, loopOf, putBlob, readDataUrl, srcKind, useAudioLib } from "../game/audioLib";
-import { globalVolume, previewAudio, previewing, setGlobalVolume, setWorkVolume, useAudioEngine } from "../game/audioEngine";
+import { previewAudio, previewing, useAudioEngine } from "../game/audioEngine";
 import { EmptyState, SearchBox, matches, useConfirm } from "./EditorKit";
 import AudioPicker from "./AudioPicker";
 import { IconMusic, IconPause, IconPlay } from "../lib/icons";
@@ -14,27 +14,6 @@ import { IconMusic, IconPause, IconPlay } from "../lib/icons";
 const inp = "w-full rounded-lg border border-line bg-paper-2 px-2 py-1 text-[12.5px] text-ink outline-none focus:border-jade";
 const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
 const chip = (on: boolean) => `rounded-full border px-2 py-0.5 text-[11px] transition ${on ? "border-jade bg-jade/10 font-semibold text-jade" : "border-line text-ink-soft hover:text-ink"}`;
-
-/* 三层音量：平台全局（本机所有作品）→ 作品（存档内）→ 单条音频（在条目里设） */
-export function AudioMixer() {
-  const { game, commitGame } = useGame();
-  useAudioEngine();
-  const row = (label: string, hint: string, v: number, set: (v: number) => void, disabled = false) => (
-    <label className="flex items-center gap-2 text-[11.5px] text-ink-soft" title={hint}>
-      <span className="w-16 shrink-0">{label}</span>
-      <input type="range" min={0} max={1} step={0.01} value={v} disabled={disabled} onChange={(e) => set(Number(e.target.value))} className="h-1 flex-1 accent-[var(--jade)]" aria-label={label} />
-      <span className="w-8 text-right tabular-nums">{Math.round(v * 100)}</span>
-    </label>
-  );
-  return (
-    <div className="space-y-1 rounded-2xl border border-line bg-paper p-3">
-      <p className="text-[12px] font-bold text-ink">音量分层 <span className="font-normal text-ink-soft">逐层相乘，互不覆盖</span></p>
-      {row("平台全局", "本机所有作品通用", globalVolume(), setGlobalVolume)}
-      {row("作品音量", "只影响当前作品，随存档保存", game?.audioVolume ?? 1, (v) => { setWorkVolume(v); if (game) commitGame({ ...game, audioVolume: v }); }, !game)}
-      <p className="text-[10.5px] text-ink-soft">单条音频的独立音量在「编辑器 · 音频库」的条目里设置。</p>
-    </div>
-  );
-}
 
 type Row = { a: AudioAsset; on: boolean; modName?: string };
 export default function AudioLibraryPanel() {
@@ -115,7 +94,6 @@ export default function AudioLibraryPanel() {
     <div className="space-y-3 text-[12.5px]">
       {confirmEl}
       <p className="text-[11.5px] leading-relaxed text-ink-soft">作品的统一音频库：剧情节点、地点 / RP 房间、触发器和皮肤都从这里选音频。MOD 启用时，它自带的音频自动加入；关闭或卸载后随之移除。</p>
-      <AudioMixer />
 
       {/* 上传 / 链接 */}
       <div className="flex flex-wrap items-center gap-2">

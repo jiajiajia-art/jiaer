@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { IconType } from 'react-icons';
 import { FaDesktop } from 'react-icons/fa';
-import { HiOutlinePuzzle, HiOutlineSpeakerphone, HiOutlineUserGroup } from 'react-icons/hi';
+import { HiOutlinePuzzle, HiOutlineSpeakerphone, HiUserGroup } from 'react-icons/hi';
 import {
   MdAutoStories,
   MdOutlineMovie,
   MdSportsEsports,
-  MdOutlineAutoAwesome,
+  MdAutoAwesome,
   MdOutlineApps,
 } from 'react-icons/md';
 import { IoChevronForward } from 'react-icons/io5';
@@ -214,6 +214,13 @@ const CreateType: React.FC = () => {
       }
       navigate(`/romance/?createWorld=1&draftId=${encodeURIComponent(fileId)}`);
     } catch (error: unknown) {
+      // 功能注释：cn-test 等环境若未部署 drafts/romance，仍允许进向导做本地回归；平台书架落库会受限
+      const status = Number((error as { response?: { status?: number } })?.response?.status || 0);
+      if (status === 404 || status === 501 || status === 502 || status === 503) {
+        toast('当前环境暂无平台草稿接口，已进入本机创作向导（可测编辑器；保存到书架可能不可用）');
+        navigate('/romance/?createWorld=1');
+        return;
+      }
       toast.error(getApiErrorMessage(error, '创建草稿失败'));
     }
   };
@@ -377,7 +384,7 @@ const CreateType: React.FC = () => {
               badge="new"
               badgeText={t('createGame.new')}
               hint={t('createGame.romanceHint')}
-              icon={MdOutlineAutoAwesome}
+              icon={MdAutoAwesome}
               thumbClass={styles.createTypeOptionThumbRomance}
               disabled={createBlocked || draftLimitReached}
               onClick={() => {
@@ -390,7 +397,7 @@ const CreateType: React.FC = () => {
               badge="new"
               badgeText={t('createGame.new')}
               hint={optionHint}
-              icon={HiOutlineUserGroup}
+              icon={HiUserGroup}
               thumbClass={styles.createTypeOptionThumbAvg}
               disabled={createBlocked}
               onClick={() => void handleSelectGameType('avg')}
@@ -453,7 +460,7 @@ const CreateType: React.FC = () => {
               <TypeOptionRow
                 title="游戏世界"
                 hint="填写设定，AI 搭建世界，再进编辑器细调。"
-                icon={MdOutlineAutoAwesome}
+                icon={MdAutoAwesome}
                 thumbClass={styles.createTypeOptionThumbRomance}
                 onClick={() => {
                   void startRomanceWorldDraft();

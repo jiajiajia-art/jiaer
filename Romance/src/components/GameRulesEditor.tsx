@@ -7,7 +7,7 @@ import { condsBrief, effectBrief } from "./ruleText";
 import type { FixedEffect, FixedEvent, GameRule, RuleBranch } from "../lib/types";
 
 /* 模组编辑器 · 玩法规则：列表默认一行（名 / 时机 / 开关 / 挂钩事件），点开再编条件与效果。
- * 预设写入事件库；「高压计数」等标成规则变量卡，不与事件同一种展开块。 */
+ * 预设写入事件库；「高压计数」等标成计数器卡（界面叫「计数器」，数据仍是 flag），不与事件同一种展开块。 */
 const inp = "min-w-0 w-full rounded-lg border border-line bg-paper-2 px-2 py-1 text-[12.5px] text-ink outline-none focus:border-jade";
 const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
 const link = "text-[11.5px] font-semibold text-jade hover:underline";
@@ -58,11 +58,11 @@ function BranchCard({
         </label>
       )}
 
-      <p className="pt-0.5 text-[11px] font-bold text-ink-soft">{isFlag ? "则改规则变量" : "则额外效果（规则变量等，可留空）"}</p>
+      <p className="pt-0.5 text-[11px] font-bold text-ink-soft">{isFlag ? "那么给计数器" : "同时还要（可留空，比如给计数器记一次）"}</p>
       {effects.map((f, i) => (
         <EffectRow key={i} ef={f} onChange={(x: FixedEffect) => onChange({ ...b, effects: effects.map((y, j) => (j === i ? x : y)) })} onDelete={() => onChange({ ...b, effects: effects.filter((_, j) => j !== i) })} />
       ))}
-      <button type="button" className={link} onClick={() => onChange({ ...b, effects: [...effects, dd.effect(isFlag ? "flag" : "metric")] })}>＋ {isFlag ? "规则变量" : "效果"}</button>
+      <button type="button" className={link} onClick={() => onChange({ ...b, effects: [...effects, dd.effect(isFlag ? "flag" : "metric")] })}>＋ {isFlag ? "计数器" : "效果"}</button>
       <input className={inp} value={b.notice ?? ""} maxLength={60} placeholder="给玩家的提示（可留空；写进当天 / 本周结算）" onChange={(e) => onChange({ ...b, notice: e.target.value || undefined })} />
     </div>
   );
@@ -122,7 +122,7 @@ export default function GameRulesEditor({
   return (
     <div className="space-y-2.5">
       <p className="text-[11px] leading-relaxed text-ink-soft">
-        规则只决定「什么时候判定、条件是什么、命中后调用事件库哪一条、改哪个规则变量」。预设会写入事件库；列表默认一行，点开再编条件与效果。
+        规则 = 「什么时候检查」+「满足什么条件」+「满足后做什么」。做什么有两种：<b className="text-ink">触发事件</b>（调用事件库里的一条事件），或<b className="text-ink">只计数</b>（给计数器加减，攒够了再由别的规则或主线条件去判断）。点上方预设可以直接用，点开一行再改。
       </p>
       <div className="flex flex-wrap gap-1.5">
         <button type="button" className={btn} onClick={addBlank}>＋ 空白规则</button>
@@ -139,7 +139,7 @@ export default function GameRulesEditor({
           const isFlag = r.role === "flag";
           const open = openIds.has(r.id);
           const linked = linkedLibraryEventNames(r, lib);
-          const hookLabel = isFlag ? "规则变量" : linked.length ? `事件「${linked.join("、")}」` : "未挂钩事件";
+          const hookLabel = isFlag ? "只计数" : linked.length ? `事件「${linked.join("、")}」` : "未挂钩事件";
 
           return (
             <div
@@ -148,7 +148,7 @@ export default function GameRulesEditor({
               data-rule-row={r.id}
               data-rule-role={r.role ?? "event"}
             >
-              {/* 功能注释：默认单行摘要——规则名、判定时机、开关、挂钩事件/规则变量；点行展开。 */}
+              {/* 功能注释：默认单行摘要——规则名、判定时机、开关、挂钩事件/只计数；点行展开。 */}
               <div
                 className="flex cursor-pointer items-center gap-2 px-2.5 py-2"
                 onClick={() => toggleOpen(r.id)}
@@ -190,12 +190,18 @@ export default function GameRulesEditor({
                       className={`${inp} !w-28 shrink-0`}
                       value={r.role ?? "event"}
                       onChange={(e) => set(r.id, { role: e.target.value as GameRule["role"] })}
-                      title="事件卡挂钩事件库；规则变量卡只改 flag"
+                      title="触发事件：满足后调用事件库；只计数：满足后只给计数器加减"
                     >
-                      <option value="event">事件规则</option>
-                      <option value="flag">规则变量</option>
+                      <option value="event">触发事件</option>
+                      <option value="flag">只计数</option>
                     </select>
                   </div>
+                  {isFlag && (
+                    <p className="rounded-lg border border-gold/30 bg-gold/5 px-2 py-1.5 text-[11px] leading-relaxed text-ink-soft">
+                      <b className="text-ink">计数器</b>是你自己起名的隐藏数字（玩家看不到，没记过就是 0），适合做「连续几天」「累计几次」的判断。
+                      例：每天结束时，如果压力 ≥ 70，计数器「高压天数」加 1；否则改成 0。再加一条「触发事件」规则，条件选计数器「高压天数」≥ 5，就能做出「连续高压 5 天」的事件。
+                    </p>
+                  )}
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-ink-soft">
                     <label className="flex items-center gap-1">概率
                       <input type="number" min={1} max={100} className={`${inp} !w-16`} value={r.chance ?? 100} onChange={(e) => { const v = Math.max(1, Math.min(100, Number(e.target.value) || 100)); set(r.id, { chance: v >= 100 ? undefined : v }); }} />%

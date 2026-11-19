@@ -45,7 +45,10 @@ test('CreatePlatformApp_分栏预览与题材多选接线', () => {
   assert.match(tsx, /applicableThemeTagIds: number\[\]/);
   assert.match(tsx, /useLocalizedThemeTags/);
   assert.match(tsx, /validateApplicableThemesForPublish/);
-  assert.match(tsx, /pages: form\.pages/);
+  // 功能注释：预览把 contentText 解析成 spec 再 postMessage，不再把 form.pages 原样塞进预览
+  assert.match(tsx, /phoneAppSpecFromText\(form\.contentText/);
+  assert.match(tsx, /type: 'kkapp-preview'/);
+  assert.match(tsx, /spec\.pages/);
   assert.doesNotMatch(tsx, /\balert\(|window\.confirm|\bconfirm\(/);
   const css = read('src/page/CreatePlatformApp.module.css');
   assert.match(css, /max-width:\s*1120px/);

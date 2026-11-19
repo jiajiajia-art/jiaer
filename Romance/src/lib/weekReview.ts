@@ -40,7 +40,7 @@ export function buildWeekDiaryMessages(i: WeekReviewInput): ChatMsg[] {
   const span = r.weekTo ? `第 ${r.week}～${r.weekTo} 周` : `第 ${r.week} 周`;
   const lines: string[] = [
     `作品：${i.worldName}`,
-    i.scriptTone ? `剧本基调：${clip(i.scriptTone, 300)}` : "",
+    i.scriptTone ? `系统提示词：${clip(i.scriptTone, 300)}` : "",
     `主角：${i.playerName}${i.playerIdentity ? `（${i.playerIdentity}）` : ""}`,
     `时段：${span}${i.diary ? ` · ${i.diary.date} · ${i.diary.season}` : ""}${i.daysLeft != null ? ` · 距本局结算还剩 ${i.daysLeft} 天` : ""}`,
     r.act ? `本段主要安排：${r.act}${r.grade ? `（表现：${r.grade}）` : ""}` : "",

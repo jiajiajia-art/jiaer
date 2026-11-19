@@ -18,20 +18,20 @@ const PDFTemplateModal: React.FC<PDFTemplateModalProps> = ({ isOpen, onClose }) 
 
     const pdfFiles: PDFFile[] = [
         {
-            name: 'Funloom创作指南',
-            path: '/pdf/Funloom创作指南.pdf',
+            name: t('gameSettingEditor.pDFTemplateModal.sf6b9e95565'),
+            path: t('gameSettingEditor.pDFTemplateModal.s6ec46feac6'),
         },
         {
-            name: '历史类模板-大唐科举之路',
-            path: '/pdf/历史类模板-大唐科举之路.pdf',
+            name: t('gameSettingEditor.pDFTemplateModal.s0bf7f7a0c7'),
+            path: t('gameSettingEditor.pDFTemplateModal.s79580c45db'),
         },
         {
-            name: '都市类模板-杭城网红模拟器',
-            path: '/pdf/都市类模板-杭城网红模拟器.pdf',
+            name: t('gameSettingEditor.pDFTemplateModal.s4ff5c9c552'),
+            path: t('gameSettingEditor.pDFTemplateModal.sdd52d5fb5a'),
         },
         {
-            name: 'AVG教程-崇祯模拟器',
-            path: '/pdf/AVG教程-崇祯模拟器.zip',
+            name: t('gameSettingEditor.pDFTemplateModal.sff3233b3bb'),
+            path: t('gameSettingEditor.pDFTemplateModal.s78b2c96c71'),
         },
     ];
 

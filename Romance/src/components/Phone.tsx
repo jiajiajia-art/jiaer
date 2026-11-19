@@ -412,6 +412,8 @@ function PhoneInner() {
   // 应用打开时，顶/底系统条改用应用自身底色，避免露出主屏壁纸
   const chromeKey = app && platformAppLegacyUi(platformFocus?.content) ? platformAppLegacyUi(platformFocus?.content) : app;
   const chrome = chromeKey && APP_CHROME[chromeKey as keyof typeof APP_CHROME] ? APP_CHROME[chromeKey as keyof typeof APP_CHROME] : (app?.startsWith("platform:") ? { top: "#ffffff", bottom: "#ffffff", dark: false } : null);
+  // 功能注释：浅色应用顶栏 / 浅色主屏壁纸 → 深色状态字；深色壁纸保持白字
+  const statusOnLight = (!!chrome && !chrome.dark) || (!chrome && wp.dark === false);
   const sync = useSyncState(app);
   useProactiveMessages(); // 好友主动来消息：整部手机在线即生效，不必停在绿信里
   const [syncTip, setSyncTip] = useState("");
@@ -486,11 +488,23 @@ function PhoneInner() {
           className={`phone-os relative isolate flex flex-col overflow-hidden ring-1 ring-white/5 ${framed ? "h-full w-full rounded-[2.95rem]" : "h-full"}`}
           style={{ background: chrome ? chrome.bottom : wp.css }}
         >
+          {/* 功能注释：浅色壁纸/浅色应用顶栏用深色字；主屏再加顶晕，避免时间与信号糊掉 */}
           <div
-            className={`relative flex shrink-0 items-center justify-between px-8 pt-3.5 pb-1 text-[14.5px] font-semibold tracking-[-0.01em] ${chrome && !chrome.dark ? "text-black/80" : "text-white"}`}
+            data-tour="phone-guide"
+            className={`relative z-10 flex shrink-0 items-center justify-between px-8 pt-3.5 pb-1 text-[14.5px] font-semibold tracking-[-0.01em] ${statusOnLight ? "text-black/85" : "text-white"}`}
             style={chrome ? { background: chrome.top } : undefined}
           >
-            <span className="flex items-center gap-1.5 tabular-nums tracking-tight">
+            {!chrome && (
+              <span
+                aria-hidden
+                className={`pointer-events-none absolute inset-x-0 -top-1 h-14 ${
+                  statusOnLight
+                    ? "bg-gradient-to-b from-white/50 via-white/20 to-transparent"
+                    : "bg-gradient-to-b from-black/50 via-black/22 to-transparent"
+                }`}
+              />
+            )}
+            <span className="relative flex items-center gap-1.5 tabular-nums tracking-tight">
               {time}
               {prefs.dnd && (
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-label="勿扰模式" className="opacity-90">
@@ -502,11 +516,11 @@ function PhoneInner() {
               onClick={() => { setApp(null); setLocked(true); }}
               aria-label="锁屏"
               title="点按锁屏"
-              className="dynamic-island absolute left-1/2 top-2.5 h-[26px] w-[92px] -translate-x-1/2" />
-            <div className="flex items-center gap-1.5">
+              className="dynamic-island absolute left-1/2 top-2.5 z-[1] h-[26px] w-[92px] -translate-x-1/2" />
+            <div className="relative flex items-center gap-1.5">
               {sync.available && (
                 <button onClick={doSync} disabled={sync.busy} aria-label="联动世界剧情刷新" title="联动世界剧情刷新"
-                  className={`-my-1 mr-0.5 grid h-6 w-6 place-items-center rounded-full ${chrome && !chrome.dark ? "bg-black/[0.07] active:bg-black/15" : "bg-white/15 active:bg-white/30"}`}>
+                  className={`-my-1 mr-0.5 grid h-6 w-6 place-items-center rounded-full ${statusOnLight ? "bg-black/[0.08] active:bg-black/15" : "bg-white/15 active:bg-white/30"}`}>
                   <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className={sync.busy ? "animate-spin" : ""}>
                     <path d="M20 11a8 8 0 1 0-2.3 5.7" /><path d="M20 4v7h-7" />
                   </svg>

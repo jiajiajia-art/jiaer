@@ -44,6 +44,33 @@ const rootToBaseRedirect = (base: string) => ({
   },
 })
 
+/**
+ * 功能注释：Romance/index.html 是 Figma 占位页（标题 <!-- figma:title -->）。
+ * Windows 路径不区分大小写，访问 /funloom/romance/ 会命中它而不是主站 index。
+ * 文档请求改回主站 index.html，地址栏仍停在 /romance/，由 SPA 接管。
+ */
+const romanceDocumentToSpaIndex = (viteBase: string) => ({
+  name: 'romance-document-to-spa-index',
+  configureServer(server: { middlewares: { use: (fn: (req: { url?: string }, res: unknown, next: () => void) => void) => void } }) {
+    const base = viteBase.replace(/\/+$/, '')
+    const romanceRoot = `${base}/romance`.toLowerCase()
+    server.middlewares.use((req, _res, next) => {
+      const raw = req.url || ''
+      const queryAt = raw.indexOf('?')
+      const pathOnly = queryAt >= 0 ? raw.slice(0, queryAt) : raw
+      const query = queryAt >= 0 ? raw.slice(queryAt) : ''
+      const trimmed = pathOnly.replace(/\/+$/, '').toLowerCase()
+      const isRomanceDocument = trimmed === romanceRoot || pathOnly.toLowerCase() === `${romanceRoot}/index.html`
+      if (isRomanceDocument) {
+        // 功能注释：不能改写成 /index.html。public/index.html 是 Firebase Auth Handler，
+        // 会盖住 Vite 入口；改到不存在的路径，才会落到主站 index 由 SPA 接管。
+        req.url = `${base}/__spa${query}`
+      }
+      next()
+    })
+  },
+})
+
 /** 功能注释：开发态短链 /romance → /funloom/romance/（生产由 Worker 同逻辑处理） */
 const romanceShortLinkRedirect = () => ({
   name: 'romance-short-link-redirect',
@@ -60,6 +87,25 @@ const romanceShortLinkRedirect = () => ({
       res.statusCode = 302
       res.setHeader('Location', `/funloom/romance${rest === '/' ? '/' : rest}${u.search}`)
       res.end()
+    })
+  },
+})
+
+/**
+ * 功能注释：挡住 Romance/dist、standalone.html 等被当成 /romance/* 静态页。
+ * macOS 大小写不敏感时，残留 dist/index.html（title=今夜她是主角）会污染标签栏。
+ */
+const romanceShellGuard = () => ({
+  name: 'romance-shell-guard',
+  configureServer(server: { middlewares: { use: (fn: (req: { url?: string }, _res: unknown, next: () => void) => void) => void } }) {
+    server.middlewares.use((req, _res, next) => {
+      const raw = req.url || ''
+      const q = raw.includes('?') ? raw.slice(raw.indexOf('?')) : ''
+      const pathOnly = raw.split('?')[0] || ''
+      if (/^\/romance\/(dist(?:\/|$)|standalone\.html$|index\.html$)/i.test(pathOnly)) {
+        req.url = `/index.html${q}`
+      }
+      next()
     })
   },
 })
@@ -108,15 +154,23 @@ export default defineConfig(({ mode }) => {
   // 功能注释：Figma 预览环境没有本机 wrangler，固定连阿里云测试；本地开发仍以 devApiPresets.ts 为准
   const presetKey = process.env.FIGMA ? 'cn-test' : resolveDevApiPresetKey()
   const preset = getDevApiPreset(presetKey)
+  // 功能注释：本地联调 cn-* 时视为国内运行时，关闭 Google/Firebase 外网请求
+  const viteRuntime = String(env.VITE_RUNTIME || process.env.VITE_RUNTIME || '').trim()
+    || (mode === 'development' && String(preset.key).startsWith('cn-') ? 'aliyun' : '')
 
   return {
     base: viteBase,
+    define: {
+      'import.meta.env.VITE_RUNTIME': JSON.stringify(viteRuntime),
+    },
     plugins: [
       react(),
       tailwindcss(),
       romanceVirtualModules(),
       ...(viteBase !== '/' ? [rootToBaseRedirect(viteBase)] : []),
+      romanceDocumentToSpaIndex(viteBase),
       romanceShortLinkRedirect(),
+      romanceShellGuard(),
       removeOversizedLocalDownloads(),
       ...(mode === 'development' ? [logDevApiPreset(preset)] : []),
     ],

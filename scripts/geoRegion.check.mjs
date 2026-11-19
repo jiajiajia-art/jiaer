@@ -33,6 +33,15 @@ test('mapCountryToRegion_港澳台应为繁体微信', () => {
   }
 });
 
+test('mapCountryToRegion_日本应为日语海外', () => {
+  assert.deepEqual(mapCountryToRegion('JP'), {
+    country: 'JP',
+    language: 'ja',
+    payRegion: 'overseas',
+    defaultPayMethod: 'overseas',
+  });
+});
+
 test('mapCountryToRegion_其它与空应为英文海外', () => {
   assert.equal(mapCountryToRegion('US').language, 'en');
   assert.equal(mapCountryToRegion('US').defaultPayMethod, 'overseas');
@@ -46,10 +55,11 @@ test('calcOverseasCustomDiamonds_最低一钻', () => {
   assert.equal(calcWechatCustomDiamonds(1), 10);
 });
 
-test('App_启动应hydrateFromIp强制语言', () => {
+test('App_启动应hydrateFromIp且用户已选语言时不覆盖', () => {
   const app = read('src/App.tsx');
   const store = read('src/store/useGeoRegionStore.ts');
   assert.match(app, /hydrateFromIp/);
+  assert.match(store, /hasUserLanguageChoice\(\)/);
   assert.match(store, /applyAppLanguage\(region\.language/);
   assert.match(store, /fetchGeoRegion/);
 });
@@ -57,6 +67,8 @@ test('App_启动应hydrateFromIp强制语言', () => {
 test('AuthModal_应按运行时语言决定Google-only', () => {
   const auth = read('src/components/AuthModal.tsx');
   assert.match(auth, /i18n\.language/);
+  // 功能注释：国内 Aliyun 关闭 Google，即便 en/ja 也走手机号
+  assert.match(auth, /isGoogleAuthEnabled/);
   assert.doesNotMatch(auth, /config\.LANGUAGE/);
   assert.doesNotMatch(auth, /import\s*\{[^}]*LANGUAGE[^}]*\}\s*from\s*['"].*config/);
 });

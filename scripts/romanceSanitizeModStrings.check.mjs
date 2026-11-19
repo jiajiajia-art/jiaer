@@ -134,6 +134,59 @@ test('sanitizeModStrings_母校与父母职业对象须显示成名称', async (
   assert.doesNotMatch(pools, /parentJobs/);
 });
 
+test('sanitizeModStrings_地点id为shop或items时不得收成数组', async () => {
+  const { sanitizeModStrings } = await import(pathToFileURL(join(romance, 'lib/sanitizeModStrings.ts')).href);
+  const clean = sanitizeModStrings({
+    id: 'w1',
+    name: '雾港',
+    version: '1.0.0',
+    kind: 'world',
+    content: {
+      rooms: {
+        shop: { name: '杂货铺', desc: '货架上摆满零食。', exits: {} },
+        items: { name: '仓库', desc: '堆着木箱。', exits: {} },
+        paths: { name: '小径', desc: '落叶铺路。', exits: {} },
+        inn: { name: '旅店', desc: '海风', exits: {} },
+      },
+    },
+  });
+  for (const id of ['shop', 'items', 'paths', 'inn']) {
+    const room = clean.content.rooms[id];
+    assert.equal(Array.isArray(room), false, `${id} 不应被收成数组`);
+    assert.equal(typeof room, 'object');
+    assert.equal(typeof room.desc, 'string');
+    assert.ok(room.desc.trim().length > 0, `${id} desc 应保留或补全`);
+  }
+  assert.equal(clean.content.rooms.shop.name, '杂货铺');
+  assert.equal(clean.content.rooms.shop.desc, '货架上摆满零食。');
+  assert.equal(clean.content.rooms.items.desc, '堆着木箱。');
+});
+
+test('sanitizeModStrings_已脏的数组型房间须拆回对象并保留desc', async () => {
+  const { sanitizeModStrings, unwrapRoomRow } = await import(
+    pathToFileURL(join(romance, 'lib/sanitizeModStrings.ts')).href
+  );
+  const unwrapped = unwrapRoomRow([{ name: '杂货铺', desc: '旧货架', exits: {} }]);
+  assert.equal(unwrapped.name, '杂货铺');
+  assert.equal(unwrapped.desc, '旧货架');
+  assert.equal(unwrapRoomRow(null), null);
+
+  const clean = sanitizeModStrings({
+    id: 'w1',
+    name: '雾港',
+    version: '1.0.0',
+    kind: 'world',
+    content: {
+      rooms: {
+        shop: [{ name: '杂货铺', desc: '货架上摆满零食。', exits: {} }],
+      },
+    },
+  });
+  assert.equal(Array.isArray(clean.content.rooms.shop), false);
+  assert.equal(clean.content.rooms.shop.desc, '货架上摆满零食。');
+  assert.equal(clean.content.rooms.shop.name, '杂货铺');
+});
+
 test('healModRoomRefs_悬空引用须清除且不得猜测开局地点', async () => {
   const { healModRoomRefs, sanitizeModStrings } = await import(
     pathToFileURL(join(romance, 'lib/sanitizeModStrings.ts')).href

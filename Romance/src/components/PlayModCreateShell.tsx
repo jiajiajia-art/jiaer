@@ -15,6 +15,17 @@ import { kkmodPackageFromPlayMod, stringifyCreatorKkmod } from "../lib/kkmodFrom
 import { readFunloomAuthToken, resolveFunloomApiBase } from "../lib/platformAvatarLibrary";
 import { PLAY_MOD_PANEL_LABEL, PLAY_MOD_SDK_VERSION, derivePlayModEditorPanels, forbiddenFieldLabels, forbiddenPlayFields, sanitizeConflictIds } from "../mods/playModGuard";
 
+/** 功能注释：从上传响应里抠组件 id，便于上传后直接提审 */
+function pickUploadedModId(data: unknown): string {
+  if (!data || typeof data !== "object") return "";
+  const o = data as Record<string, unknown>;
+  for (const k of ["modId", "id", "componentId"]) {
+    const v = o[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return "";
+}
+
 const CREATOR_LOCKED_HINT =
   "需要过审作品解锁创作者身份即可使用。公开发布一部游戏世界并通过审核后解锁。";
 
@@ -61,7 +72,7 @@ async function uploadPreviewImage(file: File): Promise<string> {
   return String(url);
 }
 
-async function uploadPlayKkmod(mod: Mod, previewImages: string[]): Promise<{ ok: boolean; message: string }> {
+async function uploadPlayKkmod(mod: Mod, previewImages: string[]): Promise<{ ok: boolean; message: string; modId?: string }> {
   const token = readFunloomAuthToken();
   if (!token) return { ok: false, message: "请先登录后再上传玩法包" };
   if (previewImages.length < PREVIEW_MIN) return { ok: false, message: `请先上传至少 ${PREVIEW_MIN} 张预览图` };
@@ -95,13 +106,39 @@ async function uploadPlayKkmod(mod: Mod, previewImages: string[]): Promise<{ ok:
       success?: boolean;
       ok?: boolean;
       message?: string;
-      data?: { message?: string };
+      data?: { message?: string; modId?: string; id?: string; componentId?: string };
     } | null;
-    const ok = res.ok && (json?.success === true || json?.ok === true || !!json?.data);
+    const ok = res.ok && json?.success !== false && json?.ok !== false && (json?.success === true || json?.ok === true || !!json?.data);
+    const modId = pickUploadedModId(json?.data) || pickUploadedModId(json);
     return {
       ok,
-      message: json?.data?.message || json?.message || (ok ? "已上传玩法包并进入私有测试草稿" : "上传失败"),
+      modId: modId || undefined,
+      message: json?.data?.message || json?.message || (ok ? "已上传玩法包并进入私有测试。可继续提交审核上架。" : "上传失败"),
     };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "网络错误" };
+  }
+}
+
+/** 功能注释：私有测试包提审；不扣织梦豆，只改审核状态 */
+async function submitPlayKkmod(modId: string): Promise<{ ok: boolean; message: string }> {
+  const token = readFunloomAuthToken();
+  if (!token) return { ok: false, message: "请先登录后再提交审核" };
+  if (!modId) return { ok: false, message: "缺少玩法包 id，请重新上传后再提审" };
+  try {
+    const base = resolveFunloomApiBase().replace(/\/$/, "");
+    const res = await fetch(`${base}/api/components/kkmod/${encodeURIComponent(modId)}/submit`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+    });
+    const json = await res.json().catch(() => null) as { success?: boolean; message?: string; data?: { message?: string } } | null;
+    const ok = res.ok && json?.success !== false && (json?.success === true || !!json?.data);
+    return { ok, message: json?.data?.message || json?.message || (ok ? "已提交审核" : "提审失败") };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "网络错误" };
   }
@@ -164,6 +201,9 @@ export default function PlayModCreateShell({ onClose }: { onClose: () => void })
   const [err, setErr] = useState("");
   const [lastMod, setLastMod] = useState<Mod | null>(null);
   const [busy, setBusy] = useState(false);
+  /** 功能注释：最近一次上传成功的组件 id，供「提交审核」；继续编辑时用 editId */
+  const [uploadedModId, setUploadedModId] = useState<string | null>(null);
+  const [submitBusy, setSubmitBusy] = useState(false);
   /** 功能注释：作者上传的商店预览图 URL；继续编辑时带出已有图 */
   const [previews, setPreviews] = useState<string[]>([]);
   const [previewBusy, setPreviewBusy] = useState(false);
@@ -194,6 +234,7 @@ export default function PlayModCreateShell({ onClose }: { onClose: () => void })
         if (r.ok) {
           setEditTarget({ mod: r.mod, isNew: false });
           setPreviews(r.previewImages);
+          setUploadedModId(editId);
         }
         else setErr(r.message);
         setEditLoading(false);
@@ -210,6 +251,23 @@ export default function PlayModCreateShell({ onClose }: { onClose: () => void })
     setNotice("");
     const r = await uploadPlayKkmod(mod, previews);
     setBusy(false);
+    if (r.ok) {
+      setUploadedModId(r.modId || editId || null);
+      setNotice(r.message);
+    } else setErr(r.message);
+  };
+
+  const submitUploadedPackage = async () => {
+    const id = uploadedModId;
+    if (!id) {
+      setErr("请先上传玩法包，再提交审核");
+      return;
+    }
+    setSubmitBusy(true);
+    setErr("");
+    setNotice("");
+    const r = await submitPlayKkmod(id);
+    setSubmitBusy(false);
     if (r.ok) setNotice(r.message);
     else setErr(r.message);
   };
@@ -224,9 +282,11 @@ export default function PlayModCreateShell({ onClose }: { onClose: () => void })
     setPreviewBusy(true);
     setErr("");
     try {
-      const urls: string[] = [];
-      for (const f of Array.from(files).slice(0, room)) urls.push(await uploadPreviewImage(f));
-      setPreviews((p) => [...p, ...urls].slice(0, PREVIEW_MAX));
+      // 功能注释：逐张落盘，中途失败时已传成功的图不丢
+      for (const f of Array.from(files).slice(0, room)) {
+        const url = await uploadPreviewImage(f);
+        setPreviews((p) => (p.includes(url) ? p : [...p, url].slice(0, PREVIEW_MAX)));
+      }
     } catch (e) {
       setErr(e instanceof Error ? e.message : "预览图上传失败");
     } finally {
@@ -266,15 +326,17 @@ export default function PlayModCreateShell({ onClose }: { onClose: () => void })
   }
 
   return (
-    <div className="world-gen-shell world-gen-editor mx-auto min-h-screen max-w-6xl overflow-x-hidden px-3 py-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-5">
-      <header className="mb-3">
-        <button type="button" className="mb-2 text-[13px] font-semibold text-ink-soft" onClick={leave}>
-          ← 返回
-        </button>
-        <p className="world-gen-kicker">创作游戏 · 玩法 Mod</p>
-        <h1 className="world-gen-title">对话生成玩法</h1>
+    <div className="world-gen-shell world-gen-editor mx-auto flex h-[100dvh] max-h-[100dvh] w-full max-w-6xl flex-col overflow-hidden px-3 py-3 sm:px-5">
+      <header className="wg-play-head">
+        <div className="wg-play-head-row">
+          <button type="button" className="world-gen-back" onClick={leave}>
+            ← 返回
+          </button>
+          <p className="world-gen-kicker">创作游戏 · 玩法 SDK</p>
+          <h1 className="world-gen-title">对话生成玩法</h1>
+        </div>
         <p className="world-gen-lead">
-          用自然语言生成玩法叠加包。包只扩展玩法，不替换原有人物、地点和时代；可绑多个游戏世界，也可分多次安装。能力都来自平台 SDK。默认从空白底叠加；也可选自己的世界草稿。
+          像聊天一样描述玩法，AI 用平台玩法 SDK 写补丁（属性、头衔、日程、事件…），不会改人物和地点。先选世界，聊完保存，再挂上去试玩。
         </p>
       </header>
       {notice ? (
@@ -346,11 +408,19 @@ export default function PlayModCreateShell({ onClose }: { onClose: () => void })
         <div className="mb-3 flex flex-wrap gap-2">
           <button
             type="button"
-            disabled={busy || previewBusy || previews.length < PREVIEW_MIN || forbiddenPlayFields(lastMod.content).length > 0}
+            disabled={busy || previewBusy || submitBusy || previews.length < PREVIEW_MIN || forbiddenPlayFields(lastMod.content).length > 0}
             className="rounded-full bg-jade px-3 py-1.5 text-[12px] font-bold text-white disabled:opacity-40"
             onClick={() => void pushPlayModPackage(lastMod)}
           >
             {busy ? "上传中…" : previews.length < PREVIEW_MIN ? "先添加预览图再上传" : "上传玩法包到组件商店"}
+          </button>
+          <button
+            type="button"
+            disabled={busy || submitBusy || !uploadedModId}
+            className="rounded-full border border-jade/50 bg-jade/10 px-3 py-1.5 text-[12px] font-bold text-jade-deep disabled:opacity-40"
+            onClick={() => void submitUploadedPackage()}
+          >
+            {submitBusy ? "提交中…" : "提交审核"}
           </button>
           <button
             type="button"
@@ -374,8 +444,10 @@ export default function PlayModCreateShell({ onClose }: { onClose: () => void })
         onClose={(savedName, savedMod) => {
           if (savedName && savedMod) {
             setLastMod(savedMod);
+            // 功能注释：内容已改动，旧上传记录作废——须重新上传，避免把旧版本提交审核
+            setUploadedModId(null);
             // 功能注释：不再保存即自动上传——必须先由作者添加预览图
-            setNotice(`已保存「${savedName}」。添加至少 ${PREVIEW_MIN} 张预览图后，即可上传到组件商店（私有测试 → 审核上架）。`);
+            setNotice(`已保存「${savedName}」。添加至少 ${PREVIEW_MIN} 张预览图后上传（不扣织梦豆），再点「提交审核」。`);
             return;
           }
           leave();

@@ -17,16 +17,21 @@ const draftLib = readFileSync(join(root, 'Romance/src/lib/useDraft.ts'), 'utf8')
 const PAGE = process.env.ROMANCE_STEP_URL || 'http://39.106.250.199/funloom/romance/?createWorld=1';
 
 test('草稿冲突_入口与编辑器文案按钮', () => {
-  assert.match(panel, /<Modal title="发现本机未保存的草稿" locked /);
-  assert.match(panel, /继续填写草稿/);
-  assert.match(panel, /从已保存版本开始/);
-  assert.match(panel, /继续填写草稿会覆盖那些修改/);
+  const choice = readFileSync(join(root, 'Romance/src/components/DraftConflictChoice.tsx'), 'utf8');
+  // 冲突弹窗标题改为「要接着哪份写？」；两张卡文案在 DraftConflictChoice
+  assert.match(panel, /<Modal[\s\S]*?title="要接着哪份写？"[\s\S]*?locked/);
+  assert.match(panel, /DraftConflictChoice/);
+  assert.match(choice, /本机草稿/);
+  assert.match(choice, /已保存版本/);
+  assert.match(choice, /用这份继续/);
+  assert.match(choice, /用这份开始/);
+  assert.match(choice, /会盖住那些后来的修改/);
   assert.match(panel, /草稿已存本机/);
-  assert.doesNotMatch(panel, />恢复草稿</);
-  assert.doesNotMatch(panel, />使用已保存版本</);
-  assert.match(wiz, /继续编辑已有内容/);
-  assert.match(wiz, /继续填写草稿/);
-  assert.match(wiz, /从已保存版本开始/);
+  assert.doesNotMatch(choice, />恢复草稿</);
+  assert.doesNotMatch(choice, />使用已保存版本</);
+  assert.doesNotMatch(choice, /从已保存版本开始/);
+  assert.match(wiz, />\s*继续编辑\s*</);
+  assert.match(wiz, /DraftConflictChoice/);
   assert.match(wiz, /选定前不打开表单/);
   assert.match(wiz, /bootFromSession/);
   assert.match(wiz, /step: 1 as const/);
@@ -37,11 +42,12 @@ test('草稿冲突_入口与编辑器文案按钮', () => {
 
 test('草稿冲突_已保存版本也写出时间', () => {
   // 功能注释：两边都写 fmtDraftTime，禁止只给本机草稿带时间
-  assert.match(panel, /已保存的版本（\$\{fmtDraftTime\(savedAtMs\)\}）/);
-  assert.match(panel, /自动保存的草稿（\{fmtDraftTime\(draft\.pending\.at\)\}）/);
+  // 本机草稿与已保存版本都把 fmtDraftTime 传进对照卡
+  assert.match(panel, /draftAtLabel=\{fmtDraftTime\(draft\.pending!\.at\)\}/);
+  assert.match(panel, /savedAtLabel=\{savedAtMs != null \? fmtDraftTime\(savedAtMs\) : ""\}/);
   assert.match(panel, /writeSavedVersionAt/);
   assert.match(panel, /resolveSavedVersionAt/);
-  assert.match(wiz, /已保存的版本（\$\{fmtDraftTime\(entranceDraftGate\.savedAt\)\}）/);
+  assert.match(wiz, /savedAtLabel=\{entranceDraftGate\.savedAt != null \? fmtDraftTime\(entranceDraftGate\.savedAt\) : ""\}/);
   assert.match(wiz, /savedAt: resolveSavedVersionAt/);
   assert.match(wiz, /writeSavedVersionAt\(worldGenDraftId/);
   assert.match(draftLib, /export function writeSavedVersionAt/);

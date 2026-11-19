@@ -2,9 +2,9 @@
     /* createTypeOption 卡片色来自模态框 CSS，需祖先提供变量 */
     --type-card: var(--color-surface);
     --type-border: color-mix(in srgb, var(--color-text) 10%, transparent);
-    /* 功能注释：活动入口跟暗色主站次要文案一致（白灰），不用品红/酒红当正文色 */
-    --activity-accent: var(--color-text-secondary);
-    --activity-accent-strong: var(--color-surface);
+    /* 功能注释：活动入口跟主题正文色，禁止写死近白——浅色底上会看不清「更多活动」 */
+    --activity-accent: color-mix(in srgb, var(--color-text) 72%, transparent);
+    --activity-accent-strong: var(--color-primary);
     --activity-rule: color-mix(in srgb, var(--color-text) 14%, transparent);
     width: 100%;
     min-height: 100vh;
@@ -15,11 +15,11 @@
 }
 
 .mainContent {
-    display: flex;
-    /* 功能注释：壳层 .main 是 flex-column；顶对齐，禁止垂直居中以免顶栏下大块空白 */
-    justify-content: flex-start;
-    /* 功能注释：列布局下用 align-items 水平居中单列内容 */
-    align-items: center;
+    /* 功能注释：本 class 挂在 AppPageShell 的滚动 main 上，必须保持 display:block。
+       改成 flex 且不写 flex-direction:column 时，align-items:center 会变成垂直居中；
+       列表高出中间滚动区后，标题被顶栏裁切，顶部溢出滚不回来，表现为上滑不动。
+       水平居中交给 .content 的 margin:auto。 */
+    display: block;
     /* 功能注释：壳层已用 --app-navbar-offset 避让顶栏，这里只留内容边距，禁止再叠一层 navbar 高度 */
     padding: 8px 20px 32px;
     /* 功能注释：禁止 min-height:100%——与壳层 absolute top/bottom 叠加后会按壳高撑开，压穿底栏导致看起来「滑不动」且末项被挡 */
@@ -43,8 +43,9 @@
     align-items: center;
     width: 100%;
     min-height: 36px;
-    margin: 0 0 6px;
-    padding: 0 2px;
+    /* 功能注释：与下方「创建游戏类型」拉开一点，避免贴死分割线 */
+    margin: 0 0 18px;
+    padding: 0 2px 10px;
     box-sizing: border-box;
     border: 0;
     background: transparent;
@@ -106,7 +107,7 @@
     flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
-    color: color-mix(in srgb, var(--color-text) 78%, transparent);
+    color: color-mix(in srgb, var(--color-text) 86%, transparent);
     white-space: nowrap;
 }
 
@@ -144,9 +145,9 @@
     flex: 0 0 auto;
     gap: 2px;
     margin-left: 10px;
-    color: var(--activity-accent);
+    color: var(--color-primary);
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     line-height: 1;
     white-space: nowrap;
 }
@@ -166,6 +167,7 @@
 .header {
     justify-content: center;
     text-align: center;
+    margin-top: 6px;
     margin-bottom: 16px;
 }
 

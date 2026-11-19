@@ -111,7 +111,12 @@ test('PlayerArchiveSection_生成中可保存离开', () => {
   const src = readFileSync(join(root, 'src/components/Galgame/panels/PlayerArchiveSection.tsx'), 'utf8');
   assert.match(src, /startPlayerAvatarBackgroundGen/);
   assert.match(src, /subscribePlayerAvatarGenBusy/);
-  assert.match(src, /可先保存或离开/);
+  // 可先保存或离开锁在 toast.avatarGenerating 与 avatar.backgroundHint
+  assert.match(src, /t\('galgameUi\.playerArchive\.toast\.avatarGenerating'\)/);
+  assert.match(src, /t\('galgameUi\.playerArchive\.avatar\.backgroundHint'\)/);
+  const zh = readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8');
+  assert.match(zh, /"avatarGenerating": "头像生成中，可先保存或离开，完成后会自动写入"/);
+  assert.match(zh, /"backgroundHint": "可先保存或离开，完成后自动写入"/);
   assert.match(src, /primaryBtn[\s\S]{0,80}disabled=\{saving \|\| personaAiBusy\}/);
   assert.match(src, /secondaryBtn[\s\S]{0,80}disabled=\{saving \|\| personaAiBusy\}/);
   assert.doesNotMatch(

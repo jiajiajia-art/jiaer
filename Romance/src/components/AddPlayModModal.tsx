@@ -40,10 +40,28 @@ type Props = {
   enabledThemeTags?: WorldThemeContext["enabledThemeTags"];
 };
 
-/** 功能注释：预览图只用接口返回的 URL */
+/** 功能注释：预览图只用接口返回的 URL；点图放大看，加载失败给出提示而不是破图 */
 function PlayModPreview({ src, alt }: { src: string; alt: string }) {
-  return <img src={src} alt={alt} className="h-36 w-full rounded-xl object-cover border border-line" />;
+  const [big, setBig] = useState(false);
+  const [broken, setBroken] = useState(false);
+  if (broken) {
+    return <div className="grid h-36 w-full place-items-center rounded-xl border border-dashed border-line text-[11.5px] text-ink-soft">预览图加载失败</div>;
+  }
+  return (
+    <>
+      <button type="button" className="block w-full" onClick={() => setBig(true)} aria-label={`放大查看：${alt}`}>
+        <img src={src} alt={alt} onError={() => setBroken(true)} className="h-36 w-full cursor-zoom-in rounded-xl border border-line object-cover" />
+      </button>
+      {big && (
+        <div className="fixed inset-0 z-[2147483000] grid place-items-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-label={alt} onClick={() => setBig(false)}>
+          <img src={src} alt={alt} className="max-h-full max-w-full rounded-xl object-contain" />
+        </div>
+      )}
+    </>
+  );
 }
+
+const PAGE_SIZE = 8;
 
 /** 功能注释：远程图标用 <img>；无图标时显示名称首字 */
 function PlayModIcon({ url, name, size }: { url: string | null; name: string; size: "md" | "lg" }) {
@@ -159,6 +177,12 @@ export default function AddPlayModModal({
     }
     return rows;
   }, [catalog, tab, installed, recommendInfo]);
+
+  // 功能注释：列表分页，每页 8 个；切页签回到第 1 页
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [tab]);
+  const pageCount = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+  const pageRows = list.slice((Math.min(page, pageCount) - 1) * PAGE_SIZE, Math.min(page, pageCount) * PAGE_SIZE);
 
   const detail = detailSlug ? catalogBySlug(detailSlug) : null;
   // 功能注释：互斥 / 平台版本不兼容 → 不可添加（置灰 + 原因）
@@ -331,7 +355,7 @@ export default function AddPlayModModal({
                   {tab === "已安装" ? "本作品还没有添加玩法" : tab === "已购买" ? "还没有购买过玩法" : "暂时还没有上架的玩法"}
                 </li>
               )}
-              {!loading && !loadError && list.map((item) => {
+              {!loading && !loadError && pageRows.map((item) => {
                 const on = installed.has(item.slug);
                 const blocked = blockOf(item);
                 const depNames = missingPlayModDepNames(item, installs, catalogBySlug);
@@ -388,6 +412,13 @@ export default function AddPlayModModal({
                 );
               })}
             </ul>
+            {!loading && !loadError && pageCount > 1 && (
+              <div className="mt-3 flex items-center justify-center gap-3 text-[12px] text-ink-soft">
+                <button type="button" className="rounded-full border border-line px-3 py-1 disabled:opacity-40" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>上一页</button>
+                <span className="tabular-nums">{Math.min(page, pageCount)} / {pageCount}</span>
+                <button type="button" className="rounded-full border border-line px-3 py-1 disabled:opacity-40" disabled={page >= pageCount} onClick={() => setPage((p) => Math.min(pageCount, p + 1))}>下一页</button>
+              </div>
+            )}
           </>
         )}
       </div>

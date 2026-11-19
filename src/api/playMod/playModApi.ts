@@ -219,11 +219,39 @@ export const playModStoreApi = {
     });
     return parseJson(res);
   },
-  uploadKkmod: async (token: string, body: { filename?: string; package: unknown; engineVersion?: string }) => {
+  uploadKkmod: async (
+    token: string,
+    body: { filename?: string; package: unknown; engineVersion?: string; previewImages?: string[] },
+  ) => {
     const res = await fetch(`${HOST_ADDRESS}/api/components/kkmod/upload`, {
       method: 'POST',
       headers: authHeaders(token),
       body: JSON.stringify(body),
+    });
+    return parseJson(res);
+  },
+  /** 功能注释：私有测试 → 审核中；对接 POST /api/components/kkmod/{modId}/submit */
+  submitKkmod: async (token: string, modId: string) => {
+    const res = await fetch(`${HOST_ADDRESS}/api/components/kkmod/${encodeURIComponent(modId)}/submit`, {
+      method: 'POST',
+      headers: authHeaders(token),
+      body: '{}',
+    });
+    return parseJson(res);
+  },
+  /** 功能注释：审核中 → 私有测试；对接 POST /api/components/kkmod/{modId}/withdraw */
+  withdrawKkmod: async (token: string, modId: string) => {
+    const res = await fetch(`${HOST_ADDRESS}/api/components/kkmod/${encodeURIComponent(modId)}/withdraw`, {
+      method: 'POST',
+      headers: authHeaders(token),
+      body: '{}',
+    });
+    return parseJson(res);
+  },
+  /** 功能注释：查玩法包审核状态（含驳回原因） */
+  getKkmodStatus: async (token: string, modId: string) => {
+    const res = await fetch(`${HOST_ADDRESS}/api/components/kkmod/${encodeURIComponent(modId)}/status`, {
+      headers: authHeaders(token, false),
     });
     return parseJson(res);
   },

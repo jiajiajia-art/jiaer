@@ -168,7 +168,7 @@ function Chat({ app, onSlime, goCheck, seed, onSeedUsed }: { app: UserApp; onSli
     const t = text.trim(); if (!t || busy) return;
     const hist = [...turns, { role: "user" as const, text: t }];
     patchApp(app.id, { turns: hist }); setInput(""); setErr("");
-    if (!ai) { setErr("小珠需要接入 AI 才能生成应用：请先在菜单「AI 配置」里接入模型。"); patchApp(app.id, { turns }); setInput(t); return; }
+    if (!ai) { setErr("小珠需要登录平台账号后才能生成应用。"); patchApp(app.id, { turns }); setInput(t); return; }
     setBusy(true);
     try {
       const msgs: ChatMsg[] = [{ role: "system", content: SYS(app.spec) }, ...hist.slice(-10).map((x) => ({ role: x.role, content: x.text }))];
@@ -220,7 +220,7 @@ function Chat({ app, onSlime, goCheck, seed, onSeedUsed }: { app: UserApp; onSli
         {reqOpen && <div className="mt-2 flex flex-wrap gap-1">{REQUIREMENTS.map((r) => { const ok = r.ok(app.spec); return <span key={r.key} className="rounded-full px-2 py-0.5 text-[10.5px] font-semibold" style={{ background: ok ? "#e5f7ef" : "#f2f2f5", color: ok ? MINT : "#aaa" }}>{ok ? "" : ""}{r.label}</span>; })}</div>}
       </div>
       <div className="flex-1 space-y-3 px-3 py-3.5">
-        {!turns.length && <Bubble me={false} text={ai ? "嗨，我是小珠！告诉我你想做什么应用吧～\n比如「帮我生成一个记账应用」「我想做一个宠物养成组件」。布局会按你的使用习惯来哦。" : "嗨，我是小珠！我要接入 AI 才能帮你生成应用哦～\n请先在菜单「AI 配置」里接入模型，再回来找我。"} />}
+        {!turns.length && <Bubble me={false} text={ai ? "嗨，我是小珠！告诉我你想做什么应用吧～\n比如「帮我生成一个记账应用」「我想做一个宠物养成组件」。布局会按你的使用习惯来哦。" : "嗨，我是小珠！请先登录平台账号，再回来找我生成应用～"} />}
         {turns.map((t, i) => <Bubble key={i} me={t.role === "user"} text={t.text} />)}
         {busy && <Typing />}
         {err && <p className="rounded-xl bg-[#fff0f0] px-3 py-2 text-[12px] text-[#d33]">{err}</p>}

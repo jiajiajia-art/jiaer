@@ -1,0 +1,3308 @@
+{
+  "ranked": [
+    [
+      "src/components/Galgame",
+      356
+    ],
+    [
+      "src/lib/galgame",
+      274
+    ],
+    [
+      "src/components/admin",
+      263
+    ],
+    [
+      "src/components/GameSettingEditor",
+      203
+    ],
+    [
+      "src/components/ai-model-center",
+      152
+    ],
+    [
+      "src/page/InteractiveVideoEdit.tsx",
+      114
+    ],
+    [
+      "src/page/external",
+      86
+    ],
+    [
+      "src/page/InteractiveVideo.tsx",
+      84
+    ],
+    [
+      "src/hooks/mapGalgame",
+      58
+    ],
+    [
+      "src/components/GalgameMap",
+      50
+    ],
+    [
+      "src/hooks/galgame",
+      46
+    ],
+    [
+      "src/page/AdminPanel.tsx",
+      45
+    ],
+    [
+      "src/components/AiModelPricingManager.tsx",
+      36
+    ],
+    [
+      "src/components/PointsAdminManager.tsx",
+      36
+    ],
+    [
+      "src/page/Bookshelf.tsx",
+      36
+    ],
+    [
+      "src/components/CreateGame",
+      29
+    ],
+    [
+      "src/components/ShareRatioAdminManager.tsx",
+      28
+    ],
+    [
+      "src/components/SpecialThemeTagManager.tsx",
+      28
+    ],
+    [
+      "src/utils/diamondTimelineLog.ts",
+      28
+    ],
+    [
+      "src/components/DailyTasksAdminManager.tsx",
+      27
+    ],
+    [
+      "src/page/GalgameMap.tsx",
+      27
+    ],
+    [
+      "src/components/CreatorEarnings",
+      26
+    ],
+    [
+      "src/components/PromotionAdminManager.tsx",
+      26
+    ],
+    [
+      "src/components/CreatorIncentiveAdminManager.tsx",
+      24
+    ],
+    [
+      "src/store/dailyTaskStore.ts",
+      24
+    ],
+    [
+      "src/components/DiamondAdminManager.tsx",
+      23
+    ],
+    [
+      "src/components/Purchase",
+      23
+    ],
+    [
+      "src/lib/aiModelPricing.ts",
+      23
+    ],
+    [
+      "src/lib/textLlmConfig.ts",
+      23
+    ],
+    [
+      "src/page/Home.tsx",
+      22
+    ],
+    [
+      "src/components/AdminBannerManager.tsx",
+      21
+    ],
+    [
+      "src/components/AiRoute",
+      21
+    ],
+    [
+      "src/components/Profile",
+      20
+    ],
+    [
+      "src/lib/messageCenterView.ts",
+      20
+    ],
+    [
+      "src/utils/gameTypeLabel.ts",
+      20
+    ],
+    [
+      "src/activities/funloom-lottery-20260731",
+      19
+    ],
+    [
+      "src/components/admin-shell",
+      19
+    ],
+    [
+      "src/page/GamePublishAppeal.tsx",
+      19
+    ],
+    [
+      "src/components/Common",
+      18
+    ],
+    [
+      "src/components/CommonModal",
+      18
+    ],
+    [
+      "src/components/MembershipRecordsPanel.tsx",
+      18
+    ],
+    [
+      "src/page/AssetDetails.tsx",
+      18
+    ],
+    [
+      "src/components/LotteryAdminManager.tsx",
+      17
+    ],
+    [
+      "src/hooks/editor",
+      17
+    ],
+    [
+      "src/lib/phoneAppAiChat.ts",
+      17
+    ],
+    [
+      "src/lib/aiPricingPreview.ts",
+      16
+    ],
+    [
+      "src/lib/bookshelf.ts",
+      16
+    ],
+    [
+      "src/page/Document.tsx",
+      15
+    ],
+    [
+      "src/utils/withdrawRules.ts",
+      15
+    ],
+    [
+      "src/components/SubscriptionAdminManager.tsx",
+      14
+    ],
+    [
+      "src/lib/creatorEarningsCsv.ts",
+      14
+    ],
+    [
+      "src/page/StGame.tsx",
+      14
+    ],
+    [
+      "src/components/AdminManualAdjustmentHistory.tsx",
+      13
+    ],
+    [
+      "src/page/Galgame.tsx",
+      13
+    ],
+    [
+      "src/page/GameDetail.tsx",
+      13
+    ],
+    [
+      "src/utils/textUtils.ts",
+      13
+    ],
+    [
+      "src/lib/myPlayMods.ts",
+      12
+    ],
+    [
+      "src/lib/aiBillingDraftRoutes.ts",
+      11
+    ],
+    [
+      "src/page/warehouse",
+      11
+    ],
+    [
+      "src/utils/interactiveVideoPricing.ts",
+      11
+    ],
+    [
+      "src/components/Avatar",
+      10
+    ],
+    [
+      "src/components/WithdrawAdminManager.tsx",
+      10
+    ],
+    [
+      "src/hooks/story",
+      10
+    ],
+    [
+      "src/lib/imageGenConfig.ts",
+      10
+    ],
+    [
+      "src/page/CreateType.tsx",
+      10
+    ],
+    [
+      "src/components/GameRating",
+      9
+    ],
+    [
+      "src/lib/creatorLevelView.ts",
+      9
+    ],
+    [
+      "src/page/MyPlayMods.tsx",
+      9
+    ],
+    [
+      "src/utils/gameBrowseFilters.ts",
+      9
+    ],
+    [
+      "src/utils/etaText.ts",
+      8
+    ],
+    [
+      "src/components/ActivityBannerCarousel.tsx",
+      7
+    ],
+    [
+      "src/components/RouteReporter.tsx",
+      7
+    ],
+    [
+      "src/lib/aiRouteSelection.ts",
+      7
+    ],
+    [
+      "src/page/Create.tsx",
+      7
+    ],
+    [
+      "src/page/CreateGame.tsx",
+      7
+    ],
+    [
+      "src/utils/creatorWorkLifecycle.ts",
+      7
+    ],
+    [
+      "src/utils/planLabels.ts",
+      7
+    ],
+    [
+      "src/api/platform",
+      6
+    ],
+    [
+      "src/components/Create",
+      6
+    ],
+    [
+      "src/components/MembershipSignInResultModal.tsx",
+      6
+    ],
+    [
+      "src/lib/phoneAppSpecBridge.ts",
+      6
+    ],
+    [
+      "src/lib/warehouse",
+      6
+    ],
+    [
+      "src/page/GameSettingsEditor.tsx",
+      6
+    ],
+    [
+      "src/page/LegalDocument.tsx",
+      6
+    ],
+    [
+      "src/page/Rankings.tsx",
+      6
+    ],
+    [
+      "src/utils/gameListingAccess.ts",
+      6
+    ],
+    [
+      "src/api/statistics",
+      5
+    ],
+    [
+      "src/components/creator",
+      5
+    ],
+    [
+      "src/components/GameGrid.tsx",
+      5
+    ],
+    [
+      "src/page/Messages.tsx",
+      5
+    ],
+    [
+      "src/utils/adminDiamondAdjustment.ts",
+      5
+    ],
+    [
+      "src/utils/miniProgram.ts",
+      5
+    ],
+    [
+      "src/utils/stRender.ts",
+      5
+    ],
+    [
+      "src/api/admin",
+      4
+    ],
+    [
+      "src/components/AiModelPricingPriceFields.tsx",
+      4
+    ],
+    [
+      "src/lib/aiModelCatalog.ts",
+      4
+    ],
+    [
+      "src/page/Analytics.tsx",
+      4
+    ],
+    [
+      "src/page/CreatorIncentive.tsx",
+      4
+    ],
+    [
+      "src/page/PointsDetails.tsx",
+      4
+    ],
+    [
+      "src/utils/draftBoxFilter.ts",
+      4
+    ],
+    [
+      "src/utils/error.ts",
+      4
+    ],
+    [
+      "src/api/galgame",
+      3
+    ],
+    [
+      "src/components/CheckInModal.tsx",
+      3
+    ],
+    [
+      "src/components/Pagination.tsx",
+      3
+    ],
+    [
+      "src/hooks/useExternalLinkCopyModal.tsx",
+      3
+    ],
+    [
+      "src/lib/creatorEarningsView.ts",
+      3
+    ],
+    [
+      "src/lib/membershipStatus.ts",
+      3
+    ],
+    [
+      "src/lib/platformAppKkmod.ts",
+      3
+    ],
+    [
+      "src/page/CustomIFCreate.tsx",
+      3
+    ],
+    [
+      "src/utils/appLanguage.ts",
+      3
+    ],
+    [
+      "src/utils/profileCrypto.ts",
+      3
+    ],
+    [
+      "src/api/common",
+      2
+    ],
+    [
+      "src/api/promotion",
+      2
+    ],
+    [
+      "src/components/GameDetail",
+      2
+    ],
+    [
+      "src/components/GamePublishAppealPrompt.tsx",
+      2
+    ],
+    [
+      "src/components/Layout",
+      2
+    ],
+    [
+      "src/hooks/useImageBusinessPrice.ts",
+      2
+    ],
+    [
+      "src/lib/aiBillingCenter.ts",
+      2
+    ],
+    [
+      "src/lib/customUiUploadSize.ts",
+      2
+    ],
+    [
+      "src/lib/gameCardBody.ts",
+      2
+    ],
+    [
+      "src/lib/worldSettingFields.ts",
+      2
+    ],
+    [
+      "src/page/Categories.tsx",
+      2
+    ],
+    [
+      "src/page/Library.tsx",
+      2
+    ],
+    [
+      "src/page/operator",
+      2
+    ],
+    [
+      "src/page/WareHouse.tsx",
+      2
+    ],
+    [
+      "src/store/uploadStore.ts",
+      2
+    ],
+    [
+      "src/utils/activityBannerSchedule.ts",
+      2
+    ],
+    [
+      "src/utils/constants.ts",
+      2
+    ],
+    [
+      "src/api/banner",
+      1
+    ],
+    [
+      "src/api/home",
+      1
+    ],
+    [
+      "src/api/worldInteraction",
+      1
+    ],
+    [
+      "src/components/AdminBannerDialog.tsx",
+      1
+    ],
+    [
+      "src/components/AuthModal.tsx",
+      1
+    ],
+    [
+      "src/components/CreatorProfile.tsx",
+      1
+    ],
+    [
+      "src/components/VerifiedBadge.tsx",
+      1
+    ],
+    [
+      "src/lib/aiUsageFormatting.ts",
+      1
+    ],
+    [
+      "src/lib/creatorIdentity.ts",
+      1
+    ],
+    [
+      "src/lib/gameCardAuthor.ts",
+      1
+    ],
+    [
+      "src/lib/gameDetailView.ts",
+      1
+    ],
+    [
+      "src/lib/platformAppThemes.ts",
+      1
+    ],
+    [
+      "src/lib/sessionProfileBilling.ts",
+      1
+    ],
+    [
+      "src/lib/story",
+      1
+    ],
+    [
+      "src/page/Favorites.tsx",
+      1
+    ],
+    [
+      "src/page/NovelReader.tsx",
+      1
+    ],
+    [
+      "src/page/PromotionCenter.tsx",
+      1
+    ],
+    [
+      "src/store/mapGalgameStore.ts",
+      1
+    ],
+    [
+      "src/utils/applicableThemeTags.ts",
+      1
+    ],
+    [
+      "src/utils/creatorDraftCapacity.ts",
+      1
+    ],
+    [
+      "src/utils/gamePublishAppeal.ts",
+      1
+    ],
+    [
+      "src/utils/imageCache.ts",
+      1
+    ],
+    [
+      "src/utils/novelGame.ts",
+      1
+    ],
+    [
+      "src/utils/promotionNavigation.ts",
+      1
+    ]
+  ],
+  "files": [
+    {
+      "file": "src/components/ai-model-center/AiUsageDashboard.tsx",
+      "count": 115,
+      "samples": [
+        "${formatPoints(units)} 织梦豆",
+        "每页条数",
+        "作品",
+        "未关联作品",
+        "来源 / 模型"
+      ]
+    },
+    {
+      "file": "src/page/InteractiveVideoEdit.tsx",
+      "count": 114,
+      "samples": [
+        "下一步",
+        "已保存",
+        "待保存",
+        "免费开放",
+        "玩家无需 KK币即可获得访问权益。"
+      ]
+    },
+    {
+      "file": "src/components/Galgame/panels/PlayerArchiveSection.tsx",
+      "count": 94,
+      "samples": [
+        "其他",
+        "其他",
+        "未设置",
+        "档案无效",
+        "保存失败"
+      ]
+    },
+    {
+      "file": "src/components/Galgame/panels/SystemsPanel.tsx",
+      "count": 90,
+      "samples": [
+        "加载我的世界书失败",
+        "加载我的世界书失败",
+        "当前无法保存到服务器",
+        "保存失败",
+        "条目无效"
+      ]
+    },
+    {
+      "file": "src/page/InteractiveVideo.tsx",
+      "count": 84,
+      "samples": [
+        "成功",
+        "失败",
+        "付费节点",
+        "付费脚本",
+        "付费内容"
+      ]
+    },
+    {
+      "file": "src/components/Galgame/panels/CharacterProfileForm.tsx",
+      "count": 75,
+      "samples": [
+        "关系",
+        "简介",
+        "对你的态度",
+        "详细简介",
+        "其他"
+      ]
+    },
+    {
+      "file": "src/components/admin/ContentReportAdminManager.tsx",
+      "count": 52,
+      "samples": [
+        "待审核",
+        "已驳回",
+        "已成立",
+        "游戏",
+        "账号"
+      ]
+    },
+    {
+      "file": "src/page/AdminPanel.tsx",
+      "count": 45,
+      "samples": [
+        "公告标题预览",
+        "热门题材排序",
+        "调整热门题材展示顺序",
+        "拖动列表项调整首页热门题材顺序，保存后会同步更新热门排序。",
+        "全部题材排序"
+      ]
+    },
+    {
+      "file": "src/page/external/ExternalRecharge.tsx",
+      "count": 45,
+      "samples": [
+        "入门",
+        "热选",
+        "畅玩",
+        "高能",
+        "豪华"
+      ]
+    },
+    {
+      "file": "src/components/admin/AdminPublicAvatarManager.tsx",
+      "count": 43,
+      "samples": [
+        "全部",
+        "正常",
+        "正常",
+        "上传失败",
+        "不合格"
+      ]
+    },
+    {
+      "file": "src/page/external/DeveloperExternalGames.tsx",
+      "count": 41,
+      "samples": [
+        "有记录",
+        "启用",
+        "已创建",
+        "待支付",
+        "已支付"
+      ]
+    },
+    {
+      "file": "src/components/Galgame/panels/PrivateChatPanel.tsx",
+      "count": 40,
+      "samples": [
+        "私聊失败",
+        "请先登录",
+        "私聊失败",
+        "加载私聊失败",
+        "加载私聊失败"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/CharactersPanel/CharactersPanel.tsx",
+      "count": 38,
+      "samples": [
+        "fetch 失败:",
+        "scaleImageWithCanvas 异常:",
+        "玩家",
+        "生图中",
+        "待抠图"
+      ]
+    },
+    {
+      "file": "src/components/Galgame/panels/CharactersPanel.tsx",
+      "count": 37,
+      "samples": [
+        "头像加载中",
+        "保存失败",
+        "已保存到本局",
+        "请先登录后再导入角色",
+        "加载卡库失败"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/systemWorldBook.ts",
+      "count": 37,
+      "samples": [
+        "条目 ${index + 1}",
+        "条目 ${index + 1}",
+        "请填写标题",
+        "标题不能超过40字",
+        "内容过长"
+      ]
+    },
+    {
+      "file": "src/components/AiModelPricingManager.tsx",
+      "count": 36,
+      "samples": [
+        "模型计费配置加载失败",
+        "模型计费配置加载失败",
+        "启用前请先补全当前计费类型所需价格。",
+        "保存失败",
+        "模型计费配置已更新"
+      ]
+    },
+    {
+      "file": "src/components/PointsAdminManager.tsx",
+      "count": 36,
+      "samples": [
+        "未记录",
+        "已下发",
+        "待下发",
+        "活动织梦豆任务列表加载失败",
+        "活动织梦豆发放成功"
+      ]
+    },
+    {
+      "file": "src/page/Bookshelf.tsx",
+      "count": 36,
+      "samples": [
+        "最近游玩",
+        "我的收藏",
+        "移出最近游玩",
+        "取消收藏",
+        "读取存档失败，请稍后重试"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/writingStylePresets.ts",
+      "count": 32,
+      "samples": [
+        "文风",
+        "视角",
+        "描写手法",
+        "剧情指导",
+        "白话风"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/streamPerfDebug.ts",
+      "count": 31,
+      "samples": [
+        "正常结束",
+        "流结束",
+        "协议完整早停",
+        "补丁后通过",
+        "输出截断"
+      ]
+    },
+    {
+      "file": "src/components/ShareRatioAdminManager.tsx",
+      "count": 28,
+      "samples": [
+        "请输入 Kuran 号",
+        "请输入手机号",
+        "查询成功",
+        "查询失败",
+        "查询失败"
+      ]
+    },
+    {
+      "file": "src/components/SpecialThemeTagManager.tsx",
+      "count": 28,
+      "samples": [
+        "最热",
+        "推荐",
+        "最新",
+        "手动配置",
+        "自动配置"
+      ]
+    },
+    {
+      "file": "src/hooks/galgame/useGalgameController.ts",
+      "count": 28,
+      "samples": [
+        "请选择你的行动",
+        "[GalgameController] response.data.data 为空",
+        "[GalgameController] 获取游戏数据失败:",
+        "[Galgame] 未找到匹配的场景 ID:",
+        "加载记忆调试信息失败。"
+      ]
+    },
+    {
+      "file": "src/utils/diamondTimelineLog.ts",
+      "count": 28,
+      "samples": [
+        "KK币充值",
+        "充值赠送",
+        "购买付费游戏",
+        "会员订阅",
+        "创作者收益分成"
+      ]
+    },
+    {
+      "file": "src/components/admin/ContentAppealAdminManager.tsx",
+      "count": 27,
+      "samples": [
+        "警告",
+        "处罚",
+        "申诉",
+        "发布审核",
+        "处理撤销"
+      ]
+    },
+    {
+      "file": "src/components/DailyTasksAdminManager.tsx",
+      "count": 27,
+      "samples": [
+        "草稿",
+        "已发布",
+        "游玩次数任务",
+        "游玩时长任务",
+        "游戏推广任务"
+      ]
+    },
+    {
+      "file": "src/page/GalgameMap.tsx",
+      "count": 27,
+      "samples": [
+        "${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png",
+        "${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultNpc.png",
+        "${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultMap.png",
+        "无法删除存档：缺少用户或游戏信息",
+        "删除成功"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/ObjectsPanel/ObjectDetail.tsx",
+      "count": 26,
+      "samples": [
+        "[ObjectDetail] 初始化表单数据",
+        "[ObjectDetail] 保存原始对象引用",
+        "[ObjectDetail] 设置表单数据",
+        "[ObjectDetail] 初始化新建物品表单",
+        "[ObjectDetail] 初始化完成"
+      ]
+    },
+    {
+      "file": "src/components/PromotionAdminManager.tsx",
+      "count": 26,
+      "samples": [
+        "上传文本",
+        "上传链接",
+        "上传图片",
+        "上传视频",
+        "待审核"
+      ]
+    },
+    {
+      "file": "src/components/CreatorIncentiveAdminManager.tsx",
+      "count": 24,
+      "samples": [
+        "普通作者",
+        "游戏激励",
+        "旧版激励",
+        "邀请激励",
+        "双激励"
+      ]
+    },
+    {
+      "file": "src/store/dailyTaskStore.ts",
+      "count": 24,
+      "samples": [
+        "任务类型无效",
+        "今日该任务奖励已领取",
+        "任务未达成，暂不可领取",
+        "请先领取任务",
+        "任务不存在或未发布"
+      ]
+    },
+    {
+      "file": "src/components/ai-model-center/ModelPricingDialog.tsx",
+      "count": 23,
+      "samples": [
+        "计费配置不存在",
+        "计费配置加载失败",
+        "API Key 读取失败",
+        "计费草稿已保存",
+        "计费草稿保存失败"
+      ]
+    },
+    {
+      "file": "src/components/DiamondAdminManager.tsx",
+      "count": 23,
+      "samples": [
+        "请输入 Kuran号",
+        "用户查询失败",
+        "用户查询成功",
+        "用户查询失败",
+        "请先查询目标用户"
+      ]
+    },
+    {
+      "file": "src/components/Purchase/RechargeModal.tsx",
+      "count": 23,
+      "samples": [
+        "中国大陆及港澳台${countrySuffix}",
+        "海外地区${countrySuffix}",
+        "刷新用户信息失败:",
+        "周卡",
+        "周卡"
+      ]
+    },
+    {
+      "file": "src/lib/aiModelPricing.ts",
+      "count": 23,
+      "samples": [
+        "生图",
+        "生视频",
+        "512 / 1K以下",
+        "无参考视频输出",
+        "有参考视频输入"
+      ]
+    },
+    {
+      "file": "src/lib/textLlmConfig.ts",
+      "count": 23,
+      "samples": [
+        "DeepSeek 官方",
+        "epone 代理",
+        "局内叙事 / 选项 / 重生成",
+        "游玩主链路 sendActionStream / regenerate",
+        "私聊、属性面板、任务等文案"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/characterProfile.ts",
+      "count": 22,
+      "samples": [
+        "性格",
+        "性格：${personality}",
+        "语气",
+        "说话",
+        "语气：${tone}"
+      ]
+    },
+    {
+      "file": "src/page/Home.tsx",
+      "count": 22,
+      "samples": [
+        "获取签到状态失败:",
+        "获取限时优惠游戏列表失败",
+        "获取限时优惠游戏列表失败:",
+        "获取全部游戏列表失败",
+        "获取首页全部游戏列表失败:"
+      ]
+    },
+    {
+      "file": "src/components/AdminBannerManager.tsx",
+      "count": 21,
+      "samples": [
+        "通用配置",
+        "游客、未填写性别及专属组为空时展示",
+        "男性配置",
+        "男性用户优先展示",
+        "女性配置"
+      ]
+    },
+    {
+      "file": "src/lib/messageCenterView.ts",
+      "count": 20,
+      "samples": [
+        "周日",
+        "周一",
+        "周二",
+        "周三",
+        "周四"
+      ]
+    },
+    {
+      "file": "src/utils/gameTypeLabel.ts",
+      "count": 20,
+      "samples": [
+        "AI文游",
+        "酒馆卡",
+        "自定义",
+        "视觉小说",
+        "互动影游"
+      ]
+    },
+    {
+      "file": "src/components/admin-shell/adminNavigation.tsx",
+      "count": 19,
+      "samples": [
+        "平台运营",
+        "货币管理",
+        "活动织梦豆",
+        "特殊织梦豆",
+        "每日任务管理"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/gameStartConfig.ts",
+      "count": 19,
+      "samples": [
+        "目前选择路线",
+        "展示当前开场路线；切换后将按新路线约束后续叙事",
+        "更换路线",
+        "确认切换到该开场路线？后续叙事将按新路线约束。",
+        "确认更换"
+      ]
+    },
+    {
+      "file": "src/page/GamePublishAppeal.tsx",
+      "count": 19,
+      "samples": [
+        "等待运营处理",
+        "已允许重新发布",
+        "申诉已驳回",
+        "作品编号无效",
+        "申诉信息加载失败，请稍后重试。"
+      ]
+    },
+    {
+      "file": "src/components/Common/SimpleRichTextEditor.tsx",
+      "count": 18,
+      "samples": [
+        "简介纯文本不能超过 {{max}} 字",
+        "源码已保存",
+        "请选择图片文件",
+        "当前无法上传图片",
+        "图片上传失败"
+      ]
+    },
+    {
+      "file": "src/components/MembershipRecordsPanel.tsx",
+      "count": 18,
+      "samples": [
+        "生效中",
+        "待生效",
+        "已过期",
+        "充值购买",
+        "兑换卡兑换"
+      ]
+    },
+    {
+      "file": "src/page/AssetDetails.tsx",
+      "count": 18,
+      "samples": [
+        "全部",
+        "永久币",
+        "限时币",
+        "全部",
+        "充值币"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/ScenesPanel/ScenesPanel.tsx",
+      "count": 17,
+      "samples": [
+        "生图中",
+        "已完成",
+        "生图失败",
+        "排队中",
+        "生图"
+      ]
+    },
+    {
+      "file": "src/components/LotteryAdminManager.tsx",
+      "count": 17,
+      "samples": [
+        "加载失败",
+        "请填写有效的开始/结束时间",
+        "一等奖权重须为 ≥0 的数字；留空或 0 表示永远抽不中",
+        "活动配置已保存",
+        "已保存：一等奖权重为 0，永远抽不中"
+      ]
+    },
+    {
+      "file": "src/components/Profile/VipStatusModal.tsx",
+      "count": 17,
+      "samples": [
+        "生效中",
+        "已到期",
+        "未开通",
+        "周卡",
+        "7 天畅享"
+      ]
+    },
+    {
+      "file": "src/lib/phoneAppAiChat.ts",
+      "count": 17,
+      "samples": [
+        "聊天",
+        "信息",
+        "浏览",
+        "阅读",
+        "视频"
+      ]
+    },
+    {
+      "file": "src/components/admin/AdminPlayModManager.tsx",
+      "count": 16,
+      "samples": [
+        "草稿",
+        "待审核",
+        "私有测试",
+        "已上架",
+        "已下架"
+      ]
+    },
+    {
+      "file": "src/components/admin/PublishReviewAdminManager.tsx",
+      "count": 16,
+      "samples": [
+        "拉取待审正文失败",
+        "原因：${reasonLabels.join(",
+        "通过失败",
+        "驳回失败",
+        "关闭先审失败"
+      ]
+    },
+    {
+      "file": "src/components/AiRoute/AiRouteSheet.tsx",
+      "count": 16,
+      "samples": [
+        "按量扣费",
+        "按次扣费",
+        "已切换到「${picked.name}」，下一次生成开始生效",
+        "已恢复平台默认「${defaultRoute.name}」",
+        "已恢复平台默认线路"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/ScenesPanel/handlers.ts",
+      "count": 16,
+      "samples": [
+        "刷新用户积分失败:",
+        "无效的图片数据类型",
+        "未找到 ${targetId}-${variant} 的暂存图片文件",
+        "存储图片失败:",
+        "更新场景时出错:"
+      ]
+    },
+    {
+      "file": "src/lib/aiPricingPreview.ts",
+      "count": 16,
+      "samples": [
+        "核价参数无效",
+        "核价参数无效",
+        "${label} 必须是非负整数",
+        "${label} 数值过大",
+        "${label} 无效"
+      ]
+    },
+    {
+      "file": "src/lib/bookshelf.ts",
+      "count": 16,
+      "samples": [
+        "已下架",
+        "已设为私密",
+        "已删除",
+        "已不存在",
+        "该剧本已下架，暂不可游玩"
+      ]
+    },
+    {
+      "file": "src/activities/funloom-lottery-20260731/lib/lotteryClient.ts",
+      "count": 15,
+      "samples": [
+        "Switch2游戏机",
+        "迷你掌机",
+        "吧唧",
+        "精灵球",
+        "300织梦豆券"
+      ]
+    },
+    {
+      "file": "src/components/admin/AdminAudioLibraryManager.tsx",
+      "count": 15,
+      "samples": [
+        "背景音乐",
+        "短音效",
+        "环境氛围音",
+        "循环",
+        "只播一次"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/quests.ts",
+      "count": 15,
+      "samples": [
+        "进行中",
+        "可选",
+        "进行中",
+        "可选",
+        "进行中"
+      ]
+    },
+    {
+      "file": "src/page/Document.tsx",
+      "count": 15,
+      "samples": [
+        "文档中心",
+        "文档中心",
+        " 或纯 ",
+        "返回",
+        "打开文档导航"
+      ]
+    },
+    {
+      "file": "src/utils/withdrawRules.ts",
+      "count": 15,
+      "samples": [
+        "您的提现申请在审核中，每月15号为结算日，请您耐心等待。",
+        "单号",
+        "用户ID",
+        "用户名",
+        "手机号"
+      ]
+    },
+    {
+      "file": "src/components/admin/AdminLocationAssetLibraryManager.tsx",
+      "count": 14,
+      "samples": [
+        "大地图图",
+        "地点场景图",
+        "封面",
+        "保存中…",
+        "保存修改"
+      ]
+    },
+    {
+      "file": "src/components/admin/AdminLocationLibraryManager.tsx",
+      "count": 14,
+      "samples": [
+        "前厅",
+        "你来到了「前厅」。",
+        "前厅餐室",
+        "你来到了「前厅餐室」。",
+        "保存中…"
+      ]
+    },
+    {
+      "file": "src/components/ai-model-center/TextPricingPreview.tsx",
+      "count": 14,
+      "samples": [
+        "会员实际扣费",
+        "用户扣费",
+        "折后人民币收入",
+        "人民币收入等值",
+        "模型真实成本（折扣不影响）"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/CharactersPanel/handlers.ts",
+      "count": 14,
+      "samples": [
+        "无效的图片数据类型",
+        "刷新用户积分失败:",
+        "更新主角信息时出错:",
+        "玩家",
+        "删除角色时出错:"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/FunctionalNPCsPanel/FunctionalNPCsPanel.tsx",
+      "count": 14,
+      "samples": [
+        "刷新用户积分失败:",
+        "自动保存图片失败:",
+        "自动保存图片失败:",
+        "删除功能性NPC失败:",
+        "更新功能性NPC状态失败:"
+      ]
+    },
+    {
+      "file": "src/components/SubscriptionAdminManager.tsx",
+      "count": 14,
+      "samples": [
+        "未使用",
+        "已使用",
+        "已过期",
+        "已归档",
+        "充值购买"
+      ]
+    },
+    {
+      "file": "src/hooks/galgame/useInteractionInit.ts",
+      "count": 14,
+      "samples": [
+        "[Init] 开始初始化交互页面",
+        "[Init] 从本地缓存恢复，步骤数:",
+        "[Init] 解析本地缓存失败:",
+        "[Init] 检测到未完成请求，启动轮询",
+        "[Init] 解析未完成请求失败:"
+      ]
+    },
+    {
+      "file": "src/hooks/mapGalgame/common/useMapMusicPlayer.ts",
+      "count": 14,
+      "samples": [
+        "播放音乐失败:",
+        "音乐 ${soundtrack} 之前加载失败，跳过重复请求",
+        "音乐响应:",
+        "音乐响应数据无效:",
+        "创建 blob URL:"
+      ]
+    },
+    {
+      "file": "src/hooks/mapGalgame/npc/useNpcInteractionStep.ts",
+      "count": 14,
+      "samples": [
+        "[WorldInteraction] 获取用户信息错误:",
+        "下一步",
+        "[队列处理] 从队列取出步骤:",
+        "[队列处理] 队列更新后长度:",
+        "缺少 sessionId、eventId 或 fileId，无法发送请求..."
+      ]
+    },
+    {
+      "file": "src/lib/creatorEarningsCsv.ts",
+      "count": 14,
+      "samples": [
+        "待审核",
+        "待打款",
+        "已打款",
+        "已驳回",
+        "申请单号"
+      ]
+    },
+    {
+      "file": "src/page/StGame.tsx",
+      "count": 14,
+      "samples": [
+        "检测到开场 HTML，进入场景模式",
+        "messages 缺失",
+        "最后一条非 system 消息必须是 user",
+        "请求失败",
+        "${op} 失败 requestId=${requestId}"
+      ]
+    },
+    {
+      "file": "src/components/admin/CommentAdminManager.tsx",
+      "count": 13,
+      "samples": [
+        "待审核",
+        "已通过",
+        "已拒绝",
+        "确定要通过用户 ",
+        "未知用户"
+      ]
+    },
+    {
+      "file": "src/components/AdminManualAdjustmentHistory.tsx",
+      "count": 13,
+      "samples": [
+        "未命名用户",
+        "织梦豆",
+        "特殊${currencyLabel}变更记录加载失败",
+        "特殊${currencyLabel}变更记录加载失败",
+        "操作人"
+      ]
+    },
+    {
+      "file": "src/components/CreateGame/GameForm.tsx",
+      "count": 13,
+      "samples": [
+        "请上传PDF或DOCX格式的文件！",
+        "文件大小不能超过10MB！",
+        "请上传图片格式的文件！",
+        "请上传PDF或DOCX格式的文件！",
+        "文件大小不能超过10MB！"
+      ]
+    },
+    {
+      "file": "src/components/CreatorEarnings/CreatorEarningsWithdrawalModal.tsx",
+      "count": 13,
+      "samples": [
+        "申请已提交，等待审核",
+        "审核通过，等待打款",
+        "提现申请状态",
+        "确认本次提现",
+        "完善创作者资料"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/ObjectsPanel/ObjectsPanel.tsx",
+      "count": 13,
+      "samples": [
+        "获取物品失败:",
+        "获取物品失败:",
+        "自动保存图片失败:",
+        "自动保存图片失败:",
+        "删除物品失败:"
+      ]
+    },
+    {
+      "file": "src/hooks/mapGalgame/npc/useNpcInteractionInit.ts",
+      "count": 13,
+      "samples": [
+        "[useNpcInteractionInit] ⏭️ 已经初始化过，跳过",
+        "[useNpcInteractionInit] ⚠️ 没有 sessionId，跳过初始化",
+        "[useNpcInteractionInit] ⚠️ 没有 eventId，跳过初始化（用于功能性NPC场景）",
+        "[useNpcInteractionInit] ✅ 开始执行初始化逻辑",
+        "[Init] 解析本地缓存失败:"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/squareAvatarPrep.ts",
+      "count": 13,
+      "samples": [
+        "边长不得低于 ${minSide}px（当前 ${width}×${height}）",
+        "无法读取图片尺寸",
+        "画布不可用",
+        "导出头像失败",
+        "推荐 ${SQUARE_AVATAR_TARGET_SIDE}×${SQUARE_AVATAR_TARGET_SIDE}px，最低 ${SQUARE_AVATAR_MIN_SIDE}×${SQUARE_AVATAR_MIN_SIDE}px；PNG/JPG/WebP/GIF；非 1:1 须先裁剪（不可拉伸变形）。"
+      ]
+    },
+    {
+      "file": "src/page/Galgame.tsx",
+      "count": 13,
+      "samples": [
+        "故事线无效",
+        "故事线无效",
+        "系统配置无效",
+        "系统配置无效",
+        "未配置"
+      ]
+    },
+    {
+      "file": "src/page/GameDetail.tsx",
+      "count": 13,
+      "samples": [
+        "记录进入游戏详情页失败:",
+        ";// 如果详情页是分享链接进入的，游戏界面也保持 ",
+        "获取游戏详情失败:",
+        "添加浏览统计失败:",
+        "加载衍生视觉小说失败:"
+      ]
+    },
+    {
+      "file": "src/utils/textUtils.ts",
+      "count": 13,
+      "samples": [
+        "\\n\\n选项：\\n",
+        "${optionIndex}. 【推荐】${option}\\n",
+        "提示：${content.trim()}",
+        "内容",
+        "内容"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/avatarLibrary.ts",
+      "count": 12,
+      "samples": [
+        "通用",
+        "儿童",
+        "成人",
+        "老年",
+        "古代"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/playerCharacterCard.ts",
+      "count": 12,
+      "samples": [
+        "属性格式无效",
+        "属性项不能超过${PLAYER_CARD_LIMITS.attributeCountMax}个",
+        "属性名不能为空",
+        "属性名不能超过${PLAYER_CARD_LIMITS.attributeKeyMax}字",
+        "属性「${key}」必须是数字"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/runIdeaFullWorkAssets.ts",
+      "count": 12,
+      "samples": [
+        "${failLabel}仅成功 ${row.completed}/${row.total} 张",
+        "${failLabel}未完成",
+        "${failLabel}任务启动失败",
+        "${failLabel}仅成功 ${reconciled.completed}/${reconciled.total} 张",
+        "${failLabel}生成未完成（${poll.status}）"
+      ]
+    },
+    {
+      "file": "src/lib/myPlayMods.ts",
+      "count": 12,
+      "samples": [
+        "草稿",
+        "私有 / 审核中",
+        "已上架",
+        "草稿",
+        "私有测试"
+      ]
+    },
+    {
+      "file": "src/lib/aiBillingDraftRoutes.ts",
+      "count": 11,
+      "samples": [
+        "请填写${label}",
+        "生文模型的网关线路",
+        "生文模型 ID",
+        "生文模型线路重复：${gatewayRoute} / ${modelId}",
+        "生图模型的网关线路"
+      ]
+    },
+    {
+      "file": "src/page/warehouse/warehouseNav.ts",
+      "count": 11,
+      "samples": [
+        "全部",
+        "恋爱",
+        "奇幻",
+        "校园",
+        "日常"
+      ]
+    },
+    {
+      "file": "src/utils/interactiveVideoPricing.ts",
+      "count": 11,
+      "samples": [
+        "织梦豆",
+        "${buyoutPriceText}买断游玩",
+        "免费开放",
+        "含付费内容，可${buyoutPriceText}买断游玩",
+        "含付费内容"
+      ]
+    },
+    {
+      "file": "src/components/Avatar/SquareAvatarCropGate.tsx",
+      "count": 10,
+      "samples": [
+        "选择图片",
+        "仅支持 PNG、JPG、WebP、GIF",
+        "图片加载失败",
+        "读取图片失败",
+        "图片加载失败"
+      ]
+    },
+    {
+      "file": "src/components/WithdrawAdminManager.tsx",
+      "count": 10,
+      "samples": [
+        "Funloom提现${today}.csv",
+        "当前状态下没有可导出的记录",
+        "Funloom创作者收益提现_${today}.csv",
+        "导出中…",
+        "导出数据表(CSV)"
+      ]
+    },
+    {
+      "file": "src/hooks/story/useStepStreamResponse.ts",
+      "count": 10,
+      "samples": [
+        "请求失败: ${response.statusText}",
+        "发生错误",
+        "❌ 流式响应错误:",
+        "[流式接收] 单个step加入队列:",
+        "[流式接收] narrativeSteps加入队列:"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/normalizeStreamErrorMessage.ts",
+      "count": 10,
+      "samples": [
+        "流式连接中断",
+        "网络中断",
+        "发生错误",
+        "网络中断，生成连接已断开，请点击重试。",
+        "内容正在生成中，请稍候。"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/playChoiceOptions.ts",
+      "count": 10,
+      "samples": [
+        "此处",
+        "${playerName}留在${sceneName}仔细观察四周",
+        "${playerName}立刻前往${sceneName}寻找破绽",
+        "${playerName}转身离开${sceneName}另寻出路",
+        "${playerName}上前与${name}交谈探听消息"
+      ]
+    },
+    {
+      "file": "src/lib/imageGenConfig.ts",
+      "count": 10,
+      "samples": [
+        "视觉小说立绘 / 场景 / 编剧资产",
+        "视觉小说立绘、场景背景与编剧台资产生图",
+        "局内头像",
+        "局内添加角色时的 AI 头像生成",
+        "仓库人设/角色卡"
+      ]
+    },
+    {
+      "file": "src/page/CreateType.tsx",
+      "count": 10,
+      "samples": [
+        "创建草稿失败",
+        "创建草稿失败",
+        "游戏世界",
+        "填写设定，AI 搭建世界，再进编辑器细调。",
+        "玩法 Mod"
+      ]
+    },
+    {
+      "file": "src/components/admin/AdminArtStyleLibraryManager.tsx",
+      "count": 9,
+      "samples": [
+        "保存中…",
+        "保存修改",
+        "新增",
+        "刷新中…",
+        "刷新"
+      ]
+    },
+    {
+      "file": "src/components/admin/AdminArtStyleManager.tsx",
+      "count": 9,
+      "samples": [
+        "保存中…",
+        "保存修改",
+        "新增",
+        "导入中…",
+        "导入内置画风"
+      ]
+    },
+    {
+      "file": "src/components/admin/BusinessCoopAdminManager.tsx",
+      "count": 9,
+      "samples": [
+        "待跟进",
+        "沟通中",
+        "已成交",
+        "已关闭",
+        "品牌合作"
+      ]
+    },
+    {
+      "file": "src/components/admin/GameIssueAdminManager.tsx",
+      "count": 9,
+      "samples": [
+        "待处理",
+        "处理中",
+        "已回复",
+        "已关闭",
+        "无法进入"
+      ]
+    },
+    {
+      "file": "src/components/admin/SiteFeedbackAdminManager.tsx",
+      "count": 9,
+      "samples": [
+        "待处理",
+        "处理中",
+        "已回复",
+        "已关闭",
+        "功能故障"
+      ]
+    },
+    {
+      "file": "src/components/GalgameMap/interaction/AbilityNodeInteractionContainer.tsx",
+      "count": 9,
+      "samples": [
+        "没有可重试的请求",
+        "请求失败，请重试",
+        "响应体已被锁定",
+        "处理失败，请重试",
+        "请求失败，请重试"
+      ]
+    },
+    {
+      "file": "src/components/GalgameMap/interaction/InteractWithNpcModal.tsx",
+      "count": 9,
+      "samples": [
+        "${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png",
+        "[InteractWithNpcModal] 刷新事件数据失败:",
+        "[InteractWithNpcModal] 获取历史记录失败:",
+        "请求失败",
+        "重试"
+      ]
+    },
+    {
+      "file": "src/components/GameRating/GameRating.tsx",
+      "count": 9,
+      "samples": [
+        "匿名用户",
+        "${count}条回复 >",
+        "展开更多",
+        "收起",
+        "刚刚"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/FunctionalNPCsPanel/FunctionalNPCDetail.tsx",
+      "count": 9,
+      "samples": [
+        "${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultNpc.png",
+        "删除功能事件失败:",
+        "生成图片失败:",
+        "保存失败:",
+        "${LEGACY_WORLD_ABILITY_NODE_GENERATION_COST} AI生成"
+      ]
+    },
+    {
+      "file": "src/lib/creatorLevelView.ts",
+      "count": 9,
+      "samples": [
+        "文字互动",
+        "世界互动",
+        "自定义",
+        "小说",
+        "视觉小说"
+      ]
+    },
+    {
+      "file": "src/page/MyPlayMods.tsx",
+      "count": 9,
+      "samples": [
+        "加载失败",
+        "加载我的玩法失败",
+        "请先登录",
+        "上传失败",
+        "已上传玩法包（私有测试）"
+      ]
+    },
+    {
+      "file": "src/utils/gameBrowseFilters.ts",
+      "count": 9,
+      "samples": [
+        "全部",
+        "AI文游",
+        "酒馆卡",
+        "自定义",
+        "互动影游"
+      ]
+    },
+    {
+      "file": "src/components/CreatorEarnings/CreatorEarningsOverview.tsx",
+      "count": 8,
+      "samples": [
+        "今日待结算（税前）",
+        "提现处理中（税前）",
+        "已到账（实收）",
+        "昨日",
+        "本月"
+      ]
+    },
+    {
+      "file": "src/components/Galgame/GameStartWizard.tsx",
+      "count": 8,
+      "samples": [
+        "旅人",
+        "默认开场",
+        "请选择故事线",
+        "开局配置无效",
+        "性别"
+      ]
+    },
+    {
+      "file": "src/hooks/editor/useEditorSession.ts",
+      "count": 8,
+      "samples": [
+        "创建世界交互游戏失败，请重试",
+        "创建游戏失败，请重试",
+        "❌ Session 创建错误:",
+        "创建游戏失败，请稍后重试",
+        "发布游戏失败:"
+      ]
+    },
+    {
+      "file": "src/utils/etaText.ts",
+      "count": 8,
+      "samples": [
+        "分钟",
+        "分钟",
+        "预计还需",
+        "耗时较长，仍在处理中，请稍候",
+        "正在生成第"
+      ]
+    },
+    {
+      "file": "src/components/ActivityBannerCarousel.tsx",
+      "count": 7,
+      "samples": [
+        "加载活动轮播图失败:",
+        "活动轮播图",
+        "活动轮播图",
+        "上一张活动轮播图",
+        "下一张活动轮播图"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/CharactersPanel/CharacterAttributesPanel.tsx",
+      "count": 7,
+      "samples": [
+        "以下属性定义不存在: ${invalidKeys.join(",
+        "成功添加 ${selectedKeysArray.length} 个属性",
+        "[CharacterAttributesPanel] 添加属性时发生错误:",
+        "[CharacterAttributesPanel] 属性删除成功:",
+        "已修改"
+      ]
+    },
+    {
+      "file": "src/components/RouteReporter.tsx",
+      "count": 7,
+      "samples": [
+        "[RouteReporter] 小程序环境下，开始使用固定账号自动登录...",
+        "[RouteReporter] 小程序自动登录失败：响应数据格式错误",
+        "[RouteReporter] 小程序自动登录失败:",
+        "[RouteReporter] 检测到 URL 中的 token，开始处理...",
+        "[RouteReporter] 成功获取用户信息:"
+      ]
+    },
+    {
+      "file": "src/lib/aiRouteSelection.ts",
+      "count": 7,
+      "samples": [
+        " 完全一致（",
+        "，值为 JSON 字符串；事件 ",
+        "平台线路",
+        "按次扣费",
+        "按量扣费"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/compositePosterTitle.ts",
+      "count": 7,
+      "samples": [
+        "封面图加载失败",
+        "封面导出失败",
+        "缺少海报标题",
+        "标题",
+        "封面图拉取失败 (${resp.status})"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/sessionNpcAvatarPrompt.ts",
+      "count": 7,
+      "samples": [
+        "日系视觉小说风格",
+        "乙女向",
+        "暗黑风格",
+        "古风水彩风格",
+        "硬性要求：必须是正确性别；只能有一个角色；必须是全身立绘；必须从头到脚完整可见；角色站立；身体不能被裁切；脸部清晰；构图居中；背景干净简洁；适合游戏角色立绘使用；不要文字；不要 logo；不要水印；不要签名；不要任何可读文字。"
+      ]
+    },
+    {
+      "file": "src/page/Create.tsx",
+      "count": 7,
+      "samples": [
+        "获取我的游戏统计错误:",
+        "获取用户信息错误:",
+        "获取签到状态错误:",
+        "复制 Kuran 号失败:",
+        "复制 Token 失败:"
+      ]
+    },
+    {
+      "file": "src/page/CreateGame.tsx",
+      "count": 7,
+      "samples": [
+        "刷新游戏详情失败:",
+        "加载游戏详情失败:",
+        "删除游戏失败:",
+        "发布游戏失败:",
+        "发布游戏失败:"
+      ]
+    },
+    {
+      "file": "src/utils/creatorWorkLifecycle.ts",
+      "count": 7,
+      "samples": [
+        "草稿",
+        "已私有分享",
+        "发布审核中",
+        "未通过",
+        "更新审核中"
+      ]
+    },
+    {
+      "file": "src/utils/planLabels.ts",
+      "count": 7,
+      "samples": [
+        "周卡会员",
+        "月卡会员",
+        "月卡会员",
+        "季卡会员",
+        "年卡会员"
+      ]
+    },
+    {
+      "file": "src/api/platform/platformAppsApi.ts",
+      "count": 6,
+      "samples": [
+        "聊天",
+        "信息",
+        "浏览",
+        "阅读",
+        "视频"
+      ]
+    },
+    {
+      "file": "src/components/CommonModal/PublishSettingsModal.tsx",
+      "count": 6,
+      "samples": [
+        "AI 生成简介失败:",
+        "请选择是否填写更新日志",
+        "更新日志不能为空",
+        "保存小说元信息失败:",
+        "保存发布题材失败:"
+      ]
+    },
+    {
+      "file": "src/components/CommonModal/SaveConfirmModal.tsx",
+      "count": 6,
+      "samples": [
+        "未保存的修改",
+        "您有未保存的修改，是否要保存？",
+        "保存",
+        "不保存",
+        "${import.meta.env.BASE_URL}data/assets/gameDetail/关闭.png"
+      ]
+    },
+    {
+      "file": "src/components/CreateGame/MobileTipModal.tsx",
+      "count": 6,
+      "samples": [
+        "提示",
+        "复制",
+        "链接已复制到剪贴板",
+        "复制失败:",
+        "复制失败，请稍后重试"
+      ]
+    },
+    {
+      "file": "src/components/CreateGame/PriceAdjustmentModal.tsx",
+      "count": 6,
+      "samples": [
+        "特惠价格不能大于原价",
+        "设置特惠价格时，必须同时设置原价",
+        "当前：${currentPrice}",
+        "请输入原价",
+        "当前：${currentSpecialPrice}"
+      ]
+    },
+    {
+      "file": "src/components/GalgameMap/SubSceneModal.tsx",
+      "count": 6,
+      "samples": [
+        "${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png",
+        "${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultNpc.png",
+        "子场景",
+        "主场景",
+        "${import.meta.env.BASE_URL}data/assets/任务.png"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/MapPanel/MapPanel.tsx",
+      "count": 6,
+      "samples": [
+        "获取地图数据失败:",
+        "刷新地图数据失败:",
+        "} 场景 -{",
+        "保存失败:",
+        "保存失败:"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/WorldPanel/StoryStructureAdvanced.tsx",
+      "count": 6,
+      "samples": [
+        "删除 phase 失败",
+        "删除 dynamicEntry 失败",
+        "保存章节失败",
+        "保存动态条目失败",
+        "新增章节失败"
+      ]
+    },
+    {
+      "file": "src/components/MembershipSignInResultModal.tsx",
+      "count": 6,
+      "samples": [
+        "今日已签到",
+        "每日签到",
+        "明天继续签到可获得更多织梦豆",
+        "今日签到可获得 ${status?.totalPointsToday ?? 0} 织梦豆",
+        "周卡"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/privateChatGate.ts",
+      "count": 6,
+      "samples": [
+        "请输入内容",
+        "消息不能超过${PRIVATE_CHAT_CONTENT_MAX}字",
+        "无效消息",
+        "消息不存在",
+        "主线正在生成"
+      ]
+    },
+    {
+      "file": "src/lib/phoneAppSpecBridge.ts",
+      "count": 6,
+      "samples": [
+        "「${draft.name.trim()}」草稿预览。继续对话可加列表、第二页等。",
+        "先对话生成名称与内容，预览会同步跟上。",
+        "列表",
+        "首页",
+        "未命名应用"
+      ]
+    },
+    {
+      "file": "src/page/GameSettingsEditor.tsx",
+      "count": 6,
+      "samples": [
+        "); // 默认为 ",
+        "，新按钮传 ",
+        "创建失败",
+        "创建空游戏失败:",
+        "一句话生成功能仅在 visual 模式下可用"
+      ]
+    },
+    {
+      "file": "src/page/LegalDocument.tsx",
+      "count": 6,
+      "samples": [
+        "FunLoom 用户服务协议",
+        "FunLoom 隐私政策",
+        "FunLoom 创作者协议",
+        "FunLoom 作品审核标准",
+        "返回"
+      ]
+    },
+    {
+      "file": "src/page/Rankings.tsx",
+      "count": 6,
+      "samples": [
+        "${import.meta.env.BASE_URL}data/assets/第一.svg",
+        "${import.meta.env.BASE_URL}data/assets/第二.svg",
+        "${import.meta.env.BASE_URL}data/assets/第三.svg",
+        "${import.meta.env.BASE_URL}data/assets/向右箭头.svg",
+        "${import.meta.env.BASE_URL}data/assets/向右箭头.svg"
+      ]
+    },
+    {
+      "file": "src/utils/gameListingAccess.ts",
+      "count": 6,
+      "samples": [
+        "未上架",
+        "审核中",
+        "未通过",
+        "已下架",
+        "已下架"
+      ]
+    },
+    {
+      "file": "src/api/statistics/dailyTask.type.ts",
+      "count": 5,
+      "samples": [
+        "点赞",
+        "游玩",
+        "开始",
+        "30分钟",
+        "10分钟"
+      ]
+    },
+    {
+      "file": "src/components/AiRoute/AiRouteFab.tsx",
+      "count": 5,
+      "samples": [
+        "AI 线路",
+        "平台默认",
+        "展开${label}按钮",
+        "${label}：当前 ${name}，点击切换",
+        "点击展开"
+      ]
+    },
+    {
+      "file": "src/components/creator/CreatorPublishAgreementModal.tsx",
+      "count": 5,
+      "samples": [
+        "请先勾选《创作者协议》与《作品审核标准》",
+        "提交发布审核",
+        "提交中…",
+        "同意并提交",
+        "取消"
+      ]
+    },
+    {
+      "file": "src/components/GalgameMap/interaction/NpcInteractionContainer.tsx",
+      "count": 5,
+      "samples": [
+        "请选择你的行动",
+        "事件已完成，但前端状态未更新。请刷新页面。",
+        "选择选项失败，请检查网络或稍后重试。",
+        "轮询超时，未能获取到历史记录。请重试或取消。",
+        "轮询请求失败，请检查网络连接后重试。"
+      ]
+    },
+    {
+      "file": "src/components/GameGrid.tsx",
+      "count": 5,
+      "samples": [
+        "剧情${idx + 1}",
+        "剧情${idx + 1}",
+        "取消选择草稿",
+        "选择草稿",
+        "剧情${idx + 1}"
+      ]
+    },
+    {
+      "file": "src/hooks/editor/useUnsavedChanges.ts",
+      "count": 5,
+      "samples": [
+        "保存失败，请重试",
+        "未保存的修改",
+        "您有未保存的修改，是否要保存？",
+        "保存",
+        "不保存"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/compressImageToWebp.ts",
+      "count": 5,
+      "samples": [
+        "无法处理图片",
+        "请选择有效图片",
+        "仅支持常见图片格式（JPEG/PNG/WebP/GIF）",
+        "浏览器无法导出 WebP，请换一张图或换浏览器重试",
+        "图片压缩后仍超过 ${Math.round(maxBytes / 1024)}KB，请换更小的图"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/playerDisplayName.ts",
+      "count": 5,
+      "samples": [
+        "旅人",
+        "玩家",
+        "用户",
+        "主角",
+        "旅人"
+      ]
+    },
+    {
+      "file": "src/page/Messages.tsx",
+      "count": 5,
+      "samples": [
+        "意见反馈回复",
+        "您的反馈已收到回复。",
+        "意见反馈回复",
+        "您的反馈已收到回复。",
+        "我知道了"
+      ]
+    },
+    {
+      "file": "src/utils/adminDiamondAdjustment.ts",
+      "count": 5,
+      "samples": [
+        "KK币数量必须大于 0 且最多保留两位小数",
+        "KK币数量超过可处理范围",
+        "变更后的KK币余额不能超过安全整数范围",
+        "扣减数量不能超过当前余额 ${currentDiamonds} KK币",
+        "限时KK币有效期必须为 1 至 3650 天"
+      ]
+    },
+    {
+      "file": "src/utils/miniProgram.ts",
+      "count": 5,
+      "samples": [
+        "自定义",
+        "自由",
+        "互动影游",
+        "当前模式",
+        "小程序端当前仅支持 AI文游 模式创作，${label} 请前往 PC 端操作。PC 端地址：${MINI_PROGRAM_CREATOR_PC_URL}，请在电脑浏览器打开。"
+      ]
+    },
+    {
+      "file": "src/utils/stRender.ts",
+      "count": 5,
+      "samples": [
+        "状态条：好感度",
+        "(好感度：(?<val>\\\\d+))",
+        ">好感度：$<val></span>",
+        "手机消息块",
+        "/\\[消息\\|([^\\]]+)\\]\\s*[:：]\\s*([\\s\\S]+?)(?=\\n|$)/g"
+      ]
+    },
+    {
+      "file": "src/activities/funloom-lottery-20260731/lib/lotteryAdminConfig.ts",
+      "count": 4,
+      "samples": [
+        "未配置 / 0：一等奖永远抽不中",
+        "约 1/${denom}（权重 ${Math.floor(w)} / 总分母约 3000）",
+        "已导出 ${rows} 条（服务端统计 ${total} 条，请核对）",
+        "已导出全部 ${rows} 条记录"
+      ]
+    },
+    {
+      "file": "src/api/admin/adminReportApi.ts",
+      "count": 4,
+      "samples": [
+        "世界观不完整",
+        "背景图不完整",
+        "无法完整游玩",
+        "违规或其他"
+      ]
+    },
+    {
+      "file": "src/components/AiModelPricingPriceFields.tsx",
+      "count": 4,
+      "samples": [
+        "输入价格",
+        "输出价格",
+        "缓存命中价格",
+        "不支持可留空"
+      ]
+    },
+    {
+      "file": "src/components/CommonModal/ConfirmModal.tsx",
+      "count": 4,
+      "samples": [
+        "确认操作",
+        "请确认是否继续此操作？",
+        "确认",
+        "取消"
+      ]
+    },
+    {
+      "file": "src/components/Create/CreatorWorksPanel.tsx",
+      "count": 4,
+      "samples": [
+        "获取主页已发布作品错误:",
+        "获取我的游戏列表错误:",
+        "获取收藏列表失败:",
+        "批量删除草稿失败:"
+      ]
+    },
+    {
+      "file": "src/components/CreateGame/GameStatsView.tsx",
+      "count": 4,
+      "samples": [
+        "没有 fileId，无法创建 session",
+        "❌ Session 创建错误:",
+        "获取游玩状态失败:",
+        "加载存档失败:"
+      ]
+    },
+    {
+      "file": "src/components/CreatorEarnings/CreatorEarningsTrend.tsx",
+      "count": 4,
+      "samples": [
+        "编辑器作品",
+        "自定义作品",
+        "SDK 外部应用",
+        "全部作品"
+      ]
+    },
+    {
+      "file": "src/components/GalgameMap/interaction/Display/TextModeDisplay.tsx",
+      "count": 4,
+      "samples": [
+        "先整段闪一下再开始打字",
+        "当前正在生成",
+        "自定义输入",
+        "输入你想说的话或行动..."
+      ]
+    },
+    {
+      "file": "src/components/GalgameMap/Modal/StoryIntroModal.tsx",
+      "count": 4,
+      "samples": [
+        "${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png",
+        "故事",
+        "欢迎来到这个精彩的故事世界，准备好开始你的冒险了吗？",
+        "开始体验"
+      ]
+    },
+    {
+      "file": "src/components/GalgameMap/Plugin/EventDisplayModal.tsx",
+      "count": 4,
+      "samples": [
+        "功能性NPC",
+        "事件图片",
+        "${import.meta.env.BASE_URL}data/asset/关闭按钮.png",
+        "关闭"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/MapPanel/FunctionalNPCList.tsx",
+      "count": 4,
+      "samples": [
+        "${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultNpc.png",
+        "立绘型",
+        "按钮型",
+        "功能性NPC"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/WorldPanel/WorldPanel.tsx",
+      "count": 4,
+      "samples": [
+        "题材#${id}",
+        "加载作品标签失败:",
+        "加载编辑作品标签失败:",
+        "事件 ${index + 1}"
+      ]
+    },
+    {
+      "file": "src/hooks/editor/useFileUpload.ts",
+      "count": 4,
+      "samples": [
+        "[轮询状态] jobId:",
+        "织梦豆不足",
+        "}，当前 ${failedData.currentPoints ?? ",
+        "[一句话生成] 开始轮询, jobId:"
+      ]
+    },
+    {
+      "file": "src/hooks/galgame/useGalgameMessage.ts",
+      "count": 4,
+      "samples": [
+        "玩家",
+        "未知角色",
+        "玩家",
+        "未知角色"
+      ]
+    },
+    {
+      "file": "src/lib/aiModelCatalog.ts",
+      "count": 4,
+      "samples": [
+        "至少添加一个比例档位",
+        "比例档位不能为空",
+        "比例档位不能重复",
+        "请先确认替换待生效版本"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/npcNameOverlay.ts",
+      "count": 4,
+      "samples": [
+        "老师",
+        "同学",
+        "先生",
+        "小姐"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/stepToDisplayMessage.ts",
+      "count": 4,
+      "samples": [
+        "玩家",
+        "玩家",
+        "未知角色",
+        "请选择你的行动"
+      ]
+    },
+    {
+      "file": "src/lib/warehouse/warehouseCardAvatarBackgroundJob.ts",
+      "count": 4,
+      "samples": [
+        "请先登录",
+        "立绘生成超时（${Math.round(timeoutMs / 1000)}s），请稍后重试",
+        "生成图像失败",
+        "生图超时，请稍后重试（高峰期可能较慢）"
+      ]
+    },
+    {
+      "file": "src/page/Analytics.tsx",
+      "count": 4,
+      "samples": [
+        "加载失败，请检查接口地址/权限",
+        "周留存(%)",
+        "月留存(%)",
+        "默认同源，如 https://your-host"
+      ]
+    },
+    {
+      "file": "src/page/CreatorIncentive.tsx",
+      "count": 4,
+      "samples": [
+        "特邀",
+        "等级—",
+        "创作者中心",
+        "${benefitSummary.label}，查看详情"
+      ]
+    },
+    {
+      "file": "src/page/PointsDetails.tsx",
+      "count": 4,
+      "samples": [
+        "全部",
+        "收入",
+        "支出",
+        "返回"
+      ]
+    },
+    {
+      "file": "src/utils/draftBoxFilter.ts",
+      "count": 4,
+      "samples": [
+        "文字互动",
+        "剧情推理",
+        "世界互动",
+        "自定义"
+      ]
+    },
+    {
+      "file": "src/utils/error.ts",
+      "count": 4,
+      "samples": [
+        "操作失败，请稍后重试",
+        "AI 服务额度不足，请稍后重试或联系管理员",
+        "AI 服务暂时不可用，请稍后重试",
+        "生成失败"
+      ]
+    },
+    {
+      "file": "src/api/galgame/playUi.ts",
+      "count": 3,
+      "samples": [
+        "面板缓存接口返回了非 JSON 内容：${preview}",
+        "面板缓存接口返回了空内容",
+        "角色头像接口返回了非 JSON 内容"
+      ]
+    },
+    {
+      "file": "src/components/admin/AdminPlatformAppsSection.tsx",
+      "count": 3,
+      "samples": [
+        "未配置（前台使用官方种子语义）",
+        "收起",
+        "改绑题材"
+      ]
+    },
+    {
+      "file": "src/components/admin/LocationPinPlacer.tsx",
+      "count": 3,
+      "samples": [
+        " · 未放",
+        "新地点",
+        "你来到了「新地点」。"
+      ]
+    },
+    {
+      "file": "src/components/CheckInModal.tsx",
+      "count": 3,
+      "samples": [
+        "周卡",
+        "月卡",
+        "会员签到额外获得永久KK币：${describeMembershipRewards(result.membershipRewards)}"
+      ]
+    },
+    {
+      "file": "src/components/Galgame/ExportVisualNovelModal.tsx",
+      "count": 3,
+      "samples": [
+        "导出弹窗 AI 生成简介失败:",
+        "${import.meta.env.BASE_URL}data/assets/create/弹框左上角图案.png",
+        "${import.meta.env.BASE_URL}data/assets/gameDetail/关闭.png"
+      ]
+    },
+    {
+      "file": "src/components/Galgame/GalgameHistoryModal.tsx",
+      "count": 3,
+      "samples": [
+        "【主角变更】",
+        "保存编辑失败:",
+        "【主角变更】"
+      ]
+    },
+    {
+      "file": "src/components/GalgameMap/Modal/HistoryModal.tsx",
+      "count": 3,
+      "samples": [
+        "功能性NPC",
+        "无标题事件",
+        "选择"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/AttributeGrowthPanel/AttributeGrowthPanel.tsx",
+      "count": 3,
+      "samples": [
+        "保存属性失败:",
+        "删除属性失败:",
+        "确定要删除属性「${attributeToDelete?.displayName || attributeToDelete?.name}」吗？删除后不可恢复。"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/FunctionalNPCsPanel/FunctionalNPCList.tsx",
+      "count": 3,
+      "samples": [
+        "${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultNpc.png",
+        "立绘型",
+        "按钮型"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/MapPanel/constants.ts",
+      "count": 3,
+      "samples": [
+        "${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png",
+        "${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultMap.png",
+        "${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultNpc.png"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/MapPanel/MapTab.tsx",
+      "count": 3,
+      "samples": [
+        "成功保存 ${placedScenes.length} 个场景的位置",
+        "保存失败:",
+        "将保存 ${placedScenes.length} 个场景的位置信息"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/MapPanel/SceneTab.tsx",
+      "count": 3,
+      "samples": [
+        "更新失败:",
+        "成功保存 ${placedSubScenes.length} 个子场景的位置",
+        "保存失败:"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/MapPanel/SubSceneTab.tsx",
+      "count": 3,
+      "samples": [
+        "保存失败:",
+        "将保存 ${placedNormalNPCs.length} 个普通NPC和 ${placedFunctionalNPCs.length} 个功能性NPC的位置和层级信息",
+        "保存失败:"
+      ]
+    },
+    {
+      "file": "src/components/Pagination.tsx",
+      "count": 3,
+      "samples": [
+        "分页导航",
+        "上一页",
+        "下一页"
+      ]
+    },
+    {
+      "file": "src/components/Profile/DailyTasksModal.tsx",
+      "count": 3,
+      "samples": [
+        "复制推广链接",
+        "推广链接已复制",
+        "复制失败，请手动复制链接"
+      ]
+    },
+    {
+      "file": "src/hooks/mapGalgame/common/interactionUtils.ts",
+      "count": 3,
+      "samples": [
+        "未知角色",
+        "请选择你的行动",
+        "未知角色"
+      ]
+    },
+    {
+      "file": "src/hooks/mapGalgame/useMusicPlayer.ts",
+      "count": 3,
+      "samples": [
+        "播放音乐失败:",
+        "音乐加载失败",
+        "播放音乐失败:"
+      ]
+    },
+    {
+      "file": "src/hooks/useExternalLinkCopyModal.tsx",
+      "count": 3,
+      "samples": [
+        "打开外部链接",
+        "小程序内无法直接打开外部链接，请复制后在浏览器中打开",
+        "复制"
+      ]
+    },
+    {
+      "file": "src/lib/creatorEarningsView.ts",
+      "count": 3,
+      "samples": [
+        "中国银行卡",
+        "银行卡",
+        "未命名作品"
+      ]
+    },
+    {
+      "file": "src/lib/membershipStatus.ts",
+      "count": 3,
+      "samples": [
+        "0天0小时",
+        "不足1小时",
+        "${days}天${hours}小时"
+      ]
+    },
+    {
+      "file": "src/lib/platformAppKkmod.ts",
+      "count": 3,
+      "samples": [
+        "未命名应用",
+        "未命名应用",
+        "冒烟：启用后不崩溃"
+      ]
+    },
+    {
+      "file": "src/page/CustomIFCreate.tsx",
+      "count": 3,
+      "samples": [
+        "加载作品标签失败:",
+        "加载游戏信息失败:",
+        "简介图片上传接口不可用（404），请确认后端已部署 upload-desc-image"
+      ]
+    },
+    {
+      "file": "src/utils/appLanguage.ts",
+      "count": 3,
+      "samples": [
+        "简体中文",
+        "繁體中文",
+        "日本語"
+      ]
+    },
+    {
+      "file": "src/utils/profileCrypto.ts",
+      "count": 3,
+      "samples": [
+        "缺少前端密钥配置: VITE_CREATOR_PROFILE_AES_KEY_B64",
+        "加密数据格式错误",
+        "加密数据 IV 无效"
+      ]
+    },
+    {
+      "file": "src/api/common/currency.ts",
+      "count": 2,
+      "samples": [
+        "织梦豆",
+        "织梦豆"
+      ]
+    },
+    {
+      "file": "src/api/promotion/promotionApi.ts",
+      "count": 2,
+      "samples": [
+        "推广图片上传失败",
+        "投稿失败"
+      ]
+    },
+    {
+      "file": "src/components/admin/OverseasPricingAdminManager.tsx",
+      "count": 2,
+      "samples": [
+        "保存中...",
+        "保存倍率"
+      ]
+    },
+    {
+      "file": "src/components/CommonModal/GenerateResultModal.tsx",
+      "count": 2,
+      "samples": [
+        "${import.meta.env.BASE_URL}data/assets/create/弹框左上角图案.png",
+        "${import.meta.env.BASE_URL}data/assets/gameDetail/关闭.png"
+      ]
+    },
+    {
+      "file": "src/components/Create/PhoneAppLivePreview.tsx",
+      "count": 2,
+      "samples": [
+        "应用实时预览",
+        "按钮"
+      ]
+    },
+    {
+      "file": "src/components/Galgame/panels/QuestsPanel.tsx",
+      "count": 2,
+      "samples": [
+        "主线",
+        "截止"
+      ]
+    },
+    {
+      "file": "src/components/Galgame/ShareReplayModal.tsx",
+      "count": 2,
+      "samples": [
+        "${import.meta.env.BASE_URL}data/assets/create/弹框左上角图案.png",
+        "${import.meta.env.BASE_URL}data/assets/gameDetail/关闭.png"
+      ]
+    },
+    {
+      "file": "src/components/GalgameMap/interaction/Display/NormalModeDisplay.tsx",
+      "count": 2,
+      "samples": [
+        "是否允许点击:",
+        "请输入..."
+      ]
+    },
+    {
+      "file": "src/components/GalgameMap/Modal/WorldModal.tsx",
+      "count": 2,
+      "samples": [
+        "确定",
+        "取消"
+      ]
+    },
+    {
+      "file": "src/components/GameDetail/GameDetailExtraModals.tsx",
+      "count": 2,
+      "samples": [
+        "提交中…",
+        "提交中…"
+      ]
+    },
+    {
+      "file": "src/components/GamePublishAppealPrompt.tsx",
+      "count": 2,
+      "samples": [
+        "作品暂时无法发布",
+        "我已修改，去申诉重新发布"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/ObjectsPanel/ObjectsList.tsx",
+      "count": 2,
+      "samples": [
+        "消耗类",
+        "非消耗类"
+      ]
+    },
+    {
+      "file": "src/hooks/mapGalgame/abilityNode/useAbilityNodeRetryHandler.ts",
+      "count": 2,
+      "samples": [
+        "没有可重试的请求",
+        "重试失败，请稍后再试"
+      ]
+    },
+    {
+      "file": "src/hooks/mapGalgame/common/useRefreshEventData.ts",
+      "count": 2,
+      "samples": [
+        "开始下一回合",
+        "[WorldInteraction] ❌ 刷新事件状态失败:"
+      ]
+    },
+    {
+      "file": "src/hooks/mapGalgame/npc/useNpcChoiceHandler.ts",
+      "count": 2,
+      "samples": [
+        "无法找到选项或 optionId:",
+        "选择选项失败:"
+      ]
+    },
+    {
+      "file": "src/hooks/mapGalgame/npc/useNpcStreamRequestManager.ts",
+      "count": 2,
+      "samples": [
+        "[useNpcStreamRequestManager] 解析未完成请求失败:",
+        "[useNpcStreamRequestManager] 检查 event 完成状态失败:"
+      ]
+    },
+    {
+      "file": "src/hooks/useImageBusinessPrice.ts",
+      "count": 2,
+      "samples": [
+        "价格暂不可用",
+        "价格暂不可用"
+      ]
+    },
+    {
+      "file": "src/lib/aiBillingCenter.ts",
+      "count": 2,
+      "samples": [
+        "请输入最多四位小数的非负数",
+        "数值过大"
+      ]
+    },
+    {
+      "file": "src/lib/customUiUploadSize.ts",
+      "count": 2,
+      "samples": [
+        "单个文件过大（${formatMb(largest)}），上限 ${formatMb(maxFile)}",
+        "总大小过大（${formatMb(total)}），上限 ${formatMb(maxTotal)}。请压缩资源后重试"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/choiceStepPrompt.ts",
+      "count": 2,
+      "samples": [
+        "请选择你的行动",
+        "请选择你的行动"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/novelChapters.ts",
+      "count": 2,
+      "samples": [
+        "开篇",
+        "开篇"
+      ]
+    },
+    {
+      "file": "src/lib/gameCardBody.ts",
+      "count": 2,
+      "samples": [
+        "${count}人收藏",
+        "全部"
+      ]
+    },
+    {
+      "file": "src/lib/warehouse/warehouseCardAvatar.ts",
+      "count": 2,
+      "samples": [
+        "生成图为 WebP，宽度≤${WAREHOUSE_CARD_AVATAR_MAX_WIDTH}，体积≤${Math.round(WAREHOUSE_CARD_AVATAR_MAX_BYTES / 1024)}KB",
+        "上传转 WebP（质量 100）；超过 ${Math.round(WAREHOUSE_CARD_UPLOAD_AVATAR_MAX_BYTES / (1024 * 1024))}MB 等比缩小"
+      ]
+    },
+    {
+      "file": "src/lib/worldSettingFields.ts",
+      "count": 2,
+      "samples": [
+        "**世界观**：${worldview}",
+        "**前情提要**：${premise}"
+      ]
+    },
+    {
+      "file": "src/page/Categories.tsx",
+      "count": 2,
+      "samples": [
+        "加载题材分类失败:",
+        "加载分类剧本失败:"
+      ]
+    },
+    {
+      "file": "src/page/Library.tsx",
+      "count": 2,
+      "samples": [
+        "获取游戏列表失败:",
+        "获取游戏列表错误:"
+      ]
+    },
+    {
+      "file": "src/page/operator/OperatorReports.tsx",
+      "count": 2,
+      "samples": [
+        "暂无数据",
+        "暂无数据"
+      ]
+    },
+    {
+      "file": "src/page/WareHouse.tsx",
+      "count": 2,
+      "samples": [
+        "获取游戏列表失败:",
+        "获取游戏列表错误:"
+      ]
+    },
+    {
+      "file": "src/store/uploadStore.ts",
+      "count": 2,
+      "samples": [
+        "排队中",
+        "上传中"
+      ]
+    },
+    {
+      "file": "src/utils/activityBannerSchedule.ts",
+      "count": 2,
+      "samples": [
+        "活动时间格式无效",
+        "活动开始时间必须早于结束时间"
+      ]
+    },
+    {
+      "file": "src/utils/constants.ts",
+      "count": 2,
+      "samples": [
+        "${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png",
+        "${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultMap.png"
+      ]
+    },
+    {
+      "file": "src/api/banner/bannerApi.ts",
+      "count": 1,
+      "samples": [
+        "轮播图图片上传失败"
+      ]
+    },
+    {
+      "file": "src/api/home/getGameData.type.ts",
+      "count": 1,
+      "samples": [
+        "；前端也兼容 1 / true / "
+      ]
+    },
+    {
+      "file": "src/api/worldInteraction/createWorldSession.ts",
+      "count": 1,
+      "samples": [
+        "[WorldInteraction] 创建新 session，已清理状态"
+      ]
+    },
+    {
+      "file": "src/components/AdminBannerDialog.tsx",
+      "count": 1,
+      "samples": [
+        "关闭弹窗"
+      ]
+    },
+    {
+      "file": "src/components/AuthModal.tsx",
+      "count": 1,
+      "samples": [
+        "成功"
+      ]
+    },
+    {
+      "file": "src/components/CreatorEarnings/CreatorWorkSelectModal.tsx",
+      "count": 1,
+      "samples": [
+        "全部作品（汇总展示）"
+      ]
+    },
+    {
+      "file": "src/components/CreatorProfile.tsx",
+      "count": 1,
+      "samples": [
+        "请输入QQ群号（5-11位数字）"
+      ]
+    },
+    {
+      "file": "src/components/Galgame/SaveModal.tsx",
+      "count": 1,
+      "samples": [
+        " 新建, "
+      ]
+    },
+    {
+      "file": "src/components/Galgame/StoryIntroModal.tsx",
+      "count": 1,
+      "samples": [
+        "${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultMap.png"
+      ]
+    },
+    {
+      "file": "src/components/GalgameMap/SceneView.tsx",
+      "count": 1,
+      "samples": [
+        "${import.meta.env.BASE_URL}data/assets/任务.png"
+      ]
+    },
+    {
+      "file": "src/components/GalgameMap/WorldMapRenderer.tsx",
+      "count": 1,
+      "samples": [
+        "${import.meta.env.BASE_URL}data/assets/任务.png"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/CharactersPanel/CharactersSidebar.tsx",
+      "count": 1,
+      "samples": [
+        "选择 ${character.name || character.id}"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/CharactersPanel/types.ts",
+      "count": 1,
+      "samples": [
+        "${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultNpc.png"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/CharactersPanel/utils.ts",
+      "count": 1,
+      "samples": [
+        "玩家（${singleRelationship}）"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/DocumentUpload/DocumentsPanel.tsx",
+      "count": 1,
+      "samples": [
+        "复制报错信息失败:"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/MapPanel/hooks/useSubSceneTab.ts",
+      "count": 1,
+      "samples": [
+        "解析拖拽数据失败:"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/PDFTemplateModal.tsx",
+      "count": 1,
+      "samples": [
+        "${import.meta.env.BASE_URL}data/assets/gameDetail/关闭.png"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/UploadMusic/MusicList.tsx",
+      "count": 1,
+      "samples": [
+        "删除音乐失败:"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/UploadMusic/UploadMusicModal.tsx",
+      "count": 1,
+      "samples": [
+        "上传音乐失败:"
+      ]
+    },
+    {
+      "file": "src/components/GameSettingEditor/WorldPanel/WorldSettingForm.tsx",
+      "count": 1,
+      "samples": [
+        "${tag.pathLabel || tag.name}（已停用）"
+      ]
+    },
+    {
+      "file": "src/components/Layout/MobileBottomNav.tsx",
+      "count": 1,
+      "samples": [
+        "没反应"
+      ]
+    },
+    {
+      "file": "src/components/Layout/Navbar.tsx",
+      "count": 1,
+      "samples": [
+        "回到首页"
+      ]
+    },
+    {
+      "file": "src/components/VerifiedBadge.tsx",
+      "count": 1,
+      "samples": [
+        "官方认证"
+      ]
+    },
+    {
+      "file": "src/hooks/mapGalgame/abilityNode/useAbilityNodeInteractionStep.ts",
+      "count": 1,
+      "samples": [
+        "下一步"
+      ]
+    },
+    {
+      "file": "src/hooks/mapGalgame/npc/useNpcRetryHandler.ts",
+      "count": 1,
+      "samples": [
+        "[useNpcRetryHandler] 重试初始交互请求"
+      ]
+    },
+    {
+      "file": "src/hooks/mapGalgame/useHistoryPolling.ts",
+      "count": 1,
+      "samples": [
+        "轮询请求失败，请检查网络连接后重试。"
+      ]
+    },
+    {
+      "file": "src/lib/aiUsageFormatting.ts",
+      "count": 1,
+      "samples": [
+        "未配置"
+      ]
+    },
+    {
+      "file": "src/lib/creatorIdentity.ts",
+      "count": 1,
+      "samples": [
+        "需要过审作品解锁创作者身份即可使用。公开发布一部游戏世界并通过审核后解锁。"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/attributePanelValues.ts",
+      "count": 1,
+      "samples": [
+        "好感"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/bootstrapStartAction.ts",
+      "count": 1,
+      "samples": [
+        "开始游戏"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/choiceStepDisplayGate.ts",
+      "count": 1,
+      "samples": [
+        "正在生成中"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/encounteredCharacters.ts",
+      "count": 1,
+      "samples": [
+        "主角"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/npcAvatarBackgroundJob.ts",
+      "count": 1,
+      "samples": [
+        "已取消头像生成"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/playerAvatarMerge.ts",
+      "count": 1,
+      "samples": [
+        "主角"
+      ]
+    },
+    {
+      "file": "src/lib/galgame/systemPanelFromMorePromptForms.ts",
+      "count": 1,
+      "samples": [
+        "系统 ${index + 1}"
+      ]
+    },
+    {
+      "file": "src/lib/gameCardAuthor.ts",
+      "count": 1,
+      "samples": [
+        "未知作者"
+      ]
+    },
+    {
+      "file": "src/lib/gameDetailView.ts",
+      "count": 1,
+      "samples": [
+        "全部"
+      ]
+    },
+    {
+      "file": "src/lib/platformAppThemes.ts",
+      "count": 1,
+      "samples": [
+        "请至少选择 1 个适用题材"
+      ]
+    },
+    {
+      "file": "src/lib/sessionProfileBilling.ts",
+      "count": 1,
+      "samples": [
+        "织梦豆"
+      ]
+    },
+    {
+      "file": "src/lib/story/rawTextStepBridge.ts",
+      "count": 1,
+      "samples": [
+        "[NARRATION: 正文…"
+      ]
+    },
+    {
+      "file": "src/page/Favorites.tsx",
+      "count": 1,
+      "samples": [
+        "获取收藏列表失败:"
+      ]
+    },
+    {
+      "file": "src/page/NovelReader.tsx",
+      "count": 1,
+      "samples": [
+        "加载小说正文失败:"
+      ]
+    },
+    {
+      "file": "src/page/PromotionCenter.tsx",
+      "count": 1,
+      "samples": [
+        "未记录"
+      ]
+    },
+    {
+      "file": "src/store/mapGalgameStore.ts",
+      "count": 1,
+      "samples": [
+        "开启下一回合"
+      ]
+    },
+    {
+      "file": "src/utils/applicableThemeTags.ts",
+      "count": 1,
+      "samples": [
+        "请至少选择 1 个适用题材"
+      ]
+    },
+    {
+      "file": "src/utils/creatorDraftCapacity.ts",
+      "count": 1,
+      "samples": [
+        "草稿已满（${used}/${max}），先发布或删除一部"
+      ]
+    },
+    {
+      "file": "src/utils/gamePublishAppeal.ts",
+      "count": 1,
+      "samples": [
+        "该作品已被运营下架，请修改后提交重新发布申诉。"
+      ]
+    },
+    {
+      "file": "src/utils/imageCache.ts",
+      "count": 1,
+      "samples": [
+        "，如果无法提取则返回 "
+      ]
+    },
+    {
+      "file": "src/utils/novelGame.ts",
+      "count": 1,
+      "samples": [
+        "小说"
+      ]
+    },
+    {
+      "file": "src/utils/promotionNavigation.ts",
+      "count": 1,
+      "samples": [
+        "/promotions#活动标题"
+      ]
+    }
+  ]
+}

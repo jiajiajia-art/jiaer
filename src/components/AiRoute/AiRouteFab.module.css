@@ -1,10 +1,12 @@
-/* 功能注释：AI 线路悬浮球——深色磨砂圆 + 主题色光环；可拖动、贴边、收起成半隐藏小标签 */
+/* 功能注释：AI 线路悬浮球——球芯固定白渐变（不跟暗色 --color-surface），环/logo 仍用主色 */
 .fab {
-  --ar-accent: var(--color-primary, #e2577a);
+  --ar-accent: var(--color-primary, #d42a2a);
+  --ar-soft: color-mix(in srgb, var(--ar-accent) 12%, #ffffff);
+  --ar-ring: color-mix(in srgb, var(--ar-accent) 55%, #f0c2a8);
   position: fixed;
   z-index: 2147483000;
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   padding: 0;
   border: none;
   border-radius: 50%;
@@ -13,38 +15,77 @@
   touch-action: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  transition: left 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2), right 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2), top 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2), opacity 0.2s;
+  transition:
+    left 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2),
+    right 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2),
+    top 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2),
+    opacity 0.2s,
+    transform 0.2s;
 }
 
 .dragging {
   cursor: grabbing;
   transition: none;
+  transform: scale(1.04);
 }
 
 .ring {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: conic-gradient(from 210deg, var(--ar-accent), color-mix(in srgb, var(--ar-accent) 30%, #8c7cff), var(--ar-accent));
-  opacity: 0.9;
-  box-shadow: 0 8px 24px rgba(10, 8, 16, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  background: conic-gradient(
+    from 160deg,
+    var(--ar-ring),
+    var(--ar-accent),
+    color-mix(in srgb, var(--ar-accent) 35%, #fff),
+    var(--ar-accent),
+    var(--ar-ring)
+  );
+  opacity: 0.7;
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  animation: ar-spin 10s linear infinite;
+  box-shadow: none;
 }
 
 .core {
   position: absolute;
-  inset: 2px;
+  inset: 3px;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: radial-gradient(120% 120% at 30% 20%, rgba(58, 52, 70, 0.96), rgba(20, 18, 26, 0.96));
-  color: #fff;
-  backdrop-filter: blur(10px);
-  transition: transform 0.18s;
+  /* 功能注释：产品要求白渐变球芯；禁止再用主题 surface（暗色皮肤会整颗变黑） */
+  background:
+    radial-gradient(120% 100% at 30% 18%, #ffffff 0%, rgba(255, 255, 255, 0.72) 42%, transparent 58%),
+    linear-gradient(165deg, #ffffff 0%, #fff8f6 42%, var(--ar-soft) 100%);
+  color: var(--ar-accent);
+  border: 1px solid color-mix(in srgb, var(--ar-accent) 18%, #ffffff);
+  box-shadow:
+    0 8px 18px -10px rgba(40, 20, 30, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  filter: none;
 }
 
 .fab:hover .core,
 .fab:focus-visible .core {
-  transform: scale(1.04);
+  transform: scale(1.05);
+  box-shadow:
+    0 10px 22px -10px color-mix(in srgb, var(--ar-accent) 35%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.fab:hover .ring,
+.fab:focus-visible .ring {
+  opacity: 0.95;
 }
 
 .fab:focus-visible {
@@ -53,38 +94,77 @@
 }
 
 .dragging .ring {
-  box-shadow: 0 14px 34px rgba(10, 8, 16, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.12);
+  opacity: 1;
+  animation-duration: 5s;
 }
 
-/* 收起：大半藏到屏幕外，只露出带握把的一截 */
+.dragging .core {
+  box-shadow:
+    0 12px 26px -10px color-mix(in srgb, var(--ar-accent) 28%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* 收起：藏一半到屏幕外，握把仍清晰可见 */
 .docked {
-  opacity: 0.82;
+  opacity: 0.92;
 }
 
-.docked .core svg {
+.docked .logo {
   opacity: 0;
+}
+
+.docked .ring {
+  animation: none;
+  opacity: 0.4;
 }
 
 .peekGrip {
   position: absolute;
   top: 50%;
   width: 3px;
-  height: 18px;
+  height: 16px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.7);
+  background: linear-gradient(180deg, var(--ar-accent), color-mix(in srgb, var(--ar-accent) 50%, #fff));
   transform: translateY(-50%);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--ar-accent) 30%, transparent);
 }
 
 .right .peekGrip {
-  left: 9px;
+  left: 8px;
 }
 
 .left .peekGrip {
-  right: 9px;
+  right: 8px;
+}
+
+@keyframes ar-spin {
+  to { transform: rotate(360deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fab {
+  .fab,
+  .core {
     transition: none;
   }
+
+  .ring {
+    animation: none;
+  }
+}
+
+/* 功能注释：游戏页内的消耗明细浮层（不切路由，避免卸载游戏页丢档） */
+.ledgerOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--color-bg, #120f17);
+  color: var(--color-text, #f4eef6);
+}
+
+.ledgerLoading {
+  padding: 3rem 1rem;
+  text-align: center;
+  opacity: 0.7;
 }

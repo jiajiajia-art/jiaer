@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChromePicker } from 'react-color';
 import type { ColorResult } from 'react-color';
 import styles from './ColorPicker.module.css';
@@ -72,6 +73,8 @@ const hexToRgbaString = (value: string): string => {
 };
 
 const ColorPicker: React.FC<ColorPickerProps> = ({ color, onChange }) => {
+    const { t } = useTranslation();
+
     const [isOpen, setIsOpen] = useState(false);
     const [internalColor, setInternalColor] = useState<string>(color || '#37333480');
     const [hexInput, setHexInput] = useState<string>(toHexString(color || '#37333480'));
@@ -193,7 +196,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ color, onChange }) => {
                     className={styles.colorPreview}
                     style={{ backgroundColor: internalColor }}
                     onClick={() => setIsOpen(!isOpen)}
-                    title="选择颜色"
+                    title={t('gameSettingEditor.mapPanel.colorPicker.s91732e25ee')}
                 />
                 <input
                     ref={inputRef}

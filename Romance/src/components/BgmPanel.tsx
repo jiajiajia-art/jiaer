@@ -1,4 +1,3 @@
-import { lazyPanel } from "../lib/lazyPanel";
 import { loadGlobal, saveGlobal } from "../lib/saveScope";
 import { engineRules, mediaCheck } from "../game/engineRules";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -8,7 +7,6 @@ import type { ModTrack } from "../mods/types";
 import { setExternalPause, yieldBgm } from "../game/audioEngine";
 import { IconMusic, IconPause, IconPlay, IconSkipBack, IconSkipForward, StatusMark } from "../lib/icons";
 import { asModArray } from "../lib/asModArray";
-const AudioMixer = lazyPanel(() => import("./AudioLibraryPanel").then((m) => ({ default: m.AudioMixer })));
 
 /* 游戏设置 · 背景音乐：本地上传音频（存 IndexedDB，刷新不丢）、歌单点播、
  * 播放 / 暂停 / 上下首 / 循环模式 / 音量 / 进度 / 删除。
@@ -220,7 +218,6 @@ export default function BgmPanel() {
         </label>
       </div>
 
-      <AudioMixer />
 
       {/* 上传 */}
       <div className="flex flex-wrap items-center gap-2">

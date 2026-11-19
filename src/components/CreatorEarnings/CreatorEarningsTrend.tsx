@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { IoChevronDown, IoStatsChartOutline } from 'react-icons/io5';
 import {
     CartesianGrid,
@@ -36,43 +37,49 @@ interface Props {
     onRetry: () => void;
 }
 
-const SERIES = {
-    editor: { dataKey: 'editorGrossYuan', name: '编辑器作品', color: 'var(--color-primary-light)' },
-    custom: { dataKey: 'customGrossYuan', name: '自定义作品', color: 'var(--color-info)' },
-    sdk: { dataKey: 'sdkGrossYuan', name: 'SDK 外部应用', color: 'var(--color-success)' },
-} as const;
-
 const CreatorEarningsTrend: React.FC<Props> = ({
     data, loading, error, period, fileId, works,
     onPeriodChange, onFileChange, onRetry,
 }) => {
+    const { t } = useTranslation();
     const visible = visibleTrendSeries(data);
     const ticks = buildCreatorTrendTicks(data.map((row) => row.bucket), period);
     const [workSelectOpen, setWorkSelectOpen] = useState(false);
-    const selectedWorkTitle = fileId ? works.find((work) => work.fileId === fileId)?.title || fileId : '全部作品';
+    const selectedWorkTitle = fileId ? works.find((work) => work.fileId === fileId)?.title || fileId : t('creatorCenter.allWorks');
+    const series = {
+        editor: { dataKey: 'editorGrossYuan', name: t('creatorCenter.seriesEditor'), color: 'var(--color-primary-light)' },
+        custom: { dataKey: 'customGrossYuan', name: t('creatorCenter.seriesCustom'), color: 'var(--color-info)' },
+        sdk: { dataKey: 'sdkGrossYuan', name: t('creatorCenter.seriesSdk'), color: 'var(--color-success)' },
+    } as const;
+    const periodLabel = (value: CreatorEarningPeriod) => (
+        value === '7d' ? t('creatorCenter.period7')
+            : value === '30d' ? t('creatorCenter.period30')
+                : value === '1y' ? t('creatorCenter.period1y')
+                    : t('creatorCenter.periodAll')
+    );
     return (
         <>
             <section className={styles.panel} aria-labelledby="creator-earnings-trend-title">
             <div className={styles.trendHeading}>
-                <h2 id="creator-earnings-trend-title">收益趋势</h2>
-                <span>单位：元（税前）</span>
-                {error && <button type="button" className={styles.textButton} onClick={onRetry}>重试</button>}
+                <h2 id="creator-earnings-trend-title">{t('creatorCenter.trendTitle')}</h2>
+                <span>{t('creatorCenter.unitPretax')}</span>
+                {error && <button type="button" className={styles.textButton} onClick={onRetry}>{t('common.retry')}</button>}
             </div>
             <button type="button" className={styles.workFilter} onClick={() => setWorkSelectOpen(true)} aria-haspopup="dialog">
-                <span>作品筛选</span>
+                <span>{t('creatorCenter.filterWorks')}</span>
                 <strong>{selectedWorkTitle}<IoChevronDown aria-hidden="true" /></strong>
             </button>
             <div className={styles.trendControls}>
-                <div className={`${styles.segmented} ${styles.periodControl}`} aria-label="时间范围">
-                    {(['7d', '30d', '1y', 'all'] as const).map((value) => <button type="button" key={value} className={period === value ? styles.active : ''} onClick={() => onPeriodChange(value)}>{value === '7d' ? '近7日' : value === '30d' ? '近30日' : value === '1y' ? '近1年' : '累计'}</button>)}
+                <div className={`${styles.segmented} ${styles.periodControl}`} aria-label={t('creatorCenter.periodAria')}>
+                    {(['7d', '30d', '1y', 'all'] as const).map((value) => <button type="button" key={value} className={period === value ? styles.active : ''} onClick={() => onPeriodChange(value)}>{periodLabel(value)}</button>)}
                 </div>
             </div>
-            {loading && <div className={styles.chartWrap} aria-busy="true"><div className={styles.chartOverlay}>正在更新趋势…</div></div>}
+            {loading && <div className={styles.chartWrap} aria-busy="true"><div className={styles.chartOverlay}>{t('creatorCenter.trendUpdating')}</div></div>}
             {!loading && (data.length === 0 || visible.length === 0) && (
                 <div className={styles.chartEmptyCompact} role="status">
                     <IoStatsChartOutline aria-hidden="true" />
-                    <strong>所选范围暂无收益</strong>
-                    <span>产生收益后将在这里展示趋势</span>
+                    <strong>{t('creatorCenter.trendEmptyTitle')}</strong>
+                    <span>{t('creatorCenter.trendEmptyHint')}</span>
                 </div>
             )}
             {!loading && data.length > 0 && visible.length > 0 && (
@@ -84,7 +91,7 @@ const CreatorEarningsTrend: React.FC<Props> = ({
                             <YAxis stroke="var(--color-text-secondary)" tickLine={false} axisLine={false} width={48} />
                             <Tooltip labelFormatter={(value) => formatCreatorTrendTooltipDate(String(value))} contentStyle={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 10 }} formatter={(value) => [`¥${Number(value).toFixed(2)}`, '']} />
                             <Legend />
-                            {visible.map((key) => <Line key={key} type="monotone" dataKey={SERIES[key].dataKey} name={SERIES[key].name} stroke={SERIES[key].color} strokeWidth={3} dot={false} activeDot={{ r: 5 }} />)}
+                            {visible.map((key) => <Line key={key} type="monotone" dataKey={series[key].dataKey} name={series[key].name} stroke={series[key].color} strokeWidth={3} dot={false} activeDot={{ r: 5 }} />)}
                         </LineChart>
                     </ResponsiveContainer>
                 </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './FunctionalNPCList.module.css';
 import sharedStyles from './shared.module.css';
 import { RiDeleteBin5Line } from 'react-icons/ri';
@@ -21,6 +22,8 @@ const FunctionalNPCList: React.FC<FunctionalNPCListProps> = ({
     onDeleteClick,
     onCreateClick,
 }) => {
+    const { t } = useTranslation();
+
     const DEFAULT_NPC_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultNpc.png`;
 
     return (
@@ -35,7 +38,7 @@ const FunctionalNPCList: React.FC<FunctionalNPCListProps> = ({
                 {abilityNodes.length === 0 ? (
                     <div className={styles.emptyState}>
                         <p>暂无功能性NPC</p>
-                        <p className={styles.emptyHint}>点击"创建"添加新的功能性NPC</p>
+                        <p className={styles.emptyHint}>点击t('createGame.create')添加新的功能性NPC</p>
                     </div>
                 ) : (
                     abilityNodes.map((node) => {
@@ -55,7 +58,7 @@ const FunctionalNPCList: React.FC<FunctionalNPCListProps> = ({
                                     <div className={styles.npcCardThumbnail}>
                                         <img
                                             src={node.imagePath ? addImageTimestamp(getImageUrl(node.imagePath)) : DEFAULT_NPC_IMAGE}
-                                            alt={node.authorNote || '功能性NPC'}
+                                            alt={node.authorNote || t('gameSettingEditor.functionalNPCsPanel.functionalNPCList.sf99e3f1430')}
                                             onError={(e) => {
                                                 (e.target as HTMLImageElement).src = DEFAULT_NPC_IMAGE;
                                             }}
@@ -63,7 +66,7 @@ const FunctionalNPCList: React.FC<FunctionalNPCListProps> = ({
                                     </div>
                                 )}
                                 <div className={styles.npcCardInfo}>
-                                    <div className={styles.npcCardName}>{node.authorNote || '未命名NPC'}</div>
+                                    <div className={styles.npcCardName}>{node.authorNote || t('gameSettingEditor.functionalNPCsPanel.functionalNPCList.s3db6eb05b5')}</div>
                                     <div className={styles.npcCardType}>
                                         {node.type === 'illustration' ? '立绘型' : node.type === 'button' ? '按钮型' : node.type}
                                     </div>
@@ -71,7 +74,7 @@ const FunctionalNPCList: React.FC<FunctionalNPCListProps> = ({
                                 <button
                                     className={styles.npcCardDelete}
                                     onClick={(e) => onDeleteClick(node.node_id, e)}
-                                    aria-label="删除"
+                                    aria-label={t('warehouse.cards.delete')}
                                 >
                                     <RiDeleteBin5Line size={18} />
                                 </button>

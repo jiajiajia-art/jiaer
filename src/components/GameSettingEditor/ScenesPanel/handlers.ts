@@ -1,3 +1,4 @@
+import i18n from '../../../i18n';
 /**
  * 场景业务逻辑处理函数
  * 抽离主要业务逻辑，降低 ScenesPanel 主文件复杂度
@@ -135,6 +136,8 @@ export type SceneSaveResult =
     };
 
 export const createSceneHandlers = (ctx: HandlersContext) => {
+    /** 功能注释：handlers 非 React 组件，统一兜底 i18n.t，避免 ctx.t 可选调用报错 */
+    const t = (key: string) => (ctx.t ? ctx.t(key) : String(i18n.t(key)));
     const {
         fileId,
         mode,
@@ -291,7 +294,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             return undefined;
         }
 
-        toast.loading(ctx.t?.('createGame.storingImage') || '正在存储图片...', { id: 'uploading-image' });
+        toast.loading(t('createGame.storingImage'), { id: 'uploading-image' });
 
         try {
             let response;
@@ -309,12 +312,12 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                     return serverPath;
                 }
             }
-            toast.error(ctx.t?.('createGame.imageStoreFailed') || '图片存储失败');
+            toast.error(t('createGame.imageStoreFailed'));
             return undefined;
         } catch (error) {
             console.error('存储图片失败:', error);
             toast.dismiss('uploading-image');
-            toast.error(ctx.t?.('createGame.imageStoreFailedRetry') || '图片存储失败，请重试');
+            toast.error(t('createGame.imageStoreFailedRetry'));
             return undefined;
         }
     };
@@ -326,16 +329,16 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         options: SaveOptions = {},
     ): Promise<SceneSaveResult> => {
         if (!fileId) {
-            toast.error(ctx.t?.('createGame.missingDataCannotSave') || '缺少必要数据，无法保存修改');
+            toast.error(t('createGame.missingDataCannotSave'));
             return { success: false };
         }
 
         const shouldShowSuccessToast = !options.suppressSuccessToast;
         const sceneDataForApi: ApiScene = {
             id: sceneToSave.id,
-            name: sceneToSave.name || '未命名场景',
+            name: sceneToSave.name || t('gameSettingEditor.scenesPanel.handlers.s77bc1d5801'),
             type: sceneToSave.type || '',
-            description: sceneToSave.desc || '暂无描述',
+            description: sceneToSave.desc || t('gameDetail.noDescription'),
             image: imagePath || undefined,
             soundtrack: sceneToSave.bgmId || undefined,
             npcs: [],
@@ -345,13 +348,13 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         try {
             const response = await api.updateScene(fileId, sceneDataForApi);
             if (!response.data?.success) {
-                toast.error(ctx.t?.('createGame.updateSceneFailed') || '更新场景失败');
+                toast.error(t('createGame.updateSceneFailed'));
                 return { success: false };
             }
 
             const updatedScene = { ...sceneToSave, image: imagePath || sceneToSave.image };
             if (shouldShowSuccessToast) {
-                toast.success(ctx.t?.('createGame.sceneUpdateSuccess') || '场景更新成功');
+                toast.success(t('createGame.sceneUpdateSuccess'));
             }
             setSceneData(prev =>
                 prev.map(s => (s.id === sceneToSave.id ? { ...s, ...updatedScene } : s))
@@ -367,7 +370,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             };
         } catch (error) {
             console.error('更新场景时出错:', error);
-            toast.error(ctx.t?.('createGame.updateSceneFailedRetry') || '更新场景失败，请重试');
+            toast.error(t('createGame.updateSceneFailedRetry'));
             return { success: false };
         }
     };
@@ -593,7 +596,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     // 确认新增场景
     const confirmAddNew = async (options: SaveOptions = {}): Promise<SceneSaveResult> => {
         if (!fileId || !newSceneData) {
-            toast.error(ctx.t?.('createGame.missingDataCannotAddScene') || '缺少必要数据，无法新增场景');
+            toast.error(t('createGame.missingDataCannotAddScene'));
             return { success: false };
         }
 
@@ -602,9 +605,9 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
 
         const sceneDataForApi: ApiScene = {
             id: newSceneId,
-            name: newSceneData.name || '未命名场景',
+            name: newSceneData.name || t('gameSettingEditor.scenesPanel.handlers.s77bc1d5801'),
             type: newSceneData.type || '',
-            description: newSceneData.desc || '暂无描述',
+            description: newSceneData.desc || t('gameDetail.noDescription'),
             image: newSceneData.image || undefined,
             soundtrack: newSceneData.bgmId || undefined,
             npcs: [],
@@ -614,7 +617,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         try {
             const response = await api.addScene(fileId, sceneDataForApi);
             if (!response.data?.success) {
-                toast.error(ctx.t?.('createGame.createSceneFailed') || '创建场景失败');
+                toast.error(t('createGame.createSceneFailed'));
                 return { success: false };
             }
 
@@ -658,7 +661,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             setNewSceneData(null);
 
             if (shouldShowSuccessToast) {
-                toast.success(ctx.t?.('createGame.sceneCreateSuccess') || '场景创建成功');
+                toast.success(t('createGame.sceneCreateSuccess'));
             }
 
             return {
@@ -668,7 +671,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             };
         } catch (error) {
             console.error('创建场景时出错:', error);
-            toast.error(ctx.t?.('createGame.createSceneFailedRetry') || '创建场景失败，请重试');
+            toast.error(t('createGame.createSceneFailedRetry'));
             return { success: false };
         }
     };
@@ -678,7 +681,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         options: SaveOptions = {},
     ): Promise<SceneSaveResult> => {
         if (!fileId || !activeScene) {
-            toast.error(ctx.t?.('createGame.missingDataCannotSave') || '缺少必要数据，无法保存修改');
+            toast.error(t('createGame.missingDataCannotSave'));
             return { success: false };
         }
 
@@ -730,17 +733,17 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
 
     const clearSceneImageImmediately = async (sceneId: string): Promise<LocalScene | null> => {
         if (!fileId) {
-            toast.error(ctx.t?.('createGame.missingDataCannotClear') || '缺少必要数据，无法清空场景图');
+            toast.error(t('createGame.missingDataCannotClear'));
             return null;
         }
         if (mode !== 'visual') {
-            toast.error(ctx.t?.('createGame.currentModeNotSupport') || '当前模式不支持清空场景图');
+            toast.error(t('createGame.currentModeNotSupport'));
             return null;
         }
 
         const persistedScene = sceneData.find((scene) => scene.id === sceneId);
         if (!persistedScene) {
-            toast.error(ctx.t?.('createGame.currentSceneNotFound') || '未找到当前场景');
+            toast.error(t('createGame.currentSceneNotFound'));
             return null;
         }
 
@@ -753,15 +756,15 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             setActiveSceneDraft((prev) => (
                 prev && prev.id === sceneId ? { ...prev, image: '' } : prev
             ));
-            toast.success(ctx.t?.('createGame.sceneImageCleared') || '场景图已清空');
+            toast.success(t('createGame.sceneImageCleared'));
             return clearedScene;
         }
 
         const sceneDataForApi: ApiScene = {
             id: persistedScene.id,
-            name: persistedScene.name || '未命名场景',
+            name: persistedScene.name || t('gameSettingEditor.scenesPanel.handlers.s77bc1d5801'),
             type: persistedScene.type || '',
-            description: persistedScene.desc || '暂无描述',
+            description: persistedScene.desc || t('gameDetail.noDescription'),
             image: '',
             soundtrack: persistedScene.bgmId || undefined,
             npcs: [],
@@ -771,7 +774,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         try {
             const response = await api.updateScene(fileId, sceneDataForApi);
             if (!response.data?.success) {
-                toast.error(ctx.t?.('createGame.clearSceneImageFailed') || '清空场景图失败');
+                toast.error(t('createGame.clearSceneImageFailed'));
                 return null;
             }
 
@@ -785,22 +788,22 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                 prev && prev.id === sceneId ? { ...prev, image: '' } : prev
             ));
             onDataChange?.();
-            toast.success(ctx.t?.('createGame.sceneImageCleared') || '场景图已清空');
+            toast.success(t('createGame.sceneImageCleared'));
             return clearedScene;
         } catch (error) {
             console.error('清空场景图时出错:', error);
-            toast.error(ctx.t?.('createGame.clearSceneImageFailedRetry') || '清空场景图失败，请稍后重试');
+            toast.error(t('createGame.clearSceneImageFailedRetry'));
             return null;
         }
     };
 
     const openAddNewSubscene = () => {
         if (!activeSceneId) {
-            toast.error(ctx.t?.('createGame.selectParentScene') || '请先选择一个父场景');
+            toast.error(t('createGame.selectParentScene'));
             return;
         }
         if (mode !== 'worldInteraction') {
-            toast.error(ctx.t?.('createGame.subSceneOnlyWorldInteraction') || '子场景功能仅在世界交互模式下可用');
+            toast.error(t('createGame.subSceneOnlyWorldInteraction'));
             return;
         }
         const newSubscene: LocalScene = {
@@ -825,11 +828,11 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     // 确认修改/新增子场景
     const confirmSubsceneEdit = async (options: SaveOptions = {}): Promise<SceneSaveResult> => {
         if (!fileId || !activeSubsceneDraft || !activeSceneId) {
-            toast.error(ctx.t?.('createGame.missingDataCannotSave') || '缺少必要数据，无法保存修改');
+            toast.error(t('createGame.missingDataCannotSave'));
             return { success: false };
         }
         if (mode !== 'worldInteraction') {
-            toast.error(ctx.t?.('createGame.subSceneOnlyWorldInteraction') || '子场景功能仅在世界交互模式下可用');
+            toast.error(t('createGame.subSceneOnlyWorldInteraction'));
             return { success: false };
         }
 
@@ -862,7 +865,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
 
         const subsceneData: any = {
             id: isAddingNewSubscene ? `subscene_${Date.now()}` : draftToSave.id,
-            name: draftToSave.name || '未命名子场景',
+            name: draftToSave.name || t('createGame.unnamedSubScene'),
             description: draftToSave.desc || '',
             image: imagePath || '',
             npcs: [],
@@ -886,12 +889,12 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                 : await api.updateSubScene(fileId, activeSceneId, subsceneData);
 
             if (!response.data?.success) {
-                toast.error(ctx.t?.('createGame.sceneDeleteSuccess') ? `${ctx.t('createGame.sceneDeleteSuccess')} (${isAddingNewSubscene ? ctx.t('createGame.createSubSceneFailed') : ctx.t('createGame.updateSubSceneFailed')})` : (isAddingNewSubscene ? '创建子场景失败' : '更新子场景失败'));
+                toast.error(t('createGame.sceneDeleteSuccess') ? `${t('createGame.sceneDeleteSuccess')} (${isAddingNewSubscene ? t('createGame.createSubSceneFailed') : t('createGame.updateSubSceneFailed')})` : (isAddingNewSubscene ? t('createGame.createSubSceneFailed') : t('createGame.updateSubSceneFailed')));
                 return { success: false };
             }
 
             if (shouldShowSuccessToast) {
-                toast.success(isAddingNewSubscene ? (ctx.t?.('createGame.subSceneCreateSuccess') || '子场景创建成功') : (ctx.t?.('createGame.subSceneUpdateSuccess') || '子场景更新成功'));
+                toast.success(isAddingNewSubscene ? (t('createGame.subSceneCreateSuccess')) : (t('createGame.subSceneUpdateSuccess')));
             }
             if (setSubsceneDataBySceneId) {
                 const savedId = subsceneData.id;
@@ -927,7 +930,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             };
         } catch (error) {
             console.error(isAddingNewSubscene ? '创建子场景时出错:' : '更新子场景时出错:', error);
-            toast.error(isAddingNewSubscene ? (ctx.t?.('createGame.createSubSceneFailedRetry') || '创建子场景失败，请重试') : (ctx.t?.('createGame.updateSubSceneFailedRetry') || '更新子场景失败，请重试'));
+            toast.error(isAddingNewSubscene ? (t('createGame.createSubSceneFailedRetry')) : (t('createGame.updateSubSceneFailedRetry')));
             return { success: false };
         }
     };
@@ -975,14 +978,14 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                     }
                     return filtered;
                 });
-                toast.success(ctx.t?.('createGame.sceneDeleteSuccess') || '场景删除成功');
+                toast.success(t('createGame.sceneDeleteSuccess'));
                 // 不在此处触发全量刷新（避免确认后立刻刷新 document）
             } else {
-                toast.error(ctx.t?.('createGame.deleteSceneFailed') || '删除场景失败');
+                toast.error(t('createGame.deleteSceneFailed'));
             }
         } catch (error) {
             console.error('删除场景时出错:', error);
-            toast.error(ctx.t?.('createGame.deleteSceneFailedRetry') || '删除场景失败，请重试');
+            toast.error(t('createGame.deleteSceneFailedRetry'));
         } finally {
             onDeleteModalClose();
         }
@@ -1008,7 +1011,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         }
 
         if (mode !== 'worldInteraction') {
-            toast.error(ctx.t?.('createGame.subSceneOnlyWorldInteraction') || '子场景功能仅在世界交互模式下可用');
+            toast.error(t('createGame.subSceneOnlyWorldInteraction'));
             subsceneToDelete = null;
             onSubsceneDeleteModalClose();
             return;
@@ -1024,7 +1027,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                     setActiveSubsceneId(null);
                     setActiveSubsceneDraft(null);
                 }
-                toast.success(ctx.t?.('createGame.subSceneDeleteSuccess') || '子场景删除成功');
+                toast.success(t('createGame.subSceneDeleteSuccess'));
                 // 不在此处触发全量刷新（避免确认后立刻刷新 document）
                 if (setSubsceneDataBySceneId) {
                     setSubsceneDataBySceneId(prev => {
@@ -1034,11 +1037,11 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                     });
                 }
             } else {
-                toast.error(ctx.t?.('createGame.deleteSubSceneFailed') || '删除子场景失败');
+                toast.error(t('createGame.deleteSubSceneFailed'));
             }
         } catch (error) {
             console.error('删除子场景时出错:', error);
-            toast.error(ctx.t?.('createGame.deleteSubSceneFailedRetry') || '删除子场景失败，请重试');
+            toast.error(t('createGame.deleteSubSceneFailedRetry'));
         } finally {
             onSubsceneDeleteModalClose();
         }
@@ -1052,11 +1055,11 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     // 处理场景/子场景图片点击
     const handleSceneImageClick = () => {
         if (isAddingNew) {
-            toast.error(ctx.t?.('createGame.confirmAddSceneFirst') || '请先确认新增场景，然后再上传图片');
+            toast.error(t('createGame.confirmAddSceneFirst'));
             return;
         }
         if (isAddingNewSubscene && activeSubsceneId && activeSubsceneId.startsWith('temp-')) {
-            toast.error(ctx.t?.('createGame.confirmAddSubSceneFirst') || '请先确认新增子场景，然后再上传图片');
+            toast.error(t('createGame.confirmAddSubSceneFirst'));
             return;
         }
         if (sceneFileInputRef.current) {
@@ -1070,11 +1073,11 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         if (!file) return;
 
         if (!file.type.startsWith('image/')) {
-            toast.error(ctx.t?.('createGame.selectImageFile') || '请选择图片文件');
+            toast.error(t('createGame.selectImageFile'));
             return;
         }
         if (file.size > 5 * 1024 * 1024) {
-            toast.error(ctx.t?.('createGame.imageSizeTooLarge') || '图片大小不能超过 5MB');
+            toast.error(t('createGame.imageSizeTooLarge'));
             return;
         }
 
@@ -1082,21 +1085,21 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         let targetSubsceneId: string | undefined;
 
         if (isAddingNew && newSceneData) {
-            toast.error(ctx.t?.('createGame.confirmAddSceneFirst') || '请先确认新增场景，然后再上传图片');
+            toast.error(t('createGame.confirmAddSceneFirst'));
             if (newSceneFileInputRef.current) newSceneFileInputRef.current.value = '';
             if (sceneFileInputRef.current) sceneFileInputRef.current.value = '';
             return;
         } else if (activeSubsceneId && activeSubsceneDraft) {
             if (mode !== 'worldInteraction') {
-                toast.error(ctx.t?.('createGame.subSceneOnlyWorldInteraction') || '子场景功能仅在世界交互模式下可用');
+                toast.error(t('createGame.subSceneOnlyWorldInteraction'));
                 return;
             }
             if (!activeSubsceneId) {
-                toast.error(ctx.t?.('createGame.missingSubSceneIdCannotUpload') || '缺少子场景ID，无法上传');
+                toast.error(t('createGame.missingSubSceneIdCannotUpload'));
                 return;
             }
             if (isAddingNewSubscene && activeSubsceneId.startsWith('temp-')) {
-                toast.error(ctx.t?.('createGame.confirmAddSubSceneFirst') || '请先确认新增子场景，然后再上传图片');
+                toast.error(t('createGame.confirmAddSubSceneFirst'));
                 if (sceneFileInputRef.current) sceneFileInputRef.current.value = '';
                 return;
             }
@@ -1107,14 +1110,14 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         }
 
         if (!targetSceneId) {
-            toast.error(ctx.t?.('createGame.selectSceneFirst') || '请先选择场景');
+            toast.error(t('createGame.selectSceneFirst'));
             return;
         }
 
         // 暂存模式：直接设置预览
         const targetId = targetSubsceneId || targetSceneId;
         await setPendingImage(targetId, file);
-        toast.success(ctx.t?.('createGame.imageStagedSaveLater') || '图片已暂存，请在确认修改后保存');
+        toast.success(t('createGame.imageStagedSaveLater'));
         setHasUnsavedChanges(true);
 
         if (sceneFileInputRef.current) sceneFileInputRef.current.value = '';
@@ -1129,11 +1132,11 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         const shouldAutoSaveVisualScene = mode === 'visual' && !isSubscene;
 
         if (isAddingNew && newSceneData && scene.id === newSceneData.id) {
-            toast.error(ctx.t?.('createGame.generateImageFirstScene') || '请先确认新增场景，然后再生成图片');
+            toast.error(t('createGame.generateImageFirstScene'));
             return null;
         }
         if (isAddingNewSubscene && scene.id.startsWith('temp-')) {
-            toast.error(ctx.t?.('createGame.confirmAddSubSceneFirst') || '请先确认新增子场景，然后再生成图片');
+            toast.error(t('createGame.confirmAddSubSceneFirst'));
             return null;
         }
 
@@ -1189,7 +1192,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
 
                         return { success: false };
                     }
-                    toast.success(ctx.t?.('createGame.sceneImageGeneratedSaveLater') || '场景图片生成成功，请在确认修改后保存');
+                    toast.success(t('createGame.sceneImageGeneratedSaveLater'));
                     await setPendingImage(targetId, response.data.blob);
                     await refreshUserPoints();
                 } else if (response.data.imagePath) {
@@ -1213,17 +1216,17 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                         return { success: false };
                     }
                     // 兼容：直接返回路径的情况
-                    toast.success(ctx.t?.('createGame.sceneImageGeneratedSaveLater') || '场景图片生成成功，请在确认修改后保存');
+                    toast.success(t('createGame.sceneImageGeneratedSaveLater'));
                     await setPendingImage(targetId, response.data.imagePath);
                     await refreshUserPoints();
                 }
             } else {
-                toast.error(response.data?.message || '当前使用人数过多，请稍后再试');
+                toast.error(response.data?.message || t('createGame.serverBusy'));
             }
             return null;
         } catch (error) {
             console.error('重新生成场景图片时出错:', error);
-            toast.error(ctx.t?.('createGame.regenerateSceneImageFailed') || '重新生成场景图片失败，请重试');
+            toast.error(t('createGame.regenerateSceneImageFailed'));
             return { success: false };
         } finally {
             setIsGeneratingSingleSceneImage(false);
@@ -1233,7 +1236,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
 
     const handleRequestRegenerateSceneImage = (scene: LocalScene) => {
         if (!fileId) {
-            toast.error(ctx.t?.('createGame.missingDataCannotGenerate') || '缺少必要数据，无法生成');
+            toast.error(t('createGame.missingDataCannotGenerate'));
             return;
         }
         pendingSceneForGenerate = scene;
@@ -1254,14 +1257,14 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     // 大地图生成 & 上传
     const doGenerateWorldMap = async () => {
         if (!fileId) {
-            toast.error(ctx.t?.('createGame.missingFileIdCannotGenerate') || '缺少文件 ID，无法生成大地图');
+            toast.error(t('createGame.missingFileIdCannotGenerate'));
             return;
         }
         try {
             setIsGeneratingWorldMap(true);
             const response = await api.generateWorldMapImage(fileId);
             if (response.data.success) {
-                toast.success(ctx.t?.('createGame.mapGenerateSuccess') || '大地图生成成功');
+                toast.success(t('createGame.mapGenerateSuccess'));
                 if (response.data.imagePath) {
                     const processedImagePath = getImageUrl(response.data.imagePath);
                     setWorldMapImageOverride(withCacheBust(processedImagePath));
@@ -1270,11 +1273,11 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                 }
                 // 不在此处触发全量刷新（避免确认后立刻刷新 document）
             } else {
-                toast.error(ctx.t?.('createGame.serverBusy') || '当前使用人数过多，请稍后再试');
+                toast.error(t('createGame.serverBusy'));
             }
         } catch (error: any) {
             console.error('生成大地图失败:', error);
-            toast.error(ctx.t?.('createGame.generateMapFailed') || '生成大地图失败：请检查网络连接');
+            toast.error(t('createGame.generateMapFailed'));
         } finally {
             setIsGeneratingWorldMap(false);
         }
@@ -1282,7 +1285,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
 
     const handleRequestGenerateWorldMap = () => {
         if (!fileId) {
-            toast.error(ctx.t?.('createGame.missingFileIdCannotGenerate') || '缺少文件 ID，无法生成大地图');
+            toast.error(t('createGame.missingFileIdCannotGenerate'));
             return;
         }
         onWorldMapCostModalOpen();
@@ -1301,24 +1304,24 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         const file = e.target.files?.[0];
         if (!file) return;
         if (!fileId) {
-            toast.error(ctx.t?.('createGame.missingFileIdCannotUpload') || '缺少文件 ID，无法上传大地图');
+            toast.error(t('createGame.missingFileIdCannotUpload'));
             return;
         }
         try {
             const response = await api.setWorldMapImage(fileId, file);
             if (response.data?.success) {
-                toast.success(ctx.t?.('createGame.mapUploadSuccess') || '大地图上传成功');
+                toast.success(t('createGame.mapUploadSuccess'));
                 if (response.data.imagePath) {
                     const processedImagePath = getImageUrl(response.data.imagePath);
                     setWorldMapImageOverride(processedImagePath);
                 }
                 // 不在此处触发全量刷新（避免确认后立刻刷新 document）
             } else {
-                toast.error(ctx.t?.('createGame.mapUploadFailed') || '大地图上传失败，请稍后重试');
+                toast.error(t('createGame.mapUploadFailed'));
             }
         } catch (error: any) {
             console.error('上传大地图失败:', error);
-            toast.error(ctx.t?.('createGame.mapUploadFailedError') || '上传大地图失败：' + (error.message || '请检查网络连接'));
+            toast.error(t('createGame.mapUploadFailedError') + (error.message || t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s73a13d2b99')));
         } finally {
             if (worldMapFileInputRef.current) {
                 worldMapFileInputRef.current.value = '';
@@ -1435,7 +1438,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     ) => {
         let lastJobStatus: BatchImageJobStatus | null = null;
         if (!fileId) {
-            toast.error(ctx.t?.('createGame.missingDataCannotGenerate') || '缺少必要数据，无法生成');
+            toast.error(t('createGame.missingDataCannotGenerate'));
             return;
         }
         const bootstrapTotal = Array.isArray(sceneIds) && sceneIds.length > 0
@@ -1487,7 +1490,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             const startPayload: any = startResponse?.data || startResponse;
             const jobId = startPayload?.jobId;
             if (!startPayload?.success || !jobId) {
-                toast.error(startPayload?.error || startPayload?.message || '当前使用人数过多，请稍后再试');
+                toast.error(startPayload?.error || startPayload?.message || t('createGame.serverBusy'));
                 setSceneBatchJobStatus(null);
                 return;
             }
@@ -1679,7 +1682,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                 }
             }
             console.error('生成所有场景立绘时出错:', error);
-            toast.error(ctx.t?.('createGame.generateAllSceneImageFailed') || '生成所有场景立绘失败，请检查网络连接');
+            toast.error(t('createGame.generateAllSceneImageFailed'));
         } finally {
             setIsGeneratingAllSceneImages(false);
             if (sceneBatchGenerationCancelRef.current) {
@@ -1716,7 +1719,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             sceneBatchGenerationCancelRef.current = true;
             setIsGeneratingAllSceneImages(false);
             setSceneBatchJobStatus(null);
-            toast(ctx.t?.('createGame.batchSceneGenerationCancelled') || '已取消场景立绘生成');
+            toast(t('createGame.batchSceneGenerationCancelled'));
         } else {
             setSceneBatchJobStatus(null);
         }
@@ -1730,7 +1733,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     const continueFailedBatchSceneImages = async (sceneIds: string[]) => {
         const ids = [...new Set((sceneIds || []).map((id) => String(id || '').trim()).filter(Boolean))];
         if (ids.length === 0) {
-            toast.error(ctx.t?.('createGame.selectScenesToGenerate') || '请先选择要重试的场景');
+            toast.error(t('createGame.selectScenesToGenerate'));
             return;
         }
         await generateAllSceneImages(null, ids);
@@ -1739,7 +1742,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
 
     const openSceneCostModal = async () => {
         if (!fileId) {
-            toast.error(ctx.t?.('createGame.missingDataCannotGenerate') || '缺少必要数据，无法生成');
+            toast.error(t('createGame.missingDataCannotGenerate'));
             return;
         }
         try {
@@ -1750,7 +1753,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             onSceneCostModalOpen(points);
         } catch (error) {
             console.error('获取场景生图积分消耗失败:', error);
-            toast.error(ctx.t?.('createGame.getPointsCostFailed') || '获取织梦豆消耗失败，请稍后重试');
+            toast.error(t('createGame.getPointsCostFailed'));
         } finally {
             setIsLoadingSceneCost(false);
         }

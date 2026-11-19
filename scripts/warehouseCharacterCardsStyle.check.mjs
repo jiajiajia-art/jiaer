@@ -19,7 +19,8 @@ test('WarehouseHub_应对齐首页墨黑酒红色板', () => {
   assert.match(css, /\.railChip\s*\{[\s\S]*?background:\s*var\(--wh-chip\)/);
   assert.match(css, /\.railChipActive\s*\{[\s\S]*?background:\s*var\(--wh-coral\)/);
   assert.match(css, /\.mobileUploadCta\s*\{[\s\S]*?border-radius:\s*999px/);
-  assert.match(css, /@media \(max-width:\s*980px\)[\s\S]*?\.content\s*\{[\s\S]*?background:\s*transparent/);
+  // 手机断点现为 768px，内容区背景透明
+  assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.content\s*\{[\s\S]*?background:\s*transparent/);
   assert.doesNotMatch(css, /--wh-stage:\s*#f4f2f5/);
   assert.doesNotMatch(css, /--wh-coral:\s*#e03d4b/);
   assert.doesNotMatch(css, /\.railChip\s*\{[\s\S]*?background:\s*#f0eef1/);
@@ -28,18 +29,21 @@ test('WarehouseHub_应对齐首页墨黑酒红色板', () => {
 test('WarehousePanel_角色卡应对齐首页暗色表面与双列网格', () => {
   const css = read('src/page/warehouse/WarehousePanel.module.css');
   const npc = read('src/page/warehouse/WarehouseCharacterCards.tsx');
-  assert.match(npc, /我的角色卡/);
+  // 「我的角色卡」文案锁在 warehouse.characters.title
+  assert.match(npc, /t\('warehouse\.characters\.title'\)/);
+  assert.match(read('src/i18n/locales/zh.json'), /"title": "我的角色卡"/);
   assert.match(css, /--wh-coral:\s*(?:#a8283c|var\(--|color-mix\()/i);
   assert.match(css, /--wh-paper:\s*(?:#1a1a1a|var\(--|color-mix\()/i);
-  assert.match(css, /@media \(max-width:\s*980px\)[\s\S]*?\.toolbar\s*\{[\s\S]*?background:\s*var\(--wh-paper\)/);
-  assert.match(css, /@media \(max-width:\s*980px\)[\s\S]*?\.grid\s*\{[\s\S]*?repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
-  assert.match(css, /@media \(max-width:\s*980px\)[\s\S]*?\.preview\s*\{\s*display:\s*none/);
+  // 手机断点现为 768px：工具条纸色、双列网格、预览隐藏
+  assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.toolbar\s*\{[\s\S]*?background:\s*var\(--wh-paper\)/);
+  assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.grid\s*\{[\s\S]*?repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.preview\s*\{\s*display:\s*none/);
   assert.match(css, /\.cardActive\s*\{[\s\S]*?border-color:\s*var\(--wh-coral\)/);
   assert.match(css, /\.cardActions \.actionPrimary\s*\{[\s\S]*?background:\s*var\(--wh-coral\)/);
   assert.match(css, /\.formOverlay\s*\{[\s\S]*?place-items:\s*center/);
   assert.match(
     css,
-    /@media \(max-width:\s*980px\)[\s\S]*?\.formOverlay\s*\{[\s\S]*?place-items:\s*center/,
+    /@media \(max-width:\s*768px\)[\s\S]*?\.formOverlay\s*\{[\s\S]*?place-items:\s*center/,
   );
   // 只看 .formOverlay 自身样式块（[^}]*），避免跨到后面其它规则误判
   assert.doesNotMatch(css, /\.formOverlay\s*\{[^}]*align-items:\s*flex-start/);

@@ -224,7 +224,7 @@ export function EntityText({ text, className }: { text: string; className?: stri
         <button
           key={key++}
           onClick={() => open(ref)}
-          className="inline appearance-none border-0 bg-transparent p-0 font-medium no-underline outline-none transition hover:brightness-110"
+          className="inline appearance-none border-0 bg-transparent p-0 font-[inherit] no-underline outline-none transition hover:brightness-110"
           style={{ color: style.color }}
         >
           {name}

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { STAT_LABELS, STAT_ORDER, creationCopy, loadPathLocks, savePathLock, clearPathLocks, type CreationPath } from "../game/data";
-import { LIVE_LOCATIONS, LIVE_PEOPLE, getWorld } from "../mods/registry";
-import { FIXED_METRICS } from "../game/fixedEvents";
+import { creationCopy, loadPathLocks, savePathLock, clearPathLocks, type CreationPath } from "../game/data";
+import { LIVE_LOCATIONS, LIVE_PEOPLE, getWorld, getWorldEndings } from "../mods/registry";
 import { formatPathLockHint, sanitizePathLockConds } from "../lib/pathDeps";
 import { IconCheck, IconChevronDown, IconChevronUp, IconLock } from "../lib/icons";
 import RoutePerks from "./RoutePerks";
@@ -13,7 +12,7 @@ const inp = "min-w-0 w-full rounded-lg border border-line bg-paper px-2 py-1 tex
 const liveEvents = () => (getWorld().content.fixedEvents ?? []).map((e) => ({ id: e.id, name: e.name }));
 
 /* 游戏内编辑器 · 人物线路解锁管理面板：
- * 让创作者或玩家直接在编辑器里将各条人物线路设为「已解锁」或「🔒 未解锁」，并可填写未解锁角标与解锁条件说明 */
+ * 让创作者或玩家直接在编辑器里将各条人物线路设为「已解锁」或「🔒 未解锁」，并可设置跨周目解锁条件 */
 export function PathUnlockPanel() {
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -24,6 +23,12 @@ export function PathUnlockPanel() {
 
   const cc = creationCopy();
   const paths = cc.paths ?? [];
+  // 功能注释：跨周目解锁条件的可选项：结局 / 其他线路 / 事件
+  const lockPools = {
+    events: liveEvents().map((e) => ({ id: e.id, label: e.name || e.id })),
+    endings: (getWorldEndings() ?? []).map((e) => ({ id: e.id, label: e.title || e.id })),
+    routes: paths.map((x) => ({ id: x.id, label: x.name || x.id })),
+  };
   const locks = loadPathLocks();
   const hasOverrides = Object.keys(locks).length > 0;
 
@@ -67,7 +72,7 @@ export function PathUnlockPanel() {
                         open ? "bg-jade/12 text-jade" : "bg-coral/15 text-coral"
                       }`}
                     >
-                      {open ? <span className="inline-flex items-center gap-0.5"><IconCheck size={12} /> 已解锁</span> : <span className="inline-flex items-center gap-0.5"><IconLock size={12} /> {p.lockTag || "未解锁"}</span>}
+                      {open ? <span className="inline-flex items-center gap-0.5"><IconCheck size={12} /> 已解锁</span> : <span className="inline-flex items-center gap-0.5"><IconLock size={12} /> 未解锁</span>}
                     </span>
                   </div>
                   {p.blurb && <p className="mt-1 text-[12px] text-ink-soft">{p.blurb}</p>}
@@ -88,7 +93,7 @@ export function PathUnlockPanel() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => savePathLock(p.id, { open: false, lockTag: p.lockTag || "未解锁" })}
+                    onClick={() => savePathLock(p.id, { open: false })}
                     className={`rounded-full border px-3 py-1 text-[11.5px] font-bold transition ${
                       !open
                         ? "border-coral bg-coral text-white shadow-sm"
@@ -102,32 +107,11 @@ export function PathUnlockPanel() {
 
               {!open && (
                 <div className="mt-3 space-y-2 border-t border-line/60 pt-2.5">
-                  <label className="block text-[11px] text-ink-soft">
-                    未解锁角标文字
-                    <input
-                      className={`${inp} mt-1 max-w-[10rem]`}
-                      value={p.lockTag ?? ""}
-                      placeholder="未解锁"
-                      onChange={(e) => savePathLock(p.id, { open: false, lockTag: e.target.value || undefined })}
-                    />
-                  </label>
                   <PathLockCondsEditor
                     value={Array.isArray(p.lockConds) ? p.lockConds : []}
-                    pools={{
-                      stats: STAT_ORDER.map((k) => ({ id: k, label: STAT_LABELS[k] || k })),
-                      metrics: FIXED_METRICS.filter((m) => m.key !== "week").map((m) => ({ id: m.key, label: m.label })),
-                      people: LIVE_PEOPLE.map((x) => ({ id: x.id, label: x.name })),
-                      rooms: LIVE_LOCATIONS.map((x) => ({ id: x.id, label: x.name })),
-                      events: liveEvents().map((e) => ({ id: e.id, label: e.name || e.id })),
-                    }}
+                    pools={{ ...lockPools, routes: lockPools.routes.filter((o) => o.id !== p.id) }}
                     onChange={(lockConds) => {
-                      const pools = {
-                        stats: STAT_ORDER.map((k) => ({ id: k, label: STAT_LABELS[k] || k })),
-                        metrics: FIXED_METRICS.filter((m) => m.key !== "week").map((m) => ({ id: m.key, label: m.label })),
-                        people: LIVE_PEOPLE.map((x) => ({ id: x.id, label: x.name })),
-                        rooms: LIVE_LOCATIONS.map((x) => ({ id: x.id, label: x.name })),
-                        events: liveEvents().map((e) => ({ id: e.id, label: e.name || e.id })),
-                      };
+                      const pools = lockPools;
                       const cleaned = sanitizePathLockConds(lockConds, pools);
                       savePathLock(p.id, {
                         open: false,

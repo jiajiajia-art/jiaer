@@ -1,7 +1,7 @@
 /* 人脉关系档位（内容槽 contacts）：嵌在「人物」上方统一配置，非独立大页。
  * 玩家列表只按关系阶段分组；卡片数值已下线；groups / orgs / stage.groups 仅旧数据兼容，运行时忽略。 */
 import { slot } from "../mods/live";
-import { term } from "../mods/registry";
+import { getWorldId, term } from "../mods/registry";
 import { groupByContactStage, normalizeContactStages, resolveContactStage } from "./contactStageGrouping";
 
 export const CONTACT_ICONS = ["dot", "heart", "star", "gem", "book", "sword", "coin", "flame", "shield", "eye", "leaf", "moon"] as const;
@@ -82,10 +82,12 @@ export function visibleContactMetrics(_cfg: ContactsSlot): ContactMetric[] {
   return [];
 }
 
-/* 当前生效配置：作者声明覆盖世界默认；旧分组/组织字段不会进入运行时。 */
+/* 当前生效配置：关系档位由平台写死（W-01，创作者不再配置，旧稿里自定义的档位忽略）；
+ * 娱乐圈世界用娱乐圈阶段词，其余作品用通用阶段词。作品只保留页面标题 / 副标题。 */
 export function contactsCfg(): ContactsSlot & Required<Pick<ContactsSlot, "metrics" | "stages">> {
-  const base = slot<ContactsSlot>("contacts", entContacts, genericContacts);
-  return normalizeContactsSlot(base, genericContacts());
+  const authored = slot<ContactsSlot>("contacts", entContacts, genericContacts);
+  const builtIn = getWorldId() === "ent" ? entContacts() : genericContacts();
+  return normalizeContactsSlot({ title: authored?.title, subtitle: authored?.subtitle ?? builtIn.subtitle, stages: builtIn.stages }, builtIn);
 }
 
 /* 阶段词：只按关系值判定；旧 groups 限定完全忽略，最低阶段兜底确保人物不会消失。 */

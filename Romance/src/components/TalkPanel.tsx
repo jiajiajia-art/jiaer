@@ -7,7 +7,7 @@ import { romancePortalRoot } from "../lib/romancePortalRoot";
 import { useGame } from "../store/gameCtx";
 import { Avatar } from "./ui";
 import { IconClose, IconSend } from "../lib/icons";
-import { streamChat, complete, isConfigured, mapSpotBlock } from "../lib/ai";
+import { povPlayerRef, streamChat, complete, isConfigured, mapSpotBlock } from "../lib/ai";
 import { affinityOf, kbBlock, kbOf, toNpcPov, recentStoryBlock, remember, romanceBlock, toneCue } from "../game/npcKnowledge";
 import { applyChatEffects, gameTimeLabel, ensurePhone, wxApply, wxRelation, wxResolve, type WxRelation } from "../game/phone";
 import { relOf } from "../game/relations";
@@ -128,7 +128,7 @@ export default function TalkPanel({ pid, name, role, onClose }: { pid: string; n
       let tThink = 0, tFirst = 0, chunks = 0;
       const sec = (t: number) => ((t - t0) / 1000).toFixed(1);
       const out = await streamChat(cfg, [
-        { role: "system", content: `${SYSTEM}\n\n你现在扮演「${name}」（${persona}）。你与玩家${known ? "已经认识" : "还不认识"}，当前微信关系：${r}。${bondBlock}${romance ? `\n${romance}` : ""}${spotCtx ? `\n\n${spotCtx}` : ""}\n\n${kbBlock(g0, pid)}\n\n${recentStoryBlock(g0)}\n\n只输出 JSON：{"mode":"talk|perfunctory|ignore","reply":"你说的话或动作描写（ignore 时留空）","wx":"agree|reject|shelve 或省略","memo":"用你的第一人称，把这一轮交谈概括成一句记忆（≤30字，只记事实与约定，不写动作神态），如：她谢我帮忙加微信，我提醒她明早九点去星栖练习馆上声乐课","love":0}。wx 只在你真正做出决定时输出；未收到申请（non_friend）时不要输出 wx。love 是这轮交谈后你对主角爱慕（私下心动）的变化，-2~3 的整数：只有真被打动、心动（正）或失望、受伤（负）时才写，普通寒暄省略；你是主角的家人或不可攻略时不写。` },
+        { role: "system", content: `${SYSTEM}\n\n${povPlayerRef(g0) ? `${povPlayerRef(g0)}\n` : ""}你现在扮演「${name}」（${persona}）。你与玩家${known ? "已经认识" : "还不认识"}，当前微信关系：${r}。${bondBlock}${romance ? `\n${romance}` : ""}${spotCtx ? `\n\n${spotCtx}` : ""}\n\n${kbBlock(g0, pid)}\n\n${recentStoryBlock(g0)}\n\n只输出 JSON：{"mode":"talk|perfunctory|ignore","reply":"你说的话或动作描写（ignore 时留空）","wx":"agree|reject|shelve 或省略","memo":"用你的第一人称，把这一轮交谈概括成一句记忆（≤30字，只记事实与约定，不写动作神态），如：她谢我帮忙加微信，我提醒她明早九点去星栖练习馆上声乐课","love":0}。wx 只在你真正做出决定时输出；未收到申请（non_friend）时不要输出 wx。love 是这轮交谈后你对主角爱慕（私下心动）的变化，-2~3 的整数：只有真被打动、心动（正）或失望、受伤（负）时才写，普通寒暄省略；你是主角的家人或不可攻略时不写。` },
         { role: "user", content: `【当前】${gameTimeLabel(g0)}，地点：${g0.world?.location || g0.sim.room || "此地"}\n主角：${g0.player.name}（${g0.player.identity}）\n【本次当面交谈】\n${history || "（刚开口）"}\n${applying ? "（玩家当面向你提出：加个微信吧？——你已收到好友申请，状态变为 pending）" : "（请回应玩家最后一句）"}` },
       ], (_d, full) => { chunks++; if (!tFirst) tFirst = performance.now(); setThinking(false); setLive(liveText(full)); }, undefined, (full) => { if (!tThink) tThink = performance.now(); setThinking(true); setThinkText(full); });
       const tEnd = performance.now();
@@ -224,7 +224,7 @@ export default function TalkPanel({ pid, name, role, onClose }: { pid: string; n
         role="dialog"
         aria-modal="true"
         aria-label={`与${name}对话`}
-        className="ui-sheet ui-dialog ui-dialog-game animate-pop"
+        className="ui-sheet ui-dialog animate-pop"
       >
         {/* 顶部：只留头像 + 姓名，心境弱化为一行小字 */}
         <header className="flex items-center gap-2.5 border-b border-line/50 px-4 py-2.5 sm:px-5">
@@ -347,7 +347,7 @@ export default function TalkPanel({ pid, name, role, onClose }: { pid: string; n
               }}
               placeholder={`对${name}当面说点什么…`}
               disabled={busy}
-              className="min-w-0 flex-1 border-0 bg-transparent py-1.5 text-[13.5px] text-ink placeholder:text-ink-soft/60 outline-none focus:outline-none focus:ring-0 disabled:opacity-50"
+              className="story-input min-w-0 flex-1 border-0 bg-transparent py-1.5 text-[13.5px] text-ink placeholder:text-ink-soft/60 outline-none focus:outline-none focus:ring-0 disabled:opacity-50"
             />
             <button
               type="button"

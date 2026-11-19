@@ -9,13 +9,13 @@ import {
   type DefaultPayMethod,
   type GeoRegionData,
 } from '../lib/geoRegion';
-import { applyAppLanguage } from '../utils/appLanguage';
+import { applyAppLanguage, hasUserLanguageChoice } from '../utils/appLanguage';
 
 type GeoRegionState = {
   region: GeoRegionData;
   loaded: boolean;
   loading: boolean;
-  /** 功能注释：每次进站强制跟 IP 覆盖语言 */
+  /** 功能注释：进站拉取 IP 区域；仅在用户没亲手选过语言时写入语言 */
   hydrateFromIp: () => Promise<GeoRegionData>;
 };
 
@@ -28,7 +28,9 @@ export const useGeoRegionStore = create<GeoRegionState>((set) => ({
     set({ loading: true });
     try {
       const region = await fetchGeoRegion();
-      await applyAppLanguage(region.language, (lng) => i18n.changeLanguage(lng));
+      if (!hasUserLanguageChoice()) {
+        await applyAppLanguage(region.language, (lng) => i18n.changeLanguage(lng));
+      }
       set({ region, loaded: true, loading: false });
       return region;
     } catch {

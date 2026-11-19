@@ -33,18 +33,18 @@
 
 .creatorLevelRow {
     width: 100%;
-    min-height: 56px;
+    min-height: 44px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 0 20px;
+    gap: 12px;
+    padding: 0 14px;
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 10px;
     background: var(--surface);
     color: var(--color-text);
     font: inherit;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     text-align: left;
     cursor: pointer;
@@ -63,9 +63,9 @@
 
 .creatorLevelLink {
     flex: 0 0 auto;
-    color: var(--color-primary-lighter);
-    font-size: 14px;
-    font-weight: 500;
+    color: var(--color-primary-fg);
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .withdrawButton,
@@ -701,13 +701,22 @@
     }
 
     .mainContent {
-        padding: 14px 12px calc(36px + env(safe-area-inset-bottom));
+        padding: 10px 10px calc(28px + env(safe-area-inset-bottom));
     }
 
     .dashboard {
-        gap: 12px;
+        gap: 10px;
     }
 
+    .creatorLevelRow {
+        min-height: 40px;
+        padding: 0 12px;
+        font-size: 13px;
+    }
+
+    .creatorLevelLink {
+        font-size: 12px;
+    }
 }
 
 @media (max-width: 640px) {

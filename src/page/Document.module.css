@@ -62,7 +62,27 @@
 }
 
 .topNavBackButton {
-    display: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-text);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.topNavBackButton:hover {
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.topNavBackButton .pagerArrow {
+    width: 22px;
+    height: 22px;
 }
 
 .topNavLogo {
@@ -1293,7 +1313,7 @@
 
 @media (max-width: 768px) {
     .pageRoot {
-        padding-bottom: calc(72px + env(safe-area-inset-bottom));
+        padding-bottom: calc(80px + env(safe-area-inset-bottom));
     }
 
     .main {

@@ -105,7 +105,25 @@
 }
 
 .bannerBandEmpty {
-    background: var(--color-text-muted);
+    /* 功能注释：与主页无背景默认氛围对齐，避免设置页仍是灰死板条 */
+    background:
+        radial-gradient(120% 90% at 12% 18%, color-mix(in srgb, var(--color-primary) 42%, transparent) 0%, transparent 52%),
+        radial-gradient(90% 80% at 88% 12%, color-mix(in srgb, var(--color-highlight, var(--color-primary)) 28%, transparent) 0%, transparent 48%),
+        linear-gradient(165deg, #2a1a22 0%, #1a1218 42%, #121018 100%);
+}
+
+.bannerBandEmpty::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(125deg, transparent 0%, color-mix(in srgb, #fff 8%, transparent) 46%, transparent 52%),
+        repeating-linear-gradient(
+            -18deg,
+            transparent 0 14px,
+            color-mix(in srgb, #fff 3.5%, transparent) 14px 15px
+        );
+    pointer-events: none;
 }
 
 .bannerBandFilled {

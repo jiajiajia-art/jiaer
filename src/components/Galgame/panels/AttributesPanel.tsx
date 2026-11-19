@@ -278,14 +278,14 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
 
   const shellTitle =
     archiveView === 'import'
-      ? '导入已有角色卡'
+      ? t('galgameUi.attributes.importCardTitle')
       : archiveView === 'preview'
-        ? '导入预览'
+        ? t('galgameUi.attributes.importPreviewTitle')
         : t('galgame.panelAttrsTitle');
 
   const shellSubtitle =
     archiveView === 'import'
-      ? '从账号卡库选择一张覆盖本局档案'
+      ? t('galgameUi.attributes.importCardSubtitle')
       : archiveView === 'preview'
         ? undefined
         : isOverview

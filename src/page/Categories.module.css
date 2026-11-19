@@ -22,7 +22,11 @@
 }
 
 .main {
-    width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
+    /* 功能注释：与首页一致，PC 避让右侧「加入群聊」悬浮条 */
+    width: min(
+        var(--app-desktop-shell-max),
+        calc(100% - 2 * max(var(--app-desktop-gutter), var(--app-floating-dock-reserve)))
+    );
     max-width: none;
     margin: var(--app-desktop-navbar-height) auto 0;
     padding: 16px 20px 20px;
@@ -218,7 +222,7 @@
 @media (max-width: 768px) {
     .pageRoot {
         min-height: 100vh;
-        padding-bottom: calc(72px + env(safe-area-inset-bottom));
+        padding-bottom: calc(80px + env(safe-area-inset-bottom));
     }
 
     .mainContent {

@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './Pagination.module.css';
 
 interface PaginationProps {
@@ -52,6 +53,7 @@ const Pagination: React.FC<PaginationProps> = ({
     className = '',
     variant = 'default',
 }) => {
+    const { t } = useTranslation();
     const safeTotalPages = Math.max(1, Math.floor(totalPages));
     const safeCurrentPage = clampPage(Math.floor(currentPage) || 1, safeTotalPages);
 
@@ -74,15 +76,15 @@ const Pagination: React.FC<PaginationProps> = ({
         <div
             className={`${styles.pagination} ${variant === 'creator' ? styles.paginationCreator : ''} ${className}`.trim()}
         >
-            <div className={styles.controls} aria-label="分页导航">
+            <div className={styles.controls} aria-label={t('common.paginationNav')}>
                 <button
                     type="button"
                     className={`${styles.navButton} ${styles.prevNextButton}`}
                     onClick={() => handlePageChange(safeCurrentPage - 1)}
                     disabled={disabled || safeCurrentPage <= 1}
-                    aria-label="上一页"
+                    aria-label={t('common.prevPage')}
                 >
-                    上一页
+                    {t('common.prevPage')}
                 </button>
 
                 {showPageNumbers ? (
@@ -94,7 +96,7 @@ const Pagination: React.FC<PaginationProps> = ({
                             onClick={() => handlePageChange(page)}
                             disabled={disabled}
                             aria-current={page === safeCurrentPage ? 'page' : undefined}
-                            aria-label={`第 ${page} 页`}
+                            aria-label={t('common.pageNumber', { page })}
                         >
                             {page}
                         </button>
@@ -106,9 +108,9 @@ const Pagination: React.FC<PaginationProps> = ({
                     className={`${styles.navButton} ${styles.prevNextButton}`}
                     onClick={() => handlePageChange(safeCurrentPage + 1)}
                     disabled={disabled || safeCurrentPage >= safeTotalPages}
-                    aria-label="下一页"
+                    aria-label={t('common.nextPage')}
                 >
-                    下一页
+                    {t('common.nextPage')}
                 </button>
             </div>
 

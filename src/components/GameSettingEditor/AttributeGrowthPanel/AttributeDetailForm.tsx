@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './AttributeDetailForm.module.css';
 import type { AttributeConfig, AttributeTarget } from './types';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
@@ -21,6 +22,8 @@ const AttributeDetailForm: React.FC<AttributeDetailFormProps> = ({
     onChange,
     onSave,
 }) => {
+    const { t } = useTranslation();
+
     // 字数统计
     const keyWords = useWordCount(formState?.key ?? '');
     const displayNameWords = useWordCount(formState?.displayName ?? '');
@@ -79,7 +82,7 @@ const AttributeDetailForm: React.FC<AttributeDetailFormProps> = ({
                     </div>
                     <input
                         className={styles.input}
-                        placeholder="如 stamina"
+                        placeholder={t('gameSettingEditor.attributeGrowthPanel.attributeDetailForm.s5170ab9566')}
                         value={formState.key ?? ''}
                         {...keyLimit}
                     />
@@ -96,7 +99,7 @@ const AttributeDetailForm: React.FC<AttributeDetailFormProps> = ({
                     </div>
                     <input
                         className={styles.input}
-                        placeholder="例如：体力 / 情绪"
+                        placeholder={t('gameSettingEditor.attributeGrowthPanel.attributeDetailForm.sbeb1675e8f')}
                         value={formState.displayName ?? ''}
                         {...displayNameLimit}
                     />
@@ -118,7 +121,7 @@ const AttributeDetailForm: React.FC<AttributeDetailFormProps> = ({
                     </div>
                     <textarea
                         className={styles.textarea}
-                        placeholder="属性含义说明，用于引导模型如何理解和使用该属性。"
+                        placeholder={t('gameSettingEditor.attributeGrowthPanel.attributeDetailForm.s9f1b14753d')}
                         value={formState.description ?? ''}
                         {...descriptionLimit}
                     />
@@ -134,20 +137,20 @@ const AttributeDetailForm: React.FC<AttributeDetailFormProps> = ({
                         <input
                             className={styles.input}
                             type="number"
-                            placeholder="默认值（如 50）"
+                            placeholder={t('gameSettingEditor.attributeGrowthPanel.attributeDetailForm.s62fcd0929d')}
                             value={formState.defaultValue ?? ''}
                             onChange={(e) => onChange({ defaultValue: Number(e.target.value) || 0 })}
                         />
                         <input
                             className={styles.input}
                             type="number"
-                            placeholder="上限（如 100）"
+                            placeholder={t('gameSettingEditor.attributeGrowthPanel.attributeDetailForm.s6d38371010')}
                             value={formState.maxValue ?? ''}
                             onChange={(e) => onChange({ maxValue: Number(e.target.value) || 0 })}
                         />
                         <input
                             className={styles.input}
-                            placeholder="单位（如 点 / %）"
+                            placeholder={t('gameSettingEditor.attributeGrowthPanel.attributeDetailForm.sa21bd80246')}
                             value={formState.unit ?? ''}
                             onChange={(e) => onChange({ unit: e.target.value })}
                         />
@@ -168,7 +171,7 @@ const AttributeDetailForm: React.FC<AttributeDetailFormProps> = ({
                     </div>
                     <textarea
                         className={styles.textarea}
-                        placeholder="可选：填写简单的文字公式，帮助系统和自己回忆该属性的增减逻辑。"
+                        placeholder={t('gameSettingEditor.attributeGrowthPanel.attributeDetailForm.s3857a55abd')}
                         value={formState.formula ?? ''}
                         {...formulaLimit}
                     />

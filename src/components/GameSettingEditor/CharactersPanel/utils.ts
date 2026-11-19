@@ -223,7 +223,7 @@ export const npcToCharacter = (npc: NPC | WorldNPC, indexFallback: number): Char
         background: mergedNpcBackground,
         relationships: npcRelationship ? [{
             id: 'r1',
-            name: '玩家',
+            name: i18n.t('gameSettingEditor.charactersPanel.utils.se7c31937db'),
             description: npcRelationship,
         }] : [],
         variations: imagesToVariations(images, variationDescriptions),
@@ -349,11 +349,11 @@ const mergeLegacyFieldsIntoBackground = (source: any, rawBackground: string): st
         sections.push(`${label}：${content}`);
     };
 
-    appendSection('成长经历 / 转折', source?.growth);
-    appendSection('短期目标', source?.goalShort);
-    appendSection('长期愿景', source?.goalLong);
+    appendSection(i18n.t('gameSettingEditor.charactersPanel.utils.s56586d6fff'), source?.growth);
+    appendSection(i18n.t('gameSettingEditor.charactersPanel.utils.sdb50baf125'), source?.goalShort);
+    appendSection(i18n.t('gameSettingEditor.charactersPanel.utils.s89fd9aed59'), source?.goalLong);
     // 秘密改由「玩家目前定位」独立字段承载，不再并入背景（避免玩家从背景读到）
-    appendSection('人物关系', extractRelationshipSummary(source));
+    appendSection(i18n.t('gameSettingEditor.charactersPanel.utils.s190c4e046c'), extractRelationshipSummary(source));
 
     if (sections.length === 0) return baseBackground;
     return baseBackground ? `${baseBackground}\n\n${sections.join('\n')}` : sections.join('\n');
@@ -370,8 +370,8 @@ export const playerToCharacter = (player: any): Character => {
     return {
         ...baseCharacter(),
         id: 'player',
-        name: player?.name || '玩家',
-        callName: extractCallName(player, player?.name || '玩家'),
+        name: player?.name || i18n.t('gameSettingEditor.charactersPanel.utils.se7c31937db'),
+        callName: extractCallName(player, player?.name || i18n.t('gameSettingEditor.charactersPanel.utils.se7c31937db')),
         gender: player?.gender || '',
         role: i18n.t('createGame.protagonist'),
         identity: playerIdentity,

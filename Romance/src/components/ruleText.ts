@@ -25,7 +25,7 @@ export function condBrief(c: FixedCond, events: FixedEvent[] = []): string {
     case "event": return `已触发「${events.find((e) => e.id === c.key)?.name || c.key || "未选"}」`;
     case "time": return `开局${c.op === "lte" ? "不超过" : "满"}${c.value}${TIME_UNIT_LABEL[c.unit]}`;
     case "date": return `${c.op === "lte" ? "不晚于" : "不早于"}${c.date || "（未填）"}`;
-    case "flag": return `「${c.key || "未命名"}」${op(c.op)}${c.value}`;
+    case "flag": return `计数器「${c.key || "未命名"}」${op(c.op)}${c.value}`;
     case "clock": return `${c.from}~${c.to}`;
     case "quest": return `「${c.key || "未选"}」${QUEST_STATE_LABEL[c.state]}`;
     case "side": return `支线「${c.key || "未选"}」${SIDE_STATE_LABEL[c.state]}`;
@@ -55,7 +55,7 @@ export function effectBrief(f: FixedEffect): string {
     case "addItem": return `获得「${item(f.key)}」`;
     case "removeItem": return `失去「${item(f.key)}」`;
     case "unlockLocation": return `解锁${place(f.key)}`;
-    case "flag": return `「${f.key || "未命名"}」${f.set ? `=${f.delta}` : d}`;
+    case "flag": return `计数器「${f.key || "未命名"}」${f.set ? `改成 ${f.delta}` : f.delta < 0 ? `减 ${-f.delta}` : `加 ${f.delta}`}`;
     case "faction": return `${faction(f.key)}声望${d}`;
     case "memory": return `${f.clear ? "忘掉" : "记下"}「${f.key || "未命名"}」`;
     case "modVar": return `[${modName(f.mod)}] ${f.key || "未选"}${f.set ? `=${f.delta}` : d}`;

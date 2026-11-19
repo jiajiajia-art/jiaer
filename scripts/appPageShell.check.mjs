@@ -13,7 +13,8 @@ const read = (rel) => readFileSync(join(root, rel), 'utf8');
 test('index_css_定义navbar与bottom_nav_offset含安全区', () => {
   const css = read('src/index.css');
   assert.match(css, /--app-navbar-offset:\s*calc\(var\(--app-desktop-navbar-height\) \+ env\(safe-area-inset-top/);
-  assert.match(css, /--app-bottom-nav-offset:\s*calc\(72px \+ env\(safe-area-inset-bottom/);
+  assert.match(css, /--app-bottom-nav-offset:\s*0px/);
+  assert.match(css, /--app-bottom-nav-offset:\s*calc\(80px \+ env\(safe-area-inset-bottom/);
 });
 
 test('Navbar_高度含顶部安全区_对齐offset', () => {

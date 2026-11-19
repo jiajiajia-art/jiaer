@@ -1,5 +1,5 @@
 /**
- * ①基础页五处回归：简介摘要、剧本基调 AI 填入、开局日期数字选择、
+ * ①基础页五处回归：简介摘要、系统提示词 AI 填入、开局日期数字选择、
  * 删除换地点扣点与日程叙事字数配置。
  */
 import assert from 'node:assert/strict';
@@ -38,7 +38,7 @@ test('简介_长设定须摘要约100字_禁止slice原文照搬', async () => {
   assert.equal(seed.content.prompt.scriptTone, undefined);
 });
 
-test('剧本基调_生成须写scriptTone并校验字数_简介可从manifest写入', async () => {
+test('系统提示词_生成须写scriptTone并校验字数_简介可从manifest写入', async () => {
   const gen = await import(pathToFileURL(join(romance, 'lib/worldGenGenerate.ts')).href);
   const wiz = await import(pathToFileURL(join(romance, 'lib/worldGenWizard.ts')).href);
   const lim = await import(pathToFileURL(join(romance, 'lib/modBasicInfoLimits.ts')).href);
@@ -83,7 +83,7 @@ test('剧本基调_生成须写scriptTone并校验字数_简介可从manifest写
         completeFn: async () => JSON.stringify({ content: { prompt: { scriptTone: '太短' } } }),
         cfg: { baseUrl: 'https://example.test/v1', apiKey: 'k', model: 'm' },
       }),
-    /剧本基调过短/,
+    /系统提示词过短/,
   );
 
   const over = `${'字'.repeat(lim.SCRIPT_TONE_MAX + 10)}`;
@@ -100,8 +100,8 @@ test('剧本基调_生成须写scriptTone并校验字数_简介可从manifest写
   // 清洗阶段会截断到 SCRIPT_TONE_MAX，软校验通过后长度不得超过上限
   assert.ok((capped.mod.content.prompt.scriptTone || '').length <= lim.SCRIPT_TONE_MAX);
 
-  assert.equal(lim.isScriptToneOverLimit('字'.repeat(5001)), true);
-  assert.equal(lim.validateModBasicInfoLimits({ scriptTone: '字'.repeat(5001) }), `剧本基调最多 ${lim.SCRIPT_TONE_MAX} 字`);
+  assert.equal(lim.isScriptToneOverLimit('字'.repeat(lim.SCRIPT_TONE_MAX + 1)), true);
+  assert.equal(lim.validateModBasicInfoLimits({ scriptTone: '字'.repeat(lim.SCRIPT_TONE_MAX + 1) }), `系统提示词最多 ${lim.SCRIPT_TONE_MAX} 字`);
 });
 
 test('开局日期_div模拟选择_禁止原生select与自由字符串', () => {
@@ -161,10 +161,9 @@ test('时间与推进_删除换地点扣点与日程叙事字数配置', () => {
 
 test('编辑器文案_简介与基调说明对齐图注需求', () => {
   const panel = read('Romance/src/components/ModEditorPanel.tsx');
-  assert.match(panel, /按世界观摘要的约 100 字简介/);
-  assert.match(panel, /默认是世界观摘要，不是创作者长设定原文/);
-  assert.match(panel, /生成世界时由 AI 写出并填入/);
-  assert.match(panel, /超出 5000 字标红，不能照常保存/);
+  // 简介占位现为约 100 字，作者态与高级态各一句
+  assert.match(panel, /约 100 字简介（列表 \/ 开局页展示，可改）/);
+  assert.match(panel, /约 100 字简介（可改，最多 200 字）/);
   // 功能注释：开局日期下灰字已删，只留年/月/日选择
   assert.doesNotMatch(panel, /格式固定为年\.月\.日，只选数字/);
   assert.doesNotMatch(panel, /这天是周/);

@@ -8,6 +8,7 @@ import { addImageTimestamp } from '../utils/imageCache';
 import { resolveGameCoverUrl } from '../utils/displayCoverUrl';
 import { getImageUrl } from '../utils/constants';
 import { getGameTypeLabelFromMeta, getGameTypeToneFromMeta } from '../utils/gameTypeLabel';
+import { translateThemeLabel } from '../utils/themeTags';
 import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
 import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
 import {
@@ -49,7 +50,7 @@ const HomeThemePreviewRail: React.FC<HomeThemePreviewRailProps> = ({
     resetKey,
     emptyText,
 }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const railRef = useRef<HTMLDivElement | null>(null);
     const dragStateRef = useRef<DragState>(createInitialDragState());
@@ -144,8 +145,9 @@ const HomeThemePreviewRail: React.FC<HomeThemePreviewRailProps> = ({
 
     const getThemeLabels = (game: UserGameData): string[] => {
         const tagNames = Array.isArray(game.theme_tag_names) ? game.theme_tag_names : [];
+        const language = i18n.resolvedLanguage || i18n.language;
         return tagNames
-            .map((name) => String(name || '').trim())
+            .map((name) => translateThemeLabel(String(name || ''), t, language))
             .filter((name) => name && name !== t('gameBrowse.all'))
             .slice(0, 2);
     };

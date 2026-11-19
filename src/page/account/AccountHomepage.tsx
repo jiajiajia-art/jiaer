@@ -248,8 +248,9 @@ const AccountHomepage: React.FC = () => {
     const bioText = profile?.bio?.trim()
         ? profile.bio
         : t('create.accountHomepageBioPlaceholder');
-    const bannerCss = profile?.bannerUrl
-        ? { backgroundImage: `url(${getImageUrl(profile.bannerUrl)})` }
+    const hasBanner = Boolean(profile?.bannerUrl);
+    const bannerCss = hasBanner
+        ? { backgroundImage: `url(${getImageUrl(profile?.bannerUrl)})` }
         : undefined;
 
     return (
@@ -270,7 +271,7 @@ const AccountHomepage: React.FC = () => {
                     </div>
                 ) : null}
                 <div
-                    className={styles.banner}
+                    className={`${styles.banner} ${hasBanner ? '' : styles.bannerDefault}`}
                     style={bannerCss}
                     aria-hidden={!isOwner}
                 >

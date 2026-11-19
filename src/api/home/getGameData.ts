@@ -45,7 +45,7 @@ const getGameDataApi = {
         return api.get<GamePlayStatusResponse>(`/auth/games/${fileId}/play-status`);
     },
     getWareHouseData: (data: PublicGameRequest) => {
-        return api.get<WareHouseResponse>(`/auth/games/history`, { params: data });
+        return api.get<WareHouseResponse>(`/auth/games/warehouse`, { params: data });
     }
 }
 

@@ -1,18 +1,34 @@
-import { signInWithRedirect, signInWithPopup } from 'firebase/auth';
-import { auth as firebaseAuth, googleProvider } from '../config/firebase';
 import { useTranslation } from 'react-i18next';
 import { auth } from '../api/account/authApi';
 import {
     REGISTRATION_AGREEMENT_VERSION,
     REGISTRATION_PRIVACY_POLICY_VERSION,
 } from '../lib/registrationAgreement';
+import { isGoogleAuthEnabled } from '../lib/googleAuthPolicy';
 
 export function useGoogleAuth() {
     const { t } = useTranslation();
     const isDev = import.meta.env.DEV;
 
     const loginWithGoogle = async () => {
+        // 功能注释：国内环境直接拒绝，不动态加载 firebase，避免外网超时
+        if (!isGoogleAuthEnabled()) {
+            return {
+                success: false,
+                code: 'GOOGLE_AUTH_DISABLED',
+                message: t('auth.googleLoginFailed'),
+            };
+        }
+
         try {
+            const [{ signInWithRedirect, signInWithPopup }, { ensureFirebaseAuth, ensureGoogleProvider }] =
+                await Promise.all([
+                    import('firebase/auth'),
+                    import('../config/firebase'),
+                ]);
+            const firebaseAuth = ensureFirebaseAuth();
+            const googleProvider = ensureGoogleProvider();
+
             if (isDev) {
                 const result = await signInWithPopup(firebaseAuth, googleProvider);
                 const idToken = await result.user.getIdToken();
@@ -34,10 +50,10 @@ export function useGoogleAuth() {
                     code: response.data?.code,
                     message: response.data?.message || t('auth.googleLoginFailed'),
                 };
-            } else {
-                await signInWithRedirect(firebaseAuth, googleProvider);
-                return { success: true, redirecting: true, message: 'Redirecting...' };
             }
+
+            await signInWithRedirect(firebaseAuth, googleProvider);
+            return { success: true, redirecting: true, message: 'Redirecting...' };
         } catch (error: unknown) {
             const authError = error as {
                 code?: string;

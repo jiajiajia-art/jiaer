@@ -1,6 +1,6 @@
 import { normalizeGigConfig, resolveGigCat, type GigConfig } from "../game/gigConfig";
 import { StarRating } from "../lib/icons";
-import { useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { STAT_LABELS, type Gig, type MealPlan, type PregnancySlot } from "../game/data";
 import { DEFAULT_GIG_PRICES, type GigPriceTable } from "../game/gigLibrary";
 import { BonusRow } from "./ModCarsEditor";
@@ -40,6 +40,8 @@ export function ModMealsEditor({ value, onChange, customAttrs }: {
   customAttrs?: AttrDef[];
 }) {
   const list = value ?? [];
+  // 功能注释：单选组名按实例唯一，避免同页多个编辑器互相抢「默认」
+  const radioName = `meal-default-${useId()}`;
   const set = (i: number, p: Partial<MealPlan>) => onChange(list.map((m, j) => (j === i ? { ...m, ...p } : m)));
   const attrKeys = packAttrKeys(customAttrs);
   const hasAttrs = Object.keys(attrKeys).length > 0;
@@ -68,7 +70,7 @@ export function ModMealsEditor({ value, onChange, customAttrs }: {
           <div className="flex items-center gap-1.5">
             <input className={`${inp} ${String(m.name ?? "").trim() ? "" : "!border-danger"}`} value={String(m.name ?? "")} placeholder="伙食名（如：家常自炊）" onChange={(e) => set(i, { name: e.target.value })} />
             <label className="flex shrink-0 items-center gap-1 text-[11px] text-ink-soft" title="未选择时默认这一档">
-              <input type="radio" name="meal-default" checked={!!m.default} onChange={() => onChange(list.map((x, j) => ({ ...x, default: j === i || undefined })))} className="accent-[var(--jade)]" />默认
+              <input type="radio" name={radioName} checked={!!m.default} onChange={() => onChange(list.map((x, j) => ({ ...x, default: j === i || undefined })))} className="accent-[var(--jade)]" />默认
             </label>
             <button className={`${btn} shrink-0`} disabled={i === 0} onClick={() => { const a = [...list]; [a[i - 1], a[i]] = [a[i], a[i - 1]]; onChange(a); }} aria-label="上移">↑</button>
             <button className={`${btn} shrink-0 hover:!border-danger hover:!text-danger`} onClick={() => { const a = list.filter((_, j) => j !== i); onChange(a.length ? a : undefined); }} aria-label="删除">×</button>
@@ -277,7 +279,19 @@ export function ModPregnancyEditor({ value, onChange }: { value?: PregnancySlot;
     for (const k of Object.keys(n) as (keyof PregnancySlot)[]) { const x = n[k]; if (x === undefined || (Array.isArray(x) && !x.length)) delete n[k]; }
     onChange(Object.keys(n).length ? n : undefined);
   };
-  const [names, setNames] = useState((v.childNames ?? []).join("、"));
+  const joined = (v.childNames ?? []).join("、");
+  const [names, setNames] = useState(joined);
+  // 功能注释：外部（AI 改写 / 撤销）改了名字池时同步输入框；正在输入的分隔符不被覆盖
+  useEffect(() => {
+    setNames((cur) => (cur.split(/[、,，\s]+/).map((x) => x.trim()).filter(Boolean).join("、") === joined ? cur : joined));
+  }, [joined]);
+  const rangeErr = [
+    v.revealMin !== undefined && v.revealMax !== undefined && v.revealMin > v.revealMax ? "最早察觉天数不能晚于最晚察觉天数" : "",
+    v.fertilityMin !== undefined && v.fertilityMax !== undefined && v.fertilityMin > v.fertilityMax ? "生育率下限不能高于上限" : "",
+    v.baseChance !== undefined && v.maxChance !== undefined && v.baseChance > v.maxChance ? "基础受孕率高于单次上限，实际会被上限截断" : "",
+    [v.baseChance, v.maxChance].some((x) => x !== undefined && (x < 0 || x > 100)) ? "受孕率需在 0–100% 之间" : "",
+    v.gestationDays !== undefined && v.gestationDays <= 0 ? "孕期需大于 0 天" : "",
+  ].filter(Boolean);
   return (
     <div className="space-y-2">
       <p className="text-[11px] leading-snug text-ink-soft">留空 = 引擎默认（灰字）。受孕率 = 隐藏生育率/100 × 基础受孕率，压力超过门槛后逐步降低，且不超过上限。谁能怀孕、孩子随谁姓，在「世界规则」里设。</p>
@@ -292,6 +306,11 @@ export function ModPregnancyEditor({ value, onChange }: { value?: PregnancySlot;
         <Num label="生育率上限" value={v.fertilityMax} placeholder={80} onChange={(x) => set({ fertilityMax: x })} />
         <Num label="分娩压力" value={v.birthStress} placeholder={10} onChange={(x) => set({ birthStress: x })} />
       </div>
+      {rangeErr.length > 0 && (
+        <ul className="rounded-lg border border-danger/40 bg-danger/5 px-2 py-1 text-[10.5px] text-danger" role="alert">
+          {rangeErr.map((e) => <li key={e}>{e}</li>)}
+        </ul>
+      )}
       <label className="block text-[10.5px] text-ink-soft">孩子名字池（不含姓，顿号或逗号分隔；留空用默认）
         <input className={inp} value={names} placeholder="安、念、朝、知夏、星禾、以宁…" onChange={(e) => { setNames(e.target.value); set({ childNames: e.target.value.split(/[、,，\s]+/).map((x) => x.trim()).filter(Boolean) }); }} />
       </label>

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useImperativeHandle } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './ObjectDetail.module.css';
 import sharedStyles from './shared.module.css';
 import ConfirmModal from '../../CommonModal/ConfirmModal';
@@ -25,6 +26,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
     isNewObject: isNewObjectProp,
     onHasUnsavedChanges,
 }, ref) => {
+    const { t } = useTranslation();
     // formData 中的 acquisition.source 使用 UI 显示值 (npc/task)
     // 保存时会转换为后端值 (ability_node/task)
     type FormDataAcquisition = {
@@ -36,7 +38,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
         acquisition?: FormDataAcquisition;
     }>({
         item_id: '',
-        name: '新建物品',
+        name: t('gameSettingEditor.objectsPanel.objectDetail.safc6fc22e9'),
         category: 'consumable',
         stackable: false,
         icon: '',
@@ -158,7 +160,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                 acquisition?: FormDataAcquisition;
             } = {
                 item_id: normalizedObject.item_id || '',
-                name: normalizedObject.name || '新建物品',
+                name: normalizedObject.name || t('gameSettingEditor.objectsPanel.objectDetail.safc6fc22e9'),
                 category: (normalizedObject.category || 'consumable') as 'consumable' | 'non-consumable',
                 stackable: normalizedObject.stackable,
                 icon: normalizedIcon,
@@ -185,7 +187,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                 acquisition?: FormDataAcquisition;
             } = {
                 item_id: '',
-                name: '新建物品',
+                name: t('gameSettingEditor.objectsPanel.objectDetail.safc6fc22e9'),
                 category: 'consumable' as 'consumable' | 'non-consumable',
                 stackable: false,
                 icon: '',
@@ -331,7 +333,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
         if (!object || !originalObjectRef.current) {
             if (isNewObjectProp) {
                 const hasChanges = !!(
-                    formData.name?.trim() !== '新建物品' ||
+                    formData.name?.trim() !== t('gameSettingEditor.objectsPanel.objectDetail.safc6fc22e9') ||
                     formData.description?.trim() ||
                     formData.functionalDescription?.trim() ||
                     (formData.acquisition?.source && formData.acquisition.source !== 'npc') ||
@@ -476,13 +478,13 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
         const file = e.target.files?.[0];
         if (file) {
             if (!file.type.startsWith('image/')) {
-                toast.error('请选择图片文件');
+                toast.error(t('createGame.pleaseSelectImageFile'));
                 return;
             }
             setLocalFile(file);
             const imageUrl = URL.createObjectURL(file);
             setFormData(prev => ({ ...prev, icon: imageUrl }));
-            toast.success('图片已选择');
+            toast.success(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s1c247ff2a3'));
         }
         e.target.value = '';
     };
@@ -506,7 +508,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
 
     const handleGenerateImageClick = () => {
         if (!formData.description?.trim()) {
-            toast.error('请先输入物品描述作为图片提示词');
+            toast.error(t('gameSettingEditor.objectsPanel.objectDetail.s7fa98ed2ef'));
             return;
         }
         setGenerateModalOpen(true);
@@ -514,14 +516,14 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
 
     const handleConfirmGenerateImage = async () => {
         if (!fileId) {
-            toast.error('缺少必要数据');
+            toast.error(t('gameSettingEditor.attributeGrowthPanel.attributeGrowthPanel.s2f396374b7'));
             return;
         }
         
         // 记录当前物品的 ID，用于标识正在生成的是哪个物品
         const currentItemId = getCurrentItemId();
         if (!currentItemId) {
-            toast.error('无法识别当前物品');
+            toast.error(t('gameSettingEditor.objectsPanel.objectDetail.s41fad710f8'));
             return;
         }
         
@@ -537,15 +539,15 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                     setTempImageId(response.data.tempImageId);
                     setFormData(prev => ({ ...prev, icon: response.data.url }));
                     setLocalFile(null);
-                    toast.success('图片生成成功');
+                    toast.success(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.sdcf637aa28'));
                 }
                 // 如果用户已经切换了物品，不更新当前表单（静默处理，避免干扰用户）
             } else {
-                toast.error('图片生成失败');
+                toast.error(t('gameSettingEditor.objectsPanel.objectDetail.secfb3e6db7'));
             }
         } catch (error: any) {
             console.error('生成图片失败:', error);
-            toast.error('图片生成失败：' + (error.message || '请检查网络连接'));
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.sc7bc5c639f') + (error.message || t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s73a13d2b99')));
         } finally {
             // 只有当前物品的生成完成时才清除生成状态
             const stillCurrentItem = getCurrentItemId() === currentItemId;
@@ -561,12 +563,12 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
 
     const handleSave = async () => {
         if (!formData.name?.trim() || formData.name === '新建物品') {
-            toast.error('请输入物品名称');
+            toast.error(t('gameSettingEditor.objectsPanel.objectDetail.s1b08ea1f6e'));
             return;
         }
 
         if (!fileId) {
-            toast.error('缺少必要数据，无法保存');
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s9038ee0f24'));
             return;
         }
 
@@ -613,7 +615,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                 if (response.data?.success) {
                     savedObject = response.data.item;
                 } else {
-                    throw new Error(response.data?.message || '创建失败');
+                    throw new Error(response.data?.message || t('gameSettingEditor.objectsPanel.objectDetail.sdeb3990191'));
                 }
             } else {
                 // 更新物品
@@ -621,7 +623,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                 if (response.data?.success) {
                     savedObject = response.data.item;
                 } else {
-                    throw new Error(response.data?.message || '更新失败');
+                    throw new Error(response.data?.message || t('gameSettingEditor.mapPanel.sceneTab.s8f8818f05b'));
                 }
             }
             
@@ -664,10 +666,10 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
             // 注意：这里不直接调用 initializeFormData，而是依赖 useEffect 自动处理
             // 因为 object prop 会通过父组件更新，useEffect 会自动触发
             
-            toast.success(isNewObject ? '物品已创建' : '物品已保存');
+            toast.success(isNewObject ? t('gameSettingEditor.objectsPanel.objectDetail.sb34937617a') : t('gameSettingEditor.objectsPanel.objectDetail.s8dc3b0c38d'));
         } catch (error: any) {
             console.error('保存失败:', error);
-            toast.error('保存失败：' + (error.message || '请检查网络连接'));
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.sb12163000c') + (error.message || t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s73a13d2b99')));
         } finally {
             setIsSaving(false);
         }
@@ -704,7 +706,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                                             rows={3}
                                             value={formData.description}
                                             onChange={(e) => handleFieldChange('description', e.target.value)}
-                                            placeholder="用于AI生成图片的提示词"
+                                            placeholder={t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s749657ce9a')}
                                         />
                                     </div>
                                     <button
@@ -713,7 +715,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                                         onClick={handleGenerateImageClick}
                                         disabled={isCurrentPanelGenerating}
                                     >
-                                        {isCurrentPanelGenerating ? '生成中...' : `${LEGACY_WORLD_ABILITY_NODE_GENERATION_COST} 织梦豆 AI生成`}
+                                        {isCurrentPanelGenerating ? t('createGame.generating') : `${LEGACY_WORLD_ABILITY_NODE_GENERATION_COST} 织梦豆 AI生成`}
                                     </button>
                                 </div>
                                 <div className={styles.imagePreviewSection}>
@@ -722,7 +724,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                                             <div className={styles.imagePreview}>
                                                 <img
                                                     src={formData.icon.startsWith('blob:') ? formData.icon : addImageTimestamp(getImageUrl(formData.icon))}
-                                                    alt="物品预览"
+                                                    alt={t('gameSettingEditor.objectsPanel.objectDetail.s2c148fef16')}
                                                 />
                                             </div>
                                         ) : (
@@ -765,7 +767,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                                 type="text"
                                 value={formData.name}
                                 onChange={(e) => handleFieldChange('name', e.target.value)}
-                                placeholder="输入物品名称"
+                                placeholder={t('gameSettingEditor.objectsPanel.objectDetail.sffe4acd37e')}
                             />
                         </label>
                     </div>
@@ -841,7 +843,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                                 rows={4}
                                 value={formData.functionalDescription}
                                 onChange={(e) => handleFieldChange('functionalDescription', e.target.value)}
-                                placeholder="用作ai推演的物品的功能性描述（如：提供抗毒效果、提升生命值50点等），尽量描述详细、可量化，作为ai推演使用"
+                                placeholder={t('gameSettingEditor.objectsPanel.objectDetail.s1dab4dc732')}
                             />
                         </label>
                     </div>
@@ -885,7 +887,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                                 rows={4}
                                 value={formData.acquisition?.condition || ''}
                                 onChange={(e) => handleFieldChange('acquisition.condition', e.target.value)}
-                                placeholder="详细的获取途径描述。可以规定何时何地何种情况/剧情下才能获得该物品，是给大模型用的提示词输入。"
+                                placeholder={t('gameSettingEditor.objectsPanel.objectDetail.sa6d1b649dc')}
                             />
                         </label>
                     </div>
@@ -898,7 +900,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                                 rows={3}
                                 value={formData.otherNotes || ''}
                                 onChange={(e) => handleFieldChange('otherNotes', e.target.value)}
-                                placeholder="其他和该物品相关的描述"
+                                placeholder={t('gameSettingEditor.objectsPanel.objectDetail.s17a1142f58')}
                             />
                         </label>
                     </div>
@@ -911,7 +913,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                             onClick={handleSave}
                             disabled={isSaving}
                         >
-                            {isSaving ? '保存中...' : '保存'}
+                            {isSaving ? t('creatorBenefitsAdmin.saving') : t('warehouse.cards.save')}
                         </button>
                     </div>
                 </div>
@@ -922,10 +924,10 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                 isOpen={generateModalOpen}
                 onConfirm={handleConfirmGenerateImage}
                 onCancel={handleCancelGenerateImage}
-                title="织梦豆扣除确认"
+                title={t('common.pointsDeductionConfirm')}
                 message={`本次生成图片将扣除 ${LEGACY_WORLD_ABILITY_NODE_GENERATION_COST} 织梦豆，是否继续？`}
-                confirmButtonText="确认生成"
-                cancelButtonText="取消"
+                confirmButtonText={t('warehouse.avatars.generateConfirm')}
+                cancelButtonText={t('warehouse.cards.cancel')}
             />
             {pendingCropFile ? (
                 <ImageCropModal

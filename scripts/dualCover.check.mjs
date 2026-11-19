@@ -97,11 +97,11 @@ test('CoverUpload_提示词占位_无样式示例芯片', () => {
   assert.match(en, /keep the reference title style/i);
 });
 
-test('PublishSettingsModal_复用CoverUpload并校验双封面', () => {
+test('PublishSettingsModal_复用CoverUpload_发布只要求竖版封面', () => {
   const tsx = read('src/components/CommonModal/PublishSettingsModal.tsx');
   assert.match(tsx, /<CoverUpload/);
-  assert.match(tsx, /hasBothGameCovers/);
-  assert.match(tsx, /portraitCoverUrl/);
+  assert.doesNotMatch(tsx, /hasBothGameCovers/);
+  assert.match(tsx, /portraitPreview\?\.trim\(\)/);
 });
 
 test('PublishSettingsModal_表单应拉满弹窗宽度', () => {

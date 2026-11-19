@@ -221,7 +221,7 @@ export function worldGenStepNamesFromPatch(
         ? (patch.prompt as { scriptTone?: string })
         : null,
     );
-    return tone ? ["剧本基调"] : [];
+    return tone ? ["系统提示词"] : [];
   }
   if (id === "opening") {
     const opening =
@@ -282,7 +282,7 @@ export function worldGenStepResultSummary(
         ? (patch.prompt as { scriptTone?: string })
         : null,
     );
-    return tone ? `剧本基调 ${tone.length} 字（建议 ${SCRIPT_TONE_TARGET_MIN}–${SCRIPT_TONE_TARGET_MAX}，上限 ${SCRIPT_TONE_MAX}）` : "已写入剧本基调";
+    return tone ? `系统提示词 ${tone.length} 字（建议 ${SCRIPT_TONE_TARGET_MIN}–${SCRIPT_TONE_TARGET_MAX}，上限 ${SCRIPT_TONE_MAX}）` : "已写入系统提示词";
   }
   if (id === "opening") {
     const opening =
@@ -337,7 +337,7 @@ export function worldGenLeanPromptBlock(limits: WorldGenLeanLimits, phase: "skel
 - 人物建议约 ${WORLD_GEN_NPCS_SUGGEST_MIN}–${WORLD_GEN_NPCS_SUGGEST_MAX} 名（参考 ${limits.npcs}）：每条必须 name/gender/age/bio（约 ${limits.npcBioChars} 字），无名字或无正文的丢掉
 - 人物线路最多 ${limits.paths} 条：须有 id/name 与关键开局字段
 - 地点建议约 ${WORLD_GEN_ROOMS_SUGGEST_MIN}–${WORLD_GEN_ROOMS_SUGGEST_MAX} 个（参考 ${limits.rooms}，每条 name+desc 非空）；固定事件建议约 2–5 条（参考 ${limits.fixedEvents}，每条必有 name、prompt、effects）；主线恰好 ${limits.storylines} 条；支线 ${limits.sidelines} 条（须为 0，勿写 sidelines）；结局最多 ${limits.endings}
-- 剧本基调 scriptTone 写完整口吻/时代/铁律，建议 ${SCRIPT_TONE_TARGET_MIN}–${SCRIPT_TONE_TARGET_MAX} 字，上限 ${SCRIPT_TONE_MAX} 字；禁止「约 700 字」式截短
+- 系统提示词 scriptTone 写完整口吻/时代/铁律，建议 ${SCRIPT_TONE_TARGET_MIN}–${SCRIPT_TONE_TARGET_MAX} 字，上限 ${SCRIPT_TONE_MAX} 字；禁止「约 700 字」式截短
 - 开场白每段约 ${limits.openingParaChars} 字，至少 2 段
 - 建角 customAttrs 建议约 2–4 条：每条必须有中文名称与 desc，禁止「未命名」或空壳凑数
 - 开局资金须同时写 startMoney 与 moneyLabel（货币名）；开局日期 startDate 格式 YYYY.MM.DD

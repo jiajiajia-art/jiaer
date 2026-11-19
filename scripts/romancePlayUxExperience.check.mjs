@@ -107,7 +107,8 @@ test('GameShell_SETTINGS区无编辑器MenuRow_保留AI配置与游戏设置', (
   assert.doesNotMatch(src, /label="编辑器"/);
   assert.doesNotMatch(src, /romaji="EDITOR"/);
   assert.doesNotMatch(src, /setEditorOpen\(true\)/);
-  assert.match(src, /label="AI 配置"/);
+  // SETTINGS 区只留游戏设置，AI 配置不再单列菜单
+  assert.doesNotMatch(src, /label="AI 配置"/);
   assert.match(src, /label="游戏设置"/);
 });
 
@@ -144,7 +145,8 @@ test('StoryQuestPanel_名气口碑作品三格只在事业玩法时显示', () =
 });
 
 test('StoryQuestPanel_有主线时不说尚未配置', () => {
-  const idx = quest.indexOf('创作者尚未配置主线目标');
+  // 空主线提示现为「创作者尚未配置，剧情可自由推进。」
+  const idx = quest.indexOf('创作者尚未配置，剧情可自由推进');
   assert.ok(idx > 0);
   const before = quest.slice(Math.max(0, idx - 500), idx);
   assert.match(before, /some\(\(l\) => l\.enabled !== false && l\.nodes\?\.length\)/);

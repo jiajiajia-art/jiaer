@@ -145,7 +145,8 @@ test('Romance_css_须在layer_base清掉input默认inset边框', () => {
   );
   const home = read('Romance/src/components/HomeTab.tsx');
   assert.match(home, /placeholder="写下你的行动，或说一句台词/);
-  assert.match(home, /className="w-full bg-transparent[^"]*outline-none"/);
+  // 行动输入现在带 story-input，仍是透明底且 outline-none
+  assert.match(home, /className="story-input w-full bg-transparent[^"]*outline-none"/);
 });
 
 test('SceneSpot_点位按钮本身不设白底依赖base透明', () => {

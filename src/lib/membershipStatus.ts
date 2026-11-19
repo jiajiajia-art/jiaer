@@ -25,24 +25,47 @@ export const hasActiveVip = (
     || resolveMembershipPlanStatus(membership?.month, now) === 'active'
 );
 
+export interface RemainingMembershipTimeLabels {
+    zero: string;
+    lessThanHour: string;
+    daysHours: (days: number, hours: number) => string;
+}
+
+const DEFAULT_REMAINING_LABELS: RemainingMembershipTimeLabels = {
+    zero: '0天0小时',
+    lessThanHour: '不足1小时',
+    daysHours: (days, hours) => `${days}天${hours}小时`,
+};
+
+const resolveDateLocale = (locale?: string | null): string => {
+    const normalized = String(locale || '').toLowerCase();
+    if (normalized.startsWith('ja')) return 'ja-JP';
+    if (normalized.startsWith('en')) return 'en-US';
+    return 'zh-CN';
+};
+
 export const formatRemainingMembershipTime = (
     endAtValue?: string | null,
     now: number = Date.now(),
+    labels: RemainingMembershipTimeLabels = DEFAULT_REMAINING_LABELS,
 ): string => {
     const endAt = parseMembershipTime(endAtValue);
-    if (endAt === null || endAt <= now) return '0天0小时';
+    if (endAt === null || endAt <= now) return labels.zero;
 
     const remainingMs = endAt - now;
     const days = Math.floor(remainingMs / 86_400_000);
     const hours = Math.floor((remainingMs % 86_400_000) / 3_600_000);
-    if (days === 0 && hours === 0) return '不足1小时';
-    return `${days}天${hours}小时`;
+    if (days === 0 && hours === 0) return labels.lessThanHour;
+    return labels.daysHours(days, hours);
 };
 
-export const formatMembershipDateTime = (value?: string | null): string => {
+export const formatMembershipDateTime = (
+    value?: string | null,
+    locale?: string | null,
+): string => {
     const timestamp = parseMembershipTime(value);
     if (timestamp === null) return '—';
-    return new Intl.DateTimeFormat('zh-CN', {
+    return new Intl.DateTimeFormat(resolveDateLocale(locale), {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',

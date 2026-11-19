@@ -8,6 +8,7 @@ import { ensureWorldGenStartMoney, healCustomAttrsUnnamed } from "./worldGenCrea
 import { normalizeRuleBranches } from "./gameRuleShape.ts";
 import { asTrimmedString } from "./asTrimmedString.ts";
 import { ENGINE_STAT_KEYS, isDirtyAttrRef, resolveAttrRef } from "../game/attrRef.ts";
+import { ensureRoomSceneDescs, unwrapRoomRow } from "./sanitizeModStrings.ts";
 
 /** 与 validateMod 对齐：这些数组条目必须有非空 id */
 const NEED_ID_KEYS = [
@@ -267,6 +268,37 @@ export function healAttrRefs(content: ModContent): string[] {
   return notes;
 }
 
+/**
+ * 功能注释：保存前把地点表收成「对象 + 非空 desc」。
+ * 旧清洗曾把 id=shop/items 的房间收成数组，validateMod 会报 rooms.x.desc 缺失。
+ */
+export function healRoomsBeforeSave(content: ModContent): string[] {
+  const notes: string[] = [];
+  const rooms = content.rooms;
+  if (!rooms || typeof rooms !== "object") return notes;
+  let unwrapped = 0;
+  let filled = 0;
+  for (const [id, room] of Object.entries(rooms)) {
+    const wasArray = Array.isArray(room);
+    const row = unwrapRoomRow(room);
+    if (!row) {
+      delete rooms[id];
+      unwrapped += 1;
+      continue;
+    }
+    if (wasArray) unwrapped += 1;
+    const before = typeof row.desc === "string" ? row.desc : "";
+    if (typeof row.desc !== "string") row.desc = "";
+    if (!String(row.name ?? "").trim()) row.name = id;
+    rooms[id] = row as NonNullable<ModContent["rooms"]>[string];
+    if (!before.trim()) filled += 1;
+  }
+  ensureRoomSceneDescs(rooms);
+  if (unwrapped) notes.push(`已校正 ${unwrapped} 处地点结构`);
+  if (filled) notes.push(`已为 ${filled} 处地点补全场景描述`);
+  return notes;
+}
+
 /** 功能注释：保存前一次自愈；返回说明文案供顶栏轻提示（世界书未挂依赖不再自愈停用） */
 export function healModBeforeSave(content: ModContent): string[] {
   return [
@@ -277,6 +309,7 @@ export function healModBeforeSave(content: ModContent): string[] {
     // 功能注释：旧 AI 稿里的「未命名」空壳保存时清掉，编辑器不再显示占位行
     ...healCustomAttrsUnnamed(content),
     ...healAttrRefs(content),
+    ...healRoomsBeforeSave(content),
   ];
 }
 
@@ -319,6 +352,10 @@ export function humanizeSaveError(raw: string): string {
     const label = KEY_LABEL[miss[1]] ?? miss[1];
     return `「${label}」第 ${Number(miss[2]) + 1} 条缺少编号`;
   }
+  const roomDesc = s.match(/^rooms\.([^.]+)\.desc 缺失$/);
+  if (roomDesc) return `地点「${roomDesc[1]}」还缺进入场景描述`;
+  const roomObj = s.match(/^rooms\.([^.]+) 须为对象$/);
+  if (roomObj) return `地点「${roomObj[1]}」数据格式不对，请打开地点栏检查或重新保存`;
   const wb = s.match(/^世界书「(.+)」未挂地点或人物，不能保存$/);
   if (wb) return `世界书「${wb[1]}」还没挂地点或人物`;
   if (/startMoney/.test(s)) return "开局资金须为非负数字（可填 0）";
@@ -334,10 +371,11 @@ export function resolveSaveErrorJump(raw: string): SaveErrorJump | null {
   if (s.includes("世界书")) return { group: "story", target: "world-book" };
   if (/gameRules|玩法规则/.test(s)) return { group: "grow", target: "grow-modules" };
   if (/opening|开场剧情/.test(s)) return { group: "look", target: "author-field-opening" };
+  if (/^rooms\.|地点/.test(s)) return { group: "base", target: "author-field-rooms" };
   const miss = s.match(/^content\.(\w+)\[/);
   if (miss && KEY_JUMP[miss[1]]) return KEY_JUMP[miss[1]];
   if (/人物|性别|年龄|npc/i.test(s)) return { group: "role", target: "npcs" };
   if (/startMoney|开局资金|moneyLabel/.test(s)) return { group: "base", target: "author-field-start-money" };
-  if (/开局日期|名称|版本|基调|地点/.test(s)) return { group: "base" };
+  if (/开局日期|名称|版本|基调/.test(s)) return { group: "base" };
   return null;
 }

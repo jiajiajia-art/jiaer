@@ -68,9 +68,10 @@ test('sanitizeNpcFactionId_只保留现存势力', async () => {
 test('npcEditor_所属势力下拉只在作品建了势力时出现', () => {
   const panel = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8');
   assert.doesNotMatch(panel, /\$\{n\.factionId\}（已失效）|factionId\}（已失效）/);
-  assert.doesNotMatch(panel, /所属势力（可选）/);
-  // 功能注释：有势力才渲染下拉；没建势力不留永远空着的下拉
-  assert.match(panel, /startFactions\.length > 0 \? \(\s*<select[^>]*aria-label="所属势力"/);
+  // 人物卡始终有所属势力下拉，写入前走 sanitizeNpcFactionId
+  assert.match(panel, /aria-label="所属势力（可选）"/);
+  assert.match(panel, /<option value="">所属势力（可选）<\/option>/);
+  assert.match(panel, /sanitizeNpcFactionId\(e\.target\.value, startFactionIds\)/);
 });
 
 test('worldGen_人物姓名软校验与卡片数值剥离', () => {

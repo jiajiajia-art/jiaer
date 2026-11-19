@@ -48,15 +48,15 @@
   background-attachment: fixed;
 }
 
-/* —— 标题：logo 同款圆润粗体 —— */
+/* —— 标题：与全站 UI 同套 Sarasa 圆体（不再套站酷快乐体，避免「获取织梦豆」等页标题和正文两套字） —— */
 [data-theme="default"] h1,
 [data-theme="default"] h2 {
-  font-family: 'ZCOOL KuaiLe', 'Baloo 2', 'Sarasa Gothic Rounded', 'PingFang SC', sans-serif;
-  letter-spacing: 0.02em;
+  font-family: 'Sarasa Gothic Rounded', 'Source Han Rounded SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  letter-spacing: 0.01em;
 }
 
-/* —— 主按钮：渐变 + 柔光 —— */
-[data-theme="default"] button[class*="primary" i],
+/* —— 主按钮：渐变 + 柔光；排除 primaryStat*，避免统计格被刷成酒红块 —— */
+[data-theme="default"] button[class*="primary" i]:not([class*="Stat" i]),
 [data-theme="default"] button[class*="submit" i],
 [data-theme="default"] [class*="joinBtn" i] {
   background-image: var(--main-background);

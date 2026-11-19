@@ -24,6 +24,24 @@ const truncate = (value: string | null | undefined, max = 56): string => {
     return value.length > max ? `${value.slice(0, max)}…` : value;
 };
 
+const machineHint = (raw: string | null | undefined): string => {
+    if (!raw) return '这是以前留下的，当时只要打分也会进来';
+    try {
+        const data = JSON.parse(raw) as { isFallback?: boolean; suggest?: string; reason?: string };
+        if (data.isFallback || data.reason === 'machine_unavailable') return '机器暂时没检成，请你看一眼';
+        if (data.suggest === 'review' || data.reason === 'machine_uncertain') return '机器没把握，请你看一眼';
+    } catch {
+        /* 旧数据格式对不上时，仍留给人工看 */
+    }
+    return '机器没把握，请你看一眼';
+};
+
+const emptyCommentText = (comment: PendingCommentItem): string => {
+    const score = Number(comment.rating_value);
+    if (score > 0) return `没有写评论，只打了 ${score} 分。`;
+    return '这条没有写评论，只是打了分。';
+};
+
 interface CommentAdminManagerProps {
     fileId?: string;
 }
@@ -119,8 +137,14 @@ const CommentAdminManager: React.FC<CommentAdminManagerProps> = ({ fileId }) => 
     return (
         <div className={styles.panelStack}>
             <section className={styles.heroCard}>
+                <div className={styles.heroCopy}>
+                    <h2 className={styles.queueTitle}>需要你看的评论</h2>
+                    <p className={styles.queueDesc}>
+                        敏感词和明确违规的评论会被机器直接拦住，确认正常的会直接显示。这里只留下机器判不准的。
+                    </p>
+                </div>
                 <div className={styles.heroMetric}>
-                    <span className={styles.heroMetricLabel}>待审核</span>
+                    <span className={styles.heroMetricLabel}>待人工</span>
                     <span className={styles.heroMetricValue}>{total}</span>
                     <span className={styles.heroMetricUnit}>条</span>
                 </div>
@@ -147,11 +171,18 @@ const CommentAdminManager: React.FC<CommentAdminManagerProps> = ({ fileId }) => 
                                         <tr key={comment.rating_id}>
                                             <td className={styles.colContent}>
                                                 <div className={styles.commentContent}>
-                                                    <span className={styles.commentQuote} aria-hidden="true">
-                                                        “
-                                                    </span>
-                                                    <span className={styles.commentText}>
-                                                        {truncate(comment.comment_content, 60)}
+                                                    {comment.comment_content?.trim() ? (
+                                                        <>
+                                                            <span className={styles.commentQuote} aria-hidden="true">“</span>
+                                                            <span className={styles.commentText}>
+                                                                {truncate(comment.comment_content, 80)}
+                                                            </span>
+                                                        </>
+                                                    ) : (
+                                                        <span className={styles.commentEmpty}>{emptyCommentText(comment)}</span>
+                                                    )}
+                                                    <span className={styles.commentMeta}>
+                                                        {comment.nickname || '匿名用户'} · {comment.game_title || '未关联作品'}
                                                     </span>
                                                 </div>
                                             </td>
@@ -159,6 +190,7 @@ const CommentAdminManager: React.FC<CommentAdminManagerProps> = ({ fileId }) => 
                                                 <span className={`${styles.statusTag} ${styles.statusPending}`}>
                                                     {statusLabelMap[comment.review_status]}
                                                 </span>
+                                                <span className={styles.machineHint}>{machineHint(comment.wx_check_result)}</span>
                                             </td>
                                             <td className={styles.colAction}>
                                                 <div className={styles.actionCluster}>
@@ -268,12 +300,16 @@ const CommentAdminManager: React.FC<CommentAdminManagerProps> = ({ fileId }) => 
                             </button>
                         </div>
 
-                        <blockquote className={styles.detailQuote}>
-                            <span className={styles.detailQuoteMark} aria-hidden="true">
-                                “
-                            </span>
-                            <p className={styles.detailQuoteText}>{detailComment.comment_content}</p>
-                        </blockquote>
+                        {detailComment.comment_content?.trim() ? (
+                            <blockquote className={styles.detailQuote}>
+                                <span className={styles.detailQuoteMark} aria-hidden="true">
+                                    “
+                                </span>
+                                <p className={styles.detailQuoteText}>{detailComment.comment_content}</p>
+                            </blockquote>
+                        ) : (
+                            <p className={styles.commentEmpty}>{emptyCommentText(detailComment)}</p>
+                        )}
 
                         <dl className={styles.detailMeta}>
                             <div className={styles.detailMetaRow}>

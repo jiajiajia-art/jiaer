@@ -1,8 +1,10 @@
 /**
  * 手机应用（原「创作应用」收编进「创作游戏」二级）：
- * 填需求 → AI 对话生成草稿字段 → 保存草稿 → 上架；保存时把应用草稿打成 phone_app 包上传组件商店（应用运行在平台 SDK 上）。
+ * 对话只改当前 kkapp 草稿（工具调用，检查通过才写入）→ 现有手机运行器预览 → 保存草稿 → 上架。
+ * 保存时把应用草稿打成 phone_app 包上传组件商店（应用运行在平台 SDK 上）。
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AppPageShell from '../components/Layout/AppPageShell';
@@ -20,16 +22,18 @@ import { playModStoreApi } from '../api/playMod/playModApi';
 import { buildPhoneAppKkmodPackage } from '../lib/platformAppKkmod';
 import { getAppBasePath } from '../lib/appBasePath';
 import {
-  applyPhoneAppAiPatch,
+  buildPhoneAppRepairUser,
   buildPhoneAppSystemPrompt,
-  extractPhoneAppJsonPatch,
+  judgePhoneAppTurn,
+  parsePhoneAppToolCalls,
   phoneAppContentIssues,
+  phoneAppEditTools,
   phoneAppSpecFromText,
   stringifyPhoneAppSpec,
-  stripPhoneAppJsonFence,
   type PhoneAppAiTurn,
   type PhoneAppFormDraft,
   type PhoneAppFormType,
+  type PhoneAppToolCall,
 } from '../lib/phoneAppAiChat';
 import getGameDataApi from '../api/home/getGameData';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
@@ -41,9 +45,9 @@ import {
   validateApplicableThemesForPublish,
 } from '../lib/platformAppThemes';
 import {
-  CREATOR_IDENTITY_LOCKED_HINT,
   isCreatorIdentityActivated,
 } from '../lib/creatorIdentity';
+import i18n from '../i18n';
 import styles from './CreatePlatformApp.module.css';
 
 type FormState = Omit<PhoneAppFormDraft, 'type'> & {
@@ -69,7 +73,7 @@ const emptyForm = (): FormState => ({
 async function completePhoneAppChat(
   token: string,
   messages: { role: 'system' | 'user' | 'assistant'; content: string }[],
-): Promise<string> {
+): Promise<{ text: string; toolCalls: PhoneAppToolCall[] }> {
   const res = await fetch(`${HOST_ADDRESS}/api/romance/play/complete`, {
     method: 'POST',
     headers: {
@@ -77,22 +81,29 @@ async function completePhoneAppChat(
       Accept: 'application/json',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ messages, max_tokens: 4000 }),
+    body: JSON.stringify({
+      messages,
+      max_tokens: 6000,
+      tools: phoneAppEditTools(),
+      tool_choice: 'auto',
+    }),
   });
   const json = (await res.json().catch(() => null)) as {
     success?: boolean;
     message?: string;
-    data?: { text?: string };
+    data?: { text?: string; tool_calls?: unknown };
   } | null;
   if (!res.ok || !json?.success) {
-    throw new Error(json?.message || `对话失败（${res.status}）`);
+    throw new Error(json?.message || i18n.t('pagesCreatePlatform.toast.chatErrorWithStatus', { status: res.status }));
   }
   const text = String(json?.data?.text || '').trim();
-  if (!text) throw new Error('模型返回空内容');
-  return text;
+  const toolCalls = parsePhoneAppToolCalls(json?.data?.tool_calls);
+  if (!text && toolCalls.length === 0) throw new Error(i18n.t('pagesCreatePlatform.toast.emptyModelResponse'));
+  return { text, toolCalls };
 }
 
 const CreatePlatformApp: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const token = useAuthStore((s) => s.user?.token);
   const userCode = useAuthStore((s) => s.user?.user?.userCode);
@@ -110,10 +121,10 @@ const CreatePlatformApp: React.FC = () => {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [brief, setBrief] = useState('');
   const [chatInput, setChatInput] = useState('');
-  const [turns, setTurns] = useState<PhoneAppAiTurn[]>([
+  const [turns, setTurns] = useState<PhoneAppAiTurn[]>(() => [
     {
       role: 'assistant',
-      text: '先写一两句需求（或直接聊天），例如「做一个二手闲置浏览页，分类生活，展示商品列表文案」。我会生成名称、说明、类型和内容草稿；满意后保存草稿，再上传应用草稿到组件商店（应用运行在平台 SDK 上）。',
+      text: i18n.t('pagesCreatePlatform.chatWelcome'),
     },
   ]);
   const [chatBusy, setChatBusy] = useState(false);
@@ -140,7 +151,7 @@ const CreatePlatformApp: React.FC = () => {
         setAllowed(ok);
         setGateChecked(true);
         if (!ok) {
-          toast.error(CREATOR_IDENTITY_LOCKED_HINT);
+          toast.error(t('pagesCreatePlatform.creatorIdentityLocked'));
           navigate('/create', { replace: true });
         }
       })
@@ -148,7 +159,7 @@ const CreatePlatformApp: React.FC = () => {
         if (cancelled) return;
         setAllowed(false);
         setGateChecked(true);
-        toast.error(CREATOR_IDENTITY_LOCKED_HINT);
+        toast.error(t('pagesCreatePlatform.creatorIdentityLocked'));
         navigate('/create', { replace: true });
       });
     return () => {
@@ -165,7 +176,7 @@ const CreatePlatformApp: React.FC = () => {
     setLoading(true);
     try {
       const res = await platformAppsApi.listMine(token);
-      if (!res.success) throw new Error(res.message || '加载失败');
+      if (!res.success) throw new Error(res.message || t('pagesCreatePlatform.toast.loadFailed'));
       setMine(Array.isArray(res.data) ? res.data : []);
       if (isStaff) {
         const pub = await platformAppsApi.listPublished(token);
@@ -173,7 +184,7 @@ const CreatePlatformApp: React.FC = () => {
         else setPublished([]);
       } else setPublished([]);
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : '加载我的应用失败');
+      toast.error(e instanceof Error ? e.message : t('pagesCreatePlatform.toast.loadMineFailed'));
     } finally {
       setLoading(false);
     }
@@ -194,7 +205,7 @@ const CreatePlatformApp: React.FC = () => {
         setThemeTags(flattenThemeTags(resp.data.data || []));
       })
       .catch(() => {
-        if (!cancelled) toast.error('题材列表加载失败，请刷新重试');
+        if (!cancelled) toast.error(t('pagesCreatePlatform.toast.themeTagsLoadFailed'));
       });
     return () => {
       cancelled = true;
@@ -209,7 +220,7 @@ const CreatePlatformApp: React.FC = () => {
     if (!file || !token) return null;
     const res = await platformAppsApi.upload(token, file);
     if (!res.success || !res.data?.imageUrl) {
-      toast.error(res.message || '上传失败');
+      toast.error(res.message || t('pagesCreatePlatform.toast.uploadFailed'));
       return null;
     }
     return String(res.data.imageUrl);
@@ -231,36 +242,49 @@ const CreatePlatformApp: React.FC = () => {
     category: form.category,
     type: form.type as PhoneAppFormType,
     contentText: form.contentText,
-    // 功能注释：带上已有页面，避免对话补丁没返回 pages 时把预览页丢掉
-    pages: form.pages,
   });
 
   const sendChat = async (raw: string) => {
     const text = raw.trim();
     if (!text || chatBusy) return;
     if (!token) {
-      toast.error('请先登录');
+      toast.error(t('pagesCreatePlatform.toast.loginRequired'));
       navigate('/profile');
       return;
     }
-    const userLine = brief.trim() ? `【需求】${brief.trim()}\n${text}` : text;
+    const userLine = brief.trim() ? `${t('pagesCreatePlatform.demandPrefix')}${brief.trim()}\n${text}` : text;
     const hist: PhoneAppAiTurn[] = [...turns, { role: 'user', text: userLine }];
     setTurns(hist);
     setChatInput('');
     setChatBusy(true);
     try {
-      const messages = [
-        { role: 'system' as const, content: buildPhoneAppSystemPrompt(draftFields()) },
-        ...hist.slice(-10).map((t) => ({ role: t.role, content: t.text })),
-      ];
-      const reply = await completePhoneAppChat(token, messages);
-      const patch = extractPhoneAppJsonPatch(reply);
-      const next = applyPhoneAppAiPatch(draftFields(), patch);
-      setForm((f) => ({ ...f, ...next }));
-      const shown = stripPhoneAppJsonFence(reply) || (patch ? '已按对话更新草稿字段，可继续细调或保存。' : reply);
-      setTurns([...hist, { role: 'assistant', text: shown }]);
+      const base = draftFields();
+      const system = buildPhoneAppSystemPrompt(base);
+      const history = hist.slice(-8).map((turn) => ({ role: turn.role, content: turn.text }));
+      const first = await completePhoneAppChat(token, [
+        { role: 'system' as const, content: system },
+        ...history,
+      ]);
+      let judged = judgePhoneAppTurn(base, first);
+      if (judged.needsRepair) {
+        const second = await completePhoneAppChat(token, [
+          { role: 'system' as const, content: system },
+          ...history,
+          { role: 'assistant' as const, content: first.text.trim() || '（提交的修改未通过手机应用检查）' },
+          { role: 'user' as const, content: buildPhoneAppRepairUser(judged.issues) },
+        ]);
+        const again = judgePhoneAppTurn(base, second);
+        judged = again.applied
+          ? again
+          : { ...again, displayText: [judged.displayText, again.displayText].filter(Boolean).join('\n\n') };
+      }
+      if (judged.applied) setForm((f) => ({ ...f, ...judged.draft, pages: undefined }));
+      setTurns([...hist, {
+        role: 'assistant',
+        text: judged.displayText || t('pagesCreatePlatform.toast.chatUpdated'),
+      }]);
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : '对话失败');
+      toast.error(e instanceof Error ? e.message : t('pagesCreatePlatform.toast.chatFailed'));
       setTurns(turns);
     } finally {
       setChatBusy(false);
@@ -283,7 +307,7 @@ const CreatePlatformApp: React.FC = () => {
           : app.content
             ? JSON.stringify(app.content)
             : '';
-    const contentText = stringifyPhoneAppSpec(phoneAppSpecFromText(legacyText, appType, app.name || '应用'));
+    const contentText = stringifyPhoneAppSpec(phoneAppSpecFromText(legacyText, appType, app.name || t('pagesCreatePlatform.defaultAppName')));
     setForm({
       name: app.name || '',
       icon: app.icon || '',
@@ -307,7 +331,7 @@ const CreatePlatformApp: React.FC = () => {
       startEdit(app);
       requestAnimationFrame(() => editFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
     } else {
-      toast.error('没有找到这个应用，可能已被删除或不属于当前账号');
+      toast.error(t('pagesCreatePlatform.toast.appNotFound'));
     }
     // 功能注释：只消费一次，避免保存后列表刷新时又把表单打回旧内容
     const next = new URLSearchParams(searchParams);
@@ -341,11 +365,11 @@ const CreatePlatformApp: React.FC = () => {
         engineVersion: '1.0.0',
       });
       if (!res.success && !res.ok) {
-        throw new Error(res.message || res.data?.message || '应用草稿上传失败');
+        throw new Error(res.message || res.data?.message || t('pagesCreatePlatform.toast.uploadDraftFailed'));
       }
-      toast.success(res.data?.message || res.message || '已上传应用草稿（组件商店私有测试）');
+      toast.success(res.data?.message || res.message || t('pagesCreatePlatform.toast.uploadDraftSuccess'));
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : '应用草稿上传失败');
+      toast.error(e instanceof Error ? e.message : t('pagesCreatePlatform.toast.uploadDraftFailed'));
     } finally {
       setUploadBusy(false);
     }
@@ -353,18 +377,18 @@ const CreatePlatformApp: React.FC = () => {
 
   const save = async () => {
     if (!token) {
-      toast.error('请先登录');
+      toast.error(t('pagesCreatePlatform.toast.loginRequired'));
       navigate('/profile');
       return;
     }
     if (!form.name.trim()) {
-      toast.error('请填写应用名称（可先对话生成）');
+      toast.error(t('pagesCreatePlatform.toast.nameRequired'));
       return;
     }
     setSaving(true);
     try {
       const issues = phoneAppContentIssues(form.contentText);
-      if (issues.length) throw new Error(`应用配置有误：${issues.slice(0, 3).join('；')}`);
+      if (issues.length) throw new Error(t('pagesCreatePlatform.toast.configInvalid', { issues: issues.slice(0, 3).join('；') }));
       const body = {
         name: form.name.trim(),
         icon: form.icon,
@@ -378,10 +402,10 @@ const CreatePlatformApp: React.FC = () => {
       const res = editingId
         ? await platformAppsApi.update(token, editingId, body)
         : await platformAppsApi.create(token, body);
-      if (!res.success) throw new Error(res.message || '保存失败');
+      if (!res.success) throw new Error(res.message || t('pagesCreatePlatform.toast.saveFailed'));
       const saved = (res.data || {}) as PlatformApp;
       const appId = saved.appId || editingId;
-      toast.success(editingId ? '已保存' : '已保存为草稿');
+      toast.success(editingId ? t('pagesCreatePlatform.toast.saved') : t('pagesCreatePlatform.toast.savedDraft'));
       if (appId) {
         await uploadPhoneAppDraft({
           appId,
@@ -401,7 +425,7 @@ const CreatePlatformApp: React.FC = () => {
       resetForm();
       await loadMine();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : '保存失败');
+      toast.error(e instanceof Error ? e.message : t('pagesCreatePlatform.toast.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -418,11 +442,11 @@ const CreatePlatformApp: React.FC = () => {
     }
     try {
       const res = await platformAppsApi.publish(token, appId);
-      if (!res.success) throw new Error(res.message || '上架失败');
-      toast.success('已上架，别人可以安装了');
+      if (!res.success) throw new Error(res.message || t('pagesCreatePlatform.toast.publishFailed'));
+      toast.success(t('pagesCreatePlatform.toast.published'));
       await loadMine();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : '上架失败');
+      toast.error(e instanceof Error ? e.message : t('pagesCreatePlatform.toast.publishFailed'));
     }
   };
 
@@ -437,51 +461,55 @@ const CreatePlatformApp: React.FC = () => {
   useEffect(() => {
     if (!previewReady) return;
     if (phoneAppContentIssues(form.contentText).length) return;
-    const spec = phoneAppSpecFromText(form.contentText, form.type as PhoneAppFormType, form.name || '应用');
-    const t = window.setTimeout(() => {
-      previewRef.current?.contentWindow?.postMessage({ type: 'kkapp-preview', spec, name: form.name || '应用预览' }, window.location.origin);
+    const spec = phoneAppSpecFromText(form.contentText, form.type as PhoneAppFormType, form.name || t('pagesCreatePlatform.defaultAppName'));
+    const timer = window.setTimeout(() => {
+      previewRef.current?.contentWindow?.postMessage({
+        type: 'kkapp-preview',
+        spec,
+        name: form.name || t('pagesCreatePlatform.previewAppName'),
+      }, window.location.origin);
     }, 200);
-    return () => window.clearTimeout(t);
-  }, [previewReady, form.contentText, form.type, form.name]);
+    return () => window.clearTimeout(timer);
+  }, [previewReady, form.contentText, form.type, form.name, t]);
 
   const unpublish = async (appId: string) => {
     if (!token) return;
     try {
       const res = await platformAppsApi.unpublish(token, appId);
-      if (!res.success) throw new Error(res.message || '下架失败');
-      toast.success('已下架为草稿');
+      if (!res.success) throw new Error(res.message || t('pagesCreatePlatform.toast.unpublishFailed'));
+      toast.success(t('pagesCreatePlatform.toast.unpublishedDraft'));
       await loadMine();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : '下架失败');
+      toast.error(e instanceof Error ? e.message : t('pagesCreatePlatform.toast.unpublishFailed'));
     }
   };
 
   if (!gateChecked || !allowed) {
     return (
       <AppPageShell hideBottomNav shellClassName={styles.pageRoot} mainClassName={styles.main}>
-        <p className={styles.hint}>{gateChecked ? CREATOR_IDENTITY_LOCKED_HINT : '校验创作者身份…'}</p>
+        <p className={styles.hint}>{gateChecked ? t('pagesCreatePlatform.creatorIdentityLocked') : t('pagesCreatePlatform.checkingCreatorIdentity')}</p>
       </AppPageShell>
     );
   }
 
   return (
     <AppPageShell hideBottomNav shellClassName={styles.pageRoot} mainClassName={styles.main}>
-      <h1 className={styles.title}>手机应用</h1>
+      <h1 className={styles.title}>{t('pagesCreatePlatform.title')}</h1>
       <p className={styles.hint}>
-        创作游戏 → 手机应用。对话生成应用草稿（页面与积木描述），由现有手机运行器解释运行；保存后走完整性检查、私有测试、审核上架。游戏世界只能从已上架列表安装（作品只存应用编号）。创作者交出的是应用草稿，应用运行在平台 SDK 上。作者库兰号：{userCode || '（需登录）'}。
+        {t('pagesCreatePlatform.intro', { userCode: userCode || t('pagesCreatePlatform.loginRequiredParen') })}
       </p>
 
       <div className={styles.workspace}>
       <div className={styles.workspaceMain}>
       <section className={styles.card} data-phone-app-ai="1">
-        <h2 className={styles.cardTitle}>AI 对话生成</h2>
+        <h2 className={styles.cardTitle}>{t('pagesCreatePlatform.aiChatTitle')}</h2>
         <div className={styles.field}>
-          <label htmlFor="app-brief">需求摘要（可选）</label>
+          <label htmlFor="app-brief">{t('pagesCreatePlatform.briefLabel')}</label>
           <textarea
             id="app-brief"
             value={brief}
             onChange={(e) => setBrief(e.target.value)}
-            placeholder="一两句话描述应用用途、风格、要展示的内容"
+            placeholder={t('pagesCreatePlatform.briefPlaceholder')}
           />
         </div>
         <div className={styles.chatLog} role="log" aria-live="polite">
@@ -493,14 +521,14 @@ const CreatePlatformApp: React.FC = () => {
               {t.text}
             </div>
           ))}
-          {chatBusy ? <div className={styles.chatBot}>生成中…</div> : null}
+          {chatBusy ? <div className={styles.chatBot}>{t('pagesCreatePlatform.chatGenerating')}</div> : null}
           <div ref={endRef} />
         </div>
         <div className={styles.chatRow}>
           <input
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
-            placeholder="继续描述或说「按闲鱼风格补内容」"
+            placeholder={t('pagesCreatePlatform.chatPlaceholder')}
             disabled={chatBusy}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -515,25 +543,25 @@ const CreatePlatformApp: React.FC = () => {
             disabled={chatBusy || !chatInput.trim()}
             onClick={() => void sendChat(chatInput)}
           >
-            发送
+            {t('pagesCreatePlatform.send')}
           </button>
         </div>
       </section>
 
       <section ref={editFormRef} className={styles.card}>
-        <h2 className={styles.cardTitle}>{editingId ? `编辑 · ${editingId}` : '草稿字段（可手改）'}</h2>
+        <h2 className={styles.cardTitle}>{editingId ? t('pagesCreatePlatform.draftFieldsTitleEdit', { id: editingId }) : t('pagesCreatePlatform.draftFieldsTitle')}</h2>
         <div className={styles.field}>
-          <label htmlFor="app-name">名称</label>
+          <label htmlFor="app-name">{t('pagesCreatePlatform.nameLabel')}</label>
           <input
             id="app-name"
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            placeholder="应用名称"
+            placeholder={t('pagesCreatePlatform.namePlaceholder')}
             maxLength={80}
           />
         </div>
         <div className={styles.field}>
-          <label>图标</label>
+          <label>{t('pagesCreatePlatform.iconLabel')}</label>
           <div className={styles.row}>
             {form.icon ? (
               <img className={styles.iconPreview} src={getImageUrl(form.icon)} alt="" />
@@ -541,7 +569,7 @@ const CreatePlatformApp: React.FC = () => {
               <span className={styles.iconPreview} />
             )}
             <label className={styles.btnGhost}>
-              上传图标
+              {t('pagesCreatePlatform.uploadIcon')}
               <input
                 type="file"
                 accept="image/*"
@@ -552,14 +580,14 @@ const CreatePlatformApp: React.FC = () => {
           </div>
         </div>
         <div className={styles.field}>
-          <label>预览图</label>
+          <label>{t('pagesCreatePlatform.previewImagesLabel')}</label>
           <div className={styles.previewRow}>
             {form.previews.map((p) => (
               <img key={p} className={styles.previewThumb} src={getImageUrl(p)} alt="" />
             ))}
           </div>
           <label className={styles.btnGhost}>
-            添加预览图
+            {t('pagesCreatePlatform.addPreview')}
             <input
               type="file"
               accept="image/*"
@@ -569,27 +597,27 @@ const CreatePlatformApp: React.FC = () => {
           </label>
         </div>
         <div className={styles.field}>
-          <label htmlFor="app-summary">一行说明</label>
+          <label htmlFor="app-summary">{t('pagesCreatePlatform.summaryLabel')}</label>
           <input
             id="app-summary"
             value={form.summary}
             onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
-            placeholder="列表里显示的一句话"
+            placeholder={t('pagesCreatePlatform.summaryPlaceholder')}
             maxLength={200}
           />
         </div>
         <div className={styles.field}>
-          <label htmlFor="app-category">分类</label>
+          <label htmlFor="app-category">{t('pagesCreatePlatform.categoryLabel')}</label>
           <input
             id="app-category"
             value={form.category}
             onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-            placeholder="如：社交、生活"
+            placeholder={t('pagesCreatePlatform.categoryPlaceholder')}
             maxLength={40}
           />
         </div>
         <div className={styles.field}>
-          <label htmlFor="app-type">类型</label>
+          <label htmlFor="app-type">{t('pagesCreatePlatform.typeLabel')}</label>
           <select
             id="app-type"
             value={form.type}
@@ -604,12 +632,12 @@ const CreatePlatformApp: React.FC = () => {
         </div>
         <div className={styles.field} data-applicable-themes="1">
           <label>
-            适用题材<span className={styles.requiredMark}>*</span>
-            <span className={styles.fieldHint}>（上架前至少选 1 个，已选 {form.applicableThemeTagIds.length}）</span>
+            {t('pagesCreatePlatform.applicableThemesLabel')}<span className={styles.requiredMark}>*</span>
+            <span className={styles.fieldHint}>{t('pagesCreatePlatform.applicableThemesHint', { count: form.applicableThemeTagIds.length })}</span>
           </label>
           <div className={styles.themeWrap}>
             {displayThemeTags.length === 0 ? (
-              <span className={styles.fieldHint}>题材加载中…</span>
+              <span className={styles.fieldHint}>{t('pagesCreatePlatform.themesLoading')}</span>
             ) : (
               displayThemeTags.map((tag) => {
                 const on = form.applicableThemeTagIds.includes(tag.id);
@@ -634,21 +662,22 @@ const CreatePlatformApp: React.FC = () => {
           </div>
         </div>
         <div className={styles.field}>
-          <label htmlFor="app-content">应用配置（kkapp@1，可手改）</label>
+          <label htmlFor="app-content">{t('pagesCreatePlatform.contentLabel')}</label>
           <textarea
             id="app-content"
             value={form.contentText}
             onChange={(e) => setForm((f) => ({ ...f, contentText: e.target.value }))}
-            placeholder="对话生成后会出现页面、列表、按钮配置；留空保存时按类型生成起步模板"
+            placeholder={t('pagesCreatePlatform.contentPlaceholder')}
             spellCheck={false}
           />
           {(() => {
             const issues = phoneAppContentIssues(form.contentText);
             if (issues.length) return <p className={styles.fieldError}>{issues.slice(0, 3).join('；')}</p>;
-            const spec = phoneAppSpecFromText(form.contentText, form.type as PhoneAppFormType, form.name || '应用');
+            const spec = phoneAppSpecFromText(form.contentText, form.type as PhoneAppFormType, form.name || t('pagesCreatePlatform.defaultAppName'));
+            const detail = spec.pages.map((p) => t('pagesCreatePlatform.pageBlockSummary', { title: p.title, blocks: p.blocks.length })).join('、');
             return (
               <p className={styles.fieldHint}>
-                {spec.pages.length} 个页面：{spec.pages.map((p) => `${p.title}（${p.blocks.length} 块）`).join('、')}
+                {t('pagesCreatePlatform.pagesSummary', { count: spec.pages.length, detail })}
               </p>
             );
           })()}
@@ -660,33 +689,33 @@ const CreatePlatformApp: React.FC = () => {
             disabled={saving || uploadBusy}
             onClick={() => void save()}
           >
-            {saving || uploadBusy ? '保存 / 上传应用草稿…' : editingId ? '保存并上传应用草稿' : '保存草稿并上传应用草稿'}
+            {saving || uploadBusy ? t('pagesCreatePlatform.saveUploadBusy') : editingId ? t('pagesCreatePlatform.saveUploadEdit') : t('pagesCreatePlatform.saveUploadNew')}
           </button>
           {editingId ? (
             <button type="button" className={styles.btnGhost} onClick={resetForm}>
-              取消编辑
+              {t('pagesCreatePlatform.cancelEdit')}
             </button>
           ) : null}
         </div>
       </section>
       </div>
-      <aside className={styles.previewPane} aria-label="实时预览">
-        <h2 className={styles.cardTitle}>实时预览</h2>
-        <p className={styles.fieldHint}>和玩家手机里同一套 kkapp 渲染；点按钮在沙盒数值上结算，不写任何存档。</p>
+      <aside className={styles.previewPane} aria-label={t('pagesCreatePlatform.livePreviewAria')}>
+        <h2 className={styles.cardTitle}>{t('pagesCreatePlatform.livePreview')}</h2>
+        <p className={styles.fieldHint}>{t('pagesCreatePlatform.livePreviewHint')}</p>
         <iframe
           ref={previewRef}
-          title="手机应用实时预览"
+          title={t('pagesCreatePlatform.previewFrameTitle')}
           className={styles.previewFrame}
           src={`${getAppBasePath()}/romance/?kkappPreview=1`}
         />
-        {phoneAppContentIssues(form.contentText).length ? <p className={styles.fieldError}>配置有误，预览暂停更新</p> : null}
+        {phoneAppContentIssues(form.contentText).length ? <p className={styles.fieldError}>{t('pagesCreatePlatform.configErrorPreviewPaused')}</p> : null}
       </aside>
       </div>
 
       {isStaff ? (
         <section className={styles.card}>
-          <h2 className={styles.cardTitle}>运营 · 已上架应用</h2>
-          <p className={styles.hint}>作者和运营改的是同一条记录；保存后商店与已装手机一起更换。</p>
+          <h2 className={styles.cardTitle}>{t('pagesCreatePlatform.opsPublishedTitle')}</h2>
+          <p className={styles.hint}>{t('pagesCreatePlatform.opsPublishedHint')}</p>
           {published.map((app) => (
             <div key={`pub-${app.appId}`} className={styles.listItem}>
               {app.icon ? (
@@ -697,11 +726,11 @@ const CreatePlatformApp: React.FC = () => {
               <div className={styles.meta}>
                 <p className={styles.metaName}>{app.name}</p>
                 <p className={styles.metaSub}>
-                  {app.summary || '暂无说明'} · {app.authorName || app.authorId}
+                  {app.summary || t('pagesCreatePlatform.noSummary')} · {app.authorName || app.authorId}
                 </p>
               </div>
               <button type="button" className={styles.btnGhost} onClick={() => startEdit(app)}>
-                编辑
+                {t('pagesCreatePlatform.edit')}
               </button>
             </div>
           ))}
@@ -709,10 +738,10 @@ const CreatePlatformApp: React.FC = () => {
       ) : null}
 
       <section className={styles.card}>
-        <h2 className={styles.cardTitle}>我的应用</h2>
-        {loading ? <p className={styles.empty}>加载中…</p> : null}
+        <h2 className={styles.cardTitle}>{t('pagesCreatePlatform.myAppsTitle')}</h2>
+        {loading ? <p className={styles.empty}>{t('pagesCreatePlatform.loading')}</p> : null}
         {!loading && mine.length === 0 ? (
-          <p className={styles.empty}>还没有应用，先对话生成或保存一份草稿</p>
+          <p className={styles.empty}>{t('pagesCreatePlatform.emptyApps')}</p>
         ) : null}
         {mine.map((app) => (
           <div key={app.appId} className={styles.listItem}>
@@ -724,15 +753,15 @@ const CreatePlatformApp: React.FC = () => {
             <div className={styles.meta}>
               <p className={styles.metaName}>{app.name}</p>
               <p className={styles.metaSub}>
-                {app.summary || '暂无说明'} · {app.authorId}
-                {readAppThemeTagIds(app).length ? ` · 适用题材 ${readAppThemeTagIds(app).length} 个` : ' · 未选适用题材'}
+                {app.summary || t('pagesCreatePlatform.noSummary')} · {app.authorId}
+                {readAppThemeTagIds(app).length ? ` · ${t('pagesCreatePlatform.themeCountSummary', { count: readAppThemeTagIds(app).length })}` : ` · ${t('pagesCreatePlatform.noApplicableThemes')}`}
               </p>
             </div>
             <span className={app.status === 'published' ? styles.badgeOn : styles.badge}>
-              {app.status === 'published' ? '已上架' : '草稿'}
+              {app.status === 'published' ? t('pagesCreatePlatform.statusPublished') : t('pagesCreatePlatform.statusDraft')}
             </span>
             <button type="button" className={styles.btnGhost} onClick={() => startEdit(app)}>
-              编辑
+              {t('pagesCreatePlatform.edit')}
             </button>
             <button
               type="button"
@@ -740,15 +769,15 @@ const CreatePlatformApp: React.FC = () => {
               disabled={uploadBusy}
               onClick={() => void uploadPhoneAppDraft(app)}
             >
-              上传应用草稿
+              {t('pagesCreatePlatform.uploadDraft')}
             </button>
             {app.status === 'published' ? (
               <button type="button" className={styles.btnGhost} onClick={() => void unpublish(app.appId)}>
-                下架
+                {t('pagesCreatePlatform.unpublish')}
               </button>
             ) : (
               <button type="button" className={styles.btnBlue} onClick={() => void publish(app.appId)}>
-                上架
+                {t('pagesCreatePlatform.publish')}
               </button>
             )}
           </div>

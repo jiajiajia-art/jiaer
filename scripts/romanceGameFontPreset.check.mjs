@@ -32,13 +32,16 @@ test('withFontPreset_无自定义字体时只改 font id', async () => {
   assert.equal(next.free, undefined);
 });
 
-test('ensureGameFontsLoaded_注入国内镜像 stylesheet', async () => {
+test('ensureGameFontsLoaded_注入本地字体 stylesheet', async () => {
   const mod = await import(pathToFileURL(join(root, 'Romance/src/lib/gameFonts.ts')).href);
-  assert.match(mod.GAME_FONTS_STYLESHEET, /fonts\.loli\.net/);
-  assert.doesNotMatch(mod.GAME_FONTS_STYLESHEET, /fonts\.googleapis\.com/);
-  assert.match(mod.GAME_FONTS_STYLESHEET, /ZCOOL\+KuaiLe/);
-  assert.match(mod.GAME_FONTS_STYLESHEET, /Ma\+Shan\+Zheng/);
-  assert.match(mod.GAME_FONTS_STYLESHEET, /Pixelify\+Sans/);
+  assert.equal(mod.resolveGameFontsStylesheetHref('/funloom/'), '/funloom/fonts/game/fonts.css');
+  assert.equal(mod.resolveGameFontsStylesheetHref('/'), '/fonts/game/fonts.css');
+  assert.match(mod.GAME_FONTS_STYLESHEET, /fonts\/game\/fonts\.css$/);
+  assert.doesNotMatch(mod.GAME_FONTS_STYLESHEET, /https?:\/\//);
+  const src = read('Romance/src/lib/gameFonts.ts');
+  assert.match(src, /resolveGameFontsStylesheetHref/);
+  // 功能注释：只拦真实 URL，注释里写域名不算
+  assert.doesNotMatch(src, /https?:\/\/fonts\./);
 });
 
 test('App_应用主题时加载预设字体并挂 font class', () => {
@@ -64,7 +67,7 @@ test('CSS_每套预设同时改 serif 与 sans_对话跟套', () => {
   }
   assert.match(css, /html\[data-romance\]\.font-brush[\s\S]*?--font-sans:\s*'Ma Shan Zheng'/);
   assert.match(css, /html\[data-romance\]\.font-cursive[\s\S]*?--font-sans:\s*'Zhi Mang Xing'/);
-  assert.match(css, /html\[data-romance\]\.font-song[\s\S]*?--font-sans:\s*'Noto Serif SC'/);
+  assert.match(css, /html\[data-romance\]\.font-song[\s\S]*?--font-sans:\s*'Source Han Serif SC'/);
   assert.match(css, /\.dlg-bubble[\s\S]*?font-family:\s*var\(--font-serif\)/);
 });
 

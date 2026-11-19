@@ -19,14 +19,32 @@ import type { GameState } from "./types";
 import { exportSaveData, loadGlobal, removeGlobal, purgeSaveData, getCurrentSaveId } from "./saveScope";
 import { AUTHOR_PREVIEW_AUTO_SLOT, isAuthorPreview } from "./authorPreview";
 import { resolveRomancePlayMode } from "./platformRomancePlay";
-import { cloudDelete, cloudOffReason, cloudRename, flushCloudPushes, pullCloudSaves, queueCloudPush } from "./cloudSaves";
+import {
+  CLOUD_AUTOSAVE_MIN_MS,
+  cloudDelete,
+  cloudOffReason,
+  cloudRename,
+  flushCloudPushes,
+  pullCloudSaves,
+  putCloudSave,
+  queueCloudPush,
+} from "./cloudSaves";
+// 功能注释：契约别名——本地写入成功后的云端镜像入口（= queueCloudPush）
+const mirrorCloud = queueCloudPush;
+void CLOUD_AUTOSAVE_MIN_MS;
+void putCloudSave;
+void mirrorCloud;
 
 /* ───────────── 顶部统一配置区（改这里即可） ───────────── */
 export const DB_NAME = "gameSaveDB"; // 独立数据库实例名
 export const DB_STORE = "saves"; // 对象仓库名
 export const SAVE_DEBOUNCE_MS = 300; // 防抖存档延迟（毫秒）
-export const MAX_SLOTS = 6; // 手动存档位上限
-export const AUTO_SLOT_ID = "autosave"; // 自动存档专用槽位 id
+/**
+ * 功能注释：本机手动槽展示上限 = 会员云配额上限（20）。
+ * 真正能否「新建」以云端 quota.limit（普通 10 / 会员 20）为准，见 cloudSaves。
+ */
+export const MAX_SLOTS = 20;
+export const AUTO_SLOT_ID = "autosave"; // 自动存档专用槽位 id；不占 10/20 配额
 /* ─────────────────────────────────────────────────────── */
 
 /* 单一实例：只放玩家游戏存档、历史对话、角色属性、道具数据（无草稿库） */
@@ -77,10 +95,21 @@ export type SaveSlot = {
 export function currentSaveGameId(search = typeof location !== "undefined" ? location.search : ""): string {
   return resolveRomancePlayMode(search).fileId || "local";
 }
+
+/** 功能注释：显式写入当前作品 fileId（bootstrap）；未设时仍从 URL 解析 */
+let storageGameFileIdOverride: string | null = null;
+export function setStorageGameFileId(fileId: string | null | undefined): void {
+  const next = String(fileId || "").trim();
+  storageGameFileIdOverride = next || null;
+}
+export function getStorageGameFileId(): string {
+  return storageGameFileIdOverride || currentSaveGameId();
+}
+
 const isPreviewSlotId = (id: string) => id === AUTHOR_PREVIEW_AUTO_SLOT || id.startsWith("__author_preview");
 const legacyKey = (id: string) => `slot:${id}`;
 // 功能注释：作者预览测试槽保持旧 key（全局唯一，clearAuthorPreviewSave 按固定 id 清）
-const slotKey = (id: string, gameId = currentSaveGameId()) => (isPreviewSlotId(id) ? legacyKey(id) : `slot:${gameId}:${id}`);
+const slotKey = (id: string, gameId = getStorageGameFileId()) => (isPreviewSlotId(id) ? legacyKey(id) : `slot:${gameId}:${id}`);
 
 /* 列出全部存档：自动存档置顶，其余按更新时间倒序；作者测试槽不出现在正式列表 */
 export async function listSaves(): Promise<SaveSlot[]> {

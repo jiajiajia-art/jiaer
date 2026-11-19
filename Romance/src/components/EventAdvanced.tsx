@@ -187,8 +187,8 @@ export function ChainEditor({ ev, events, game, onChange }: { ev: FixedEvent; ev
         ))}
         <button type="button" className={link} onClick={() => onChange({ chainBreaks: [...breaks, { state: "interrupted", group: { match: "all", conds: [dd.cond("rel")] } }] })}>＋ 断点</button>
         <p className={hint}>
-          链状态写在规则变量 <code className="text-jade">{chainFlag(ev.chain)}</code>：0 进行中 · 2 暂停 · -1 中断 · -2 永久失败。主线节点、结局、其他事件都可以用「规则变量」条件识别它；
-          中断后用「规则变量 设为 0」的效果即可恢复，永久失败不会再恢复。链不在「进行中」时，链上所有事件都不会触发。
+          链状态写在计数器 <code className="text-jade">{chainFlag(ev.chain)}</code>：0 进行中 · 2 暂停 · -1 中断 · -2 永久失败。主线节点、结局、其他事件都可以用「计数器」条件识别它；
+          中断后用「计数器 改成 0」的效果即可恢复，永久失败不会再恢复。链不在「进行中」时，链上所有事件都不会触发。
         </p>
       </>)}
     </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './PlayPanelShell.module.css';
 
 interface PlayPanelShellProps {
@@ -31,6 +32,7 @@ const PlayPanelShell: React.FC<PlayPanelShellProps> = ({
   showBack = true,
   hideHeader = false,
 }) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
   const hasFooter = Boolean(footer) || showBack;
   return (
@@ -40,7 +42,7 @@ const PlayPanelShell: React.FC<PlayPanelShellProps> = ({
           <header className={styles.header}>
             <div className={styles.headerRow}>
               {onHeaderBack ? (
-                <button type="button" className={styles.headerBack} onClick={onHeaderBack} aria-label="返回">
+                <button type="button" className={styles.headerBack} onClick={onHeaderBack} aria-label={t('galgameUi.playPanel.backAria')}>
                   ‹
                 </button>
               ) : null}
@@ -58,7 +60,7 @@ const PlayPanelShell: React.FC<PlayPanelShellProps> = ({
             {footer}
             {showBack ? (
               <button type="button" className={styles.backButton} onClick={onClose}>
-                返回
+                {t('galgame.back')}
               </button>
             ) : null}
           </footer>

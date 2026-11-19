@@ -88,25 +88,27 @@
 }
 
 .levelBadge {
-  min-width: 76px;
-  min-height: 40px;
+  min-width: 64px;
+  min-height: 34px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 14px;
+  padding: 0 12px;
   border: 1px solid color-mix(in srgb, var(--color-primary-light) 42%, transparent);
-  border-radius: 11px;
+  border-radius: 10px;
   background: color-mix(in srgb, var(--color-primary) 18%, transparent);
   color: var(--color-primary-fg);
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1;
   white-space: nowrap;
 }
 
 .progressCopy h2,
 .sectionHeading h2 {
   color: var(--benefit-heading);
-  font-size: 18px;
+  font-size: 16px;
+  font-weight: 700;
   line-height: 1.35;
 }
 
@@ -148,10 +150,14 @@
 .totalPv span {
   color: var(--benefit-muted);
   font-size: 12px;
+  line-height: 1.3;
 }
 
 .totalPv strong {
-  font-size: 28px;
+  color: var(--color-text);
+  font-size: 20px;
+  font-weight: 750;
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
 }
 
@@ -182,14 +188,17 @@
 
 .ratioItem span {
   color: var(--benefit-copy);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
 }
 
 .ratioItem strong {
   color: var(--color-text);
-  font-size: 24px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
   font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .progressCopy {
@@ -202,7 +211,9 @@
 
 .progressCopy > strong {
   color: var(--color-primary-fg);
-  font-size: 18px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
 
@@ -269,17 +280,19 @@
   min-width: 0;
   color: var(--benefit-copy);
   overflow-wrap: anywhere;
-  font-size: 16px;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.4;
 }
 
 .modeTag {
   flex: 0 0 auto;
-  padding: 4px 9px;
+  padding: 3px 8px;
   border: 1px solid color-mix(in srgb, var(--color-primary) 46%, transparent);
   border-radius: 999px;
   background: color-mix(in srgb, var(--color-primary) 16%, transparent);
   color: var(--color-primary-fg);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1.3;
   white-space: nowrap;
@@ -298,6 +311,10 @@
   grid-area: metric;
   align-self: end;
   justify-self: end;
+  color: var(--benefit-muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -312,6 +329,8 @@
   background: color-mix(in srgb, var(--color-text) 3.5%, transparent);
   color: var(--color-text-secondary);
   font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
   white-space: nowrap;
 }
 
@@ -663,10 +682,43 @@
     border-bottom: 0;
   }
 
+  .levelBadge {
+    min-width: 58px;
+    min-height: 30px;
+    padding: 0 10px;
+    font-size: 14px;
+  }
+
+  .progressCopy h2,
+  .sectionHeading h2 {
+    font-size: 15px;
+  }
+
+  .totalPv strong {
+    font-size: 18px;
+  }
+
+  .ratioItem span {
+    font-size: 13px;
+  }
+
   .ratioItem > strong {
-    font-size: 20px;
-    line-height: 1.2;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.25;
     overflow-wrap: anywhere;
+  }
+
+  .progressCopy > strong {
+    font-size: 14px;
+  }
+
+  .workTitle strong {
+    font-size: 13px;
+  }
+
+  .workMetric {
+    font-size: 12px;
   }
 
   .ratioSection,

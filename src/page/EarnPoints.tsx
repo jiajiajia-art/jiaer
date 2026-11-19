@@ -20,9 +20,11 @@ const EarnPoints: React.FC = () => {
     const navigate = useNavigate();
     const { user, updateUser } = useAuthStore();
     const refreshDailyTasks = useDailyTaskStore((state) => state.refreshDailyTasks);
+    const [isCheckInOpen, setIsCheckInOpen] = useState(false);
     const [isDailyTasksOpen, setIsDailyTasksOpen] = useState(false);
     const [isExchangeOpen, setIsExchangeOpen] = useState(false);
-    const [checkInActionContainer, setCheckInActionContainer] = useState<HTMLDivElement | null>(null);
+
+    const signedInToday = Boolean(user?.user?.hasSignedIn);
 
     const refreshUser = useCallback(async () => {
         const response = await auth.getUserInfo().catch(() => null);
@@ -34,6 +36,10 @@ const EarnPoints: React.FC = () => {
     useEffect(() => {
         void refreshUser();
     }, [refreshUser]);
+
+    const openCheckIn = () => {
+        setIsCheckInOpen(true);
+    };
 
     const openDailyTasks = () => {
         setIsDailyTasksOpen(true);
@@ -75,31 +81,19 @@ const EarnPoints: React.FC = () => {
                                 <h2>{t('earnPoints.todayTasks')}</h2>
                                 <p>{t('earnPoints.todayTasksHint')}</p>
                             </div>
-                            <div
-                                ref={setCheckInActionContainer}
-                                className={styles.checkInActionSlot}
-                                aria-live="polite"
-                            />
                         </header>
 
-                        <article className={styles.checkInCard}>
-                            <div className={styles.checkInIntro}>
-                                <span className={styles.itemIcon}><img src={SIGNIN_ICON} alt="" /></span>
-                                <div>
-                                    <h3>{t('earnPoints.checkIn')}</h3>
-                                    <p>{t('earnPoints.checkInHint')}</p>
-                                </div>
-                            </div>
-                            <CheckInModal
-                                isOpen
-                                mode="profile"
-                                presentation="embedded"
-                                onClose={() => undefined}
-                                onGoToDailyTasks={openDailyTasks}
-                                onSignInSuccess={() => void refreshUser()}
-                                embeddedActionContainer={checkInActionContainer}
-                            />
-                        </article>
+                        {/* 功能注释：页内只保留签到入口，本周签到样式统一在弹窗内展示，避免嵌入月历形成第二套签到窗 */}
+                        <button type="button" className={styles.taskRow} onClick={openCheckIn}>
+                            <span className={styles.itemIcon}><img src={SIGNIN_ICON} alt="" /></span>
+                            <span className={styles.taskCopy}>
+                                <strong>{t('earnPoints.checkIn')}</strong>
+                                <small>{t('earnPoints.checkInHint')}</small>
+                            </span>
+                            <span className={signedInToday ? styles.disabledAction : styles.primaryAction}>
+                                {signedInToday ? t('checkIn.titleSignedIn') : t('earnPoints.openCheckIn')}
+                            </span>
+                        </button>
 
                         <button type="button" className={styles.taskRow} onClick={openDailyTasks}>
                             <span className={styles.itemIcon}><RiCopperCoinLine aria-hidden="true" /></span>
@@ -122,6 +116,19 @@ const EarnPoints: React.FC = () => {
                 </section>
             </main>
 
+            <CheckInModal
+                isOpen={isCheckInOpen}
+                mode="profile"
+                onClose={() => {
+                    setIsCheckInOpen(false);
+                    void refreshUser();
+                }}
+                onGoToDailyTasks={() => {
+                    setIsCheckInOpen(false);
+                    openDailyTasks();
+                }}
+                onSignInSuccess={() => void refreshUser()}
+            />
             <DailyTasksModal
                 isOpen={isDailyTasksOpen}
                 onClose={() => {

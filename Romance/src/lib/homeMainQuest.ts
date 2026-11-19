@@ -16,9 +16,13 @@ export type HomeMainQuest = {
   total: number;
   /** 功能注释：0~1，供小说模式顶栏进度条使用 */
   progress: number;
+  /** 功能注释：当前节点的完成条件（任务页展示给玩家；空 = 作者没写，剧情自由推进） */
+  conds: FixedCond[];
 };
 
-type QuestSrc = { flags?: Record<string, number>; clockMin?: number; day?: number };
+type QuestSrc = { flags?: Record<string, number>; clockMin?: number; day?: number; eventsFired?: string[] };
+/** 功能注释：固定事件 id → 触发日期（YYYY.MM.DD）；节点靠「事件已触发」推进时，用它给出「等到…」 */
+export type EventDateMap = Record<string, string | undefined>;
 
 function str(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
@@ -63,7 +67,7 @@ function inClock(min: number, from: string, to: string): boolean {
 }
 
 /** 功能注释：当前步若还没进 clock / date 窗口，给出「等到…」；已满足则不写，避免空行 */
-export function waitLabelFromConds(conds: FixedCond[] | undefined, s: QuestSrc, todayYmd?: string): string | undefined {
+export function waitLabelFromConds(conds: FixedCond[] | undefined, s: QuestSrc, todayYmd?: string, eventDates?: EventDateMap): string | undefined {
   if (!conds?.length) return undefined;
   const now = s.clockMin ?? 0;
   for (const c of conds) {
@@ -77,6 +81,11 @@ export function waitLabelFromConds(conds: FixedCond[] | undefined, s: QuestSrc, 
     }
     if (c.kind === "date" && c.op === "gte" && /^\d{4}\.\d{2}\.\d{2}$/.test(c.date) && todayYmd && todayYmd < c.date) {
       return `等到 ${c.date}`;
+    }
+    // 功能注释：节点等某个定日事件上演（B-04）——没写等待文案时顶栏会让玩家误以为已进入下一章
+    if (c.kind === "event" && todayYmd && !(s.eventsFired ?? []).includes(c.key)) {
+      const date = eventDates?.[c.key];
+      if (date && /^\d{4}\.\d{2}\.\d{2}$/.test(date) && todayYmd < date) return `等到 ${date}`;
     }
   }
   return undefined;
@@ -106,7 +115,7 @@ export function questProgressOf(line: Storyline, s: QuestSrc): { done: number; t
  * 功能注释：首页主线卡数据。创作者没配主线 → null（整块不出现）。
  * 配了则取第一条仍在进行的主线的当前节点；等待时间有则附带，没有就不带第二行。
  */
-export function homeMainQuest(s: QuestSrc, lines: Storyline[] | undefined, todayYmd?: string): HomeMainQuest | null {
+export function homeMainQuest(s: QuestSrc, lines: Storyline[] | undefined, todayYmd?: string, eventDates?: EventDateMap): HomeMainQuest | null {
   const list = (lines ?? []).filter((l) => l.enabled !== false && l.nodes?.length);
   if (!list.length) return null;
   for (const line of list) {
@@ -114,7 +123,7 @@ export function homeMainQuest(s: QuestSrc, lines: Storyline[] | undefined, today
     if (!node) continue;
     const stepName = str(node.name) || str(line.name) || "主线";
     const stepDesc = str(node.desc) || undefined;
-    const waitLabel = waitLabelFromConds(node.conds, s, todayYmd);
+    const waitLabel = waitLabelFromConds(node.conds, s, todayYmd, eventDates);
     const prog = questProgressOf(line, s);
     return {
       lineId: line.id,
@@ -125,6 +134,7 @@ export function homeMainQuest(s: QuestSrc, lines: Storyline[] | undefined, today
       done: prog.done,
       total: prog.total,
       progress: prog.progress,
+      conds: Array.isArray(node.conds) ? node.conds : [],
     };
   }
   return null;

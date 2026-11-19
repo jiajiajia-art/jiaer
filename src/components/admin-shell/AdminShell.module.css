@@ -33,6 +33,17 @@
   box-shadow: 0 1px 4px color-mix(in srgb, var(--color-primary) 4%, transparent);
 }
 
+.headerStart {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.menuToggle {
+  display: none;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -70,6 +81,10 @@
   font-weight: 500;
 }
 
+.homeLabel {
+  margin-inline-start: 6px;
+}
+
 .homeButton:hover {
   color: var(--color-primary-fg) !important;
 }
@@ -96,6 +111,10 @@
   overflow: auto;
   border-right: 1px solid var(--color-border);
   background: var(--color-surface) !important;
+}
+
+.backdrop {
+  display: none;
 }
 
 .siderInner {
@@ -381,7 +400,7 @@
   box-shadow: none !important;
 }
 
-.content :global(button[class*='Active_']) {
+.content :global(button[class*='Active_']:not([role='tab'])) {
   border-color: var(--color-primary) !important;
   background: var(--color-bg) !important;
   color: var(--color-primary-fg) !important;
@@ -431,5 +450,88 @@
 
   .content {
     padding: 20px 16px 36px;
+  }
+}
+
+/* 功能注释：手机上侧栏不再占位，正文用满宽度；菜单从顶栏按钮盖上来 */
+@media (max-width: 768px) {
+  .header {
+    gap: 8px;
+    padding: 0 12px;
+  }
+
+  .headerActions {
+    gap: 4px;
+  }
+
+  .menuToggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex: none;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--color-text);
+    font-size: 18px;
+    cursor: pointer;
+  }
+
+  .homeLabel {
+    display: none;
+  }
+
+  .sider {
+    position: fixed !important;
+    z-index: 30;
+    top: 64px;
+    left: 0;
+    bottom: 0;
+    height: auto;
+    width: min(280px, 86vw) !important;
+    max-width: min(280px, 86vw) !important;
+    min-width: 0 !important;
+    flex: none !important;
+    transform: translateX(-105%);
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform 0.22s ease, visibility 0.22s ease;
+    box-shadow: none;
+  }
+
+  .siderOpen {
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
+    box-shadow: 12px 0 32px color-mix(in srgb, var(--color-shadow) 35%, transparent);
+  }
+
+  .backdrop {
+    display: block;
+    position: fixed;
+    z-index: 20;
+    top: 64px;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    border: 0;
+    padding: 0;
+    background: color-mix(in srgb, var(--color-text) 28%, transparent);
+    cursor: pointer;
+  }
+
+  .content {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 12px 12px 28px;
+  }
+
+  .content :global([class*='_card_']),
+  .content :global([class*='_panel_']),
+  .content :global([class*='_section_']) {
+    padding: 14px !important;
   }
 }

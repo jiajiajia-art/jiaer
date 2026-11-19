@@ -24,25 +24,25 @@ export const AVATAR_STYLE_OPTIONS: ReadonlyArray<{
     id: 'A',
     label: '日系视觉小说风格',
     prompt:
-      'Style: polished Japanese anime visual novel character art, clean elegant linework, soft cel shading, refined facial features, detailed but readable outfit design, high-quality game character sprite.',
+      'Art style: Japanese visual novel CG illustration, bishoujo game character portrait look, soft cel shading with gentle gradients, clean thin lineart, porcelain skin rendering, glossy hair strands, pastel color grading, subtle bloom glow, polished galgame key visual quality.',
   },
   {
     id: 'B',
     label: '乙女向',
     prompt:
-      'Style: elegant otome game character art, delicate facial features, graceful silhouette, refined hair rendering, beautiful expressive eyes, soft romantic lighting, polished anime shading, premium visual novel sprite quality.',
+      'Art style: otome game romantic illustration, delicate shojo-manga linework, sparkling catchlights in eyes, soft rose-gold lighting, silky flowing hair, lace and ribbon details, dreamy bokeh atmosphere, elegant feminine blush-pink and lavender palette, premium otome cover art finish.',
   },
   {
     id: 'C',
     label: '暗黑风格',
     prompt:
-      'Style: dark fantasy visual novel character art, refined anime linework, muted color palette, subtle dramatic shadows, elegant gothic mood, detailed clothing textures, mysterious but readable character design.',
+      'Art style: dark fantasy anime illustration, gothic visual novel mood, deep umber and blood-crimson palette, dramatic chiaroscuro shadows, ornate gothic ornaments, velvet and metal texture rendering, mysterious candlelit glow, refined but ominous character design.',
   },
   {
     id: 'D',
     label: '古风水彩风格',
     prompt:
-      'Style: hand-painted ancient Chinese watercolor character sprite, with an elegant East Asian classical aesthetic and delicate paper watercolor texture. The linework should be soft but clear. The colors should be pale, refined, and translucent. Ink tones and watercolor washes should blend naturally. The clothing should have layered ancient Chinese styling, flowing fabric, and graceful details. The overall mood should be warm, elegant, restrained, and poetic, like a refined guofeng otome game or ancient Chinese visual novel character design. The character silhouette must remain clear, the facial features must be readable, and the outfit details must stay visible. Do not turn the image into a blurry landscape painting, pure ink-wash background art, or scenery-focused illustration.',
+      'Art style: Chinese guofeng watercolor painting, gongbi fine line meets xieyi ink wash, translucent mineral pigments on rice paper, pale jade and ochre tones, soft feathered edges, flowing hanfu fabric folds, poetic East Asian classical aesthetic. Keep the face readable and silhouette clear; do not turn into landscape-only or pure ink-wash scenery.',
   },
 ];
 

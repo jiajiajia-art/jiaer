@@ -1,15 +1,13 @@
 /* ═══════════════ 音频播放器（运行时单例）═══════════════
  * 多声道：同一时间最多一首 BGM（切换时淡出旧曲 + 淡入新曲）；音效 / 氛围音可叠加。
- * 音量分层相乘、互不覆盖：平台全局音量 × 作品音量 × 单条音频音量 × 本次指令音量。
+ * 音量 = 单条音频音量 × 本次指令音量。
  * 发出信号：播放结束 / 淡入完成 / 淡出完成 —— 供原生触发器（trigger.kind = "audio"）消费。 */
 import { useSyncExternalStore } from "react";
 import type { AudioCmd, AudioSignal } from "../lib/types";
-import { loadGlobal, saveGlobal } from "../lib/saveScope";
 import { loopOf, playableSrc, resolveAudio } from "./audioLib";
 
 type Ch = { id: string; a: HTMLAudioElement; mult: number; k: number; timer: number; vt: number; bgm: boolean };
-const K_VOL = "star:audio:global";
-const st = { global: loadGlobal<number>(K_VOL, 1), work: 1, bgm: null as string | null, playing: [] as string[] };
+const st = { bgm: null as string | null, playing: [] as string[] };
 const chans = new Map<string, Ch>();
 const ls = new Set<() => void>();
 let ver = 0;
@@ -27,11 +25,8 @@ export const onAudioSignal = (f: () => void) => { sigL.add(f); return () => { si
 let pauseExternal: (() => void) | null = null;
 export const setExternalPause = (f: () => void) => { pauseExternal = f; };
 
-const vol = (c: Ch) => Math.max(0, Math.min(1, st.global * st.work * (resolveAudio(c.id)?.volume ?? 1) * c.mult * c.k));
+const vol = (c: Ch) => Math.max(0, Math.min(1, (resolveAudio(c.id)?.volume ?? 1) * c.mult * c.k));
 const apply = (c: Ch) => { c.a.volume = vol(c); };
-export const globalVolume = () => st.global;
-export function setGlobalVolume(v: number) { st.global = v; saveGlobal(K_VOL, v); chans.forEach(apply); emitUi(); }
-export function setWorkVolume(v: number) { if (st.work === v) return; st.work = v; chans.forEach(apply); emitUi(); }
 
 function ramp(c: Ch, to: number, ms: number, done?: () => void) {
   window.clearInterval(c.timer);
@@ -123,7 +118,7 @@ export async function previewAudio(id: string | null, src?: string, volume = 1) 
   if (!id || previewId === id || !src) { previewId = null; emitUi(); return true; }
   const u = await playableSrc(src);
   if (!u) return false;
-  preview = new Audio(u); preview.volume = Math.min(1, st.global * st.work * volume);
+  preview = new Audio(u); preview.volume = Math.min(1, volume);
   preview.onended = () => { previewId = null; emitUi(); };
   previewId = id;
   try { await preview.play(); emitUi(); return true; } catch { previewId = null; emitUi(); return false; }

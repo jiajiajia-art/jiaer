@@ -26,7 +26,7 @@ export const BATCH_SCOPE_LABEL: Record<BatchScope, string> = {
 export const BATCH_ROOM_PREFIX = "room:";
 export const BATCH_MAP_PREFIX = "map:";
 
-type RoomLike = { name?: string; scenePrompt?: string; bg?: string; mapId?: string };
+type RoomLike = { name?: string; scenePrompt?: string; desc?: string; bg?: string; mapId?: string };
 type MapLike = { id: string; name?: string; desc?: string; bg?: string };
 
 const DEFAULT_MAP_ID = "map_main";
@@ -92,7 +92,7 @@ export function buildBatchJobs(opts: {
 
   for (const id of pickBatchRoomIds(opts)) {
     const r = opts.rooms[id];
-    const parts = buildLocationScenePromptParts({ name: r.name, scenePrompt: r.scenePrompt }, settings);
+    const parts = buildLocationScenePromptParts({ name: r.name, scenePrompt: r.scenePrompt || r.desc }, settings);
     const prompt = composePositivePrompt(parts);
     if (!prompt) { skippedNoPrompt += 1; continue; }
     jobs.push({

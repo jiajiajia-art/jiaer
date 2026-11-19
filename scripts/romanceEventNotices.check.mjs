@@ -11,7 +11,7 @@ test("事件发生地_进入触发房间优先_其次条件地点_最后当前�
   assert.equal(noticeRoomOf({}, "street"), "street");
 });
 
-test("未限时_下回合过期_限时_按天倒计时到0失败", () => {
+test("未限时_一直保留不过期_限时_按天倒计时到0失败", () => {
   const a = makeEventNotice(host(5, 10), { kind: "event", refId: "e1", name: "停摆钟" }, "n1");
   const b = makeEventNotice(host(5, 10), { kind: "event", refId: "e2", name: "旧登记本", limitDays: 3 }, "n2");
   let g = host(5, 10, [a, b]);
@@ -19,12 +19,13 @@ test("未限时_下回合过期_限时_按天倒计时到0失败", () => {
   assert.equal(t.expired.length + t.failed.length, 0, "同一回合不变");
   g = host(6, 11, [a, b]);
   t = tickEventNotices(g);
-  assert.deepEqual(t.expired.map((x) => x.refId), ["e1"]);
+  assert.equal(t.expired.length, 0, "未限时不再下一回合过期");
   assert.equal(t.failed.length, 0);
   assert.equal(noticeDaysLeft(b, 11), 2);
   t = tickEventNotices(host(9, 13, t.g.eventNotices));
   assert.deepEqual(t.failed.map((x) => x.refId), ["e2"]);
   assert.equal(t.g.eventNotices.find((x) => x.id === "n2").status, "failed");
+  assert.equal(t.g.eventNotices.find((x) => x.id === "n1").status, "open");
 });
 
 test("下一回合提示_含上回合事件与可展开事件_要求不得替玩家展开", () => {

@@ -1,5 +1,6 @@
 /* 功能注释：全站页脚——PC 品牌左+三列右；移动端仅法律一行（见 max-width:768） */
 .footer {
+  /* 功能注释：页脚跟主题底色；深色仍近黑，浅色不再锁死 #0A0A0A 黑条 */
   --footer-surface: var(--color-bg);
   --footer-title: var(--color-text);
   --footer-muted: var(--color-text-secondary);
@@ -138,9 +139,13 @@
   }
 
   .brandCol {
+    /* 功能注释：PC 的 flex:1 1 240px 在移动端会把整列撑成 240px 高，版权下出现大块空白 */
+    flex: 0 0 auto;
     max-width: none;
+    width: 100%;
     gap: 0;
     align-items: center;
+    min-height: 0;
   }
 
   .logo,

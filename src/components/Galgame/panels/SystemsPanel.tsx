@@ -7,7 +7,6 @@ import styles from './SystemsPanel.module.css';
 import GameConfirmModal from '../GameConfirmModal';
 import {
   GAME_START_LIMITS,
-  GAME_START_UE_COPY,
   type GameStartPersonaBlocks,
   type GameStartWorldBookEntry,
   type GameStartWritingStyle,
@@ -169,7 +168,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
         const res = await warehouseResourcesApi.list(token, { type: 'worldbook' });
         if (cancelled) return;
         if (!res?.success) {
-          toast.error(res?.message || '加载我的世界书失败');
+          toast.error(res?.message || t('galgameUi.systems.toast.loadWorldBookFailed'));
           setMineWorldBooks([]);
           return;
         }
@@ -181,7 +180,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
         });
       } catch (e) {
         if (!cancelled) {
-          toast.error((e as Error)?.message || '加载我的世界书失败');
+          toast.error((e as Error)?.message || t('galgameUi.systems.toast.loadWorldBookFailed'));
           setMineWorldBooks([]);
         }
       } finally {
@@ -204,7 +203,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
     personaBlocks?: GameStartPersonaBlocks;
   }) => {
     if (!onPersistSystemConfig) {
-      toast.error('当前无法保存到服务器');
+      toast.error(t('galgameUi.systems.toast.cannotSaveServer'));
       return false;
     }
     setSaving(true);
@@ -220,7 +219,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
       return true;
     } catch (e) {
       console.error(e);
-      toast.error((e as Error)?.message || '保存失败');
+      toast.error((e as Error)?.message || t('galgameUi.common.saveFailed'));
       return false;
     } finally {
       setSaving(false);
@@ -266,7 +265,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
       keywords: keywordsText.split(/[,，]/).map((s) => s.trim()).filter(Boolean),
     });
     if (!checked.ok) {
-      toast.error(checked.message || '条目无效');
+      toast.error(checked.message || t('galgameUi.common.invalidEntry'));
       return;
     }
     const next = [...entries];
@@ -276,7 +275,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
     setEntries(next);
     const ok = await persist({ worldBookEntries: next });
     if (ok) {
-      toast.success('世界书已保存');
+      toast.success(t('galgameUi.systems.toast.worldBookSaved'));
       setEditingEntry(null);
       setView('worldBook');
     }
@@ -294,7 +293,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
     if (importTab === 'template') {
       const tpl = WORLD_BOOK_IMPORT_TEMPLATES.find((x) => x.id === selectedTemplateId);
       if (!tpl) {
-        toast.error('请选择模板');
+        toast.error(t('galgameUi.systems.toast.selectTemplate'));
         return;
       }
       incoming = tpl.entries.map((e) => ({
@@ -304,19 +303,19 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
     } else if (importTab === 'mine') {
       const book = mineWorldBooks.find((x) => x.id === selectedMineWorldBookId);
       if (!book) {
-        toast.error('请选择我的世界书');
+        toast.error(t('galgameUi.systems.toast.selectMyWorldBook'));
         return;
       }
       const parsed = warehouseWorldBookToEntries(book);
       if (!parsed.ok) {
-        toast.error(parsed.message || '导入失败');
+        toast.error(parsed.message || t('galgameUi.common.importFailed'));
         return;
       }
       incoming = parsed.entries;
     } else {
       const parsed = parseWorldBookImportText(importText);
       if (!parsed.ok) {
-        toast.error(parsed.message || '导入失败');
+        toast.error(parsed.message || t('galgameUi.common.importFailed'));
         return;
       }
       incoming = parsed.entries;
@@ -325,7 +324,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
     setEntries(next);
     const ok = await persist({ worldBookEntries: next });
     if (ok) {
-      toast.success(`已导入 ${incoming.length} 条，可继续编辑`);
+      toast.success(t('galgameUi.systems.toast.importedCount', { count: incoming.length }));
       setImportText('');
       setImportFileName('');
       setSelectedTemplateId(null);
@@ -341,9 +340,9 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
       const text = await file.text();
       setImportText(text);
       setImportTab('paste');
-      toast.success('文件已读入，请确认后导入');
+      toast.success(t('galgameUi.systems.toast.fileReadConfirmImport'));
     } catch {
-      toast.error('读取文件失败');
+      toast.error(t('galgameUi.systems.toast.readFileFailed'));
     }
   };
 
@@ -367,15 +366,15 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
   const addAvoidWord = () => {
     const w = avoidDraft.trim().slice(0, GAME_START_LIMITS.avoidWordMax);
     if (!w) {
-      toast.error('请输入避雷词');
+      toast.error(t('galgameUi.systems.toast.enterAvoidWord'));
       return;
     }
     if (writingStyle.avoidWords.includes(w)) {
-      toast.error('已存在');
+      toast.error(t('galgameUi.common.alreadyExists'));
       return;
     }
     if (writingStyle.avoidWords.length >= GAME_START_LIMITS.avoidWordsMax) {
-      toast.error(`最多 ${GAME_START_LIMITS.avoidWordsMax} 个`);
+      toast.error(t('galgameUi.common.maxCount', { max: GAME_START_LIMITS.avoidWordsMax }));
       return;
     }
     setWritingStyle((s) => ({ ...s, avoidWords: [...s.avoidWords, w] }));
@@ -392,7 +391,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
   const finishAvoidEdit = async () => {
     const ok = await persist({ writingStyle });
     if (ok) {
-      toast.success('避雷词库已更新');
+      toast.success(t('galgameUi.systems.toast.avoidWordsUpdated'));
       setView('writingStyle');
     }
   };
@@ -408,16 +407,16 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
     setPersonaBlocks(next);
     const ok = await persist({ personaBlocks: next });
     if (ok) {
-      toast.success('定位已保存');
+      toast.success(t('galgameUi.systems.toast.positionSaved'));
       setView('position');
     }
   };
 
-  const POSITION_AI_LABEL = { traits: '当前立场' } as const;
+  const POSITION_AI_LABEL = { traits: t('galgameUi.systems.form.traits') } as const;
 
   const requestPositionAi = async (field: 'traits') => {
     if (!authUser?.token || !sessionId) {
-      toast.error('请先登录并进入对局');
+      toast.error(t('galgameUi.common.loginAndEnterSession'));
       return;
     }
     if (positionAiBusy || saving) return;
@@ -428,7 +427,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
         && latestPoints < textBillingPreview.chargedUnits
       ) {
         toast.error(
-          `织梦豆不足（需要 ${textBillingPreview.chargedUnits}，当前 ${latestPoints}）`,
+          t('galgameUi.currency.insufficientDreamBeans', { need: textBillingPreview.chargedUnits, current: latestPoints }),
         );
         return;
       }
@@ -451,7 +450,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
         },
       });
       if (!res?.success || !res.data?.text) {
-        toast.error(res?.message || '生成失败');
+        toast.error(res?.message || t('galgameUi.common.generateFailed'));
         return;
       }
       const text = String(res.data.text);
@@ -465,12 +464,12 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
         updateUser({ points: res.data.remainingPoints });
       }
       toast.success(
-        `${POSITION_AI_LABEL[field]}已生成（-${res.data.billing
+        t('galgameUi.systems.toast.positionGenerated', { field: POSITION_AI_LABEL[field], billing: res.data.billing
           ? formatSessionProfileCharge(res.data.billing)
-          : textChargeText}）`,
+          : textChargeText }),
       );
     } catch (e) {
-      toast.error((e as Error)?.message || '生成失败');
+      toast.error((e as Error)?.message || t('galgameUi.common.generateFailed'));
     } finally {
       setPositionAiBusy(null);
     }
@@ -490,7 +489,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
       retainedStorylineIds: retained,
     });
     if (ok) {
-      toast.success(`已切换路线：${selected.title}`);
+      toast.success(t('galgameUi.route.switchedToast', { title: selected.title }));
       setPendingRouteId(null);
       setView('route');
     }
@@ -499,21 +498,21 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
   const shellTitle = (() => {
     switch (view) {
       case 'worldBook':
-        return '世界书';
+        return t('galgameUi.systems.nav.worldBook');
       case 'worldBookEdit':
-        return editingEntry && entries.some((e) => e.id === editingEntry.id) ? '编辑条目' : '新增条目';
+        return editingEntry && entries.some((e) => e.id === editingEntry.id) ? t('galgameUi.systems.nav.editEntry') : t('galgameUi.systems.nav.newEntry');
       case 'worldBookImport':
-        return '导入世界书';
+        return t('galgameUi.systems.nav.importWorldBook');
       case 'writingStyle':
-        return '文风设定';
+        return t('galgameUi.systems.nav.writingStyle');
       case 'avoidEdit':
-        return '避雷词库';
+        return t('galgameUi.systems.nav.avoidWords');
       case 'position':
       case 'positionEdit':
-        return '玩家目前定位';
+        return t('galgameUi.systems.nav.position');
       case 'route':
       case 'routeEdit':
-        return GAME_START_UE_COPY.currentRouteSection;
+        return t('galgameUi.route.currentSection');
       default:
         return t('galgame.panelSystemsTitle');
     }
@@ -521,13 +520,13 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
 
   const shellSubtitle = (() => {
     if (view === 'overview') return t('galgame.panelSystemsSubtitle');
-    if (view === 'worldBook') return '已装载条目与规则';
-    if (view === 'worldBookImport') return '支持粘贴、上传、模板或从我的世界书导入';
-    if (view === 'writingStyle') return '文风 / 节奏 / 视角 / 描写 / 剧情';
-    if (view === 'avoidEdit') return '长按拖拽排序二期；可增删';
-    if (view === 'position') return '当前身份与立场';
-    if (view === 'positionEdit') return '编辑当前身份与立场';
-    if (view === 'route') return GAME_START_UE_COPY.currentRouteHint;
+    if (view === 'worldBook') return t('galgameUi.systems.nav.worldBookDesc');
+    if (view === 'worldBookImport') return t('galgameUi.systems.nav.importWorldBookHint');
+    if (view === 'writingStyle') return t('galgameUi.systems.nav.writingStyleHint');
+    if (view === 'avoidEdit') return t('galgameUi.systems.nav.avoidEditHint');
+    if (view === 'position') return t('galgameUi.systems.nav.positionDesc');
+    if (view === 'positionEdit') return t('galgameUi.systems.nav.positionEditHint');
+    if (view === 'route') return t('galgameUi.route.currentHint');
     return undefined;
   })();
 
@@ -544,16 +543,16 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
             setView('worldBookImport');
           }}
         >
-          导入世界书
+          {t('galgameUi.systems.actions.importWorldBook')}
         </button>
         <button type="button" className={shell.primaryButton} onClick={() => openEditEntry()}>
-          新增条目
+          {t('galgameUi.systems.actions.addEntry')}
         </button>
       </div>
     ) : view === 'writingStyle' ? (
       <div className={styles.headerActions}>
         <button type="button" className={shell.ghostButton} onClick={() => setView('avoidEdit')}>
-          编辑避雷
+          {t('galgameUi.systems.actions.editAvoidWords')}
         </button>
       </div>
     ) : null;
@@ -575,10 +574,10 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
         {view === 'overview' ? (
           <div className={styles.overviewList}>
             {[
-              { id: 'worldBook' as const, icon: '书', title: '世界书', desc: '已装载条目与规则' },
-              { id: 'writingStyle' as const, icon: '风', title: '文风设定', desc: '文风偏好与避雷词' },
-              { id: 'position' as const, icon: '位', title: '玩家目前定位', desc: '当前身份与立场' },
-              { id: 'route' as const, icon: '线', title: GAME_START_UE_COPY.currentRouteSection, desc: '剧情路线与进度' },
+              { id: 'worldBook' as const, icon: '書', title: t('galgameUi.systems.nav.worldBook'), desc: t('galgameUi.systems.nav.worldBookDesc') },
+              { id: 'writingStyle' as const, icon: '风', title: t('galgameUi.systems.nav.writingStyle'), desc: t('galgameUi.systems.nav.writingStyleDesc') },
+              { id: 'position' as const, icon: '位', title: t('galgameUi.systems.nav.position'), desc: t('galgameUi.systems.nav.positionDesc') },
+              { id: 'route' as const, icon: '线', title: t('galgameUi.route.currentSection'), desc: t('galgameUi.route.progressDesc') },
             ].map((item) => (
               <button
                 key={item.id}
@@ -599,7 +598,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
 
         {view === 'worldBook' ? (
           panelItems.length === 0 ? (
-            <div className={shell.empty}>暂无世界书条目，可新增或导入</div>
+            <div className={shell.empty}>{t('galgameUi.systems.actions.emptyWorldBook')}</div>
           ) : (
             panelItems.map((item) => (
               <article key={item.id} className={styles.wbCard}>
@@ -607,14 +606,14 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                   <h3 className={styles.wbTitle}>{item.name}</h3>
                   {item.summary ? <p className={styles.wbBody}>{item.summary}</p> : null}
                   <p className={styles.wbMeta}>
-                    触发关键词：{item.keywords.length ? item.keywords.join('、') : '无'}
-                    {item.constant ? ' · 常驻' : ''}
+                    {t('galgameUi.systems.actions.keywordsPrefix')}{item.keywords.length ? item.keywords.join('、') : t('galgameUi.common.none')}
+                    {item.constant ? ` ${t('galgameUi.common.constantTrigger')}` : ''}
                   </p>
                 </div>
                 <div className={styles.wbSide}>
-                  <span className={styles.badge}>已装载</span>
+                  <span className={styles.badge}>{t('galgameUi.systems.actions.loaded')}</span>
                   <div className={styles.toggleRow}>
-                    <span>{item.enabled ? '启用' : '停用'}</span>
+                    <span>{item.enabled ? t('galgameUi.common.enabled') : t('galgameUi.common.disabled')}</span>
                     <button
                       type="button"
                       className={`${styles.switch} ${item.enabled ? styles.switchOn : ''}`}
@@ -644,32 +643,32 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
         {view === 'worldBookEdit' && editingEntry ? (
           <div className={styles.form}>
             <label className={styles.field}>
-              <span className={styles.labelRow}>标题</span>
+              <span className={styles.labelRow}>{t('galgameUi.systems.form.title')}</span>
               <input
                 value={editingEntry.title}
                 maxLength={40}
-                placeholder="条目标题"
+                placeholder={t('galgameUi.systems.form.entryTitlePlaceholder')}
                 onChange={(e) => setEditingEntry({ ...editingEntry, title: e.target.value })}
               />
             </label>
             <label className={styles.field}>
-              <span className={styles.labelRow}>内容</span>
+              <span className={styles.labelRow}>{t('galgameUi.systems.form.content')}</span>
               <textarea
                 rows={6}
                 value={editingEntry.content}
-                placeholder="条目内容摘要 / 规则正文"
+                placeholder={t('galgameUi.systems.form.entryContentPlaceholder')}
                 onChange={(e) => setEditingEntry({ ...editingEntry, content: e.target.value })}
               />
             </label>
             <label className={styles.field}>
               <span className={styles.labelRow}>
-                触发关键词
+                {t('galgameUi.systems.form.triggerKeywords')}
                 <span className={styles.counter}>{keywordsJoined.length}/100</span>
               </span>
               <input
                 value={keywordsJoined}
                 maxLength={100}
-                placeholder="用逗号分隔"
+                placeholder={t('galgameUi.systems.form.keywordsPlaceholder')}
                 onChange={(e) =>
                   setEditingEntry({
                     ...editingEntry,
@@ -679,7 +678,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
               />
             </label>
             <div className={styles.field}>
-              <span className={styles.labelRow}>是否常驻</span>
+              <span className={styles.labelRow}>{t('galgameUi.systems.form.constant')}</span>
               <div className={styles.toggleRow}>
                 <button
                   type="button"
@@ -691,25 +690,25 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 >
                   <span className={styles.switchKnob} />
                 </button>
-                <span>{editingEntry.constant ? '常驻' : '按关键词触发'}</span>
+                <span>{editingEntry.constant ? t('galgameUi.common.constantTrigger') : t('galgameUi.common.keywordTrigger')}</span>
               </div>
             </div>
             <div className={styles.field}>
-              <span className={styles.labelRow}>状态</span>
+              <span className={styles.labelRow}>{t('galgameUi.systems.form.status')}</span>
               <div className={styles.statusChips}>
                 <button
                   type="button"
                   className={`${styles.statusChip} ${editingEntry.enabled !== false ? styles.statusChipActive : ''}`}
                   onClick={() => setEditingEntry({ ...editingEntry, enabled: true })}
                 >
-                  启用
+                  {t('galgameUi.common.enabled')}
                 </button>
                 <button
                   type="button"
                   className={`${styles.statusChip} ${editingEntry.enabled === false ? styles.statusChipActive : ''}`}
                   onClick={() => setEditingEntry({ ...editingEntry, enabled: false })}
                 >
-                  停用
+                  {t('galgameUi.common.disabled')}
                 </button>
               </div>
             </div>
@@ -723,7 +722,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                   setView('worldBook');
                 }}
               >
-                取消
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -731,7 +730,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 disabled={saving}
                 onClick={() => void saveEntry()}
               >
-                {saving ? '保存中…' : '保存'}
+                {saving ? t('createGame.saving') : t('common.save')}
               </button>
             </div>
           </div>
@@ -742,10 +741,10 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
             <div className={styles.importTabs} role="tablist">
               {(
                 [
-                  { id: 'mine' as const, label: '我的世界书' },
-                  { id: 'paste' as const, label: '粘贴内容' },
-                  { id: 'upload' as const, label: '上传文件' },
-                  { id: 'template' as const, label: '已有模板' },
+                  { id: 'mine' as const, label: t('galgameUi.systems.form.tabMine') },
+                  { id: 'paste' as const, label: t('galgameUi.systems.form.tabPaste') },
+                  { id: 'upload' as const, label: t('galgameUi.systems.form.tabUpload') },
+                  { id: 'template' as const, label: t('galgameUi.systems.form.tabTemplate') },
                 ] as const
               ).map((tab) => (
                 <button
@@ -764,10 +763,10 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
             {importTab === 'mine' ? (
               <div className={styles.mineList}>
                 {mineWorldBooksLoading ? (
-                  <div className={shell.empty}>加载我的世界书…</div>
+                  <div className={shell.empty}>{t('galgameUi.systems.form.loadingMyWorldBook')}</div>
                 ) : mineWorldBooks.length === 0 ? (
                   <div className={shell.empty}>
-                    仓库里还没有世界书。可先去「我的资源 → 我的世界书」创建，或改用粘贴/模板导入。
+                    {t('galgameUi.systems.form.noWorldBookInWarehouse')}
                   </div>
                 ) : (
                   mineWorldBooks.map((book) => {
@@ -785,14 +784,14 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                         onClick={() => setSelectedMineWorldBookId(book.id)}
                       >
                         <div className={styles.templateBody}>
-                          <p className={styles.templateName}>{book.title || '未命名世界书'}</p>
+                          <p className={styles.templateName}>{book.title || t('galgameUi.common.unnamedWorldBook')}</p>
                           <p className={styles.templateDesc}>
-                            {(book.description || '').trim() || `${entryCount} 条设定`}
-                            {book.enabled === false ? ' · 已停用' : ''}
-                            {entryCount > 0 ? ` · ${entryCount} 条` : ''}
+                            {(book.description || '').trim() || t('galgameUi.common.entrySettingsCount', { count: entryCount })}
+                            {book.enabled === false ? t('galgameUi.common.disabledBadge') : ''}
+                            {entryCount > 0 ? t('galgameUi.common.entryCountBadge', { count: entryCount }) : ''}
                           </p>
                         </div>
-                        <span className={styles.badge}>{selected ? '已选' : '选择'}</span>
+                        <span className={styles.badge}>{selected ? t('galgameUi.common.selected') : t('galgameUi.common.select')}</span>
                       </button>
                     );
                   })
@@ -802,12 +801,12 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
 
             {importTab === 'paste' ? (
               <label className={styles.field}>
-                <span className={styles.labelRow}>粘贴世界书内容（JSON 或纯文本）</span>
+                <span className={styles.labelRow}>{t('galgameUi.systems.form.pasteWorldBookLabel')}</span>
                 <textarea
                   className={styles.pasteArea}
                   rows={8}
                   value={importText}
-                  placeholder={'支持 JSON 数组 / {entries} / 创作台 morePromptForms，或空行分隔的纯文本'}
+                  placeholder={t('galgameUi.systems.form.pasteWorldBookPlaceholder')}
                   onChange={(e) => setImportText(e.target.value)}
                 />
               </label>
@@ -821,7 +820,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                   onChange={(e) => void onPickFile(e.target.files?.[0] || null)}
                 />
                 <span>点击选择 .json / 文本文件</span>
-                <span>{importFileName || '支持拖放前请先点选文件'}</span>
+                <span>{importFileName || t('galgameUi.systems.form.pickFileHint')}</span>
               </label>
             ) : null}
 
@@ -841,7 +840,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                       </p>
                     </div>
                     <span className={styles.badge}>
-                      {selectedTemplateId === tpl.id ? '已选' : '选择'}
+                      {selectedTemplateId === tpl.id ? t('galgameUi.common.selected') : t('galgameUi.common.select')}
                     </span>
                   </button>
                 ))}
@@ -855,7 +854,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 disabled={saving}
                 onClick={() => setView('worldBook')}
               >
-                取消
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -863,7 +862,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 disabled={saving}
                 onClick={() => void confirmImport()}
               >
-                {saving ? '导入中…' : '确认导入'}
+                {saving ? t('galgameUi.common.importing') : t('galgameUi.common.importConfirm')}
               </button>
             </div>
           </div>
@@ -898,7 +897,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
             ))}
 
             <section className={styles.sectionBlock}>
-              <h4 className={styles.sectionTitle}>节奏</h4>
+              <h4 className={styles.sectionTitle}>{t('galgameUi.systems.form.pace')}</h4>
               <div className={styles.paceRow}>
                 {WRITING_PACE_OPTIONS.map((p) => (
                   <button
@@ -916,7 +915,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
 
             <section className={styles.sectionBlock}>
               <div className={styles.presetRow} style={{ borderBottom: 'none', paddingTop: 0 }}>
-                <h4 className={styles.sectionTitle}>避雷词库</h4>
+                <h4 className={styles.sectionTitle}>{t('galgameUi.systems.form.avoidWordsSection')}</h4>
                 <div className={styles.headerActions}>
                   <button type="button" className={styles.editBtn} onClick={() => setView('avoidEdit')}>
                     编辑
@@ -934,7 +933,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 </div>
               </div>
               {writingStyle.avoidWords.length === 0 ? (
-                <p className={styles.infoHint}>暂无避雷词</p>
+                <p className={styles.infoHint}>{t('galgameUi.systems.form.noAvoidWords')}</p>
               ) : (
                 <div className={styles.tagCloud}>
                   {writingStyle.avoidWords.map((w) => (
@@ -943,7 +942,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                       <button
                         type="button"
                         className={styles.tagX}
-                        aria-label={`删除 ${w}`}
+                        aria-label={t('galgameUi.common.deleteAria', { word: w })}
                         onClick={() => {
                           const next = {
                             ...writingStyle,
@@ -972,12 +971,12 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
               叙事会用自然替代表述避开这些词；禁止用 ××、xx 或无意义空格代替。
             </p>
             <div className={styles.field}>
-              <span className={styles.labelRow}>添加避雷词</span>
+              <span className={styles.labelRow}>{t('galgameUi.systems.form.addAvoidWord')}</span>
               <div className={styles.paceRow}>
                 <input
                   value={avoidDraft}
                   maxLength={GAME_START_LIMITS.avoidWordMax}
-                  placeholder="输入后点添加"
+                  placeholder={t('galgameUi.systems.form.avoidWordPlaceholder')}
                   onChange={(e) => setAvoidDraft(e.target.value)}
                 />
                 <button type="button" className={styles.editBtn} onClick={addAvoidWord}>
@@ -987,7 +986,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
             </div>
             <div className={styles.avoidEditList}>
               {writingStyle.avoidWords.length === 0 ? (
-                <div className={shell.empty}>词库为空</div>
+                <div className={shell.empty}>{t('galgameUi.systems.form.avoidEmpty')}</div>
               ) : (
                 writingStyle.avoidWords.map((w) => (
                   <div key={w} className={styles.avoidEditRow}>
@@ -1006,7 +1005,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 disabled={saving}
                 onClick={() => void finishAvoidEdit()}
               >
-                {saving ? '保存中…' : '完成'}
+                {saving ? t('createGame.saving') : t('galgameUi.common.done')}
               </button>
             </div>
           </div>
@@ -1016,12 +1015,12 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
           <div className={styles.form}>
             <div className={styles.positionCard}>
               <div className={styles.positionRow}>
-                <span className={styles.positionKey}>当前身份</span>
-                <div className={styles.positionVal}>{personaBlocks.identity || '未设置'}</div>
+                <span className={styles.positionKey}>{t('galgameUi.systems.form.identity')}</span>
+                <div className={styles.positionVal}>{personaBlocks.identity || t('galgameUi.common.notSet')}</div>
               </div>
               <div className={styles.positionRow}>
-                <span className={styles.positionKey}>当前立场</span>
-                <div className={styles.positionVal}>{personaBlocks.traits || '未设置'}</div>
+                <span className={styles.positionKey}>{t('galgameUi.systems.form.traits')}</span>
+                <div className={styles.positionVal}>{personaBlocks.traits || t('galgameUi.common.notSet')}</div>
               </div>
             </div>
             <p className={styles.infoHint}>
@@ -1038,7 +1037,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 setView('positionEdit');
               }}
             >
-              编辑定位
+              {t('galgameUi.systems.actions.editPosition')}
             </button>
           </div>
         ) : null}
@@ -1046,17 +1045,17 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
         {view === 'positionEdit' ? (
           <div className={styles.form}>
             <label className={styles.field}>
-              <span className={styles.labelRow}>当前身份</span>
+              <span className={styles.labelRow}>{t('galgameUi.systems.form.identity')}</span>
               <input
                 value={positionDraft.identity}
                 maxLength={80}
-                placeholder="如：冷宫嫔妃 / 江湖游侠"
+                placeholder={t('galgameUi.systems.form.identityPlaceholder')}
                 onChange={(e) => setPositionDraft((d) => ({ ...d, identity: e.target.value }))}
               />
             </label>
             <label className={styles.field}>
               <div className={styles.labelWithAi}>
-                <span className={styles.labelRow}>当前立场</span>
+                <span className={styles.labelRow}>{t('galgameUi.systems.form.traits')}</span>
                 <button
                   type="button"
                   className={styles.fieldAiBtn}
@@ -1066,15 +1065,15 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                   }}
                 >
                   {positionAiBusy === 'traits'
-                    ? '生成中…'
-                    : `AI生成 · ${textChargeText}`}
+                    ? t('galgameUi.common.generating')
+                    : t('galgameUi.common.aiGenerate', { charge: textChargeText })}
                 </button>
               </div>
               <textarea
                 rows={3}
                 value={positionDraft.stance}
                 maxLength={200}
-                placeholder="对外可被察觉的立场，如：表面随和、站队某派"
+                placeholder={t('galgameUi.systems.form.traitsPlaceholder')}
                 disabled={positionAiBusy === 'traits'}
                 onChange={(e) => setPositionDraft((d) => ({ ...d, stance: e.target.value }))}
               />
@@ -1086,7 +1085,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 disabled={saving || Boolean(positionAiBusy)}
                 onClick={() => setView('position')}
               >
-                取消
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -1094,7 +1093,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 disabled={saving || Boolean(positionAiBusy)}
                 onClick={() => void savePosition()}
               >
-                {saving ? '保存中…' : '保存'}
+                {saving ? t('createGame.saving') : t('common.save')}
               </button>
             </div>
           </div>
@@ -1105,7 +1104,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
             <div className={styles.positionCard}>
               <div className={styles.positionRow}>
                 <span className={styles.positionKey}>当前路线</span>
-                <div className={styles.positionVal}>{currentRoute?.title || '未选择'}</div>
+                <div className={styles.positionVal}>{currentRoute?.title || t('galgameUi.common.noRouteSelected')}</div>
               </div>
               {currentRoute?.summary ? (
                 <div className={styles.positionRow}>
@@ -1146,7 +1145,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 setView('routeEdit');
               }}
             >
-              更换路线
+              {t('galgameUi.systems.actions.changeRoute')}
             </button>
           </div>
         ) : null}
@@ -1183,7 +1182,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 rows={3}
                 maxLength={200}
                 value={routeMemo}
-                placeholder="可写切换原因或期待走向"
+                placeholder={t('galgameUi.route.routeRemarkPlaceholder')}
                 onChange={(e) => setRouteMemo(e.target.value)}
               />
             </label>
@@ -1193,7 +1192,7 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
                 className={styles.secondaryBtn}
                 onClick={() => setView('route')}
               >
-                取消
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -1211,10 +1210,10 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
       <GameConfirmModal
         isOpen={Boolean(positionAiConfirm)}
         variant="dossier"
-        title={`确认生成${positionAiConfirm ? POSITION_AI_LABEL[positionAiConfirm] : ''}`}
-        message={`将扣除 ${textChargeText} 生成「${positionAiConfirm ? POSITION_AI_LABEL[positionAiConfirm] : ''}」，是否继续？`}
-        confirmText="确认生成"
-        cancelText="取消"
+        title={t('galgameUi.systems.toast.confirmGeneratePositionTitle', { field: positionAiConfirm ? POSITION_AI_LABEL[positionAiConfirm] : '' })}
+        message={t('galgameUi.systems.toast.confirmGeneratePositionMessage', { charge: textChargeText, field: positionAiConfirm ? POSITION_AI_LABEL[positionAiConfirm] : '' })}
+        confirmText={t('galgameUi.common.confirmGenerate')}
+        cancelText={t('common.cancel')}
         onConfirm={() => {
           void runPositionAi();
         }}
@@ -1222,14 +1221,14 @@ const SystemsPanel: React.FC<SystemsPanelProps> = ({
       />
       <GameConfirmModal
         isOpen={Boolean(pendingRouteId)}
-        title={GAME_START_UE_COPY.changeRouteConfirmTitle}
+        title={t('galgameUi.route.confirmSwitchTitle')}
         message={
           pendingRoute
-            ? `${GAME_START_UE_COPY.changeRouteConfirmMessage}\n「${pendingRoute.title}」`
-            : GAME_START_UE_COPY.changeRouteConfirmMessage
+            ? `${t('galgameUi.route.changeMessage')}\n「${pendingRoute.title}」`
+            : t('galgameUi.route.changeMessage')
         }
-        confirmText={saving ? '更换中…' : GAME_START_UE_COPY.changeRouteConfirmOk}
-        cancelText="取消"
+        confirmText={saving ? t('galgameUi.common.changingRoute') : t('galgameUi.common.confirmChangeRoute')}
+        cancelText={t('common.cancel')}
         onConfirm={() => {
           void confirmRouteChange();
         }}

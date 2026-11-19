@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './AttributeList.module.css';
 import type { AttributeConfig } from './types';
 
@@ -10,6 +11,8 @@ interface AttributeListProps {
 }
 
 const AttributeList: React.FC<AttributeListProps> = ({ attributes, activeId, onSelect, onDelete }) => {
+    const { t } = useTranslation();
+
     if (!attributes.length) {
         return (
             <div className={styles.leftList}>
@@ -25,7 +28,7 @@ const AttributeList: React.FC<AttributeListProps> = ({ attributes, activeId, onS
         <div className={styles.leftList}>
             {attributes.map((attr) => {
                 const isActive = activeId === attr.id;
-                const requiredTag = attr.required ? '必修' : '选修';
+                const requiredTag = attr.required ? t('gameSettingEditor.attributeGrowthPanel.attributeList.s1812ac6915') : t('gameSettingEditor.attributeGrowthPanel.attributeList.sd59fe9c5e4');
 
                 return (
                     <div

@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import type { MembershipPlanState, MembershipState } from '../../api/account/auth.type';
 import {
     formatMembershipDateTime,
@@ -25,19 +26,15 @@ interface MembershipPlanCardConfig {
     rewards: string[];
 }
 
-const STATUS_LABELS: Record<MembershipPlanDisplayStatus, string> = {
-    active: '生效中',
-    expired: '已到期',
-    inactive: '未开通',
-};
-
 const VipStatusModal: React.FC<VipStatusModalProps> = ({
     isOpen,
     membership,
     onClose,
     onPurchase,
 }) => {
+    const { t, i18n } = useTranslation();
     const [selectedPlanKey, setSelectedPlanKey] = React.useState<'week' | 'month'>('week');
+    const locale = i18n.resolvedLanguage || i18n.language || 'zh';
 
     useEffect(() => {
         if (!isOpen) return undefined;
@@ -49,32 +46,38 @@ const VipStatusModal: React.FC<VipStatusModalProps> = ({
     }, [isOpen, onClose]);
 
     const now = Date.now();
-    const plans: MembershipPlanCardConfig[] = [
+    const statusLabels = useMemo<Record<MembershipPlanDisplayStatus, string>>(() => ({
+        active: t('profile.vipStatus.statusActive'),
+        expired: t('profile.vipStatus.statusExpired'),
+        inactive: t('profile.vipStatus.statusInactive'),
+    }), [t]);
+
+    const plans: MembershipPlanCardConfig[] = useMemo(() => ([
         {
             key: 'week',
-            name: '周卡',
+            name: t('profile.vipStatus.week'),
             plan: membership?.week,
-            tagline: '7 天畅享',
+            tagline: t('profile.vipStatus.weekTagline'),
             total: '540',
             rewards: [
-                '每日签到额外领取 77 永久KK币，第 7 天领取 78 币',
-                '7 天累计可领取 540 永久KK币',
-                '正式发布的 AI 文游游玩扣费享 85 折',
+                t('profile.vipStatus.weekReward1'),
+                t('profile.vipStatus.weekReward2'),
+                t('profile.vipStatus.weekReward3'),
             ],
         },
         {
             key: 'month',
-            name: '月卡',
+            name: t('profile.vipStatus.month'),
             plan: membership?.month,
-            tagline: '30 天畅享',
+            tagline: t('profile.vipStatus.monthTagline'),
             total: '2,000',
             rewards: [
-                '每日签到额外领取 66 永久KK币，第 30 天领取 86 币',
-                '30 天累计可领取 2,000 永久KK币',
-                '正式发布的 AI 文游游玩扣费享 85 折',
+                t('profile.vipStatus.monthReward1'),
+                t('profile.vipStatus.monthReward2'),
+                t('profile.vipStatus.monthReward3'),
             ],
         },
-    ];
+    ]), [membership?.month, membership?.week, t]);
     const selectedPlan = plans.find((item) => item.key === selectedPlanKey) || plans[0];
 
     useEffect(() => {
@@ -102,15 +105,20 @@ const VipStatusModal: React.FC<VipStatusModalProps> = ({
             >
                 <header className={styles.header}>
                     <div>
-                        <span className={styles.vipMark}>VIP</span>
-                        <h2 id="vip-status-title">我的会员</h2>
+                        <span className={styles.vipMark}>{t('profile.vip')}</span>
+                        <h2 id="vip-status-title">{t('profile.vipStatus.title')}</h2>
                     </div>
-                    <button type="button" className={styles.closeButton} onClick={onClose} aria-label="关闭">
+                    <button
+                        type="button"
+                        className={styles.closeButton}
+                        onClick={onClose}
+                        aria-label={t('common.close')}
+                    >
                         <span aria-hidden="true" />
                     </button>
                 </header>
 
-                <div className={styles.planTabs} role="group" aria-label="会员卡类型">
+                <div className={styles.planTabs} role="group" aria-label={t('profile.vipStatus.planTypeAria')}>
                     {plans.map((item) => (
                         <button
                             key={item.key}
@@ -132,34 +140,44 @@ const VipStatusModal: React.FC<VipStatusModalProps> = ({
                                 <div className={styles.heroTop}>
                                     <div>
                                         <p className={styles.heroEyebrow}>{selectedPlan.tagline}</p>
-                                        <h3>{selectedPlan.name}会员</h3>
+                                        <h3>{t('profile.vipStatus.memberTitle', { name: selectedPlan.name })}</h3>
                                     </div>
                                     <span className={`${styles.statusBadge} ${styles[`status_${status}`]}`}>
                                         <i aria-hidden="true" />
-                                        {STATUS_LABELS[status]}
+                                        {statusLabels[status]}
                                     </span>
                                 </div>
                                 <p className={styles.heroValue}>
-                                    累计可领 <strong>{selectedPlan.total}</strong> 永久KK币
+                                    {t('profile.vipStatus.totalClaimablePrefix')}{' '}
+                                    <strong>{selectedPlan.total}</strong>{' '}
+                                    {t('profile.vipStatus.totalClaimableSuffix')}
                                 </p>
                                 <dl className={styles.timeGrid}>
                                     <div>
-                                        <dt>生效时间</dt>
-                                        <dd>{formatMembershipDateTime(selectedPlan.plan?.startAt)}</dd>
+                                        <dt>{t('profile.vipStatus.effectiveTime')}</dt>
+                                        <dd>{formatMembershipDateTime(selectedPlan.plan?.startAt, locale)}</dd>
                                     </div>
                                     <div>
-                                        <dt>到期时间</dt>
-                                        <dd>{formatMembershipDateTime(selectedPlan.plan?.endAt)}</dd>
+                                        <dt>{t('profile.vipStatus.expiryTime')}</dt>
+                                        <dd>{formatMembershipDateTime(selectedPlan.plan?.endAt, locale)}</dd>
                                     </div>
                                     <div>
-                                        <dt>剩余时长</dt>
-                                        <dd>{status === 'active' ? formatRemainingMembershipTime(selectedPlan.plan?.endAt, now) : '—'}</dd>
+                                        <dt>{t('profile.vipStatus.remainingTime')}</dt>
+                                        <dd>
+                                            {status === 'active'
+                                                ? formatRemainingMembershipTime(selectedPlan.plan?.endAt, now, {
+                                                    zero: t('profile.vipStatus.remainingZero'),
+                                                    lessThanHour: t('profile.vipStatus.remainingLessThanHour'),
+                                                    daysHours: (days, hours) => t('profile.vipStatus.remainingDaysHours', { days, hours }),
+                                                })
+                                                : t('profile.vipStatus.emDash')}
+                                        </dd>
                                     </div>
                                 </dl>
                             </article>
 
                             <section className={styles.benefits}>
-                                <h4>会员福利</h4>
+                                <h4>{t('profile.vipStatus.benefits')}</h4>
                                 <ul>
                                     {selectedPlan.rewards.map((reward) => (
                                         <li key={reward}>
@@ -176,11 +194,13 @@ const VipStatusModal: React.FC<VipStatusModalProps> = ({
                 })()}
 
                 <p className={styles.sharedNote}>
-                    周卡与月卡可同时生效并分别领取奖励；同档位重复购买会顺延有效期。
+                    {t('profile.vipStatus.sharedNote')}
                 </p>
 
                 <button type="button" className={styles.purchaseButton} onClick={onPurchase}>
-                    {resolveMembershipPlanStatus(selectedPlan.plan, now) === 'active' ? `续费${selectedPlan.name}` : `立即开通${selectedPlan.name}`}
+                    {resolveMembershipPlanStatus(selectedPlan.plan, now) === 'active'
+                        ? t('profile.vipStatus.renew', { name: selectedPlan.name })
+                        : t('profile.vipStatus.activate', { name: selectedPlan.name })}
                 </button>
             </section>
         </div>,

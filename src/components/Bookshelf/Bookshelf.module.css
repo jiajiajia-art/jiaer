@@ -614,7 +614,7 @@
   }
 
   .manageBar {
-    bottom: calc(72px + env(safe-area-inset-bottom));
+    bottom: calc(80px + env(safe-area-inset-bottom));
     padding-bottom: 10px;
   }
 

@@ -1,11 +1,12 @@
 /**
- * 功能注释：一次拉取头像年龄/背景选项，供上传、筛选、建角匹配共用，避免多处重复请求。
+ * 功能注释：一次拉取头像年龄/背景/风格包选项，供上传、筛选、建角匹配共用，避免多处重复请求。
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { avatarLibraryApi } from '../api/galgame/avatarLibrary';
 import {
   AVATAR_AGE_GROUPS,
   AVATAR_BACKGROUNDS,
+  AVATAR_STYLE_PACKS,
   tagOptionsToSeg,
   type AvatarTagOption,
 } from '../lib/galgame/avatarLibrary';
@@ -79,8 +80,12 @@ export function useAvatarTagOptions(token?: string | null, { includeDisabled = f
     () => tagOptionsToSeg(options, 'background_type', AVATAR_BACKGROUNDS),
     [options],
   );
+  const stylePackOptions = useMemo(
+    () => tagOptionsToSeg(options, 'style_pack', AVATAR_STYLE_PACKS),
+    [options],
+  );
 
-  return { options, ageOptions, backgroundOptions, loading, reload };
+  return { options, ageOptions, backgroundOptions, stylePackOptions, loading, reload };
 }
 
 /** 功能注释：管理端改选项后清缓存，仓库页下次进入拿新配置 */

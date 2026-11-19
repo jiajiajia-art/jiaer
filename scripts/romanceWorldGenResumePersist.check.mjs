@@ -140,16 +140,20 @@ test("CreatorWorksPanel_书架续编带resume=1", () => {
   assert.match(panel, /createWorld=1&draftId=.*resume=1/);
 });
 
-test("WorldGenWizard_resume先拉平台正文无则missing", () => {
+test("WorldGenWizard_resume先拉平台正文_空壳续写_已删missing", () => {
   const wiz = read("components/WorldGenWizard.tsx");
-  assert.match(wiz, /fetchRomancePlatformDraftContent/);
+  assert.match(wiz, /loadRomancePlatformDraftContent/);
+  assert.match(wiz, /shouldFetchRomancePlatformDraftContent/);
   assert.match(wiz, /wantsResumeEditor\(\)/);
+  assert.match(wiz, /remoteLoad\?\.status === "empty"/);
+  assert.match(wiz, /已打开创作页继续填写/);
   assert.match(wiz, /setResumeLoad\("missing"\)/);
   assert.match(wiz, /打不开这份存档/);
-  // 禁止 resume 无本地时直接当新建空表单
   assert.match(wiz, /resumeLoad === "loading"/);
   // 功能注释：按 updatedAt 取较新，禁止旧本机盖新平台
   assert.match(wiz, /remoteAt >= localAt/);
+  // 功能注释：新建只有 draftId 时不得因 !localOk 去 GET content
+  assert.doesNotMatch(wiz, /wantResume \|\| !localOk/);
 });
 
 test("App_有draftId离开向导不清本机会话", () => {

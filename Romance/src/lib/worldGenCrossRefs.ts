@@ -119,13 +119,15 @@ function normalizeRefRow(row: Rec, refs: WorldGenRefIds, flags: RefFlags, roomKi
   const room = resolveAlias(key, refs.roomIds, refs.roomAlias);
   const faction = flags.allowFaction && refs.factionIds.has(key) ? key : "";
   const kind = rawKind === "attr" || rawKind === "attribute" ? "stat" : rawKind;
-  // 功能注释：作品自定义属性在引擎里是 metric + "c:" 前缀；写成 stat:id 会在编辑器显示「已失效」、局内读不到值
-  if ((kind === "stat" || kind === "metric") && attr) return { ...row, kind: "metric", key: `c:${attr}` };
+  // 功能注释：建角属性在引擎里是 metric + c: 前缀。只改写对得上的属性，fame 等编造 key 仍丢弃。
+  if ((kind === "stat" || kind === "metric") && attr) {
+    return { ...row, kind: "metric", key: attr.startsWith("c:") ? attr : `c:${attr}` };
+  }
   if (kind === "rel" && npc) return { ...row, key: npc };
   if (kind === roomKind && room) return { ...row, key: room };
   if (kind === "faction" && faction) return row;
   if (!kind) {
-    if (attr) return { ...row, kind: "metric", key: `c:${attr}` };
+    if (attr) return { ...row, kind: "metric", key: attr.startsWith("c:") ? attr : `c:${attr}` };
     if (npc) return { ...row, kind: "rel", key: npc };
     if (room) return { ...row, kind: roomKind, key: room };
   }
@@ -302,39 +304,32 @@ export function applyWorldGenEventRefs(patch: Rec, refs: WorldGenRefIds, flags: 
   return out;
 }
 
-/** 功能注释：主线节点条件只认已有属性 / 人物 / 地点 / 同批事件；筛空了就留空，不自动补名气条件 */
+/** 功能注释：主线节点条件只认已有属性 / 人物 / 地点 / 同批事件。筛空后按天数兜底，避免节点永远完不成；不补名气。 */
 export function applyWorldGenQuestRefs(patch: Rec, refs: WorldGenRefIds, flags: RefFlags): Rec {
   if (!Array.isArray(patch.storylines) || !refs.known) return patch;
   const out: Rec = { ...patch };
-  const used = new Set<string>();
-  for (const line of objList(patch.storylines)) {
-    for (const node of objList(line.nodes)) {
-      for (const c of objList(node.conds)) if (asTrimmedString(c.kind) === "event") used.add(asTrimmedString(c.key));
-    }
-  }
-  const eventPool = [...refs.eventIds].filter((id) => !used.has(id));
-  let timeStep = 0;
-  out.storylines = objList(patch.storylines).map((line) => ({
-    ...line,
-    nodes: objList(line.nodes).map((node) => {
-      const next: Rec = { ...node, conds: filterWorldGenCondsByRefs(node.conds, refs, flags) };
-      // 功能注释：条件全被筛掉时兜底——依次挂一条尚未用过的固定事件「已触发」，没有事件则按天数推进；
-      // 否则节点无条件，一开始判定就直接完成，主线形同虚设
-      if (!(next.conds as Rec[]).length) {
-        const ev = eventPool.shift();
-        next.conds = ev
-          ? [{ kind: "event", key: ev }]
-          : [{ kind: "time", unit: "day", op: "gte", value: 7 * (++timeStep) }];
-        WORLD_GEN_AUTO_COND_NODES.add(next);
-      }
-      if (Array.isArray(node.failConds)) {
-        const fail = filterWorldGenCondsByRefs(node.failConds, refs, flags);
-        if (fail.length) next.failConds = fail;
-        else delete next.failConds;
-      }
-      return next;
-    }),
-  }));
+  out.storylines = objList(patch.storylines).map((line) => {
+    let fallbackN = 0;
+    return {
+      ...line,
+      nodes: objList(line.nodes).map((node) => {
+        const kept = filterWorldGenCondsByRefs(node.conds, refs, flags);
+        const next: Rec = { ...node };
+        if (kept.length) next.conds = kept;
+        else {
+          fallbackN += 1;
+          next.conds = [{ kind: "time", unit: "day", op: "gte", value: 7 * fallbackN }];
+          WORLD_GEN_AUTO_COND_NODES.add(next);
+        }
+        if (Array.isArray(node.failConds)) {
+          const fail = filterWorldGenCondsByRefs(node.failConds, refs, flags);
+          if (fail.length) next.failConds = fail;
+          else delete next.failConds;
+        }
+        return next;
+      }),
+    };
+  });
   return out;
 }
 

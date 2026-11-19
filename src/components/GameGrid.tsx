@@ -14,6 +14,7 @@ import { getGameTypeLabelFromMeta, getGameTypeToneFromMeta } from '../utils/game
 import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
 import { buildGameDetailNavigateState } from '../utils/gameDetailNavigation';
 import { resolveGameCardBody } from '../lib/gameCardBody';
+import { translateThemeLabel } from '../utils/themeTags';
 import {
   GAME_CARD_DEFAULT_AVATAR_PATH,
   resolveGameCardAuthor,
@@ -63,7 +64,7 @@ const GameGrid: React.FC<GameGridProps> = ({
     showWorkStatus = false,
 }) => {
     const navigate = useNavigate();
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const longPressTimerRef = useRef<number | null>(null);
     const longPressTriggeredRef = useRef(false);
     const isWorksLayout = layoutVariant === 'works';
@@ -216,31 +217,49 @@ const GameGrid: React.FC<GameGridProps> = ({
                                 );
                             })()}
                             {(() => {
-                                // 功能注释：列表封面统一走 display-cover；无封面时用暗色占位，避免 welcome 白底破暗色
+                                // 功能注释：列表优先竖版/display-cover；草稿未上传封面时回退默认图，避免空底像「图丢了」
+                                const defaultCoverSrc = `${import.meta.env.BASE_URL}data/events/welcome.png`;
                                 const displayCoverPath = resolveGameListCoverUrl({
                                     display_cover_url: meta.display_cover_url,
                                     cover_url: meta.cover_url,
                                     portrait_cover_url: meta.portrait_cover_url,
+                                    coverUrl: (meta as { coverUrl?: string | null }).coverUrl,
+                                    portraitCoverUrl: (meta as { portraitCoverUrl?: string | null }).portraitCoverUrl,
                                 });
                                 if (!displayCoverPath) {
-                                    return <div className={styles.goodsImgPlaceholder} aria-hidden="true" />;
+                                    return (
+                                        <img
+                                            className={styles.goodsImgDefaultCover}
+                                            src={defaultCoverSrc}
+                                            alt={meta.title || `剧情${idx + 1}`}
+                                        />
+                                    );
                                 }
                                 return (
                                     <img
                                         src={addImageTimestamp(getImageUrl(displayCoverPath))}
                                         alt={meta.title || `剧情${idx + 1}`}
                                         onError={(event) => {
-                                            // 功能注释：缺 display-cover 时回退原图，避免列表裂图
+                                            // 功能注释：缺 display-cover → 原图 → 默认图，避免列表裂图/空底
                                             const img = event.currentTarget;
-                                            const fallbackPath = coverUrlAfterDisplayCoverError(
-                                                displayCoverPath,
-                                                resolveOriginalCoverUrl(meta),
-                                            );
-                                            if (!fallbackPath) return;
-                                            const next = addImageTimestamp(getImageUrl(fallbackPath));
-                                            if (!next || img.src === next || img.dataset.coverFallback === '1') return;
-                                            img.dataset.coverFallback = '1';
-                                            img.src = next;
+                                            if (img.dataset.coverFallback === '2') return;
+                                            if (img.dataset.coverFallback !== '1') {
+                                                const fallbackPath = coverUrlAfterDisplayCoverError(
+                                                    displayCoverPath,
+                                                    resolveOriginalCoverUrl(meta),
+                                                );
+                                                const next = fallbackPath
+                                                    ? addImageTimestamp(getImageUrl(fallbackPath))
+                                                    : '';
+                                                if (next && img.src !== next) {
+                                                    img.dataset.coverFallback = '1';
+                                                    img.src = next;
+                                                    return;
+                                                }
+                                            }
+                                            img.dataset.coverFallback = '2';
+                                            img.classList.add(styles.goodsImgDefaultCover);
+                                            img.src = defaultCoverSrc;
                                         }}
                                     />
                                 );
@@ -283,6 +302,15 @@ const GameGrid: React.FC<GameGridProps> = ({
                                 </div>
                             )}
 
+                            {/* 功能注释：题材标签叠在封面左下（数据条上方），不再占正文底部一行 */}
+                            {body.tags.length > 0 ? (
+                                <div className={styles.goodsCoverTags}>
+                                    {body.tags.map((tag) => (
+                                        <span key={tag} className={styles.goodsTagPill}>{translateThemeLabel(tag, t, i18n.resolvedLanguage || i18n.language)}</span>
+                                    ))}
+                                </div>
+                            ) : null}
+
                             {/* 功能注释：封面底栏火焰/心形同套下载 mask + 统一小号，对齐效果图 */}
                             <div className={styles.goodsInfo}>
                                 <div className={styles.goodsInfoStats}>
@@ -313,13 +341,27 @@ const GameGrid: React.FC<GameGridProps> = ({
                             <div className={styles.goodsTitle} title={meta.title || undefined}>
                                 {meta.title || `剧情${idx + 1}`}
                             </div>
-                            {/* 功能注释：首页无简介用空行保卡片等高；书架 works 仅在有且与标题不同的简介时渲染，去掉空行/重复行 */}
-                            {(!isWorksLayout || (body.subtitle && body.subtitle !== String(meta.title ?? '').trim())) && (
-                                <p className={styles.goodsDesc} title={body.subtitle || undefined}>
-                                    {body.subtitle || '\u00a0'}
-                                </p>
-                            )}
-                            {/* 功能注释：左作者署名、右收藏徽标，同一行左右布局 */}
+                            {(() => {
+                                // 功能注释：简介与标题相同（含空白差异）时不渲染，避免「标题下再空一行同文案」
+                                const titleText = String(meta.title ?? '').replace(/\s+/g, ' ').trim();
+                                const subtitleText = String(body.subtitle ?? '').replace(/\s+/g, ' ').trim();
+                                const showSubtitle = Boolean(subtitleText) && subtitleText !== titleText;
+                                if (isWorksLayout) {
+                                    if (!showSubtitle) return null;
+                                    return (
+                                        <p className={styles.goodsDesc} title={subtitleText}>
+                                            {subtitleText}
+                                        </p>
+                                    );
+                                }
+                                // 功能注释：首页无简介用空行保卡片等高；有简介且与标题不同才展示真文案
+                                return (
+                                    <p className={styles.goodsDesc} title={showSubtitle ? subtitleText : undefined}>
+                                        {showSubtitle ? subtitleText : '\u00a0'}
+                                    </p>
+                                );
+                            })()}
+                            {/* 功能注释：作者署名（首页不再展示「N人收藏」胶囊） */}
                             <div className={styles.goodsMetaRow}>
                                 <div className={styles.goodsAuthor} title={author.name}>
                                     <img
@@ -332,14 +374,6 @@ const GameGrid: React.FC<GameGridProps> = ({
                                     <span className={styles.goodsAuthorName}>{author.name}</span>
                                 </div>
                             </div>
-                            {/* 功能注释：首页标签行恒占位保齐；书架 works 无标签不渲染，去掉作者下方空白条 */}
-                            {(body.tags.length > 0 || !isWorksLayout) && (
-                                <div className={styles.goodsTagRow} aria-hidden={body.tags.length === 0 || undefined}>
-                                    {body.tags.map((tag) => (
-                                        <span key={tag} className={styles.goodsTagPill}>{tag}</span>
-                                    ))}
-                                </div>
-                            )}
                         </div>
                     </div>
                 );

@@ -983,7 +983,7 @@ export default function Ending({ snap }: { snap?: Snap }) {
           {/* 各项等级判定 */}
           {d.pillars.length > 0 && (
             <section
-              className="end-rise end-panel relative mt-9 px-3 pb-4 pt-7"
+              className="end-rise end-panel relative mt-5 px-3 pb-3 pt-6"
               style={{ animationDelay: ".16s" }}
             >
               <Tag
@@ -1001,9 +1001,9 @@ export default function Ending({ snap }: { snap?: Snap }) {
           )}
 
           {/* 结局后记 · 评定人寄语 */}
-          <div className="mt-9 grid gap-9 @2xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] @2xl:gap-4">
+          <div className="mt-5 grid gap-4 @2xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] @2xl:gap-3">
             <section
-              className="end-rise end-notebook relative pb-4 pr-4 pt-8"
+              className="end-rise end-notebook relative pb-3 pr-4 pt-7"
               style={{ animationDelay: ".24s" }}
             >
               <Tag
@@ -1059,7 +1059,7 @@ export default function Ending({ snap }: { snap?: Snap }) {
             </section>
 
             <section
-              className="end-rise end-panel relative px-3 pb-4 pt-8"
+              className="end-rise end-panel relative px-3 pb-3 pt-7"
               style={{ animationDelay: ".32s" }}
             >
               <Tag
@@ -1103,10 +1103,10 @@ export default function Ending({ snap }: { snap?: Snap }) {
             </p>
           ) : (
             <section
-              className="end-rise end-lace relative mt-9 px-4 pb-4 pt-5"
+              className="end-rise end-lace relative mt-4 px-3.5 pb-3 pt-3.5"
               style={{ animationDelay: ".4s" }}
             >
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
                   onClick={() => go("create")}
@@ -1114,13 +1114,13 @@ export default function Ending({ snap }: { snap?: Snap }) {
                 >
                   <Glyph
                     name="home"
-                    width={24}
-                    height={24}
+                    width={22}
+                    height={22}
                     strokeWidth={2.2}
                     className="shrink-0"
                   />
                   <span className="text-left">
-                    <span className="end-round block text-[19px] leading-none sm:text-[22px]">
+                    <span className="end-round block text-[17px] leading-none sm:text-[20px]">
                       再来一局
                     </span>
                     <small>NEW GAME</small>
@@ -1132,14 +1132,14 @@ export default function Ending({ snap }: { snap?: Snap }) {
                   className="end-btn end-btn-blue"
                 >
                   <IconShare
-                    width={24}
-                    height={24}
+                    width={22}
+                    height={22}
                     strokeWidth={2.2}
                     className="shrink-0"
                     aria-hidden
                   />
                   <span className="text-left">
-                    <span className="end-round block text-[19px] leading-none sm:text-[22px]">
+                    <span className="end-round block text-[17px] leading-none sm:text-[20px]">
                       分享给朋友
                     </span>
                     <small>SHARE TO FRIENDS</small>
@@ -1153,21 +1153,21 @@ export default function Ending({ snap }: { snap?: Snap }) {
                   className="end-btn end-btn-lilac col-span-2"
                 >
                   <IconCamera
-                    width={24}
-                    height={24}
+                    width={22}
+                    height={22}
                     strokeWidth={2.2}
                     className="shrink-0"
                     aria-hidden
                   />
                   <span className="text-left">
-                    <span className="end-round block text-[19px] leading-none sm:text-[22px]">
+                    <span className="end-round block text-[17px] leading-none sm:text-[20px]">
                       {busy ? "正在生成图片…" : "导出 PNG 图片"}
                     </span>
                     <small>{busy ? "RENDERING" : "SAVE AS IMAGE"}</small>
                   </span>
                 </button>
               </div>
-              <p className="mt-3 flex items-center justify-center gap-1.5 text-[12px] text-[var(--e-soft)]">
+              <p className="mt-2 flex items-center justify-center gap-1.5 text-[12px] text-[var(--e-soft)]">
                 把这份结局卡片分享给朋友吧{" "}
                 <IconHeart size={14} className="inline text-[var(--e-pink)]" />
                 <Glyph
@@ -1180,7 +1180,7 @@ export default function Ending({ snap }: { snap?: Snap }) {
               <button
                 type="button"
                 onClick={() => go("create")}
-                className="end-link mx-auto mt-1.5 block"
+                className="end-link mx-auto mt-1 block"
               >
                 再写一段新的人生 ›
               </button>

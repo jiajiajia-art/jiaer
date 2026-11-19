@@ -865,7 +865,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             if (stage === 'generate_fail') return '生图失败';
             if (stage === 'rembg_fail') return '抠图失败';
             if (stage === 'pending') return '排队中';
-            return '等待中';
+            return t('gameSettingEditor.charactersPanel.charactersPanel.sbd3488d0a9');
         };
 
         const stageRank = (stage: string) => {
@@ -1077,7 +1077,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         if (stage === 'item_done') return '完成';
         if (stage === 'generate_fail' || stage === 'rembg_fail' || stage === 'fail') return '失败';
         if (stage === 'batch_start') return '启动';
-        return '进度';
+        return t('galgame.progress');
     };
     const batchLogStageClass = (stage: string, isActive: boolean) => {
         const base = isActive ? styles.plusLoadingLogRowActive : styles.plusLoadingLogRow;
@@ -1855,7 +1855,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     // 点击差分 AI 生成前，先弹出积分确认
     const handleRequestVariationGenerate = (variation: Variation) => {
         if (variantPrice == null) {
-            toast.error('生图价格暂不可用，请联系管理员检查业务模型与计费配置');
+            toast.error(t('gameSettingEditor.charactersPanel.charactersPanel.s4ec0acb9cf'));
             return;
         }
         // 新增模式下禁止生成图片
@@ -1899,7 +1899,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
     const openNpcCostModal = async () => {
         if (characterPrice == null) {
-            toast.error('生图价格暂不可用，请联系管理员检查业务模型与计费配置');
+            toast.error(t('gameSettingEditor.charactersPanel.charactersPanel.s4ec0acb9cf'));
             return;
         }
         if (!handlers) return;
@@ -1951,7 +1951,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     // 点击单个 AI 生成前，先弹出积分确认
     const handleRequestSingleNpcGenerate = (character: Character) => {
         if (characterPrice == null) {
-            toast.error('生图价格暂不可用，请联系管理员检查业务模型与计费配置');
+            toast.error(t('gameSettingEditor.charactersPanel.charactersPanel.s4ec0acb9cf'));
             return;
         }
         if (!fileId) {
@@ -2737,7 +2737,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                     <textarea
                                                         rows={3}
                                                         value={currentCharacter.positioningIdentity || ''}
-                                                        placeholder="如：假扮双胞胎哥哥混入男校的江知夏"
+                                                        placeholder={t('gameSettingEditor.charactersPanel.charactersPanel.s372fc2b5f1')}
                                                         {...positioningIdentityLimit}
                                                     />
                                                 </InlineFieldSave>
@@ -2757,7 +2757,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                     <textarea
                                                         rows={3}
                                                         value={currentCharacter.positioningTraits || ''}
-                                                        placeholder="对外可被察觉的立场，如：表面随和、站队某派"
+                                                        placeholder={t('gameSettingEditor.charactersPanel.charactersPanel.s196439dc9a')}
                                                         {...positioningTraitsLimit}
                                                     />
                                                 </InlineFieldSave>
@@ -2777,7 +2777,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                     <textarea
                                                         rows={4}
                                                         value={currentCharacter.positioningSecret || ''}
-                                                        placeholder="不被他人所知道的事；玩家局内看不到这段，仅影响叙事 AI"
+                                                        placeholder={t('gameSettingEditor.charactersPanel.charactersPanel.s7f57cdeeaf')}
                                                         {...positioningSecretLimit}
                                                     />
                                                 </InlineFieldSave>
@@ -2979,8 +2979,8 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                             <div id="batch-npc-gen-title" className={styles.plusLoadingText}>
                                 {showContinueFailedTasks
                                     ? (batchStageBoard.stuckItems.length > 0
-                                        ? '部分角色立绘卡住'
-                                        : '角色立绘生成结束')
+                                        ? t('gameSettingEditor.charactersPanel.charactersPanel.saf9d78f601')
+                                        : t('gameSettingEditor.charactersPanel.charactersPanel.s1b7301d205'))
                                     : t('createGame.generatingCharacterPortrait')}
                             </div>
                             {!showContinueFailedTasks && batchCharacterEtaText && (
@@ -3070,7 +3070,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                 {(item.stage === 'generate_start'
                                                     ? item.stageElapsedSeconds >= 90
                                                     : item.stageElapsedSeconds >= 90)
-                                                    ? ' · 疑似卡住'
+                                                    ? t('gameSettingEditor.charactersPanel.charactersPanel.s2c7ab20eb6')
                                                     : ''}
                                             </div>
                                         )}
@@ -3132,7 +3132,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                         handlers?.cancelGenerateAllNpcImages();
                                     }}
                                 >
-                                    {showContinueFailedTasks ? '关闭' : t('common.cancel')}
+                                    {showContinueFailedTasks ? t('warehouse.cards.close') : t('common.cancel')}
                                 </button>
                             </div>
                         </div>

@@ -12,11 +12,11 @@ const read = (p) => readFileSync(join(root, p), 'utf8');
 
 test('CreateType_PC内容区应顶对齐且水平居中_禁止垂直居中留白', () => {
   const css = read('src/page/CreateType.module.css');
-  const mainContent = css.match(/\.mainContent\s*\{([^}]*)\}/)?.[1] ?? '';
-  // 功能注释：壳层 flex-column 下若写 justify-content:center 会垂直居中，顶栏下出现大块空余
-  assert.match(mainContent, /justify-content:\s*flex-start/);
-  assert.match(mainContent, /align-items:\s*center/);
+  const mainContent = (css.match(/\.mainContent\s*\{([^}]*)\}/)?.[1] ?? '').replace(/\/\*[\s\S]*?\*\//g, '');
+  // 功能注释：main 必须 display:block。改成 flex 且不写 column 时，align-items:center 会变成垂直居中，列表被顶栏裁切
+  assert.match(mainContent, /display:\s*block/);
   assert.doesNotMatch(mainContent, /justify-content:\s*center\b/);
+  assert.doesNotMatch(mainContent, /align-items:\s*center/);
   assert.match(css, /\.content\s*\{[\s\S]*?max-width:\s*560px/);
   assert.match(css, /\.content\s*\{[\s\S]*?margin:\s*0\s+auto/);
   // 禁止再铺满整个 shell-max 多列拉宽

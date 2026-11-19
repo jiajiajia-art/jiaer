@@ -40,7 +40,7 @@ export default function EditorHub({ project, stats, groups }: { project: string;
   };
 
   return (
-    <div className="space-y-4">
+    <div className="editor-hub space-y-4">
       {/* 1. 顶部世界摘要卡：只在「全部」总览里出现，进入单个模块后不占位 */}
       {!activeTool && <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-gradient-to-r from-jade/10 via-paper to-coral/10 px-4 py-3">
         <div className="min-w-0 flex-1">

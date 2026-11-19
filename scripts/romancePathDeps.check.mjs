@@ -1,5 +1,5 @@
 /**
- * 回归：人物线路解锁条件 / 开局数值必须挂依赖（属性、人物、地点、事件）；
+ * 回归：人物线路解锁条件（跨周目：通关 / 结局 / 线路 / 事件）与开局数值必须挂依赖；
  * 未选中的不生效；简介/处境可留纯文本。
  */
 import assert from 'node:assert/strict';
@@ -17,31 +17,41 @@ const pools = {
   people: [{ id: 'lin', label: '林晓' }],
   rooms: [{ id: 'inn', label: '旅店' }],
   events: [{ id: 'ev1', label: '开场风波' }],
+  endings: [{ id: 'end1', label: '归隐田园' }],
+  routes: [{ id: 'r1', label: '佃农之女' }],
 };
 
 test('pathDeps_解锁条件清洗与提示文案', async () => {
+  // 功能注释：解锁条件已改为跨周目种类（建角时属性/地点无法判定）；旧条件一律丢弃
   const mod = await import(pathToFileURL(join(romance, 'lib/pathDeps.ts')).href);
-  assert.deepEqual(mod.PATH_LOCK_COND_KINDS, ['stat', 'metric', 'rel', 'location', 'event']);
+  assert.deepEqual(mod.PATH_LOCK_COND_KINDS, ['clear', 'ending', 'route', 'event']);
 
   const cleaned = mod.sanitizePathLockConds(
     [
+      { kind: 'clear' },
+      { kind: 'clear' },
       { kind: 'metric', key: 'fame', op: 'gte', value: 50 },
-      { kind: 'rel', key: 'ghost', op: 'gte', value: 10 },
       { kind: 'location', key: 'inn' },
-      { kind: 'flag', key: 'x', op: 'gte', value: 1 },
+      { kind: 'ending', key: 'end1' },
+      { kind: 'ending', key: 'ghost' },
+      { kind: 'route', key: 'r1' },
       { kind: 'event', key: 'ev1' },
       null,
     ],
     pools,
   );
   assert.deepEqual(cleaned, [
-    { kind: 'metric', key: 'fame', op: 'gte', value: 50 },
-    { kind: 'location', key: 'inn' },
+    { kind: 'clear' },
+    { kind: 'ending', key: 'end1' },
+    { kind: 'route', key: 'r1' },
     { kind: 'event', key: 'ev1' },
   ]);
-  assert.match(mod.formatPathLockHint(cleaned, pools), /名气/);
-  assert.match(mod.formatPathLockHint(cleaned, pools), /旅店/);
-  assert.match(mod.formatPathLockHint(cleaned, pools), /开场风波/);
+  const hint = mod.formatPathLockHint(cleaned, pools);
+  assert.match(hint, /二周目/);
+  assert.match(hint, /归隐田园/);
+  assert.match(hint, /佃农之女/);
+  assert.match(hint, /开场风波/);
+  assert.match(hint, /后解锁$/);
   assert.equal(mod.formatPathLockHint([], pools), '');
 });
 
@@ -102,8 +112,8 @@ test('pathDeps_可变固定只能选本作品属性', async () => {
   assert.deepEqual(mod.sanitizePathAttrNames(null, opts), []);
   const paths = readFileSync(join(romance, 'components/ModPathsEditor.tsx'), 'utf8');
   assert.match(paths, /AttrNamePick/);
-  assert.match(paths, /可变自由决定/);
-  assert.match(paths, /固定不可改/);
+  // 功能注释：「可变 / 固定」两块已合并为一个「锁定属性」多选，没锁的照常可调
+  assert.match(paths, /锁定属性/);
   assert.doesNotMatch(paths, /玩家可自由决定（每行一项/);
   assert.doesNotMatch(paths, /开局小事件旁白/);
   // 主编辑路径卡不再挂开局数值卡片罗列 / 属性能力 / 实时预览

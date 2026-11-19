@@ -27,6 +27,54 @@ export function readRomancePlatformDraftId(
   }
 }
 
+/** 功能注释：把平台草稿 id 写回地址栏（replaceState），续编 / 发布共用同一 fileId。 */
+export function writeRomancePlatformDraftId(fileId: string): void {
+  const id = String(fileId || "").trim();
+  if (!id || typeof location === "undefined" || typeof history === "undefined") return;
+  try {
+    const url = new URL(location.href);
+    url.searchParams.set("draftId", id);
+    history.replaceState(history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * 功能注释：入口未带 draftId 时补建一条平台草稿（POST /drafts/romance），成功后写回 URL。
+ * 正常路径仍应由创作者中心入口先 create；这里只兜底「本机进向导后仍要发布」的情况。
+ */
+export async function ensureRomancePlatformDraftId(
+  apiBase = resolveFunloomApiBase(),
+): Promise<string> {
+  const existing = readRomancePlatformDraftId();
+  if (existing) return existing;
+  const token = readFunloomAuthToken();
+  if (!token) return "";
+  const base = String(apiBase || "").trim().replace(/\/$/, "");
+  try {
+    const res = await fetch(`${base}/api/auth/games/drafts/romance`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+    });
+    const json = (await res.json().catch(() => null)) as {
+      success?: boolean;
+      data?: { fileId?: string } | null;
+    } | null;
+    const id = String(json?.data?.fileId || "").trim();
+    if (!res.ok || !json?.success || !id) return "";
+    writeRomancePlatformDraftId(id);
+    return id;
+  } catch {
+    return "";
+  }
+}
+
 /** 功能注释：书架展示标题；空名回落未命名，截断与后端一致。 */
 export function resolveRomanceDraftTitle(name: string | null | undefined): string {
   const t = String(name ?? "").trim();
@@ -85,16 +133,25 @@ export function buildRomancePlatformDraftContent(input: {
 export function resolveRomanceDraftCoverUrl(
   mod: Pick<Mod, "cover" | "content"> | null | undefined,
 ): string {
-  const direct = String(mod?.cover || "").trim();
+  // 功能注释：封面字段可能是字符串，也可能是 AI 生成的 { url / src / image } 对象（G-02：有封面仍报缺封面 / 把 [object Object] 当封面）
+  const pick = (v: unknown): string => {
+    if (typeof v === "string") return v.trim();
+    if (v && typeof v === "object") {
+      const o = v as { url?: unknown; src?: unknown; image?: unknown };
+      for (const x of [o.url, o.src, o.image]) if (typeof x === "string" && x.trim()) return x.trim();
+    }
+    return "";
+  };
+  const direct = pick(mod?.cover);
   if (direct) return direct;
   const cover = mod?.content?.cover;
   if (!cover || typeof cover !== "object") return "";
-  const image = String((cover as { image?: string }).image || "").trim();
+  const image = pick((cover as { image?: unknown }).image);
   if (image) return image;
   const cgs = (cover as { cgs?: unknown }).cgs;
   if (Array.isArray(cgs)) {
     for (const item of cgs) {
-      const url = String(item || "").trim();
+      const url = pick(item);
       if (url) return url;
     }
   }
@@ -103,7 +160,7 @@ export function resolveRomanceDraftCoverUrl(
 
 /**
  * 功能注释：PATCH 更新已有草稿；失败返回 false，禁止回落到 create。
- * coverUrl 有值时写回 games.cover_url，书架卡片与编辑器封面一致。
+ * coverUrl 有值时写回 games.cover_url，并镜像 portrait_cover_url（Romance 单封面满足发布双封面校验）。
  */
 export async function patchRomancePlatformDraft(
   fileId: string,
@@ -115,10 +172,18 @@ export async function patchRomancePlatformDraft(
   const token = readFunloomAuthToken();
   if (!token) return false;
   try {
-    const body: { title: string; cover_url?: string | null } = {
+    const body: {
+      title: string;
+      cover_url?: string | null;
+      portrait_cover_url?: string | null;
+    } = {
       title: resolveRomanceDraftTitle(title),
     };
-    if (coverUrl !== undefined) body.cover_url = coverUrl || null;
+    if (coverUrl !== undefined) {
+      body.cover_url = coverUrl || null;
+      // 功能注释：单封面镜像竖版，避免发布接口因缺 portrait_cover_url 返回 400
+      body.portrait_cover_url = coverUrl || null;
+    }
     const res = await fetch(romanceDraftUpdateUrl(id), {
       method: "PATCH",
       headers: {
@@ -137,15 +202,104 @@ export async function patchRomancePlatformDraft(
 }
 
 /**
- * 功能注释：按作品 ID 取回编辑器正文；无存档返回 null（调用方提示打不开，禁止开空编辑器）。
+ * 功能注释：发布前把 mod.themeTagId 全量写到平台 game_tag_map，并顺带写入面向人群。
+ * 失败返回 false；调用方应阻止继续 publish，避免题材缺失 400。
  */
-export async function fetchRomancePlatformDraftContent(
+export async function syncRomancePlatformThemeTags(
   fileId: string,
-): Promise<RomancePlatformDraftContent | null> {
+  themeTagId: number,
+  audienceType: "male" | "female" | "all",
+  apiBase = resolveFunloomApiBase(),
+): Promise<boolean> {
   const id = String(fileId || "").trim();
-  if (!id) return null;
+  const tagId = Number(themeTagId);
+  if (!id || !Number.isFinite(tagId) || tagId <= 0) return false;
   const token = readFunloomAuthToken();
-  if (!token) return null;
+  if (!token) return false;
+  const base = String(apiBase || "").trim().replace(/\/$/, "");
+  try {
+    const res = await fetch(`${base}/api/auth/games/tags`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        fileId: id,
+        tagIds: [tagId],
+        audienceType,
+      }),
+    });
+    const json = await res.json().catch(() => null) as { success?: boolean } | null;
+    return res.ok && json?.success === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 功能注释：是否该 GET 平台正文。
+ * 新建入口只有 draftId、无 resume、无本机重载 → 禁止请求（无意义的空拉）。
+ * 书架 resume=1，或 boot 仍在从 IDB 拉大体积稿时才拉；空壳现返回 200+empty。
+ */
+export function shouldFetchRomancePlatformDraftContent(input: {
+  platformDraftId: string;
+  wantResume: boolean;
+  pendingHeavy?: boolean;
+}): boolean {
+  const id = String(input.platformDraftId || "").trim();
+  if (!id) return false;
+  return !!(input.wantResume || input.pendingHeavy);
+}
+
+/**
+ * 功能注释：书架续编拉正文的结果。
+ * ready=有 mod+draft；empty=账号下空壳可继续创作；gone=不存在/已删；error=鉴权或网络失败。
+ */
+export type RomanceDraftContentLoad =
+  | { status: "ready"; content: RomancePlatformDraftContent }
+  | { status: "empty" }
+  | { status: "gone" }
+  | { status: "error" };
+
+/**
+ * 功能注释：解析 GET content 响应；空壳走 200+empty，禁止再当 404 死胡同。
+ * 兼容旧后端仍返回 404 + draft_content_missing 时也视为 empty。
+ */
+export function classifyRomanceDraftContentResponse(
+  status: number,
+  json: { success?: boolean; data?: unknown; empty?: boolean; code?: string } | null,
+): RomanceDraftContentLoad {
+  if (status === 401 || status === 403) return { status: "error" };
+  if (status === 404 || status === 410) {
+    const code = String(json?.code || "");
+    if (code === "draft_content_missing" || code === "draft_content_empty") {
+      return { status: "empty" };
+    }
+    return { status: "gone" };
+  }
+  if (status < 200 || status >= 300) return { status: "error" };
+  if (json?.success === true && json.empty === true) return { status: "empty" };
+  if (json?.success === true && isUsableRomancePlatformDraftContent(json.data)) {
+    return { status: "ready", content: json.data };
+  }
+  if (json?.success === true && (json.data == null || json.data === undefined)) {
+    return { status: "empty" };
+  }
+  return { status: "error" };
+}
+
+/**
+ * 功能注释：按作品 ID 取回编辑器正文（含空壳/已删分类）；书架 resume 必须区分 empty 与 gone。
+ */
+export async function loadRomancePlatformDraftContent(
+  fileId: string,
+): Promise<RomanceDraftContentLoad> {
+  const id = String(fileId || "").trim();
+  if (!id) return { status: "gone" };
+  const token = readFunloomAuthToken();
+  if (!token) return { status: "error" };
   try {
     const res = await fetch(romanceDraftContentUrl(id), {
       method: "GET",
@@ -154,16 +308,26 @@ export async function fetchRomancePlatformDraftContent(
         Accept: "application/json",
       },
     });
-    if (!res.ok) return null;
     const json = await res.json().catch(() => null) as {
       success?: boolean;
       data?: unknown;
+      empty?: boolean;
+      code?: string;
     } | null;
-    if (!json?.success || !isUsableRomancePlatformDraftContent(json.data)) return null;
-    return json.data;
+    return classifyRomanceDraftContentResponse(res.status, json);
   } catch {
-    return null;
+    return { status: "error" };
   }
+}
+
+/**
+ * 功能注释：按作品 ID 取回编辑器正文；仅 ready 返回内容，其余 null（兼容旧调用方）。
+ */
+export async function fetchRomancePlatformDraftContent(
+  fileId: string,
+): Promise<RomancePlatformDraftContent | null> {
+  const loaded = await loadRomancePlatformDraftContent(fileId);
+  return loaded.status === "ready" ? loaded.content : null;
 }
 
 /**
@@ -339,20 +503,51 @@ export type RomancePublishResult =
   | { ok: true; pendingReview: boolean }
   | { ok: false; message: string };
 
+export type RomancePublishPrep = {
+  /** 功能注释：用于同步封面与题材；缺封面/题材时提前失败，对齐后端 400 */
+  mod: Mod;
+  title?: string;
+};
+
 /**
  * 功能注释：提交发布审核；走主站同一 /api/auth/games/publish，先审作品返回 pending_review。
+ * 真实场景：先镜像双封面 + 同步题材到平台，再 POST publish，避免「弹窗可提交但接口 400」。
  * 调用前须已把最新正文 PUT 到同一 fileId，否则审核看到的是旧版本。
  */
 export async function publishRomancePlatformDraft(
   fileId: string,
   input: RomancePublishInput,
-  apiBase = resolveFunloomApiBase(),
+  prepOrApiBase?: RomancePublishPrep | string,
+  apiBaseArg = resolveFunloomApiBase(),
 ): Promise<RomancePublishResult> {
+  const prep = typeof prepOrApiBase === "object" && prepOrApiBase ? prepOrApiBase : null;
+  const apiBase = typeof prepOrApiBase === "string" ? prepOrApiBase : apiBaseArg;
   const id = String(fileId || "").trim();
   if (!id) return { ok: false, message: "这个作品还没有关联平台草稿，无法发布" };
   const token = readFunloomAuthToken();
   if (!token) return { ok: false, message: "请先登录后再发布" };
   const base = String(apiBase || "").trim().replace(/\/$/, "");
+
+  if (prep?.mod) {
+    const coverUrl = resolveRomanceDraftCoverUrl(prep.mod);
+    if (!coverUrl) {
+      return { ok: false, message: "请先设置作品封面后再提交发布审核" };
+    }
+    const themeTagId = Number(prep.mod.themeTagId);
+    if (!Number.isFinite(themeTagId) || themeTagId <= 0) {
+      return { ok: false, message: "请先选择作品题材后再提交发布审核" };
+    }
+    const title = prep.title || prep.mod.name || "";
+    const coverOk = await patchRomancePlatformDraft(id, title, coverUrl);
+    if (!coverOk) {
+      return { ok: false, message: "同步封面到平台失败，请检查网络后重试" };
+    }
+    const tagsOk = await syncRomancePlatformThemeTags(id, themeTagId, input.audienceType, base);
+    if (!tagsOk) {
+      return { ok: false, message: "同步作品题材失败，请检查网络后重试" };
+    }
+  }
+
   try {
     const res = await fetch(`${base}/api/auth/games/publish`, {
       method: "POST",
@@ -364,7 +559,7 @@ export async function publishRomancePlatformDraft(
       body: JSON.stringify({
         fileId: id,
         priceAmount: 0,
-        description: input.description,
+        description: typeof input.description === "string" ? input.description : "",
         versionNotes: input.versionNotes || null,
         notifyFavoritedUsers: !!input.notifyFavoritedUsers,
         audienceType: input.audienceType,
@@ -382,7 +577,10 @@ export async function publishRomancePlatformDraft(
       return { ok: false, message: json?.message || "提交失败，请稍后再试" };
     }
     const status = json.data?.moderation_status ?? json.data?.moderationStatus ?? "";
-    return { ok: true, pendingReview: status === "pending_review" };
+    return {
+      ok: true,
+      pendingReview: status === "pending_review" || status === "update_pending_review",
+    };
   } catch {
     return { ok: false, message: "网络异常，提交失败" };
   }

@@ -197,13 +197,17 @@ export function NavTabsEditor() {
   );
 }
 
+/** 功能注释：自定义底栏图标加载失败的 URL；模块级保留，避免重挂载反复闪破图 */
+const brokenNavIcons = new Set<string>();
+
 /* 底栏：常用水晶石牌快捷位 + 中央度日水晶星章。完整牌位由右上角 ☰ 菜单呈现。
  * 度日走稳定的 endDayNow（幂等推进），不承载任何叙事计算。 */
-export default function MudChrome({ tab, setTab }: { tab: MudTab; setTab: (t: MudTab) => void }) {
+export default function MudChrome({ tab, setTab, seamlessTop }: { tab: MudTab; setTab: (t: MudTab) => void; /** 上方已有输入坞时去掉顶边，合成一块底栏 */ seamlessTop?: boolean }) {
   const { game, busy, look: theme, advanceNow } = useGame(); // 实际生效外观（含剧情美化）
   const nav = theme.navActive ?? {};
   useMods();
   const [flash, setFlash] = useState(false);
+  const [, bumpNavIcons] = useState(0);
   if (!game) return null;
 
   const s = game.sim;
@@ -252,20 +256,32 @@ export default function MudChrome({ tab, setTab }: { tab: MudTab; setTab: (t: Mu
         active ? "text-jade-deep" : "text-ink-soft hover:text-ink"
       }`}
     >
-      {/* 选中态：只在图标后衬一枚柔光胶囊，干净不抢眼 */}
-      <span className="relative grid h-7 w-12 place-items-center">
-        <span aria-hidden className={`nav-hl pointer-events-none absolute inset-0 rounded-full transition-all duration-300 ${active ? "nav-hl-on nav-pill bg-gradient-to-r from-jade/22 to-coral/18 opacity-100 shadow-[0_0_14px_-3px_var(--crystal-glow)]" : "scale-75 opacity-0 group-hover:scale-90 group-hover:bg-ink-soft/8 group-hover:opacity-100"}`} />
-        {/* 选中瞬间：一圈水晶光晕向外扩散后消失 */}
-        {active && nav.ripple !== false && <span aria-hidden className="nav-ripple pointer-events-none absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,var(--crystal-glow),transparent_70%)]" />}
-        <span className={`nav-ico relative z-[1] grid place-items-center ${active ? "nav-ico-on drop-shadow-[0_2px_6px_var(--crystal-glow)]" : ""}`}>
+      {/* 选中态：圆角方底衬，与方头像 / 方推进钮同一语言 */}
+      <span className="relative grid h-7 w-11 place-items-center">
+        <span aria-hidden className={`nav-hl pointer-events-none absolute inset-0 rounded-[8px] transition-all duration-300 ${active ? "nav-hl-on nav-pill bg-jade/14 opacity-100" : "scale-90 opacity-0 group-hover:bg-ink-soft/8 group-hover:opacity-100"}`} />
+        {active && nav.ripple !== false && <span aria-hidden className="nav-ripple pointer-events-none absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-[8px] bg-[radial-gradient(circle,var(--crystal-glow),transparent_70%)]" />}
+        <span className={`nav-ico relative z-[1] grid place-items-center ${active ? "nav-ico-on" : ""}`}>
           {(() => {
             // 自定义图标：选中 / 未选中各一张；只设了一张时两态共用（未选中略降透明度）
             const ic = nav.icons?.[id];
             const src = active ? ic?.on || ic?.off : ic?.off || ic?.on;
             const sz = nav.iconSize ?? (src ? 24 : 20);
-            return src
-              ? <img src={src} alt="" style={{ width: sz, height: sz }} className={`object-contain ${active || ic?.off ? "" : "opacity-60 grayscale"}`} />
-              : <NavGlyph name={glyph} active={active} size={sz} />;
+            // 功能注释：自定义图失效（blob 过期 / 404）时回退矢量标，避免底栏红破图方块
+            if (src && !brokenNavIcons.has(src)) {
+              return (
+                <img
+                  src={src}
+                  alt=""
+                  style={{ width: sz, height: sz }}
+                  className={`object-contain ${active || ic?.off ? "" : "opacity-60 grayscale"}`}
+                  onError={() => {
+                    brokenNavIcons.add(src);
+                    bumpNavIcons((n) => n + 1);
+                  }}
+                />
+              );
+            }
+            return <NavGlyph name={glyph} active={active} size={sz} />;
           })()}
         </span>
         {badge != null && (
@@ -291,7 +307,7 @@ export default function MudChrome({ tab, setTab }: { tab: MudTab; setTab: (t: Mu
   );
 
   return (
-    <nav className="z-20 shrink-0 [--crystal-a:var(--jade)] [--crystal-b:var(--coral)] [--crystal-glow:rgba(196,150,255,0.45)]">
+    <nav className="mud-chrome z-20 shrink-0 [--crystal-a:var(--jade)] [--crystal-b:var(--coral)] [--crystal-glow:rgba(196,150,255,0.35)]">
       {/* 共享的水晶渐变 */}
       <svg width="0" height="0" className="absolute" aria-hidden>
         <defs>
@@ -302,19 +318,13 @@ export default function MudChrome({ tab, setTab }: { tab: MudTab; setTab: (t: Mu
         </defs>
       </svg>
 
-      {/* 7 段式分割底栏 (完全复刻原型截图结构：分割线线框 + 居中行动星章按钮) */}
-      <div className="relative">
+      {/* 功能注释：中央「日程/推进」保持原先凸起圆钮（箭头+文案），不改成方钮 */}
+      <div className={`relative overflow-visible bg-paper-2/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl ${seamlessTop ? "" : "border-t border-line/50"}`}>
+        <div className="relative mx-auto flex max-w-3xl items-stretch text-ink">
+          <div className="flex flex-1 items-stretch">{left.map(renderSlot)}</div>
 
-        <div className="relative overflow-visible bg-paper-2/88 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_28px_-18px_var(--crystal-glow)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-300">
-          {/* 顶缘水晶细光：渐隐分割线替代硬边框 */}
-          <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[color-mix(in_srgb,var(--jade)_45%,var(--line))] to-transparent" />
-          <div className="relative mx-auto flex max-w-3xl items-stretch text-ink">
-            {/* 左组 */}
-            <div className="flex flex-1 items-stretch">{left.map(renderSlot)}</div>
-
-            {/* 中央主行动位：养成开=日程板；养成关=直接推进 */}
-            <div className="relative flex w-[72px] shrink-0 flex-col items-center justify-end pb-2">
-              <span className="pointer-events-none mt-auto h-[11px]" aria-hidden />
+          <div className="relative flex w-[72px] shrink-0 flex-col items-center justify-end pb-2">
+            <span className="pointer-events-none mt-auto h-[11px]" aria-hidden />
             <button
               onClick={advance}
               disabled={busy}
@@ -322,27 +332,24 @@ export default function MudChrome({ tab, setTab }: { tab: MudTab; setTab: (t: Mu
               title={growOn ? "打开本周日程：排程并推进" : "按创作台节奏推进时间"}
               className={`group absolute -top-4 grid h-[56px] w-[56px] place-items-center rounded-full bg-paper-2 p-[3px] shadow-[0_8px_20px_-8px_var(--coral),0_0_0_4px_color-mix(in_srgb,var(--paper-2)_88%,transparent)] transition-all duration-300 hover:-translate-y-0.5 active:scale-95 disabled:opacity-60 ${flash ? "animate-flash" : ""}`}
             >
-              {/* 外圈流光 */}
               <span aria-hidden className="advance-conic pointer-events-none absolute inset-0 rounded-full opacity-70 [animation-duration:10s] group-hover:opacity-100" />
               <span className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[var(--coral)] via-[color-mix(in_srgb,var(--coral)_55%,var(--jade))] to-[var(--jade)] text-white">
                 <span aria-hidden className="pointer-events-none absolute inset-x-2 top-0.5 h-[45%] rounded-t-full bg-gradient-to-b from-white/45 to-transparent" />
                 <span className={`relative transition-transform duration-300 group-hover:translate-x-0.5 ${busy ? "animate-pulse" : ""}`}>
-                <DiyIcon slot="adv.arrow" size={16}>
-                <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h12M13 6l6 6-6 6" />
-                </svg>
-                </DiyIcon>
+                  <DiyIcon slot="adv.arrow" size={16}>
+                    <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h12M13 6l6 6-6 6" />
+                    </svg>
+                  </DiyIcon>
                 </span>
-                <span className="relative mt-0.5 font-serif text-[11.5px] font-black leading-none tracking-[0.2em] pl-[0.2em]">
+                <span className="relative mt-0.5 pl-[0.2em] text-[11px] font-bold leading-none tracking-[0.08em]">
                   {advanceLabel}
                 </span>
               </span>
             </button>
-            </div>
-
-            {/* 右组 */}
-            <div className="flex flex-1 items-stretch">{right.map(renderSlot)}</div>
           </div>
+
+          <div className="flex flex-1 items-stretch">{right.map(renderSlot)}</div>
         </div>
       </div>
     </nav>

@@ -79,7 +79,9 @@ test('CharacterProfileForm_头像确认含风格选择与外貌补充_无英文�
     join(root, 'src/components/Galgame/panels/CharacterProfileForm.tsx'),
     'utf8',
   );
-  assert.match(src, /画风与提示词/);
+  // 画风与提示词文案锁在 playerArchive.avatar.showPrompt
+  assert.match(src, /t\('galgameUi\.playerArchive\.avatar\.showPrompt'\)/);
+  assert.match(readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8'), /"showPrompt": "画风与提示词"/);
   assert.match(src, /风格选择/);
   assert.match(src, /外貌补充（可选）/);
   assert.match(src, /AVATAR_STYLE_OPTIONS/);

@@ -6,7 +6,6 @@ import { useLocalizedThemeTags } from '../utils/themeTags';
 import {
     HOME_LIST_MODE_OPTIONS,
     HOME_LIST_SORT_OPTIONS,
-    HOME_NOVEL_QUICK_FILTER_MODE,
     type HomeListMode,
     type HomeListSort,
 } from '../utils/gameBrowseFilters';
@@ -72,7 +71,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
         [mode],
     );
     const selectedModeValueLabel = selectedModeOption?.labelKey ? t(selectedModeOption.labelKey) : t('gameBrowse.modes.all');
-    const selectedModeTriggerLabel = mode === 'all' || mode === HOME_NOVEL_QUICK_FILTER_MODE
+    const selectedModeTriggerLabel = mode === 'all'
         ? t('gameBrowse.mode')
         : selectedModeValueLabel;
     const selectedTag = useMemo(
@@ -183,19 +182,6 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
         setOpenDropdown(null);
     };
 
-    const handleNovelQuickFilterClick = () => {
-        setOpenDropdown(null);
-        if (mode === HOME_NOVEL_QUICK_FILTER_MODE) {
-            onModeChange('all');
-            return;
-        }
-        // 进入视觉小说快捷筛时清空题材，避免与题材 AND 出空列表
-        if (tagId !== null) {
-            onTagChange(null);
-        }
-        onModeChange(HOME_NOVEL_QUICK_FILTER_MODE);
-    };
-
     const getTriggerClassName = (key: Exclude<DropdownKey, null>) => ([
         styles.trigger,
         openDropdown === key ? styles.triggerOpen : '',
@@ -209,7 +195,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                     className={getTriggerClassName('sort')}
                     aria-haspopup="menu"
                     aria-expanded={openDropdown === 'sort'}
-                    aria-label={`${t('gameBrowse.sort')}，${t('common.currently')}${selectedSortLabel}`}
+                    aria-label={t('gameBrowse.filterCurrent', { label: t('gameBrowse.sort'), value: selectedSortLabel })}
                     onClick={() => toggleDropdown('sort')}
                 >
                     <span className={styles.triggerText}>{selectedSortLabel}</span>
@@ -246,7 +232,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                     className={getTriggerClassName('mode')}
                     aria-haspopup="menu"
                     aria-expanded={openDropdown === 'mode'}
-                    aria-label={`${t('gameBrowse.mode')}，${t('common.currently')}${selectedModeValueLabel}`}
+                    aria-label={t('gameBrowse.filterCurrent', { label: t('gameBrowse.mode'), value: selectedModeValueLabel })}
                     onClick={() => toggleDropdown('mode')}
                 >
                     <span className={styles.triggerText}>{selectedModeTriggerLabel}</span>
@@ -284,7 +270,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                     className={getTriggerClassName('tag')}
                     aria-haspopup="menu"
                     aria-expanded={openDropdown === 'tag'}
-                    aria-label={`${t('gameBrowse.theme')}，${t('common.currently')}${selectedTagValueLabel}`}
+                    aria-label={t('gameBrowse.filterCurrent', { label: t('gameBrowse.theme'), value: selectedTagValueLabel })}
                     onClick={() => toggleDropdown('tag')}
                 >
                     <span className={styles.triggerText}>{selectedTagTriggerLabel}</span>
@@ -318,23 +304,6 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                         ))}
                     </div>
                 ) : null}
-            </div>
-
-            <div className={styles.divider} aria-hidden="true" />
-
-            <div className={styles.group}>
-                <button
-                    type="button"
-                    className={[
-                        styles.quickFilter,
-                        mode === HOME_NOVEL_QUICK_FILTER_MODE ? styles.quickFilterActive : '',
-                    ].filter(Boolean).join(' ')}
-                    aria-pressed={mode === HOME_NOVEL_QUICK_FILTER_MODE}
-                    aria-label={t('gameBrowse.novelQuickFilter')}
-                    onClick={handleNovelQuickFilterClick}
-                >
-                    {t('gameBrowse.modes.novel')}
-                </button>
             </div>
         </div>
     );

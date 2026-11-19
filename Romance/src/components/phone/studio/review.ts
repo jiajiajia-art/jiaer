@@ -71,7 +71,7 @@ export async function startReview(app: UserApp, onSlime?: (t: string) => void) {
     if (!isConfigured(cfg)) {
       patchApp(app.id, { status: "pending", reviewStartedAt: undefined });
       onSlime?.("审核员需要接入 AI 才能上班哦");
-      throw new Error("需要先在菜单「AI 配置」里接入模型，审核员才能审核。");
+      throw new Error("请先登录平台账号，审核员才能审核。");
     }
     const raw = await complete(cfg, [{ role: "system", content: SYS }, { role: "user", content: `请审核这个应用：\n${brief(app)}` }]);
     setStep(app.id, 3); await wait(500);

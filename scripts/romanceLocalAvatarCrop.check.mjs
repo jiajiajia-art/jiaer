@@ -22,13 +22,12 @@ test('romance_本地上传头像_裁切与预览已挂载', () => {
   assert.match(flow, /裁切并预览|使用此头像|重新裁切/);
   assert.match(flow, /allowClose|须完成裁切/);
   assert.match(lib, /exportSquareDataUrl|isApproxSquare|LOCAL_AVATAR_TARGET_SIDE/);
-  assert.match(picker, /从本地上传/);
-  assert.match(picker, /保存/);
+  // 本地上传按钮文案现为「本地上传」
+  assert.match(picker, />本地上传</);
   assert.match(picker, /标签筛选|genderFilter|ageFilter/);
   assert.match(picker, /setSelected|selected/);
-  // 点图只高亮，须点保存才 onPick
-  assert.match(picker, /onClick=\{\(\) => setSelected\(url\)\}/);
-  assert.doesNotMatch(picker, /onClick=\{\(\) => onPick\(url\)\}/);
+  // 功能注释：点头像即使用，不再需要回到顶部点保存
+  assert.match(picker, /onClick=\{\(\) => \{ setSelected\(url\); onPick\(url\); \}\}/);
   // 标签区只保留性别/年龄 chip，禁止重复的「青年女性 女·成年·N张」快捷条与分区 h4
   assert.doesNotMatch(picker, /快捷分类/);
   assert.doesNotMatch(picker, /<h4[\s\S]*?p\.hint/);

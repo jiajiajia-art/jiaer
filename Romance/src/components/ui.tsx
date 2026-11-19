@@ -23,8 +23,8 @@ export function SectionHead({ code, cn, hint, right }: { code?: string; cn: stri
 const ModalDepth = createContext(0);
 
 /* 所有弹窗共用 .ui-dialog：宽 min(1000px, 100vw-24px)、max-width 1000px，高度随内容，过高才封顶滚动
- * footer：钉在框底、不进滚动区；panelClassName：如建角向导 ui-dialog-create（85vw×85dvh） */
-export function Modal({ title, onClose, children, footer, panelClassName, heavyBackdrop, locked = false }: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; panelClassName?: string; heavyBackdrop?: boolean; /** 必须点内容里的按钮才能离开：遮罩、Esc、关闭钮都不收起 */ locked?: boolean }) {
+ * footer：钉在框底、不进滚动区；panelClassName：如建角向导 ui-dialog-create（85vw，高度随内容、最高 85dvh） */
+export function Modal({ title, onClose, children, footer, panelClassName, heavyBackdrop, locked = false, titleIcon }: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; panelClassName?: string; heavyBackdrop?: boolean; /** 必须点内容里的按钮才能离开：遮罩、Esc、关闭钮都不收起 */ locked?: boolean; /** 标题左侧图标；传 false 隐藏，不传仍用默认星标 */ titleIcon?: ReactNode | false }) {
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const lockedRef = useRef(locked);
@@ -73,7 +73,7 @@ export function Modal({ title, onClose, children, footer, panelClassName, heavyB
         <div className="ui-sheet-head-bar z-10 rounded-t-[var(--radius-ui-lg)]">
           <div className="flex items-center justify-between gap-2 px-4 pb-2 pt-3.5 sm:px-5">
             <h3 className="ui-title flex min-w-0 items-center gap-2 truncate sm:text-[17px]">
-              <IconSpark size="md" className="shrink-0 text-coral" />
+              {titleIcon === false ? null : (titleIcon ?? <IconSpark size="md" className="shrink-0 text-coral" />)}
               {title}
             </h3>
             {locked ? null : (
@@ -85,7 +85,7 @@ export function Modal({ title, onClose, children, footer, panelClassName, heavyB
             )}
           </div>
         </div>
-        <div className="ui-dialog-body px-4 pb-5 pt-1 sm:px-5">{children}</div>
+        <div className="ui-dialog-body px-4 pb-5 pt-2.5 sm:px-5">{children}</div>
         {footer}
       </div>
     </div>
@@ -122,8 +122,9 @@ export function Avatar({ src, name, size = 48, onPick, editable = true, square =
           {initial}
         </span>
       )}
+      {/* 功能注释：相机标仅精细指针悬停或键盘聚焦时出现；触屏点一下会粘住 :hover，不能用 group-hover 常显 */}
       {editable && (
-        <span className="absolute inset-0 hidden items-center justify-center bg-black/45 text-paper-2 group-hover:flex">
+        <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/45 text-paper-2 opacity-0 transition-opacity group-focus-visible:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100">
           <IconCamera width={size * 0.4} height={size * 0.4} />
         </span>
       )}

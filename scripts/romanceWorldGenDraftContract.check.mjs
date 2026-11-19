@@ -1,5 +1,5 @@
 /**
- * 世界生成契约（R1–R10 / R2）：条数建议、基调 5000、完整上下文、无 locations、无 fame 默认。
+ * 世界生成契约（R1–R10 / R2）：条数建议、基调 8000、完整上下文、无 locations、无 fame 默认。
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -11,12 +11,12 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const romance = join(root, 'Romance/src');
 const read = (p) => readFileSync(join(romance, p), 'utf8');
 
-test('scriptTone_上限5000且UI同步', async () => {
+test('scriptTone_上限8000且UI同步', async () => {
   const lim = await import(pathToFileURL(join(romance, 'lib/modBasicInfoLimits.ts')).href);
-  assert.equal(lim.SCRIPT_TONE_MAX, 5000);
+  assert.equal(lim.SCRIPT_TONE_MAX, 8000);
   const panel = read('components/ModEditorPanel.tsx');
   assert.doesNotMatch(panel, /超出 4000/);
-  assert.match(panel, /5000/);
+  assert.match(panel, /SCRIPT_TONE_MAX/);
 });
 
 test('worldGen_条数建议_软校验接受2人3地', async () => {
@@ -85,8 +85,8 @@ test('buildGeneratedContext_含属性货币世界书完整基调', async () => {
   assert.match(ctx, /势力：无/);
   assert.match(ctx, /人物线路：p1=继承人/);
   assert.match(ctx, /开局日期：2024\.03\.15/);
-  assert.ok(ctx.includes(tone), '第2次须带完整剧本基调，不得截成600字');
-  assert.doesNotMatch(ctx, /剧本基调：.{0,20}\.\.\./);
+  assert.ok(ctx.includes(tone), '第2次须带完整系统提示词，不得截成600字');
+  assert.doesNotMatch(ctx, /系统提示词：.{0,20}\.\.\./);
 });
 
 test('storylines_不再自动补fame条件', async () => {

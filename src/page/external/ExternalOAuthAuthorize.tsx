@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import AuthModal from '../../components/AuthModal';
 import { externalSdkApi } from '../../api/externalSdkApi';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -8,6 +9,7 @@ import { parseExternalAuthorizeParams } from '../../utils/externalSdkPages';
 import styles from './ExternalSdkPage.module.css';
 
 export default function ExternalOAuthAuthorize() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const params = useMemo(() => parseExternalAuthorizeParams(searchParams), [searchParams]);
   const authUser = useAuthStore((state) => state.user?.user);
@@ -37,12 +39,12 @@ export default function ExternalOAuthAuthorize() {
       });
       const redirectUrl = response.data.data?.redirectUrl;
       if (!redirectUrl) {
-        throw new Error('授权结果缺少回跳地址');
+        throw new Error(t('pagesExternal.oauth.missingRedirect'));
       }
-      setSuccessText('授权成功，正在返回外部游戏。');
+      setSuccessText(t('pagesExternal.oauth.successRedirect'));
       window.location.assign(redirectUrl);
     } catch (err) {
-      setError(getApiErrorMessage(err, '授权失败，请检查外部应用配置后重试。'));
+      setError(getApiErrorMessage(err, t('pagesExternal.oauth.authorizeFailed')));
     } finally {
       setSubmitting(false);
     }
@@ -52,7 +54,7 @@ export default function ExternalOAuthAuthorize() {
     if (submitting) return;
     logout();
     setError('');
-    setSuccessText('已退出当前 Funloom 账号，请登录你要授权的账号。');
+    setSuccessText(t('pagesExternal.oauth.switchedAccount'));
     setAuthOpen(true);
   };
 
@@ -69,17 +71,17 @@ export default function ExternalOAuthAuthorize() {
       });
       const target = response.data.data?.redirectUrl;
       if (!target) {
-        throw new Error('拒绝授权结果缺少回跳地址');
+        throw new Error(t('pagesExternal.oauth.denyMissingRedirect'));
       }
       window.location.assign(target);
     } catch (err) {
-      setError(getApiErrorMessage(err, '拒绝授权失败，请回到外部游戏重试。'));
+      setError(getApiErrorMessage(err, t('pagesExternal.oauth.denyFailed')));
     } finally {
       setSubmitting(false);
     }
   };
 
-  const currentName = authUser?.nickname || authUser?.phoneNumber || authUser?.userCode || '当前账号';
+  const currentName = authUser?.nickname || authUser?.phoneNumber || authUser?.userCode || t('pagesExternal.oauth.currentAccount');
 
   return (
     <main className={styles.shell}>
@@ -91,36 +93,36 @@ export default function ExternalOAuthAuthorize() {
 
         <div className={styles.heroBlock}>
           <p className={styles.eyebrow}>External Game Authorization</p>
-          <h1 id="external-oauth-title">授权外部游戏连接 Funloom</h1>
+          <h1 id="external-oauth-title">{t('pagesExternal.oauth.title')}</h1>
           <p className={styles.lead}>
-            外部游戏将通过一次性授权码完成账号绑定。授权码会在短时间内失效，不会向外部页面暴露你的登录密码。
+            {t('pagesExternal.oauth.lead')}
           </p>
         </div>
 
         {!params.valid ? (
           <div className={styles.noticeError} role="alert">
-            授权链接缺少必要参数，请回到外部游戏重新发起绑定。
+            {t('pagesExternal.oauth.invalidParams')}
           </div>
         ) : (
           <>
             <div className={styles.summary}>
               <div>
-                <span>外部应用</span>
+                <span>{t('pagesExternal.oauth.externalApp')}</span>
                 <strong>{params.appId}</strong>
               </div>
               <div>
-                <span>回跳地址</span>
+                <span>{t('pagesExternal.oauth.redirectUri')}</span>
                 <strong>{params.redirectUri}</strong>
               </div>
               {params.externalUserId && (
                 <div>
-                  <span>外部用户</span>
+                  <span>{t('pagesExternal.oauth.externalUser')}</span>
                   <strong>{params.externalUserId}</strong>
                 </div>
               )}
               <div>
-                <span>Funloom 账号</span>
-                <strong>{isAuthenticated ? currentName : '尚未登录'}</strong>
+                <span>{t('pagesExternal.oauth.funloomAccount')}</span>
+                <strong>{isAuthenticated ? currentName : t('pagesExternal.oauth.notLoggedIn')}</strong>
               </div>
             </div>
 
@@ -134,14 +136,14 @@ export default function ExternalOAuthAuthorize() {
                 onClick={handleAuthorize}
                 disabled={submitting}
               >
-                {submitting ? '授权中...' : isAuthenticated ? '确认授权并返回' : '登录后授权'}
+                {submitting ? t('pagesExternal.oauth.authorizing') : isAuthenticated ? t('pagesExternal.oauth.confirmAndReturn') : t('pagesExternal.oauth.loginThenAuthorize')}
               </button>
               <button type="button" className={styles.secondaryButton} onClick={handleDeny} disabled={submitting}>
-                拒绝并返回
+                {t('pagesExternal.oauth.denyAndReturn')}
               </button>
               {isAuthenticated && (
                 <button type="button" className={styles.ghostButton} onClick={handleSwitchAccount} disabled={submitting}>
-                  切换 Funloom 账号
+                  {t('pagesExternal.oauth.switchAccount')}
                 </button>
               )}
             </div>

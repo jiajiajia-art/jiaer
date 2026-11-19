@@ -212,8 +212,8 @@ test('创作者权益_作品模式标签与标题整体垂直居中并适当放�
   assert.match(benefits, /className=\{styles\.workIdentity\}[\s\S]*?className=\{styles\.workTitle\}/);
   assert.match(benefitsCss, /grid-template-areas:[\s\S]*?"identity status"[\s\S]*?"identity metric"/);
   assert.match(benefitsCss, /\.workIdentity\s*\{[\s\S]*?align-self:\s*center/);
-  assert.match(benefitsCss, /\.workTitle strong\s*\{[\s\S]*?font-size:\s*16px/);
-  assert.match(benefitsCss, /\.modeTag\s*\{[\s\S]*?font-size:\s*12px/);
+  assert.match(benefitsCss, /\.workTitle strong\s*\{[\s\S]*?font-size:\s*14px/);
+  assert.match(benefitsCss, /\.modeTag\s*\{[\s\S]*?font-size:\s*11px/);
 });
 
 test('创作者权益_应可查看等级与分成说明表', () => {
@@ -255,15 +255,16 @@ test('创作者权益_移动端应隐藏底部导航并支持触控滑动表格'
 test('个人中心_极窄屏下创作者等级不应被其他标签挤出屏幕', () => {
   const create = read('src/page/Create.tsx');
   const createCss = read('src/page/Create.module.css');
-  const badgeRowStart = create.indexOf('className={styles.creatorHeroBadgeRow}');
-  const badgeRowEnd = create.indexOf('</div>', badgeRowStart);
-  const badgeRow = create.slice(badgeRowStart, badgeRowEnd);
+  const nameGroupStart = create.indexOf('className={styles.creatorHeroNameGroup}');
+  const nameGroupEnd = create.indexOf('</div>', nameGroupStart);
+  const nameGroup = create.slice(nameGroupStart, nameGroupEnd);
 
   assert.match(create, /className=\{styles\.creatorHeroIdGroup\}/);
-  // 标签行改为 VIP + 推广者
-  assert.match(badgeRow, /creatorVipBadge/);
+  // 功能注释：VIP 与推广者跟在昵称组里，名称组允许换行，避免极窄屏被挤出
+  assert.match(nameGroup, /creatorVipBadge/);
+  assert.match(nameGroup, /creatorRoleBadge/);
+  assert.match(createCss, /\.creatorHeroNameGroup\s*\{[\s\S]*?flex-wrap:\s*wrap/);
   assert.match(createCss, /\.creatorHeroMetaRow\s*\{[\s\S]*?flex-wrap:\s*wrap/);
-  assert.match(createCss, /\.creatorHeroBadgeRow\s*\{[\s\S]*?flex-wrap:\s*wrap/);
   assert.match(createCss, /\.creatorHeroId\s*\{[\s\S]*?text-overflow:\s*ellipsis/);
   assert.match(createCss, /@media \(max-width: 1080px\)[\s\S]*?\.creatorHeroBadgeRow\s*\{[^}]*margin-left:\s*0/);
 });

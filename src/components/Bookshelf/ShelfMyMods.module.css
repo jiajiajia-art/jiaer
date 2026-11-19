@@ -144,9 +144,46 @@
   font-variant-numeric: tabular-nums;
 }
 
+.actions {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+}
+
 .editBtn {
   flex: 0 0 auto;
-  width: 64px;
+  min-width: 64px;
+}
+
+.reviewBtn,
+.withdrawBtn {
+  min-width: 64px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.reviewBtn {
+  border: 1px solid color-mix(in srgb, var(--shelf-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--shelf-accent) 14%, transparent);
+  color: var(--shelf-accent);
+}
+
+.withdrawBtn {
+  border: 1px solid var(--shelf-line);
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.reviewBtn:disabled,
+.withdrawBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .skeleton {

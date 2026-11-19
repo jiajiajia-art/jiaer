@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, useImperativeHandle, forwardRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './SceneTab.module.css';
 import sharedStyles from './shared.module.css';
 import { IoMdArrowDropdown, IoMdArrowDropright } from 'react-icons/io';
@@ -31,6 +32,7 @@ const SceneTab = forwardRef<SceneTabRef, SceneTabProps>(({
     onDataChange,
     onHasUnsavedChanges,
 }, ref) => {
+    const { t } = useTranslation();
     const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
     const [placedSubScenes, setPlacedSubScenes] = useState<PlacedSubScene[]>([]);
     const [draggingSubSceneId, setDraggingSubSceneId] = useState<string | null>(null);
@@ -291,7 +293,7 @@ const SceneTab = forwardRef<SceneTabRef, SceneTabProps>(({
     const handleSaveSubSceneParent = useCallback(
         async (subSceneId: string, newParentSceneId: string) => {
             if (!fileId) {
-                toast.error('文件ID不存在，请先上传文件');
+                toast.error(t('gameSettingEditor.mapPanel.mapTab.s6feba82bdd'));
                 return;
             }
 
@@ -300,18 +302,18 @@ const SceneTab = forwardRef<SceneTabRef, SceneTabProps>(({
                 .find(s => s.id === subSceneId);
 
             if (!originalSubScene) {
-                toast.error('找不到子场景');
+                toast.error(t('gameSettingEditor.mapPanel.sceneTab.s7959130b53'));
                 return;
             }
 
             const oldParentSceneId = originalSubScene.parentId || currentScene?.id;
             if (!oldParentSceneId) {
-                toast.error('无法确定子场景的当前父场景');
+                toast.error(t('gameSettingEditor.mapPanel.sceneTab.s30078a11d0'));
                 return;
             }
 
             if (oldParentSceneId === newParentSceneId) {
-                toast.success('父场景未改变');
+                toast.success(t('gameSettingEditor.mapPanel.sceneTab.s8ee827c170'));
                 setEditingSubScene(null);
                 setSelectedSubSceneIdInScene(null);
                 return;
@@ -326,18 +328,18 @@ const SceneTab = forwardRef<SceneTabRef, SceneTabProps>(({
                 );
 
                 if (response.data.success) {
-                    toast.success('子场景父场景已更新');
+                    toast.success(t('gameSettingEditor.mapPanel.sceneTab.s83002d9bc4'));
                     setEditingSubScene(null);
                     setSelectedSubSceneIdInScene(null);
                     if (onDataChange) {
                         onDataChange();
                     }
                 } else {
-                    toast.error('更新失败');
+                    toast.error(t('gameSettingEditor.mapPanel.sceneTab.s8f8818f05b'));
                 }
             } catch (error: any) {
                 console.error('更新失败:', error);
-                toast.error('更新失败：' + (error.message || '请检查网络连接'));
+                toast.error(t('gameSettingEditor.mapPanel.sceneTab.sf1a69dffbd') + (error.message || t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s73a13d2b99')));
             }
         },
         [fileId, sceneSetting?.scenes, currentScene, onDataChange]
@@ -345,17 +347,17 @@ const SceneTab = forwardRef<SceneTabRef, SceneTabProps>(({
 
     const handleSaveSubScenePositions = useCallback(async () => {
         if (!fileId) {
-            toast.error('文件ID不存在，请先上传文件');
+            toast.error(t('gameSettingEditor.mapPanel.mapTab.s6feba82bdd'));
             return;
         }
 
         if (placedSubScenes.length === 0) {
-            toast.error('没有需要保存的子场景位置');
+            toast.error(t('gameSettingEditor.mapPanel.sceneTab.s0c6048f21f'));
             return;
         }
 
         if (!currentScene) {
-            toast.error('当前场景不存在');
+            toast.error(t('gameSettingEditor.mapPanel.sceneTab.s1605fb47e9'));
             return;
         }
 
@@ -377,11 +379,11 @@ const SceneTab = forwardRef<SceneTabRef, SceneTabProps>(({
                     onDataChange();
                 }
             } else {
-                toast.error('保存失败，请检查网络连接');
+                toast.error(t('gameSettingEditor.mapPanel.mapTab.s36dc107338'));
             }
         } catch (error: any) {
             console.error('保存失败:', error);
-            toast.error('保存失败：' + (error.message || '请检查网络连接'));
+            toast.error(t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.sb12163000c') + (error.message || t('gameSettingEditor.functionalNPCsPanel.functionalNPCDetail.s73a13d2b99')));
         }
     }, [placedSubScenes, fileId, currentScene, onHasUnsavedChanges, onDataChange]);
 
@@ -415,7 +417,7 @@ const SceneTab = forwardRef<SceneTabRef, SceneTabProps>(({
                 <img
                     ref={sceneImageRef}
                     src={currentScene?.image ? getImageUrl(currentScene.image) : DEFAULT_SCENE_IMAGE}
-                    alt={currentScene?.name || '场景地图'}
+                    alt={currentScene?.name || t('gameSettingEditor.mapPanel.sceneTab.s288e4de186')}
                     className={sharedStyles.sceneImage}
                     draggable={false}
                     onLoad={() => {
@@ -477,7 +479,7 @@ const SceneTab = forwardRef<SceneTabRef, SceneTabProps>(({
                                             return subSceneImage ? getImageUrl(subSceneImage) : DEFAULT_SUBSCENE_ICON;
                                         })()
                                     }
-                                    alt="子场景"
+                                    alt={t('createGame.subScene')}
                                     draggable={false}
                                     className={styles.subSceneIcon}
                                     style={{

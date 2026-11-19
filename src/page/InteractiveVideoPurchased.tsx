@@ -91,7 +91,6 @@ const InteractiveVideoPurchased: React.FC = () => {
                     </div>
 
                     <section className={styles.summarySection}>
-                        <p className={styles.summaryDesc}>{t('interactiveVideoPurchased.description')}</p>
                         <div className={styles.summaryGrid}>
                             <div className={styles.summaryCard}>
                                 <span className={styles.summaryLabel}>{t('interactiveVideoPurchased.gameCount')}</span>
@@ -123,9 +122,18 @@ const InteractiveVideoPurchased: React.FC = () => {
                         </section>
                     ) : games.length === 0 ? (
                         <section className={styles.statePanel}>
-                            <MdShoppingBag className={styles.emptyIcon} />
+                            <div className={styles.emptyIconWrap} aria-hidden="true">
+                                <MdShoppingBag className={styles.emptyIcon} />
+                            </div>
                             <h2>{t('interactiveVideoPurchased.emptyTitle')}</h2>
                             <p>{t('interactiveVideoPurchased.emptyDesc')}</p>
+                            <button
+                                type="button"
+                                className={styles.primaryButton}
+                                onClick={() => navigate('/home')}
+                            >
+                                {t('interactiveVideoPurchased.browseHome')}
+                            </button>
                         </section>
                     ) : (
                         <section className={styles.gameList}>

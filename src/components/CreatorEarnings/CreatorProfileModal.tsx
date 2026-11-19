@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import CreatorProfile, { type CreatorProfileData, type CreatorProfileFormData } from '../CreatorProfile';
 import CreatorEarningsModalShell from './CreatorEarningsModalShell';
 
@@ -12,12 +13,15 @@ interface Props {
     onClose: () => void;
 }
 
-const CreatorProfileModal: React.FC<Props> = ({ open, data, loading, error, onRetry, onSave, onClose }) => (
-    <CreatorEarningsModalShell open={open} title="创作者资料" onClose={onClose} wide>
-        {loading && <div>正在加载创作者资料…</div>}
-        {error && <div role="alert">资料加载失败 <button type="button" onClick={onRetry}>重试</button></div>}
+const CreatorProfileModal: React.FC<Props> = ({ open, data, loading, error, onRetry, onSave, onClose }) => {
+    const { t } = useTranslation();
+    return (
+    <CreatorEarningsModalShell open={open} title={t('creatorCenter.profile')} onClose={onClose} wide>
+        {loading && <div>{t('creatorCenter.profileLoading')}</div>}
+        {error && <div role="alert">{t('creatorCenter.profileLoadFailed')} <button type="button" onClick={onRetry}>{t('common.retry')}</button></div>}
         {!loading && !error && <CreatorProfile data={data} onSave={onSave} />}
     </CreatorEarningsModalShell>
-);
+    );
+};
 
 export default CreatorProfileModal;

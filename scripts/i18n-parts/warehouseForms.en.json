@@ -1,0 +1,67 @@
+{
+  "warehouse": {
+    "forms": {
+      "labelName": "Name",
+      "labelAgeGroup": "Age group (avatar match)",
+      "labelBackground": "Background (avatar match)",
+      "avatarLockedHint": "Avatar chosen manually—auto-match locked",
+      "defaultCardSuffix": " · Default",
+      "aiGenerating": "Generating…",
+      "aiGenerateCost": "AI generate · {{cost}}"
+    },
+    "persona": {
+      "avatarGenFailed": "Couldn't generate image",
+      "personaGenFailed": "Couldn't generate persona",
+      "personaGenOk": "Persona generated (−{{cost}} points)",
+      "form": {
+        "previewHint": "Write your persona on the right…",
+        "namePlaceholder": "Your name in the story",
+        "personaLabel": "Persona",
+        "personaPlaceholder": "Personality, tone, backstory—the more specific, the better",
+        "tagsPlaceholder": "School, romance (comma-separated)",
+        "setDefaultCheckbox": "Set as default persona card",
+        "savePersona": "Save persona",
+        "confirmGenerateTitle": "Generate persona",
+        "confirmGenerateMessage": "This will deduct {{cost}} points to generate the persona summary. Continue?",
+        "confirmGenerate": "Generate"
+      }
+    },
+    "characters": {
+      "form": {
+        "previewHint": "Write the character on the right…",
+        "namePlaceholder": "Character name",
+        "personaLabel": "Character persona",
+        "personaPlaceholder": "Personality, tone, relationship to the player—the more specific, the better",
+        "tagsPlaceholder": "Fantasy, romance (comma-separated)",
+        "setDefaultCheckbox": "Set as default character card",
+        "saveCharacter": "Save character card",
+        "confirmGenerateTitle": "Generate character persona",
+        "confirmGenerateMessage": "This will deduct {{cost}} points to generate the character persona. Continue?",
+        "confirmGenerate": "Generate"
+      }
+    },
+    "resource": {
+      "form": {
+        "dialogAriaEdit": "Edit",
+        "dialogAriaCreate": "Create",
+        "unnamed": "Untitled",
+        "previewHint": "Fill in details on the right…",
+        "titleEdit": "Edit",
+        "titleCreate": "New",
+        "typeWorldbook": " worldbook",
+        "typePlugin": " plugin",
+        "titleLabel": "Title",
+        "titlePlaceholder": "Resource title",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Brief description of purpose",
+        "tagsPlaceholder": "Fantasy, school (comma-separated)",
+        "entriesJsonLabel": "Entries JSON",
+        "entriesJsonPlaceholder": "[{\"title\":\"Entry name\",\"content\":\"...\",\"keywords\":[],\"constant\":false,\"enabled\":true}]",
+        "pluginTypeLabel": "Plugin type",
+        "scriptLabel": "Script / config text",
+        "scriptPlaceholder": "Prompts, regex rules, or tool notes…",
+        "enablePlugin": "Enable this plugin"
+      }
+    }
+  }
+}

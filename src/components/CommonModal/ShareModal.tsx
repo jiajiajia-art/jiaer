@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { MdContentCopy, MdQrCode2 } from 'react-icons/md';
+import { MdContentCopy, MdOutlineReport, MdQrCode2 } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import styles from './ShareModal.module.css';
 
@@ -63,14 +63,14 @@ const ShareModal: React.FC<ShareModalProps> = ({
                 <div className={styles.actions}>
                     <button type="button" className={styles.action} onClick={handleCopyLink}>
                         <span className={styles.tile}>
-                            <MdContentCopy size={26} />
+                            <MdContentCopy size={22} aria-hidden="true" />
                         </span>
                         <span className={styles.label}>{t('gameDetail.copyLink')}</span>
                     </button>
 
                     <button type="button" className={styles.action} onClick={handleShowQRCode}>
                         <span className={styles.tile}>
-                            <MdQrCode2 size={26} />
+                            <MdQrCode2 size={22} aria-hidden="true" />
                         </span>
                         <span className={styles.label}>{t('gameDetail.generateQRCode')}</span>
                     </button>
@@ -78,11 +78,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
                     {onReport ? (
                         <button type="button" className={styles.action} onClick={handleReport}>
                             <span className={styles.tile}>
-                                <img
-                                    className={styles.reportIcon}
-                                    src={`${import.meta.env.BASE_URL}data/assetsv2/common/report.svg`}
-                                    alt=""
-                                />
+                                <MdOutlineReport size={22} aria-hidden="true" />
                             </span>
                             <span className={styles.label}>{t('report.reportAction')}</span>
                         </button>

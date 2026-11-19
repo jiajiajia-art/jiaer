@@ -1,0 +1,10 @@
+{
+  "description": "The request only asks to retrieve the latest GitHub branch and does not specify a web application or its purpose.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

@@ -838,7 +838,8 @@
   --gr-text: var(--color-text);
   --gr-muted: var(--color-text-secondary);
   --gr-accent: var(--color-primary-light);
-  padding-bottom: 1.5rem;
+  /* 详情页正文流嵌套：去掉为大块底栏预留的额外空白 */
+  padding-bottom: 0.25rem;
   color: var(--gr-text);
 }
 
@@ -1041,12 +1042,12 @@
   background: color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
-/* ===== 样式调优：详情页评论区紧凑化——输入框、发表按钮、空状态缩小 ===== */
+/* ===== 样式调优：详情页评论区紧凑化——输入框、发表按钮缩小；与下方列表再隔开一些 ===== */
 .container[data-mode='comments'] .writeSection {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1.35rem;
 }
 
 .container[data-mode='comments'] .commentInput {
@@ -1084,18 +1085,21 @@
 }
 
 .container[data-mode='comments'] .emptyState {
-  padding: 1.25rem 1rem 1.5rem;
+  padding: 1.1rem 0.75rem 0.75rem;
   gap: 0.35rem;
+  min-height: 0;
 }
 
 .container[data-mode='comments'] .emptyIcon {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   margin-bottom: 0;
-  opacity: 0.7;
+  opacity: 0.65;
+  line-height: 1;
 }
 
 .container[data-mode='comments'] .emptyState p {
   font-size: 0.8125rem;
+  line-height: 1.35;
 }
 
 /* ===== 评论排序下拉：最新发布 / 最热 ===== */

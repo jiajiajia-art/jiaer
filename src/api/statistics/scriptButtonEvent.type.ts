@@ -12,7 +12,8 @@ export type ScriptButtonType =
     | 'export_visual_novel'
     | 'export_visual_novel_create'
     | 'export_visual_novel_overwrite'
-    | 'history_back';
+    | 'history_back'
+    | 'play_back';
 
 export interface ScriptButtonEventPayload {
     buttonType: ScriptButtonType;

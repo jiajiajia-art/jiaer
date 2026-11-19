@@ -92,6 +92,43 @@
     background-size: cover;
     background-position: center;
     border-radius: 0;
+    overflow: hidden;
+}
+
+/* 功能注释：无自定义背景时用品牌氛围默认底，避免一整块灰死板 */
+.bannerDefault {
+    background:
+        radial-gradient(120% 90% at 12% 18%, color-mix(in srgb, var(--color-primary) 42%, transparent) 0%, transparent 52%),
+        radial-gradient(90% 80% at 88% 12%, color-mix(in srgb, var(--color-highlight, var(--color-primary)) 28%, transparent) 0%, transparent 48%),
+        radial-gradient(70% 60% at 70% 88%, color-mix(in srgb, var(--color-primary) 18%, transparent) 0%, transparent 55%),
+        linear-gradient(165deg, #2a1a22 0%, #1a1218 42%, #121018 100%);
+}
+
+.bannerDefault::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(125deg, transparent 0%, color-mix(in srgb, #fff 8%, transparent) 46%, transparent 52%),
+        repeating-linear-gradient(
+            -18deg,
+            transparent 0 14px,
+            color-mix(in srgb, #fff 3.5%, transparent) 14px 15px
+        );
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+.bannerDefault::after {
+    content: '';
+    position: absolute;
+    left: -12%;
+    bottom: -40%;
+    width: 70%;
+    height: 90%;
+    border-radius: 50%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--color-primary) 26%, transparent) 0%, transparent 68%);
+    pointer-events: none;
 }
 
 .settingsBtn {
@@ -133,6 +170,7 @@
     z-index: 2;
 }
 
+/* 功能注释：封面上的更多钮做成毛玻璃圆钮，避免纯图标看不清 */
 .moreBtn {
     width: 36px;
     height: 36px;
@@ -140,24 +178,25 @@
     align-items: center;
     justify-content: center;
     border: none;
-    border-radius: 0;
-    background: transparent;
-    color: var(--color-text);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-shadow) 36%, transparent);
+    color: var(--color-on-media);
     cursor: pointer;
     padding: 0;
-    filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--color-shadow) 70%, transparent));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 .moreBtn:hover {
-    background: transparent;
-    opacity: 0.82;
+    background: color-mix(in srgb, var(--color-shadow) 48%, transparent);
+    opacity: 1;
 }
 
 .moreMenu {
     position: absolute;
-    top: calc(100% + 6px);
+    top: calc(100% + 8px);
     right: 0;
-    min-width: 120px;
+    min-width: 132px;
     background: var(--color-surface);
     border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
     border-radius: 12px;
@@ -168,23 +207,27 @@
 .moreMenuItem {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
+    justify-content: flex-start;
+    gap: 10px;
     width: 100%;
     border: none;
     background: transparent;
     color: var(--color-text);
-    text-align: center;
-    padding: 12px 18px 12px 10px;
+    text-align: left;
+    padding: 12px 16px;
     font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
     cursor: pointer;
 }
 
+/* 功能注释：report.svg 本体是白填充，菜单白底会隐形；用主题反色滤镜染成当前文字色 */
 .moreMenuIcon {
     width: 16px;
     height: 16px;
     display: block;
     flex-shrink: 0;
+    filter: var(--icon-invert-filter);
 }
 
 .moreMenuItem:hover {
@@ -194,21 +237,21 @@
 .visitorActions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     flex-wrap: wrap;
-    margin-top: 4px;
+    margin-top: 2px;
 }
 
 .followBtn,
 .blockBtn {
     flex-shrink: 0;
-    height: 30px;
-    min-width: 72px;
+    height: 28px;
+    min-width: 68px;
     padding: 0 12px;
     border-radius: 999px;
     border: 1px solid transparent;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
     line-height: 1;
 }
@@ -241,8 +284,9 @@
 }
 
 .profileCard {
-    margin: -62px 12px 0;
-    padding: 16px;
+    /* 功能注释：头像单独上叠封面；昵称/简介留在白底区，禁止压到 banner 上 */
+    margin: 0 12px;
+    padding: 12px 12px 4px;
     background: transparent;
     position: relative;
     z-index: 1;
@@ -250,18 +294,20 @@
 
 .identityRow {
     display: flex;
-    align-items: flex-end;
-    gap: 14px;
+    align-items: flex-start;
+    gap: 12px;
 }
 
 .avatar {
-    width: 84px;
-    height: 84px;
+    width: 72px;
+    height: 72px;
+    margin-top: -48px;
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
-    border: 2px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    border: 3px solid var(--color-bg);
     background: var(--color-surface-2);
+    box-shadow: 0 2px 10px color-mix(in srgb, var(--color-shadow) 18%, transparent);
 }
 
 .identityInfo {
@@ -269,14 +315,14 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding-top: 52px;
+    gap: 4px;
+    padding-top: 2px;
 }
 
 .displayName {
     margin: 0;
-    font-size: 20px;
-    font-weight: 600;
+    font-size: 16px;
+    font-weight: 650;
     line-height: 1.3;
     color: var(--creator-value);
     word-break: break-word;
@@ -285,18 +331,18 @@
 .bio {
     margin: 0;
     font-size: 13px;
-    line-height: 1.45;
+    line-height: 1.4;
     color: var(--creator-label);
 }
 
 .socialStats {
     display: flex;
     align-items: center;
-    gap: 12px;
-    font-size: 16px;
+    gap: 10px;
+    font-size: 13px;
     line-height: 1.2;
-    margin: 20px 12px 0;
-    padding: 0 16px;
+    margin: 8px 12px 0;
+    padding: 0 12px;
 }
 
 .socialItem {
@@ -319,24 +365,25 @@
 
 .socialLabel {
     color: var(--creator-label);
+    font-weight: 500;
 }
 
 .socialValue {
     color: var(--creator-value);
-    font-weight: 700;
-    font-size: 18px;
+    font-weight: 650;
+    font-size: 14px;
     font-variant-numeric: tabular-nums;
 }
 
 .socialDivider {
     width: 1px;
-    height: 16px;
+    height: 12px;
     background: var(--creator-divider);
     flex-shrink: 0;
 }
 
 .worksWrap {
-    padding: 16px 12px 0;
+    padding: 12px 12px 0;
 }
 
 @media (min-width: 768px) {
@@ -348,6 +395,7 @@
     .profileCard {
         margin-left: 0;
         margin-right: 0;
+        padding: 14px 0 6px;
     }
 
     .worksWrap {
@@ -356,11 +404,23 @@
     }
 
     .avatar {
-        width: 96px;
-        height: 96px;
+        width: 80px;
+        height: 80px;
+        margin-top: -52px;
+    }
+
+    .identityInfo {
+        padding-top: 2px;
+        gap: 5px;
     }
 
     .displayName {
-        font-size: 22px;
+        font-size: 17px;
+    }
+
+    .socialStats {
+        margin-top: 10px;
+        padding-left: 0;
+        padding-right: 0;
     }
 }

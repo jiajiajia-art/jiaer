@@ -7,10 +7,8 @@ import {
   BulbOutlined,
   CheckCircleOutlined,
   CommentOutlined,
-  DollarOutlined,
   FileSearchOutlined,
   GiftOutlined,
-  LineChartOutlined,
   NotificationOutlined,
   PictureOutlined,
   PercentageOutlined,
@@ -24,6 +22,7 @@ import {
   WalletOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
+import type { TFunction } from 'i18next';
 import { getNavigationBadgeCount } from './navigationBadges';
 import styles from './AdminShell.module.css';
 
@@ -36,6 +35,7 @@ export interface AdminNavigationItem {
   icon?: ReactNode;
   badge?: number;
   children?: AdminNavigationItem[];
+  matches?: (pathname: string) => boolean;
 }
 
 export interface AdminNavigationGroup {
@@ -44,221 +44,202 @@ export interface AdminNavigationGroup {
   items: AdminNavigationItem[];
 }
 
-const adminGroups = (badges: Record<string, number>): AdminNavigationGroup[] => [
+const adminGroups = (badges: Record<string, number>, t: TFunction): AdminNavigationGroup[] => [
   {
     key: 'admin-content',
-    label: '内容管理',
+    label: t('adminUi.nav.groups.admin-content'),
     items: [
-      { key: 'announcements', label: '公告管理', path: '/admin', icon: <NotificationOutlined /> },
+      { key: 'announcements', label: t('adminUi.nav.items.announcements'), path: '/admin', icon: <NotificationOutlined /> },
       {
         key: 'banners',
-        label: '轮播图管理',
+        label: t('adminUi.nav.items.banners'),
         path: '/admin/banners/home',
         icon: <PictureOutlined />,
-        children: [
-          { key: 'bannerHome', label: '首页轮播图', path: '/admin/banners/home' },
-          { key: 'bannerActivity', label: '活动轮播图', path: '/admin/banners/activity' },
-        ],
+        matches: (pathname) => pathname.startsWith('/admin/banners'),
       },
       {
         key: 'themes',
-        label: '题材管理',
+        label: t('adminUi.nav.items.themes'),
         path: '/admin/themes/all',
         icon: <AppstoreOutlined />,
+        matches: (pathname) => pathname.startsWith('/admin/themes'),
       },
-      { key: 'documents', label: '文档管理', path: '/admin/documents', icon: <ReadOutlined /> },
-      { key: 'comments', label: '评论管理', path: '/admin/comments', icon: <CommentOutlined /> },
+      { key: 'documents', label: t('adminUi.nav.items.documents'), path: '/admin/documents', icon: <ReadOutlined /> },
+      { key: 'comments', label: t('adminUi.nav.items.comments'), path: '/admin/comments', icon: <CommentOutlined /> },
     ],
   },
   {
     key: 'admin-platform',
-    label: '平台运营',
+    label: t('adminUi.nav.groups.admin-platform', { defaultValue: '平台运营' }),
     items: [
       {
-        key: 'points',
-        label: '织梦豆管理',
+        key: 'currency',
+        label: t('adminUi.nav.items.currency', { defaultValue: '资金管理' }),
         path: '/admin/points/activity',
         icon: <GiftOutlined />,
-        children: [
-          { key: 'pointsActivity', label: '活动奖励', path: '/admin/points/activity', badge: badges.points },
-          { key: 'pointsSpecial', label: '特殊织梦豆', path: '/admin/points/special' },
-        ],
+        badge: badges.points,
+        matches: (pathname) => pathname.startsWith('/admin/points') || pathname.startsWith('/admin/diamonds'),
       },
-      { key: 'dailyTasks', label: '每日任务管理', path: '/admin/daily-tasks', icon: <CheckCircleOutlined /> },
-      { key: 'lottery', label: '抽奖活动', path: '/admin/lottery', icon: <TrophyOutlined /> },
-      { key: 'shareRatio', label: '分成比例', path: '/admin/share-ratio', icon: <PercentageOutlined /> },
+      { key: 'dailyTasks', label: t('adminUi.nav.items.dailyTasks', { defaultValue: '每日任务管理' }), path: '/admin/daily-tasks', icon: <CheckCircleOutlined /> },
+      { key: 'lottery', label: t('adminUi.nav.items.lottery', { defaultValue: '抽奖活动' }), path: '/admin/lottery', icon: <TrophyOutlined /> },
+      { key: 'shareRatio', label: t('adminUi.nav.items.shareRatio', { defaultValue: '分成比例' }), path: '/admin/share-ratio', icon: <PercentageOutlined /> },
     ],
   },
   {
     key: 'admin-account',
-    label: '账户与权限',
+    label: t('adminUi.nav.groups.admin-account', { defaultValue: '账户与权限' }),
     items: [
-      { key: 'diamonds', label: 'KK币管理', path: '/admin/diamonds', icon: <DollarOutlined /> },
       {
         key: 'subscriptions',
-        label: '会员管理',
+        label: t('adminUi.nav.items.subscriptions', { defaultValue: '会员管理' }),
         path: '/admin/subscriptions/records',
         icon: <ShoppingOutlined />,
-        children: [
-          { key: 'membershipRecords', label: '会员状态记录', path: '/admin/subscriptions/records' },
-          { key: 'membershipKeyGeneration', label: '兑换卡生成', path: '/admin/subscriptions/key-generation' },
-          { key: 'membershipKeyRecords', label: '兑换卡使用记录', path: '/admin/subscriptions/key-records' },
-        ],
+        matches: (pathname) => pathname.startsWith('/admin/subscriptions'),
       },
-      { key: 'users', label: '用户角色', path: '/admin/users', icon: <TeamOutlined /> },
+      { key: 'users', label: t('adminUi.nav.items.users', { defaultValue: '用户角色' }), path: '/admin/users', icon: <TeamOutlined /> },
       {
         key: 'withdraw',
-        label: '提现管理',
+        label: t('adminUi.nav.items.withdraw', { defaultValue: '提现管理' }),
         path: '/admin/withdraw/applications',
         icon: <WalletOutlined />,
-        children: [
-          { key: 'withdrawApplications', label: '提现申请', path: '/admin/withdraw/applications' },
-          { key: 'withdrawVerify', label: '创作者认证', path: '/admin/withdraw/verify' },
-          { key: 'withdrawCreatorEarnings', label: '创作者收益提现', path: '/admin/withdraw/creator-earnings' },
-        ],
+        matches: (pathname) => pathname.startsWith('/admin/withdraw'),
       },
     ],
   },
   {
     key: 'admin-ai',
-    label: 'AI 与配置',
+    label: t('adminUi.nav.groups.admin-ai'),
     items: [
       {
         key: 'aiModelCenter',
-        label: 'AI 模型中心',
-        path: '/admin/ai-model-center/models',
+        label: t('adminUi.nav.items.aiModelCenter'),
+        path: '/admin/ai-model-center/usage',
         icon: <BulbOutlined />,
-        children: [
-          { key: 'aiModels', label: '模型与计费', path: '/admin/ai-model-center/models' },
-          { key: 'aiUsage', label: '用量与成本', path: '/admin/ai-model-center/usage' },
-          { key: 'aiRuntime', label: '运行配置', path: '/admin/ai-model-center/runtime' },
-        ],
+        matches: (pathname) => pathname.startsWith('/admin/ai-model-center') || pathname.startsWith('/admin/ai-model-pricing') || pathname.startsWith('/admin/image-gen') || pathname.startsWith('/admin/text-llm'),
       },
       {
         key: 'assetCenter',
-        label: '素材中心',
+        label: t('adminUi.nav.items.assetCenter'),
         path: '/admin/avatars',
         icon: <PictureOutlined />,
-        children: [
-          { key: 'avatars', label: '公共头像', path: '/admin/avatars' },
-          { key: 'artStyles', label: '画风管理', path: '/admin/art-styles' },
-        ],
+        matches: (pathname) => pathname.startsWith('/admin/avatars') || pathname.startsWith('/admin/art-styles'),
       },
-      { key: 'components', label: '组件管理', path: '/admin/components', icon: <SettingOutlined /> },
+      {
+        key: 'components',
+        label: t('adminUi.nav.items.components'),
+        path: '/admin/components',
+        icon: <SettingOutlined />,
+        matches: (pathname) => pathname.startsWith('/admin/components') || pathname.startsWith('/admin/play-mods'),
+      },
     ],
   },
 ];
 
-const operatorGroups = (isAdmin: boolean, badges: Record<string, number>): AdminNavigationGroup[] => [
+const operatorGroups = (isAdmin: boolean, badges: Record<string, number>, t: TFunction): AdminNavigationGroup[] => [
   {
     key: 'operator-overview',
-    label: '数据分析',
+    label: t('adminUi.nav.groups.operator-overview'),
     items: [
-      { key: 'stats', label: '数据概览', path: '/operator', icon: <BarChartOutlined /> },
-      { key: 'reports', label: '运营报表', path: '/operator/reports', icon: <LineChartOutlined /> },
+      {
+        key: 'stats',
+        label: t('adminUi.nav.items.stats', { defaultValue: '数据看板' }),
+        path: '/operator',
+        icon: <BarChartOutlined />,
+        matches: (pathname) => pathname === '/operator' || pathname.startsWith('/operator/reports'),
+      },
     ],
   },
   {
     key: 'operator-growth',
-    label: '增长运营',
+    label: t('adminUi.nav.groups.operator-growth'),
     items: [
       {
         key: 'promotions',
-        label: '推广活动',
+        label: t('adminUi.nav.items.promotions'),
         path: '/operator/promotion/list',
         icon: <ThunderboltOutlined />,
-        children: [
-          { key: 'promotionList', label: '管理活动', path: '/operator/promotion/list' },
-          { key: 'promotionCreate', label: '新增活动', path: '/operator/promotion/create' },
-          { key: 'promotionTicker', label: '首页滚动通知', path: '/operator/promotion/ticker' },
-          { key: 'promotionReviews', label: '投稿审核', path: '/operator/promotion/reviews', badge: badges.promotions },
-        ],
+        badge: badges.promotions,
+        matches: (pathname) => pathname.startsWith('/operator/promotion'),
       },
-      { key: 'recruitment', label: '用户招募', path: '/operator/recruitment', icon: <TeamOutlined /> },
+      { key: 'recruitment', label: t('adminUi.nav.items.recruitment'), path: '/operator/recruitment', icon: <TeamOutlined /> },
       ...(isAdmin
         ? [
-            { key: 'promoters', label: '推广者', path: '/operator/promoters', icon: <UserOutlined /> },
+            { key: 'promoters', label: t('adminUi.nav.items.promoters'), path: '/operator/promoters', icon: <UserOutlined /> },
           ]
         : []),
     ],
   },
   {
     key: 'operator-content',
-    label: '内容运营',
+    label: t('adminUi.nav.groups.operator-content'),
     items: [
       ...(isAdmin
         ? [
-            { key: 'specialAuthors', label: '特殊作者', path: '/operator/special-authors', icon: <TeamOutlined /> },
+            { key: 'specialAuthors', label: t('adminUi.nav.items.specialAuthors'), path: '/operator/special-authors', icon: <TeamOutlined /> },
             {
               key: 'platformWorks',
-              label: '平台作品',
+              label: t('adminUi.nav.items.platformWorks'),
               path: '/operator/platform-works/works',
               icon: <BookOutlined />,
-              children: [
-                { key: 'platformWorksList', label: '作品列表', path: '/operator/platform-works/works' },
-                { key: 'platformWorksAppeals', label: '发布申诉', path: '/operator/platform-works/appeals', badge: badges.platformWorks },
-              ],
+              badge: badges.platformWorks,
+              matches: (pathname: string) => pathname.startsWith('/operator/platform-works'),
             },
           ]
         : []),
       {
         key: 'contentReports',
-        label: '内容举报',
+        label: t('adminUi.nav.items.contentReports'),
         path: '/operator/content-reports/reports',
         icon: <AlertOutlined />,
-        children: [
-          { key: 'contentReportReviews', label: '举报审核', path: '/operator/content-reports/reports' },
-          { key: 'contentReportPenalties', label: '处罚记录', path: '/operator/content-reports/penalties' },
-        ],
+        matches: (pathname) => pathname.startsWith('/operator/content-reports'),
       },
-      { key: 'appeals', label: '申诉复核', path: '/operator/appeals', icon: <FileSearchOutlined /> },
-      { key: 'publishQueue', label: '发布队列', path: '/operator/publish-queue', icon: <SettingOutlined /> },
+      { key: 'appeals', label: t('adminUi.nav.items.appeals'), path: '/operator/appeals', icon: <FileSearchOutlined /> },
+      { key: 'publishQueue', label: t('adminUi.nav.items.publishQueue'), path: '/operator/publish-queue', icon: <SettingOutlined /> },
     ],
   },
   {
     key: 'operator-platform',
-    label: '平台配置',
+    label: t('adminUi.nav.groups.operator-platform'),
     items: [
       {
         key: 'aiModelCenter',
-        label: 'AI 模型中心',
-        path: '/operator/ai-model-center/models',
+        label: t('adminUi.nav.items.aiModelCenter'),
+        path: '/operator/ai-model-center/usage',
         icon: <BulbOutlined />,
-        children: [
-          { key: 'aiModels', label: '模型与计费', path: '/operator/ai-model-center/models' },
-          { key: 'aiUsage', label: '用量与成本', path: '/operator/ai-model-center/usage' },
-        ],
+        matches: (pathname) => pathname.startsWith('/operator/ai-model-center'),
       },
-      { key: 'platformBenefits', label: '平台权益', path: '/operator/platform-benefits', icon: <GiftOutlined /> },
+      { key: 'platformBenefits', label: t('adminUi.nav.items.platformBenefits'), path: '/operator/platform-benefits', icon: <GiftOutlined /> },
       { key: 'dailyTasks', label: '每日任务', path: '/operator/daily-tasks', icon: <CheckCircleOutlined /> },
       {
         key: 'withdraw',
-        label: '提现',
+        label: t('adminUi.nav.items.withdraw', { defaultValue: '提现管理' }),
         path: '/operator/withdraw/applications',
         icon: <WalletOutlined />,
-        children: [
-          { key: 'withdrawApplications', label: '提现申请', path: '/operator/withdraw/applications' },
-          { key: 'withdrawVerify', label: '创作者认证', path: '/operator/withdraw/verify' },
-          { key: 'withdrawCreatorEarnings', label: '创作者收益提现', path: '/operator/withdraw/creator-earnings' },
-        ],
+        matches: (pathname) => pathname.startsWith('/operator/withdraw'),
       },
       {
         key: 'assetCenter',
-        label: '素材中心',
+        label: t('adminUi.nav.items.assetCenter'),
         path: '/operator/avatars',
         icon: <PictureOutlined />,
-        children: [
-          { key: 'avatars', label: '公共头像', path: '/operator/avatars' },
-          { key: 'locations', label: '地点库', path: '/operator/locations' },
-          { key: 'locationAssets', label: '地点素材库', path: '/operator/location-assets' },
-          { key: 'audioLibrary', label: '音频库', path: '/operator/audio-library' },
-          { key: 'artStyles', label: '画风管理', path: '/operator/art-styles' },
-        ],
+        matches: (pathname) => ['/operator/avatars', '/operator/locations', '/operator/location-assets', '/operator/audio-library', '/operator/art-styles'].some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)),
       },
-      { key: 'components', label: '组件管理', path: '/operator/components', icon: <SettingOutlined /> },
-      { key: 'feedback', label: '意见反馈', path: '/operator/feedback', icon: <CommentOutlined /> },
-      { key: 'businessCoop', label: '商务合作', path: '/operator/business-coop', icon: <TeamOutlined /> },
-      { key: 'gameIssues', label: '作品问题', path: '/operator/game-issues', icon: <AlertOutlined /> },
+      {
+        key: 'components',
+        label: t('adminUi.nav.items.components'),
+        path: '/operator/components',
+        icon: <SettingOutlined />,
+        matches: (pathname) => pathname.startsWith('/operator/components') || pathname.startsWith('/operator/play-mods'),
+      },
+      {
+        key: 'messages',
+        label: t('adminUi.nav.items.messagesHub', { defaultValue: '消息中心' }),
+        path: '/operator/messages/feedback',
+        icon: <CommentOutlined />,
+        matches: (pathname) => pathname.startsWith('/operator/messages') || pathname.startsWith('/operator/feedback'),
+      },
+      { key: 'businessCoop', label: t('adminUi.nav.items.businessCoop'), path: '/operator/business-coop', icon: <TeamOutlined /> },
+      { key: 'gameIssues', label: t('adminUi.nav.items.gameIssues'), path: '/operator/game-issues', icon: <AlertOutlined /> },
     ],
   },
 ];
@@ -266,13 +247,14 @@ const operatorGroups = (isAdmin: boolean, badges: Record<string, number>): Admin
 export const getAdminNavigation = (
   mode: AdminShellMode,
   options: { isAdmin?: boolean; userId?: string; badges?: Record<string, number> } = {},
+  t: TFunction,
 ): AdminNavigationGroup[] => {
   const badges = options.badges || {};
-  if (mode === 'operator') return operatorGroups(Boolean(options.isAdmin), badges);
+  if (mode === 'operator') return operatorGroups(Boolean(options.isAdmin), badges, t);
   if (options.userId === '96e89940badf1f67') {
-    return [{ key: 'admin-limited', label: '内容管理', items: [{ key: 'comments', label: '评论管理', path: '/admin/comments', icon: <CommentOutlined /> }] }];
+    return [{ key: 'admin-limited', label: t('adminUi.nav.groups.admin-limited'), items: [{ key: 'comments', label: t('adminUi.nav.items.comments'), path: '/admin/comments', icon: <CommentOutlined /> }] }];
   }
-  return adminGroups(badges);
+  return adminGroups(badges, t);
 };
 
 export const flattenNavigationItems = (groups: AdminNavigationGroup[]): AdminNavigationItem[] => (
@@ -284,7 +266,8 @@ export const resolveNavigationSelection = (groups: AdminNavigationGroup[], pathn
     for (const item of items) {
       const nested = item.children?.length ? find(item.children, [...parents, item.key]) : null;
       if (nested) return nested;
-      if (item.path === pathname) return { key: item.key, openKeys: parents };
+      const matched = item.matches ? item.matches(pathname) : item.path === pathname;
+      if (matched) return { key: item.key, openKeys: parents };
     }
     return null;
   };

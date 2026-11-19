@@ -44,7 +44,7 @@ test('OpeningStyleStudio_预览对话切换_计费清晰_可粘贴HTML', () => {
 test('ModEditorPanel_开场剧情删掉固定事件脚注', () => {
   const panel = read('Romance/src/components/ModEditorPanel.tsx');
   const openingAt = panel.indexOf('title="开场剧情"');
-  const nextAt = panel.indexOf('title="剧情美化"', openingAt);
+  const nextAt = panel.indexOf('title="底栏页签"', openingAt);
   assert.ok(openingAt >= 0 && nextAt > openingAt);
   const sec = panel.slice(openingAt, nextAt);
   assert.match(sec, /OpeningStyleStudio/);

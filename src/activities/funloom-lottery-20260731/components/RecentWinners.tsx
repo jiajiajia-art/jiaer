@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './RecentWinners.module.css';
-import { PRIZE_DISPLAY, type PrizeKey } from '../lib/lotteryClient';
+import { type PrizeKey } from '../lib/lotteryClient';
 import { resolveRecentWinnersMarqueeSeconds } from '../lib/recentWinnersMarquee';
 import { PRIZE_IMAGES } from './LotteryWheel';
 
@@ -35,6 +36,7 @@ export { resolveRecentWinnersMarqueeSeconds };
 
 /** 功能注释：活动页「刚刚中奖」固定高度 + 自动向上轮播，避免撑长整页。 */
 const RecentWinners: React.FC<RecentWinnersProps> = ({ items, paused = false }) => {
+  const { t } = useTranslation();
   const marqueeSeconds = useMemo(
     () => resolveRecentWinnersMarqueeSeconds(items.length),
     [items.length],
@@ -45,9 +47,9 @@ const RecentWinners: React.FC<RecentWinnersProps> = ({ items, paused = false }) 
 
   return (
     <section className={styles.wrap}>
-      <h2 className={styles.title}>刚刚中奖</h2>
+      <h2 className={styles.title}>{t('lottery.recentWinners.title')}</h2>
       {items.length === 0 ? (
-        <p className={styles.empty}>还没有人抽奖，来抢第一个吧</p>
+        <p className={styles.empty}>{t('lottery.recentWinners.empty')}</p>
       ) : (
         <div className={styles.viewport}>
           <ul
@@ -61,13 +63,13 @@ const RecentWinners: React.FC<RecentWinnersProps> = ({ items, paused = false }) 
             {renderItems.map((item, index) => {
               const key = item.prizeKey as PrizeKey;
               const img = PRIZE_IMAGES[key];
-              const label = item.prizeName || PRIZE_DISPLAY[key]?.label || item.prizeKey;
+              const label = item.prizeName || t(`lottery.prizes.${key}.label`, { defaultValue: item.prizeKey });
               return (
                 <li key={`${item.id}-${index}`} className={styles.item}>
                   {img ? <img src={img} alt={label} className={styles.thumb} /> : null}
                   <div className={styles.text}>
                     <strong>{item.displayName}</strong>
-                    <span>抽中了 {label}</span>
+                    <span>{t('lottery.recentWinners.wonPrize', { label })}</span>
                   </div>
                   <time className={styles.time}>{formatTime(item.createdAt)}</time>
                 </li>

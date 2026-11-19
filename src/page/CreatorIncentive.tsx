@@ -54,7 +54,7 @@ const resolveCreatorCenterReturnPath = (state: unknown): '/profile' | '/create' 
 };
 
 const CreatorIncentive: React.FC = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const { user, updateUser } = useAuthStore();
@@ -184,9 +184,9 @@ const CreatorIncentive: React.FC = () => {
     const isWorkIncentive = ['incentive', 'game_incentive', 'all_incentive'].includes(promotion.incentiveType);
     const isCodeIncentive = ['code_incentive', 'all_incentive'].includes(promotion.incentiveType);
     const benefitLabel = benefitSummary?.isSpecialAuthor
-        ? benefitSummary.label || '特邀'
-        : benefitSummary?.level ? `Lv.${benefitSummary.level}` : '等级—';
-    const formatValue = (value: number) => (Number(value) || 0).toLocaleString('zh-CN');
+        ? benefitSummary.label || t('creatorCenter.specialInvite')
+        : benefitSummary?.level ? `Lv.${benefitSummary.level}` : t('creatorCenter.levelUnknown');
+    const formatValue = (value: number) => (Number(value) || 0).toLocaleString(i18n.resolvedLanguage || i18n.language || 'zh');
 
     const handlePeriodChange = (value: CreatorEarningPeriod) => setPeriod(value);
     const handleRecords = (fileId = '') => { setRecordsFileId(fileId); setRecordsOpen(true); };
@@ -198,7 +198,7 @@ const CreatorIncentive: React.FC = () => {
             <main className={styles.mainContent}>
                 <div className={styles.dashboard}>
                     <CenteredPageHeader
-                        title="创作者中心"
+                        title={t('create.accountCreatorIncentive')}
                         backLabel={t('create.incentiveBack')}
                         onBack={() => navigate(resolveCreatorCenterReturnPath(location.state))}
                     />
@@ -208,10 +208,10 @@ const CreatorIncentive: React.FC = () => {
                             type="button"
                             className={styles.creatorLevelRow}
                             onClick={() => navigate('/creator-benefits')}
-                            aria-label={`${benefitSummary.label}，查看详情`}
+                            aria-label={t('creatorCenter.viewDetailsAria', { label: benefitSummary.label })}
                         >
                             <span>{benefitSummary.label}</span>
-                            <span className={styles.creatorLevelLink}>查看详情 <span aria-hidden="true">›</span></span>
+                            <span className={styles.creatorLevelLink}>{t('creatorCenter.viewDetails')} <span aria-hidden="true">›</span></span>
                         </button>
                     )}
 
@@ -221,7 +221,7 @@ const CreatorIncentive: React.FC = () => {
 
                     <section className={`${styles.panel} ${styles.promotionPanel}`} aria-labelledby="promotion-incentive-title">
                         <div className={styles.sectionHeader}><div><h2 id="promotion-incentive-title">{t('create.promotionIncentiveTitle')}</h2><p>{t('create.promotionIncentiveHint')}</p></div></div>
-                        {promotionStatus === 'loading' && <div className={styles.stateBox}>正在加载推广激励…</div>}
+                        {promotionStatus === 'loading' && <div className={styles.stateBox}>{t('create.promotionIncentiveLoading')}</div>}
                         {promotionStatus === 'error' && <div className={styles.stateBox} role="alert"><span>{t('create.incentiveStatsLoadFailed')}</span><button type="button" onClick={() => void loadPromotion()}>{t('create.incentiveRetry')}</button></div>}
                         {promotionStatus === 'success' && (isWorkIncentive || isCodeIncentive) && (
                             <div className={styles.settlementGrid}>

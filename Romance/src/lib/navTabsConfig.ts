@@ -51,9 +51,21 @@ const TAB_DEFS: TabDef[] = [
   { id: "settings", glyph: "gear", defaultLabel: "设置" },
 ];
 
-/** 功能注释：terms/label 可能被 AI 写成非字符串，禁止直接 .trim() */
+/** 内部 id / 术语键，不能当显示名（AI 生成的作品常把 id 写进 label：底栏显示 home / npc，P-05） */
+const RESERVED_NAV_WORDS = new Set([
+  ...TAB_DEFS.map((d) => d.id as string),
+  "world", "sim", "quest", "tabworld", "tabindustry", "tabnpc", "tabphone", "tabimage",
+]);
+
+/** 功能注释：terms/label 可能被 AI 写成非字符串，禁止直接 .trim()；内部 id 视为未填 */
 function navText(raw: unknown): string {
-  return typeof raw === "string" ? raw.trim() : "";
+  const t = typeof raw === "string" ? raw.trim() : "";
+  return t && RESERVED_NAV_WORDS.has(t.toLowerCase()) ? "" : t;
+}
+
+/** 牌位兜底中文名 */
+export function navDefaultLabel(id: string): string {
+  return TAB_DEFS.find((d) => d.id === id)?.defaultLabel ?? "";
 }
 
 /** 功能注释：按模组功能开关过滤可选牌位；名称优先 terms，再默认。 */
@@ -111,7 +123,7 @@ export function resolveNavSlots(
   }
   return picked.slice(0, n).map((id) => {
     const p = pool.find((x) => x.id === id)!;
-    return { ...p, label: lbl(id) || p.label };
+    return { ...p, label: lbl(id) || navText(p.label) || navDefaultLabel(id) || p.label };
   });
 }
 

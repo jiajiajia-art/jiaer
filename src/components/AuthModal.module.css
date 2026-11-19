@@ -91,11 +91,12 @@
 
 .title {
     color: var(--color-text);
-    font-size: 1.7rem;
-    font-weight: 700;
+    font-size: var(--modal-fs-title);
+    font-weight: var(--modal-fw-title);
+    line-height: var(--modal-lh-title);
     text-align: center;
     margin: 0 0 18px 0;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.02em;
 }
 
 .form {

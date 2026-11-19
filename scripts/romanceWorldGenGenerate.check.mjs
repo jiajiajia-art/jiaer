@@ -58,6 +58,7 @@ test('worldGenGenerate_extract与merge_以及只跑勾选模组', async () => {
   assert.equal(gen.worldGenModuleMaxTokens('fixedEvents'), 8000);
   assert.equal(gen.worldGenModuleMaxTokens('storylines'), 8000);
   assert.equal(gen.worldGenModuleMaxTokens('rooms'), 4000);
+  assert.equal(gen.worldGenModuleMaxTokens('prompt'), 12000);
   assert.match(
     gen.formatGenError(new SyntaxError("Expected ',' or ']' after array element in JSON at position 88")),
     /JSON 不完整/,

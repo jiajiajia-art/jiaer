@@ -17,7 +17,7 @@ export type PromotionEndTimeSource = {
 /** 功能注释：封面右下角结束时间；长期活动回退为长期文案 */
 export function formatPromotionEndTimeBadge(
   activity: PromotionEndTimeSource,
-  labels: { longTerm: string; endTimePrefix: string },
+  labels: { longTerm: string; endTimePrefix: string; endTimePattern?: string },
 ): string {
   if (activity.isLongTerm || !activity.endAt) {
     return labels.longTerm;
@@ -32,7 +32,13 @@ export function formatPromotionEndTimeBadge(
   const day = String(date.getDate()).padStart(2, '0');
   const hour = String(date.getHours()).padStart(2, '0');
   const minute = String(date.getMinutes()).padStart(2, '0');
-  return `${labels.endTimePrefix} ${month}月${day}日${hour}:${minute}`;
+  const pattern = labels.endTimePattern || '{{month}}月{{day}}日{{hour}}:{{minute}}';
+  const stamp = pattern
+    .replace('{{month}}', month)
+    .replace('{{day}}', day)
+    .replace('{{hour}}', hour)
+    .replace('{{minute}}', minute);
+  return `${labels.endTimePrefix} ${stamp}`;
 }
 
 /** 功能注释：按活动投稿开关收集形式标签（文本/链接/图片/视频） */

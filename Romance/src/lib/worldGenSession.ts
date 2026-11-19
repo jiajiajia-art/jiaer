@@ -356,6 +356,23 @@ export function shouldResumeWorldGenSession(): boolean {
   return true;
 }
 
+/**
+ * 功能注释：编辑器打开期间在 URL 标记 resume=1；系统文件选择器等导致页面被回收重载时，
+ * 直接回到编辑器而不是落回「创作游戏」引导页（B-06）。回到设定页时清除。
+ */
+export function setWorldGenResumeQuery(on: boolean): void {
+  if (typeof location === "undefined" || typeof history === "undefined") return;
+  try {
+    const url = new URL(location.href);
+    if ((url.searchParams.get("resume") === "1") === on) return;
+    if (on) url.searchParams.set("resume", "1");
+    else url.searchParams.delete("resume");
+    history.replaceState(history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  } catch {
+    /* ignore */
+  }
+}
+
 /** 功能注释：向导打开期间把 createWorld 写回 URL，刷新仍能识别入口 */
 export function ensureWorldGenQuery(): void {
   if (typeof location === "undefined" || typeof history === "undefined") return;

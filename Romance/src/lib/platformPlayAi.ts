@@ -24,18 +24,29 @@ export function hasPlatformPlayAuth(): boolean {
   return !!readFunloomAuthToken();
 }
 
+export type PlatformPlayToolDef = {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+};
+
 export type PlatformPlayCompleteOpts = {
   timeoutMs?: number;
   signal?: AbortSignal;
   max_tokens?: number;
+  /** 功能注释：OpenAI 兼容 function calling；有 tools 时透传给平台 complete */
+  tools?: PlatformPlayToolDef[];
   /** 功能注释：计费溯源功能点（见 lib/aiTrace.ts） */
   feature?: string;
 };
+
+export type PlatformPlayToolCall = { name: string; args: unknown; raw: string };
 
 export type PlatformPlayCompleteResult = {
   text: string;
   pointsDeducted: number;
   remainingPoints?: number;
+  tool_calls?: PlatformPlayToolCall[];
 };
 
 function requireAuthToken(): string {
@@ -78,6 +89,12 @@ export async function completePlayViaPlatform(
       body: JSON.stringify({
         messages,
         max_tokens: opts.max_tokens || 4000,
+        ...(opts.tools?.length
+          ? {
+              tools: opts.tools.map((t) => ({ type: "function", function: t })),
+              tool_choice: "auto",
+            }
+          : {}),
         ...aiRouteBody("text"),
         ...aiTraceBody("text", { feature: opts.feature }),
       }),
@@ -86,7 +103,12 @@ export async function completePlayViaPlatform(
     const rawBody = await res.text().catch(() => "");
     let json: {
       success?: boolean;
-      data?: { text?: string; pointsDeducted?: number; remainingPoints?: number };
+      data?: {
+        text?: string;
+        pointsDeducted?: number;
+        remainingPoints?: number;
+        tool_calls?: Array<{ function?: { name?: string; arguments?: string }; name?: string; arguments?: string }>;
+      };
       message?: string;
       error?: string;
       code?: string;
@@ -109,7 +131,23 @@ export async function completePlayViaPlatform(
     }
 
     const text = String(json?.data?.text || "").trim();
-    if (!text) {
+    const rawCalls = Array.isArray(json?.data?.tool_calls) ? json.data.tool_calls : [];
+    const tool_calls: PlatformPlayToolCall[] = rawCalls.map((c) => {
+      const raw = String(c?.function?.arguments ?? c?.arguments ?? "");
+      let args: unknown = undefined;
+      try {
+        args = raw ? JSON.parse(raw) : {};
+      } catch {
+        try {
+          args = JSON.parse(raw.replace(/,\s*([}\]])/g, "$1"));
+        } catch {
+          args = undefined;
+        }
+      }
+      return { name: String(c?.function?.name ?? c?.name ?? ""), args, raw };
+    });
+    // 功能注释：纯 tool_calls 时正文可为空；无 tools 时仍要求有正文
+    if (!text && !(opts.tools?.length && tool_calls.length)) {
       throw Object.assign(new Error("平台返回空内容"), { status: 204, body: rawBody.slice(0, 200) });
     }
     const pointsDeducted = Math.max(0, Math.floor(Number(json?.data?.pointsDeducted) || 0));
@@ -118,7 +156,7 @@ export async function completePlayViaPlatform(
       remainingRaw == null || !Number.isFinite(Number(remainingRaw))
         ? undefined
         : Math.max(0, Math.floor(Number(remainingRaw)));
-    return { text, pointsDeducted, remainingPoints };
+    return { text, pointsDeducted, remainingPoints, ...(tool_calls.length ? { tool_calls } : {}) };
   } catch (e) {
     if ((e as { name?: string })?.name === "AbortError") {
       throw new DOMException("已取消", "AbortError");

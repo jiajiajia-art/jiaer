@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../store/useAuthStore';
 import { playerCharacterCardsApi } from '../../api/galgame/playerCharacterCards';
@@ -27,7 +28,7 @@ import {
   subscribeWarehouseCardAvatarGenComplete,
   warehouseCardAvatarJobKey,
 } from '../../lib/warehouse/warehouseCardAvatarBackgroundJob';
-import { PERSONA_TAGS, genderLabel } from './warehouseNav';
+import { PERSONA_TAG_ALL, PERSONA_TAGS, genderLabel, personaTagLabel } from './warehouseNav';
 import WarehouseCardAvatarField from './WarehouseCardAvatarField';
 import WarehouseAvatarGenerateConfirm from './WarehouseAvatarGenerateConfirm';
 import WarehouseEmptyIcon from './WarehouseEmptyIcon';
@@ -59,6 +60,7 @@ const emptyDraft = (): Draft => ({
 
 /** 我的角色卡（NPC，cardKind=npc） */
 const WarehouseCharacterCards: React.FC = () => {
+  const { t } = useTranslation();
   const {
     estimatedPoints: warehouseCardPrice,
     priceUnavailable: warehouseCardPriceUnavailable,
@@ -71,7 +73,7 @@ const WarehouseCharacterCards: React.FC = () => {
   const [cards, setCards] = useState<PlayerCharacterCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
-  const [tag, setTag] = useState('全部');
+  const [tag, setTag] = useState<(typeof PERSONA_TAGS)[number]>(PERSONA_TAG_ALL);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -106,7 +108,9 @@ const WarehouseCharacterCards: React.FC = () => {
         void refreshAuthUserPoints();
       }
       toast.success(
-        `图像已生成（-${result.pointsDeducted ?? warehouseCardCost} 织梦豆）`,
+        t('warehouse.cards.imageGenOk', {
+          cost: result.pointsDeducted ?? warehouseCardCost,
+        }),
       );
       if (result.cardId) {
         void loadRef.current?.();
@@ -116,7 +120,7 @@ const WarehouseCharacterCards: React.FC = () => {
         setDraft((d) => ({ ...d, avatarUrl: result.avatarUrl, avatarLocked: true }));
       }
     });
-  }, [updateUser]);
+  }, [updateUser, t, warehouseCardCost]);
 
   const loadRef = useRef<(() => Promise<void>) | null>(null);
 
@@ -135,7 +139,7 @@ const WarehouseCharacterCards: React.FC = () => {
     try {
       const res = await playerCharacterCardsApi.list(token, { kind: 'npc', q: query });
       if (!res?.success) {
-        toast.error(res?.message || '加载角色卡失败');
+        toast.error(res?.message || t('warehouse.characters.loadFailed'));
         setCards([]);
         return;
       }
@@ -146,11 +150,11 @@ const WarehouseCharacterCards: React.FC = () => {
         return list[0]?.id || null;
       });
     } catch (e) {
-      toast.error((e as Error)?.message || '加载角色卡失败');
+      toast.error((e as Error)?.message || t('warehouse.characters.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [token, query]);
+  }, [token, query, t]);
 
   loadRef.current = load;
 
@@ -159,7 +163,7 @@ const WarehouseCharacterCards: React.FC = () => {
   }, [load]);
 
   const filtered = useMemo(() => {
-    if (tag === '全部') return cards;
+    if (tag === PERSONA_TAG_ALL) return cards;
     return cards.filter((c) => (c.tags || []).some((t) => t === tag));
   }, [cards, tag]);
 
@@ -209,7 +213,7 @@ const WarehouseCharacterCards: React.FC = () => {
 
   const requestGenerateAvatar = async () => {
     if (!draft.name.trim()) {
-      toast.error('请先填写姓名再生成图像');
+      toast.error(t('warehouse.characters.needNameForAvatar'));
       return;
     }
     if (!token || generatingAvatar) return;
@@ -219,7 +223,7 @@ const WarehouseCharacterCards: React.FC = () => {
       return;
     }
     if (typeof latestPoints === 'number' && latestPoints < warehouseCardCost) {
-      toast.error(`织梦豆不足（需要 ${warehouseCardCost}，当前 ${latestPoints}）`);
+      toast.error(t('warehouse.cards.pointsInsufficient', { need: warehouseCardCost, current: latestPoints }));
       return;
     }
     setAvatarConfirmOpen(true);
@@ -231,7 +235,7 @@ const WarehouseCharacterCards: React.FC = () => {
   }) => {
     setAvatarConfirmOpen(false);
     if (!token || !draft.name.trim() || generatingAvatar) return;
-    toast('图像后台生成中，可继续编辑或保存');
+    toast(t('warehouse.cards.imageGenBackground'));
     try {
       await startWarehouseCardAvatarBackgroundGen({
         token,
@@ -246,13 +250,13 @@ const WarehouseCharacterCards: React.FC = () => {
         },
       });
     } catch (e) {
-      toast.error((e as Error)?.message || '生成图像失败');
+      toast.error((e as Error)?.message || t('warehouse.characters.avatarGenFailed'));
     }
   };
 
   const requestGeneratePersona = async () => {
     if (!draft.name.trim()) {
-      toast.error('请先填写姓名再生成');
+      toast.error(t('warehouse.characters.needNameForPersona'));
       return;
     }
     if (!token || generatingPersona || saving) return;
@@ -262,7 +266,10 @@ const WarehouseCharacterCards: React.FC = () => {
       && latestPoints < NPC_PROFILE_FIELD_GENERATION_COST
     ) {
       toast.error(
-        `织梦豆不足（需要 ${NPC_PROFILE_FIELD_GENERATION_COST}，当前 ${latestPoints}）`,
+        t('warehouse.cards.pointsInsufficient', {
+          need: NPC_PROFILE_FIELD_GENERATION_COST,
+          current: latestPoints,
+        }),
       );
       return;
     }
@@ -282,7 +289,7 @@ const WarehouseCharacterCards: React.FC = () => {
         cardKind: 'npc',
       });
       if (!res?.success || !res.data?.text) {
-        toast.error(res?.message || '角色设定生成失败');
+        toast.error(res?.message || t('warehouse.characters.personaGenFailed'));
         return;
       }
       setDraft((d) => ({
@@ -291,10 +298,12 @@ const WarehouseCharacterCards: React.FC = () => {
       }));
       await refreshAuthUserPoints();
       toast.success(
-        `角色设定已生成（-${res.data.pointsDeducted ?? NPC_PROFILE_FIELD_GENERATION_COST} 织梦豆）`,
+        t('warehouse.characters.personaGenOk', {
+          cost: res.data.pointsDeducted ?? NPC_PROFILE_FIELD_GENERATION_COST,
+        }),
       );
     } catch (e) {
-      toast.error((e as Error)?.message || '角色设定生成失败');
+      toast.error((e as Error)?.message || t('warehouse.characters.personaGenFailed'));
     } finally {
       setGeneratingPersona(false);
     }
@@ -302,7 +311,7 @@ const WarehouseCharacterCards: React.FC = () => {
 
   const saveForm = async () => {
     if (!token) {
-      toast.error('请先登录');
+      toast.error(t('warehouse.cards.loginRequired'));
       return;
     }
     const checked = validatePlayerCharacterCardInput({
@@ -312,7 +321,7 @@ const WarehouseCharacterCards: React.FC = () => {
       attributes: {},
     });
     if (!checked.ok) {
-      toast.error(checked.message || '表单无效');
+      toast.error(checked.message || t('warehouse.cards.formInvalid'));
       return;
     }
     const tags = draft.tagsText
@@ -335,15 +344,15 @@ const WarehouseCharacterCards: React.FC = () => {
         ? await playerCharacterCardsApi.update(token, editingId, body)
         : await playerCharacterCardsApi.create(token, body);
       if (!res?.success) {
-        toast.error(res?.message || '保存失败');
+        toast.error(res?.message || t('warehouse.cards.saveFailed'));
         return;
       }
-      toast.success(editingId ? '已更新角色卡' : '已创建角色卡');
+      toast.success(editingId ? t('warehouse.characters.updatedOk') : t('warehouse.characters.createdOk'));
       setFormOpen(false);
       await load();
       if (res.data?.id) setSelectedId(String(res.data.id));
     } catch (e) {
-      toast.error((e as Error)?.message || '保存失败');
+      toast.error((e as Error)?.message || t('warehouse.cards.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -353,10 +362,10 @@ const WarehouseCharacterCards: React.FC = () => {
     if (!token) return;
     const res = await playerCharacterCardsApi.setDefault(token, card.id);
     if (!res?.success) {
-      toast.error(res?.message || '设置失败');
+      toast.error(res?.message || t('warehouse.cards.setFailed'));
       return;
     }
-    toast.success('已设为默认角色卡');
+    toast.success(t('warehouse.characters.setDefaultOk'));
     await load();
   };
 
@@ -364,10 +373,10 @@ const WarehouseCharacterCards: React.FC = () => {
     if (!token) return;
     const res = await playerCharacterCardsApi.publish(token, card.id, nextPublic);
     if (!res?.success) {
-      toast.error(res?.message || '操作失败');
+      toast.error(res?.message || t('warehouse.cards.operationFailed'));
       return;
     }
-    toast.success(nextPublic ? '已发布到公共卡库' : '已取消公开');
+    toast.success(nextPublic ? t('warehouse.cards.publishOk') : t('warehouse.cards.unpublishOk'));
     await load();
   };
 
@@ -379,7 +388,7 @@ const WarehouseCharacterCards: React.FC = () => {
     a.download = `character-${card.name || card.id}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('已导出 JSON');
+    toast.success(t('warehouse.cards.exportJsonOk'));
   };
 
   const importFile = async (file: File) => {
@@ -389,7 +398,7 @@ const WarehouseCharacterCards: React.FC = () => {
       const json = JSON.parse(text);
       const checked = validatePlayerCharacterCardInput(json);
       if (!checked.ok) {
-        toast.error(checked.message || '导入文件无效');
+        toast.error(checked.message || t('warehouse.cards.importInvalid'));
         return;
       }
       const res = await playerCharacterCardsApi.create(token, {
@@ -399,13 +408,13 @@ const WarehouseCharacterCards: React.FC = () => {
         avatarUrl: json.avatarUrl || '',
       });
       if (!res?.success) {
-        toast.error(res?.message || '导入失败');
+        toast.error(res?.message || t('warehouse.cards.importFailed'));
         return;
       }
-      toast.success('已导入角色卡');
+      toast.success(t('warehouse.characters.importOk'));
       await load();
     } catch {
-      toast.error('无法解析导入文件');
+      toast.error(t('warehouse.cards.importParseFailed'));
     }
   };
 
@@ -413,10 +422,10 @@ const WarehouseCharacterCards: React.FC = () => {
     if (!token || !deleteId) return;
     const res = await playerCharacterCardsApi.remove(token, deleteId);
     if (!res?.success) {
-      toast.error(res?.message || '删除失败');
+      toast.error(res?.message || t('warehouse.cards.deleteFailed'));
       return;
     }
-    toast.success('已删除');
+    toast.success(t('warehouse.cards.deleted'));
     setDeleteId(null);
     await load();
   };
@@ -424,8 +433,8 @@ const WarehouseCharacterCards: React.FC = () => {
   return (
     <div className={panel.panelRoot}>
       <header className={panel.header}>
-        <h1 className={panel.title}>我的角色卡</h1>
-        <p className={panel.sub}>管理 NPC 角色卡，可导入导出，并发布到公共卡库</p>
+        <h1 className={panel.title}>{t('warehouse.characters.title')}</h1>
+        <p className={panel.sub}>{t('warehouse.characters.sub')}</p>
       </header>
 
       <div className={panel.toolbar}>
@@ -433,10 +442,10 @@ const WarehouseCharacterCards: React.FC = () => {
           className={panel.search}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="搜索角色名 / 设定"
+          placeholder={t('warehouse.characters.searchPlaceholder')}
         />
         <button type="button" className={panel.ghostBtn} onClick={() => fileRef.current?.click()}>
-          导入 JSON
+          {t('warehouse.cards.importJson')}
         </button>
         <input
           ref={fileRef}
@@ -450,30 +459,30 @@ const WarehouseCharacterCards: React.FC = () => {
           }}
         />
         <button type="button" className={panel.primaryBtn} onClick={openCreate}>
-          + 新建角色卡
+          + {t('warehouse.characters.newCard')}
         </button>
       </div>
 
       <div className={panel.tags}>
-        {PERSONA_TAGS.map((t) => (
+        {PERSONA_TAGS.map((tg) => (
           <button
-            key={t}
+            key={tg}
             type="button"
-            className={tag === t ? panel.tagActive : panel.tag}
-            onClick={() => setTag(t)}
+            className={tag === tg ? panel.tagActive : panel.tag}
+            onClick={() => setTag(tg)}
           >
-            {t}
+            {personaTagLabel(tg, t)}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <p className={panel.empty}>加载中…</p>
+        <p className={panel.empty}>{t('common.loading')}</p>
       ) : filtered.length === 0 ? (
         <div className={panel.emptyStage}>
           <WarehouseEmptyIcon kind="character" />
-          <h2>还没有角色卡</h2>
-          <p>新建或导入一张 NPC 卡，带到不同故事里使用</p>
+          <h2>{t('warehouse.characters.emptyTitle')}</h2>
+          <p>{t('warehouse.characters.emptyHint')}</p>
         </div>
       ) : (
         <div className={panel.layout}>
@@ -495,23 +504,23 @@ const WarehouseCharacterCards: React.FC = () => {
                         {(card.name || '?').slice(0, 1)}
                       </div>
                     )}
-                    {card.isDefault ? <span className={panel.portraitBadge}>默认</span> : null}
+                    {card.isDefault ? <span className={panel.portraitBadge}>{t('warehouse.cards.defaultBadge')}</span> : null}
                     {active ? <span className={panel.checkMark}>✓</span> : null}
                   </div>
                   <div className={panel.cardBody}>
                     <div className={panel.cardTop}>
                       <h3 className={panel.cardName}>{card.name}</h3>
-                      {card.isPublic ? <span className={panel.badge}>已公开</span> : null}
+                      {card.isPublic ? <span className={panel.badge}>{t('warehouse.cards.publicBadge')}</span> : null}
                     </div>
-                    <p className={panel.cardMeta}>{genderLabel(card.gender)}</p>
+                    <p className={panel.cardMeta}>{genderLabel(card.gender, t)}</p>
                     {(card.tags || []).length > 0 ? (
                       <div className={panel.chipRow}>
-                        {(card.tags || []).slice(0, 3).map((t) => (
-                          <span key={t} className={panel.chip}>{t}</span>
+                        {(card.tags || []).slice(0, 3).map((tg) => (
+                          <span key={tg} className={panel.chip}>{personaTagLabel(tg, t)}</span>
                         ))}
                       </div>
                     ) : null}
-                    <p className={panel.cardPersona}>{card.persona || '暂无角色设定'}</p>
+                    <p className={panel.cardPersona}>{card.persona || t('warehouse.characters.noPersona')}</p>
                     <div className={panel.cardActions}>
                       <button
                         type="button"
@@ -521,7 +530,7 @@ const WarehouseCharacterCards: React.FC = () => {
                           openEdit(card);
                         }}
                       >
-                        编辑
+                        {t('warehouse.cards.edit')}
                       </button>
                       {!card.isDefault ? (
                         <button
@@ -531,7 +540,7 @@ const WarehouseCharacterCards: React.FC = () => {
                             void setAsDefault(card);
                           }}
                         >
-                          设为默认
+                          {t('warehouse.cards.setDefault')}
                         </button>
                       ) : null}
                     </div>
@@ -558,51 +567,51 @@ const WarehouseCharacterCards: React.FC = () => {
                   )}
                 </div>
                 <div className={panel.previewInner}>
-                  <p className={panel.previewTitle}>当前角色预览</p>
+                  <p className={panel.previewTitle}>{t('warehouse.characters.previewTitle')}</p>
                   <h3 className={panel.previewName}>{selected.name}</h3>
-                  <p className={panel.previewRow}><strong>性别</strong>{genderLabel(selected.gender)}</p>
-                  <p className={panel.previewRow}><strong>角色设定</strong>{selected.persona || '—'}</p>
+                  <p className={panel.previewRow}><strong>{t('warehouse.cards.labelGender')}</strong>{genderLabel(selected.gender, t)}</p>
+                  <p className={panel.previewRow}><strong>{t('warehouse.characters.previewPersonaLabel')}</strong>{selected.persona || '—'}</p>
                   <p className={panel.previewRow}>
-                    <strong>标签</strong>
+                    <strong>{t('warehouse.cards.labelTags')}</strong>
                     {(selected.tags || []).join('、') || '—'}
                   </p>
                   <div className={panel.previewActions}>
                     <button type="button" className={panel.primaryBtn} onClick={() => openEdit(selected)}>
-                      编辑角色
+                      {t('warehouse.characters.editCard')}
                     </button>
                     <button
                       type="button"
                       className={panel.ghostBtn}
-                      onClick={() => toast('请在对局内打开该角色的私聊面板')}
+                      onClick={() => toast(t('warehouse.characters.dmToast'))}
                     >
-                      私聊说明
+                      {t('warehouse.characters.dmHint')}
                     </button>
                     <button type="button" className={panel.ghostBtn} onClick={() => exportCard(selected)}>
-                      导出
+                      {t('warehouse.cards.export')}
                     </button>
                     <button
                       type="button"
                       className={panel.ghostBtn}
                       onClick={() => void publish(selected, !selected.isPublic)}
                     >
-                      {selected.isPublic ? '取消公开' : '发布到公共卡库'}
+                      {selected.isPublic ? t('warehouse.cards.unpublish') : t('warehouse.cards.publishPublic')}
                     </button>
                     <button
                       type="button"
                       className={panel.dangerBtn}
                       onClick={() => setDeleteId(selected.id)}
                     >
-                      删除
+                      {t('warehouse.cards.delete')}
                     </button>
                   </div>
                   <p className={panel.previewTip}>
-                    角色卡用于 NPC；私聊需在具体对局会话中进行。开局可从仓库选用角色设定。
+                    {t('warehouse.characters.previewTip')}
                   </p>
                 </div>
               </>
             ) : (
               <div className={panel.previewInner}>
-                <p className={panel.empty}>选择一张卡查看详情</p>
+                <p className={panel.empty}>{t('warehouse.cards.selectCardHint')}</p>
               </div>
             )}
           </aside>
@@ -616,7 +625,7 @@ const WarehouseCharacterCards: React.FC = () => {
               className={panel.formCard}
               role="dialog"
               aria-modal="true"
-              aria-label={editingId ? '编辑角色卡' : '新建角色卡'}
+              aria-label={editingId ? t('warehouse.characters.formEditTitle') : t('warehouse.characters.newCard')}
               onClick={(e) => e.stopPropagation()}
             >
               <aside className={panel.formPreview}>
@@ -630,16 +639,18 @@ const WarehouseCharacterCards: React.FC = () => {
                     />
                   ) : (
                     <div className={panel.formPreviewPortraitFallback} aria-hidden>
-                      {(draft.name || '角').slice(0, 1)}
+                      {(draft.name || t('warehouse.cards.avatarFallbackNpc')).slice(0, 1)}
                     </div>
                   )}
                 </div>
-                <h4 className={panel.formPreviewName}>{draft.name.trim() || '未命名角色'}</h4>
+                <h4 className={panel.formPreviewName}>
+                  {draft.name.trim() || t('warehouse.characters.unnamedCharacter')}
+                </h4>
                 <p className={panel.formPreviewMeta}>
-                  {genderLabel(draft.gender)}
-                  {draft.isDefault ? ' · 默认卡' : ''}
+                  {genderLabel(draft.gender, t)}
+                  {draft.isDefault ? t('warehouse.forms.defaultCardSuffix') : ''}
                   <br />
-                  {(draft.persona || '在右侧写下角色设定…').slice(0, 72)}
+                  {(draft.persona || t('warehouse.characters.form.previewHint')).slice(0, 72)}
                   {draft.persona.length > 72 ? '…' : ''}
                 </p>
                 <div className={panel.formPreviewChips}>
@@ -656,11 +667,13 @@ const WarehouseCharacterCards: React.FC = () => {
 
               <div className={panel.formBody}>
                 <div className={panel.formBodyHead}>
-                  <h3>{editingId ? '编辑角色卡' : '新建角色卡'}</h3>
+                  <h3>
+                    {editingId ? t('warehouse.characters.formEditTitle') : t('warehouse.characters.newCard')}
+                  </h3>
                   <button
                     type="button"
                     className={panel.formClose}
-                    aria-label="关闭"
+                    aria-label={t('warehouse.cards.close')}
                     disabled={saving}
                     onClick={() => setFormOpen(false)}
                   >
@@ -673,25 +686,25 @@ const WarehouseCharacterCards: React.FC = () => {
                   avatarUrl={draft.avatarUrl}
                   generating={generatingAvatar}
                   disabled={saving}
-                  fallbackChar="角"
+                  fallbackChar={t('warehouse.cards.avatarFallbackNpc')}
                   cardId={editingId}
                   onGenerate={() => void requestGenerateAvatar()}
                   onAvatarUrl={(url) => setDraft((d) => ({ ...d, avatarUrl: url, avatarLocked: true }))}
                 >
                   <div className={panel.field}>
-                    <label htmlFor="wh-npc-name">姓名</label>
+                    <label htmlFor="wh-npc-name">{t('warehouse.forms.labelName')}</label>
                     <input
                       id="wh-npc-name"
                       value={draft.name}
                       onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
                       maxLength={40}
-                      placeholder="角色名字"
+                      placeholder={t('warehouse.characters.form.namePlaceholder')}
                       autoFocus
                     />
                   </div>
 
                   <div className={panel.field}>
-                    <span id="wh-npc-gender-label">性别</span>
+                    <span id="wh-npc-gender-label">{t('warehouse.cards.labelGender')}</span>
                     <div className={panel.segRow} role="radiogroup" aria-labelledby="wh-npc-gender-label">
                       {PLAYER_CARD_GENDERS.map((g) => (
                         <button
@@ -709,14 +722,14 @@ const WarehouseCharacterCards: React.FC = () => {
                           {draft.gender === g ? (
                             <MdCheck className={panel.segActiveIcon} aria-hidden />
                           ) : null}
-                          {genderLabel(g)}
+                          {genderLabel(g, t)}
                         </button>
                       ))}
                     </div>
                   </div>
 
                   <div className={panel.field}>
-                    <label htmlFor="wh-npc-age">年龄段（头像匹配）</label>
+                    <label htmlFor="wh-npc-age">{t('warehouse.forms.labelAgeGroup')}</label>
                     <select
                       id="wh-npc-age"
                       value={draft.ageGroup}
@@ -733,7 +746,7 @@ const WarehouseCharacterCards: React.FC = () => {
                   </div>
 
                   <div className={panel.field}>
-                    <label htmlFor="wh-npc-bg">背景（头像匹配）</label>
+                    <label htmlFor="wh-npc-bg">{t('warehouse.forms.labelBackground')}</label>
                     <select
                       id="wh-npc-bg"
                       value={draft.backgroundType}
@@ -749,13 +762,13 @@ const WarehouseCharacterCards: React.FC = () => {
                     </select>
                   </div>
                   {draft.avatarLocked ? (
-                    <p className={panel.sub} style={{ margin: 0 }}>已手动选定头像，自动匹配已锁定</p>
+                    <p className={panel.sub} style={{ margin: 0 }}>{t('warehouse.forms.avatarLockedHint')}</p>
                   ) : null}
                 </WarehouseCardAvatarField>
 
                 <div className={panel.field}>
                   <div className={panel.labelWithAi}>
-                    <label htmlFor="wh-npc-text">角色设定</label>
+                    <label htmlFor="wh-npc-text">{t('warehouse.characters.form.personaLabel')}</label>
                     <button
                       type="button"
                       className={panel.fieldAiBtn}
@@ -766,8 +779,8 @@ const WarehouseCharacterCards: React.FC = () => {
                         <MdAutoAwesome className={panel.fieldAiBtnIcon} aria-hidden />
                       ) : null}
                       {generatingPersona
-                        ? '生成中…'
-                        : `AI生成 · ${NPC_PROFILE_FIELD_GENERATION_COST}`}
+                        ? t('warehouse.forms.aiGenerating')
+                        : t('warehouse.forms.aiGenerateCost', { cost: NPC_PROFILE_FIELD_GENERATION_COST })}
                     </button>
                   </div>
                   <textarea
@@ -775,18 +788,18 @@ const WarehouseCharacterCards: React.FC = () => {
                     value={draft.persona}
                     onChange={(e) => setDraft((d) => ({ ...d, persona: e.target.value }))}
                     maxLength={PLAYER_CARD_LIMITS.persona.max}
-                    placeholder="性格、口吻、与玩家的关系…越具体越好"
+                    placeholder={t('warehouse.characters.form.personaPlaceholder')}
                     disabled={generatingPersona}
                   />
                 </div>
 
                 <div className={panel.field}>
-                  <label htmlFor="wh-npc-tags">标签</label>
+                  <label htmlFor="wh-npc-tags">{t('warehouse.cards.labelTags')}</label>
                   <input
                     id="wh-npc-tags"
                     value={draft.tagsText}
                     onChange={(e) => setDraft((d) => ({ ...d, tagsText: e.target.value }))}
-                    placeholder="奇幻, 恋爱（逗号分隔）"
+                    placeholder={t('warehouse.characters.form.tagsPlaceholder')}
                   />
                 </div>
 
@@ -796,7 +809,7 @@ const WarehouseCharacterCards: React.FC = () => {
                     checked={draft.isDefault}
                     onChange={(e) => setDraft((d) => ({ ...d, isDefault: e.target.checked }))}
                   />
-                  设为默认角色卡
+                  {t('warehouse.characters.form.setDefaultCheckbox')}
                 </label>
 
                 <div className={panel.formActions}>
@@ -806,7 +819,7 @@ const WarehouseCharacterCards: React.FC = () => {
                     disabled={saving}
                     onClick={() => setFormOpen(false)}
                   >
-                    取消
+                    {t('warehouse.cards.cancel')}
                   </button>
                   <button
                     type="button"
@@ -814,7 +827,7 @@ const WarehouseCharacterCards: React.FC = () => {
                     disabled={saving}
                     onClick={() => void saveForm()}
                   >
-                    {saving ? '保存中…' : '保存角色卡'}
+                    {saving ? t('warehouse.cards.saving') : t('warehouse.characters.form.saveCharacter')}
                   </button>
                 </div>
               </div>
@@ -827,8 +840,8 @@ const WarehouseCharacterCards: React.FC = () => {
       <WarehouseAvatarGenerateConfirm
         isOpen={avatarConfirmOpen}
         cost={warehouseCardCost}
-        title="确认生成图像"
-        subjectLabel="角色立绘"
+        title={t('warehouse.avatars.generateTitle')}
+        subjectLabel={t('warehouse.avatars.generateSubjectCharacter')}
         onCancel={() => setAvatarConfirmOpen(false)}
         onConfirm={(result) => void runGenerateAvatar(result)}
       />
@@ -837,20 +850,22 @@ const WarehouseCharacterCards: React.FC = () => {
         isOpen={personaConfirmOpen}
         onCancel={() => setPersonaConfirmOpen(false)}
         onConfirm={() => void runGeneratePersona()}
-        title="确认生成角色设定"
-        message={`将扣除 ${NPC_PROFILE_FIELD_GENERATION_COST} 织梦豆生成「角色设定」，是否继续？`}
-        confirmButtonText="生成"
-        cancelButtonText="取消"
+        title={t('warehouse.characters.form.confirmGenerateTitle')}
+        message={t('warehouse.characters.form.confirmGenerateMessage', {
+          cost: NPC_PROFILE_FIELD_GENERATION_COST,
+        })}
+        confirmButtonText={t('warehouse.characters.form.confirmGenerate')}
+        cancelButtonText={t('warehouse.cards.cancel')}
       />
 
       <ConfirmModal
         isOpen={Boolean(deleteId)}
         onCancel={() => setDeleteId(null)}
         onConfirm={() => void confirmDelete()}
-        title="删除角色卡"
-        message="删除后不可恢复，确认删除吗？"
-        confirmButtonText="删除"
-        cancelButtonText="取消"
+        title={t('warehouse.characters.deleteTitle')}
+        message={t('warehouse.cards.deleteConfirm')}
+        confirmButtonText={t('warehouse.cards.delete')}
+        cancelButtonText={t('warehouse.cards.cancel')}
       />
     </div>
   );

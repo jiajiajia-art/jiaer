@@ -16,6 +16,11 @@ export const withCacheBust = (url?: string | null): string => {
         : getImageUrl(url);
     
     if (!processedUrl) return '';
+
+    // 功能注释：Romance 封面常为 data:/blob:；拼 ?t= 会毁掉 URI，列表卡落到默认图
+    if (processedUrl.startsWith('data:') || processedUrl.startsWith('blob:')) {
+        return processedUrl;
+    }
     
     if (processedUrl.includes('?t=') || processedUrl.includes('&t=') || 
         processedUrl.includes('?cb=') || processedUrl.includes('&cb=')) {

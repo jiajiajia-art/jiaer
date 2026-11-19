@@ -32,10 +32,13 @@ test('WarehouseHub_手机用目录条与底栏sheet而非堆叠侧栏', () => {
   assert.match(css, /mobileRail/);
   assert.match(css, /sheetPanel/);
   assert.doesNotMatch(css, /@media \(max-width: 980px\)[\s\S]*\.sidebar\s*\{[^}]*width:\s*100%/);
-  assert.match(css, /\.mobileChrome::after/);
+  // 手机顶栏随页滚动，目录在底栏 sheet，不再用 mobileChrome::after 遮罩
+  assert.match(css, /\.mobileChrome\s*\{[\s\S]*?position:\s*relative/);
+  assert.match(css, /\.sheetPanel\s*\{[\s\S]*?bottom:\s*0/);
+  assert.doesNotMatch(css, /\.mobileChrome::after/);
   assert.match(css, /background:\s*var\(--wh-stage\)/);
   assert.doesNotMatch(css, /rgba\(244,\s*242,\s*245,\s*0\.92\)/);
   assert.match(panelCss, /\.header\s*\{\s*display:\s*none;/);
-  assert.match(indexCss, /--app-mobile-navbar-height:\s*60px/);
+  assert.match(indexCss, /--app-mobile-navbar-height:\s*72px/);
   assert.match(indexCss, /--app-desktop-navbar-height:\s*var\(--app-mobile-navbar-height\)/);
 });

@@ -6,8 +6,9 @@ export type CommentReviewStatus = 'pending' | 'approved' | 'rejected';
 export interface PendingCommentItem {
     rating_id: string;
     comment_content: string;
+    rating_value?: number | null;
     review_status: CommentReviewStatus;
-    wx_check_result: string;
+    wx_check_result: string | null;
     nickname: string;
     game_title: string;
     created_at: string;

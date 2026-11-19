@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -6,7 +7,6 @@ import lotteryApi from './api/lotteryApi';
 import {
   evaluateClientDrawGate,
   LOTTERY_SLUG,
-  PRIZE_DISPLAY,
   PRIZE_KEYS,
   type LotteryCampaign,
   type LotteryDraw,
@@ -27,7 +27,9 @@ function getErrorMessage(error: unknown, fallback: string): string {
 
 /** 功能注释：活动页视觉对齐主 KV（蓝紫霓虹）；抽奖逻辑不变。 */
 const FunloomLotteryPage: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
+  const prizeLabel = (key: PrizeKey) => t(`lottery.prizes.${key}.label`);
   const token = useAuthStore((s) => s.user?.token);
   const isLoggedIn = Boolean(token);
 
@@ -68,7 +70,7 @@ const FunloomLotteryPage: React.FC = () => {
       const res = await lotteryApi.getCampaign(LOTTERY_SLUG);
       const data = res.data?.data;
       if (!data?.campaign) {
-        toast.error('活动加载失败');
+        toast.error(t('lottery.page.loadFailed'));
         return;
       }
       setCampaign(data.campaign);
@@ -76,7 +78,7 @@ const FunloomLotteryPage: React.FC = () => {
       setMyDraw(data.myDraw || data.myTodayDraw || null);
       setCanDraw(Boolean(data.canDraw));
     } catch (error) {
-      toast.error(getErrorMessage(error, '活动加载失败'));
+      toast.error(getErrorMessage(error, t('lottery.page.loadFailed')));
     } finally {
       setLoading(false);
     }
@@ -97,11 +99,11 @@ const FunloomLotteryPage: React.FC = () => {
     });
     if (!gate.ok) {
       if (gate.code === 'login_required') {
-        toast.error(gate.message);
+        toast.error(t(`lottery.gate.${gate.code}`));
         navigate('/home', { state: { from: { pathname: `/activity/${LOTTERY_SLUG}` } } });
         return;
       }
-      toast.error(gate.message);
+      toast.error(t(`lottery.gate.${gate.code}`));
       return;
     }
     if (drawing || spinning) return;
@@ -116,7 +118,7 @@ const FunloomLotteryPage: React.FC = () => {
       if (!data?.prize || !data?.draw) {
         setSpinning(false);
         setTargetPrizeKey(null);
-        toast.error('抽奖失败，请稍后重试');
+        toast.error(t('lottery.page.drawFailedRetry'));
         return;
       }
       setPendingResult({
@@ -133,7 +135,7 @@ const FunloomLotteryPage: React.FC = () => {
     } catch (error) {
       setSpinning(false);
       setTargetPrizeKey(null);
-      toast.error(getErrorMessage(error, '抽奖失败'));
+      toast.error(getErrorMessage(error, t('lottery.page.drawFailed')));
     } finally {
       setDrawing(false);
     }
@@ -154,10 +156,10 @@ const FunloomLotteryPage: React.FC = () => {
     setShippingSubmitting(true);
     try {
       await lotteryApi.saveShipping(pendingResult.draw.id, form);
-      toast.success('收货信息已保存');
+      toast.success(t('lottery.page.shippingSaved'));
       setShowShipping(false);
     } catch (error) {
-      toast.error(getErrorMessage(error, '保存失败'));
+      toast.error(getErrorMessage(error, t('lottery.page.saveFailed')));
     } finally {
       setShippingSubmitting(false);
     }
@@ -170,46 +172,50 @@ const FunloomLotteryPage: React.FC = () => {
       const draw = res.data?.data;
       if (draw) {
         setPendingResult((prev) => (prev ? { ...prev, draw } : prev));
-        toast.success('织梦豆已发放');
+        toast.success(t('lottery.page.pointsGranted'));
       }
     } catch (error) {
-      toast.error(getErrorMessage(error, '织梦豆发放失败'));
+      toast.error(getErrorMessage(error, t('lottery.page.pointsGrantFailed')));
     }
   };
 
   const alreadyDrawn =
     campaign?.drawLimitType === 'once_per_activity' ? Boolean(myDraw) : Boolean(myTodayDraw);
-  const drawLabel = drawing || spinning ? '抽奖中…' : alreadyDrawn ? '已抽过奖' : '开始抽奖';
+  const drawLabel = drawing || spinning
+    ? t('lottery.page.drawing')
+    : alreadyDrawn
+      ? t('lottery.page.alreadyDrawn')
+      : t('lottery.page.startDraw');
   const statusHint = !isLoggedIn
-    ? '点击后需登录才能抽奖'
+    ? t('lottery.page.hintLogin')
     : alreadyDrawn
       ? campaign?.drawLimitType === 'once_per_activity'
-        ? '本活动期间每账号限抽 1 次，你已抽过'
-        : '你今天已经抽过啦，明天再来'
+        ? t('lottery.page.hintOncePerActivity')
+        : t('lottery.page.hintOncePerDay')
       : !canDraw
-        ? '当前暂不可抽（活动未开放或已抽过）'
-        : '点击下方金色按钮开始抽奖';
+        ? t('lottery.page.hintUnavailable')
+        : t('lottery.page.hintReady');
 
   return (
     <div className={styles.page}>
       <div className={styles.topBar}>
         <button type="button" className={styles.back} onClick={() => navigate(-1)}>
-          返回
+          {t('lottery.page.back')}
         </button>
       </div>
 
       <header className={styles.header}>
-        <h1 className={styles.srOnly}>Funloom 惊喜一抽！100%中奖</h1>
+        <h1 className={styles.srOnly}>{t('lottery.page.heroTitle')}</h1>
         <img
           className={styles.heroBanner}
           src={heroBanner}
-          alt="Funloom 惊喜一抽！100%中奖"
+          alt={t('lottery.page.heroTitle')}
         />
-        <p className={styles.meta}>活动时间 7.31 – 8.03 · 每账号活动期间限抽 1 次（本次抽奖仅面向Chinajoy活动）</p>
+        <p className={styles.meta}>{t('lottery.page.meta')}</p>
       </header>
 
       {loading ? (
-        <p className={styles.loading}>加载中…</p>
+        <p className={styles.loading}>{t('lottery.page.loading')}</p>
       ) : (
         <>
           <div className={styles.wheelBlock}>
@@ -232,20 +238,20 @@ const FunloomLotteryPage: React.FC = () => {
           </button>
 
           <section className={styles.prizeList}>
-            <h2 className={styles.sectionTitle}>奖池一览</h2>
+            <h2 className={styles.sectionTitle}>{t('lottery.page.prizePoolTitle')}</h2>
             <ul className={styles.prizeGrid}>
               {PRIZE_KEYS.map((key) => {
-                const meta = PRIZE_DISPLAY[key];
+                const label = prizeLabel(key);
                 return (
                   <li key={key}>
                     <button
                       type="button"
                       className={styles.prizeCard}
                       onClick={() => setPreviewPrizeKey(key)}
-                      aria-label={`预览奖品：${meta.label}`}
+                      aria-label={t('lottery.page.previewPrizeAria', { label })}
                     >
                       <img src={PRIZE_IMAGES[key]} alt="" />
-                      <strong>{meta.label}</strong>
+                      <strong>{label}</strong>
                     </button>
                   </li>
                 );

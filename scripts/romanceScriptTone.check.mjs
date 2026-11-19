@@ -1,5 +1,5 @@
 /**
- * 剧本基调：三框并一框，进①基础；旧字按 GM→世界观→口吻接上；发给模型仍是这段。
+ * 系统提示词：三框并一框，进①基础；旧字按 GM→世界观→口吻接上；发给模型仍是这段。
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -54,8 +54,8 @@ test('mergeScriptToneFragments_新基调与旧三框跨包合并也不丢字', (
   assert.equal(next.terminology, '新术语');
 });
 
-test('编辑器_剧本基调在基础作品信息_剧情页不再有三块', () => {
-  assert.match(panel, /剧本基调/);
+test('编辑器_系统提示词在基础作品信息_剧情页不再有三块', () => {
+  assert.match(panel, /系统提示词/);
   assert.match(panel, /readScriptTone\(c\.prompt\)/);
   assert.match(panel, /applyScriptTone/);
   assert.match(panel, /consolidateScriptTone/);
@@ -65,7 +65,7 @@ test('编辑器_剧本基调在基础作品信息_剧情页不再有三块', () 
   assert.doesNotMatch(panel, /叙事口吻 \/ 文风/);
 });
 
-test('运行时_header读剧本基调_fragment不再重复世界观口吻', () => {
+test('运行时_header读系统提示词_fragment不再重复世界观口吻', () => {
   assert.match(registry, /readScriptTone\(getWorld\(\)\.content\.prompt\)/);
   assert.match(registry, /mergeScriptToneFragments\(content\.prompt/);
   assert.doesNotMatch(registry, /p\.worldIntro && `【世界观】/);

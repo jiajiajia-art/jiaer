@@ -1,9 +1,10 @@
 /**
- * 我的资源 · 头像库：私人相册 / 公共 / 系统；三维标签。
+ * 我的资源 · 头像库：私人相册 / 公共 / 系统；标签含风格包。
  * 匹配优先级改由剧本编辑器①基础按剧配置；此处只管理资产与相册顺序。
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../store/useAuthStore';
 import { avatarLibraryApi } from '../../api/galgame/avatarLibrary';
@@ -13,12 +14,11 @@ import {
   avatarAgeLabel,
   avatarBackgroundLabel,
   avatarGenderLabel,
-  describeAvatarMatchPriority,
+  avatarStylePackLabel,
   type AvatarLibraryAlbum,
   type AvatarLibraryItem,
 } from '../../lib/galgame/avatarLibrary';
 import {
-  describeSquareAvatarUploadHints,
   resolveLibraryAvatarDisplayUrl,
 } from '../../lib/galgame/squareAvatarPrep';
 import { getImageUrl } from '../../utils/constants';
@@ -28,7 +28,14 @@ import SquareAvatarCropGate, {
   type SquareAvatarUploadPayload,
 } from '../../components/Avatar/SquareAvatarCropGate';
 import WarehouseEmptyIcon from './WarehouseEmptyIcon';
+import { genderLabel } from './warehouseNav';
 import panel from './WarehousePanel.module.css';
+
+function displayAssetGender(id: string, t: (key: string) => string): string {
+  if (id === 'universal') return t('warehouse.avatars.gender.universal');
+  if (id === 'male' || id === 'female') return genderLabel(id, t);
+  return avatarGenderLabel(id);
+}
 
 type Scope = 'mine' | 'public' | 'system';
 type SegOption = { id: string; label: string };
@@ -39,7 +46,7 @@ function SegOptions({
   value,
   options,
   allowEmpty,
-  emptyLabel = '全部',
+  emptyLabel,
   onChange,
 }: {
   label: string;
@@ -50,7 +57,7 @@ function SegOptions({
   onChange: (next: string) => void;
 }) {
   const items: SegOption[] = allowEmpty
-    ? [{ id: '', label: emptyLabel }, ...options]
+    ? [{ id: '', label: emptyLabel ?? '' }, ...options]
     : [...options];
   return (
     <div className={panel.segBlock}>
@@ -83,8 +90,18 @@ function SegOptions({
 }
 
 const WarehouseAvatarLibrary: React.FC = () => {
+  const { t } = useTranslation();
   const token = useAuthStore((s) => s.user?.token);
-  const { ageOptions, backgroundOptions, options: tagOptions } = useAvatarTagOptions(token);
+  const { ageOptions, backgroundOptions, stylePackOptions, options: tagOptions } = useAvatarTagOptions(token);
+
+  const assetGenderOptions = useMemo(
+    () => AVATAR_ASSET_GENDERS.map((g) => ({
+      id: g.id,
+      label: displayAssetGender(g.id, t),
+    })),
+    [t],
+  );
+  const filterAllLabel = t('warehouse.avatars.filterAll');
 
   const [scope, setScope] = useState<Scope>('mine');
   const [items, setItems] = useState<AvatarLibraryItem[]>([]);
@@ -94,6 +111,7 @@ const WarehouseAvatarLibrary: React.FC = () => {
   const [gender, setGender] = useState('');
   const [ageGroup, setAgeGroup] = useState('');
   const [backgroundType, setBackgroundType] = useState('');
+  const [stylePack, setStylePack] = useState('');
   const [q, setQ] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -115,14 +133,14 @@ const WarehouseAvatarLibrary: React.FC = () => {
     if (!token) return;
     const res = await avatarLibraryApi.listAlbums(token);
     if (!res.success) {
-      toast.error(res.message || '加载私人头像库失败');
+      toast.error(res.message || t('warehouse.avatars.loadAlbumsFailed'));
       setAlbums([]);
       return;
     }
     const list = Array.isArray(res.data) ? res.data : [];
     setAlbums(list);
     if (!formAlbumId && list[0]?.id) setFormAlbumId(list[0].id);
-  }, [token, formAlbumId]);
+  }, [token, formAlbumId, t]);
 
   const loadItems = useCallback(async () => {
     if (!token) return;
@@ -133,22 +151,23 @@ const WarehouseAvatarLibrary: React.FC = () => {
         gender: gender || undefined,
         ageGroup: ageGroup || undefined,
         backgroundType: backgroundType || undefined,
+        stylePack: stylePack || undefined,
         q: q.trim() || undefined,
         albumId: scope === 'mine' && activeAlbumId ? activeAlbumId : undefined,
       });
       if (!res.success) {
-        toast.error(res.message || '加载头像库失败');
+        toast.error(res.message || t('warehouse.avatars.loadFailed'));
         setItems([]);
         return;
       }
       setItems(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
-      toast.error((e as Error)?.message || '加载头像库失败');
+      toast.error((e as Error)?.message || t('warehouse.avatars.loadFailed'));
       setItems([]);
     } finally {
       setLoading(false);
     }
-  }, [token, scope, gender, ageGroup, backgroundType, q, activeAlbumId]);
+  }, [token, scope, gender, ageGroup, backgroundType, stylePack, q, activeAlbumId, t]);
 
   useEffect(() => {
     if (!token) return;
@@ -179,10 +198,10 @@ const WarehouseAvatarLibrary: React.FC = () => {
         crop: payload.crop,
       });
       if (!res.success) {
-        toast.error(res.message || '上传失败');
+        toast.error(res.message || t('warehouse.avatars.uploadFailed'));
         return;
       }
-      toast.success('已加入我的头像库');
+      toast.success(t('warehouse.avatars.uploadOk'));
       setFormTitle('');
       setUploadOpen(false);
       setScope('mine');
@@ -190,7 +209,7 @@ const WarehouseAvatarLibrary: React.FC = () => {
       await loadAlbums();
       await loadItems();
     } catch (e) {
-      toast.error((e as Error)?.message || '上传失败');
+      toast.error((e as Error)?.message || t('warehouse.avatars.uploadFailed'));
     } finally {
       setUploading(false);
     }
@@ -201,10 +220,10 @@ const WarehouseAvatarLibrary: React.FC = () => {
     const res = await avatarLibraryApi.remove(token, deleteId);
     setDeleteId(null);
     if (!res.success) {
-      toast.error(res.message || '删除失败');
+      toast.error(res.message || t('warehouse.avatars.deleteFailed'));
       return;
     }
-    toast.success('已删除（使用中的角色仍保留已绑定头像）');
+    toast.success(t('warehouse.avatars.deleteOk'));
     await loadAlbums();
     await loadItems();
   };
@@ -224,14 +243,14 @@ const WarehouseAvatarLibrary: React.FC = () => {
 
   const createAlbum = async () => {
     if (!token) return;
-    const title = newAlbumTitle.trim() || '未命名头像库';
+    const title = newAlbumTitle.trim() || t('warehouse.avatars.unnamedAlbum');
     const res = await avatarLibraryApi.createAlbum(token, { title });
     if (!res.success) {
-      toast.error(res.message || '新建失败');
+      toast.error(res.message || t('warehouse.avatars.createAlbumFailed'));
       return;
     }
     setNewAlbumTitle('');
-    toast.success('已新建头像库');
+    toast.success(t('warehouse.avatars.createAlbumOk'));
     await loadAlbums();
   };
 
@@ -242,19 +261,19 @@ const WarehouseAvatarLibrary: React.FC = () => {
   return (
     <div className={panel.panelRoot}>
       <header className={panel.header}>
-        <h1 className={panel.title}>头像库</h1>
+        <h1 className={panel.title}>{t('warehouse.avatars.title')}</h1>
         <p className={panel.sub}>
-          {describeAvatarMatchPriority()}。{describeSquareAvatarUploadHints()}
+          {t('warehouse.avatars.matchPriorityHint')}。{t('warehouse.avatars.uploadHints')}
         </p>
       </header>
 
       <div className={panel.avatarLibControls}>
         <div className={panel.avatarLibScopeSearch}>
-          <div className={panel.avatarLibScopeTrack} role="tablist" aria-label="头像库范围">
+          <div className={panel.avatarLibScopeTrack} role="tablist" aria-label={t('warehouse.avatars.scopeAria')}>
             {([
-              { id: 'mine' as const, label: '我的' },
-              { id: 'public' as const, label: '公共' },
-              { id: 'system' as const, label: '系统' },
+              { id: 'mine' as const, label: t('warehouse.avatars.scopeMine') },
+              { id: 'public' as const, label: t('warehouse.avatars.scopePublic') },
+              { id: 'system' as const, label: t('warehouse.avatars.scopeSystem') },
             ]).map((s) => (
               <button
                 key={s.id}
@@ -275,20 +294,20 @@ const WarehouseAvatarLibrary: React.FC = () => {
             className={panel.avatarLibSearch}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="搜索头像库或头像"
-            aria-label="搜索头像"
+            placeholder={t('warehouse.avatars.searchPlaceholder')}
+            aria-label={t('warehouse.avatars.searchAria')}
           />
           <button
             type="button"
             className={panel.primaryBtn}
             onClick={() => setUploadOpen(true)}
           >
-            上传头像
+            {t('warehouse.avatars.upload')}
           </button>
         </div>
 
         {!showAlbumGrid ? (
-          <div className={panel.uploadDimsRow} aria-label="列表筛选">
+          <div className={panel.uploadDimsRow} aria-label={t('warehouse.avatars.filterListAria')}>
             {activeAlbum ? (
               <button
                 type="button"
@@ -298,28 +317,38 @@ const WarehouseAvatarLibrary: React.FC = () => {
                 ← {activeAlbum.title}
               </button>
             ) : null}
+            {scope !== 'mine' ? (
+              <SegOptions
+                label="风格包"
+                value={stylePack}
+                options={stylePackOptions}
+                allowEmpty
+                emptyLabel={filterAllLabel}
+                onChange={setStylePack}
+              />
+            ) : null}
             <SegOptions
-              label="性别"
+              label={t('warehouse.avatars.filterGender')}
               value={gender}
-              options={AVATAR_ASSET_GENDERS}
+              options={assetGenderOptions}
               allowEmpty
-              emptyLabel="全部"
+              emptyLabel={filterAllLabel}
               onChange={setGender}
             />
             <SegOptions
-              label="年龄"
+              label={t('warehouse.avatars.filterAge')}
               value={ageGroup}
               options={ageOptions}
               allowEmpty
-              emptyLabel="全部"
+              emptyLabel={filterAllLabel}
               onChange={setAgeGroup}
             />
             <SegOptions
-              label="背景"
+              label={t('warehouse.avatars.filterBackground')}
               value={backgroundType}
               options={backgroundOptions}
               allowEmpty
-              emptyLabel="全部"
+              emptyLabel={filterAllLabel}
               onChange={setBackgroundType}
             />
           </div>
@@ -329,25 +358,25 @@ const WarehouseAvatarLibrary: React.FC = () => {
       {showAlbumGrid ? (
         <div className={panel.avatarAlbumSection}>
           <div className={panel.avatarAlbumHeader}>
-            <h2 className={panel.avatarAlbumTitle}>我的头像库</h2>
+            <h2 className={panel.avatarAlbumTitle}>{t('warehouse.avatars.myAlbumsTitle')}</h2>
             <div className={panel.avatarAlbumNewRow}>
               <input
                 className={panel.avatarLibSearch}
                 value={newAlbumTitle}
                 onChange={(e) => setNewAlbumTitle(e.target.value)}
-                placeholder="新库名称"
+                placeholder={t('warehouse.avatars.newAlbumPlaceholder')}
                 maxLength={40}
-                aria-label="新库名称"
+                aria-label={t('warehouse.avatars.newAlbumAria')}
               />
               <button type="button" className={panel.primaryBtn} onClick={() => void createAlbum()}>
-                + 新建
+                {t('warehouse.avatars.newAlbum')}
               </button>
             </div>
           </div>
           {orderedAlbums.length === 0 ? (
             <div className={panel.empty}>
               <WarehouseEmptyIcon />
-              <p>还没有私人头像库，先新建一个吧。</p>
+              <p>{t('warehouse.avatars.emptyAlbums')}</p>
             </div>
           ) : (
             <div className={panel.avatarAlbumGrid}>
@@ -357,7 +386,7 @@ const WarehouseAvatarLibrary: React.FC = () => {
                     <div>
                       <h3 className={panel.avatarAlbumCardName}>{album.title}</h3>
                       <p className={panel.sub} style={{ margin: 0 }}>
-                        {album.avatarCount ?? 0} 张头像
+                        {t('warehouse.avatars.avatarCount', { count: album.avatarCount ?? 0 })}
                       </p>
                     </div>
                     <div className={panel.avatarAlbumOrderBtns}>
@@ -365,7 +394,7 @@ const WarehouseAvatarLibrary: React.FC = () => {
                         type="button"
                         className={panel.ghostBtn}
                         disabled={index === 0}
-                        aria-label="上移相册顺序"
+                        aria-label={t('warehouse.avatars.moveAlbumUpAria')}
                         onClick={() => void moveAlbum(album.id, -1)}
                       >
                         ↑
@@ -374,7 +403,7 @@ const WarehouseAvatarLibrary: React.FC = () => {
                         type="button"
                         className={panel.ghostBtn}
                         disabled={index >= orderedAlbums.length - 1}
-                        aria-label="下移相册顺序"
+                        aria-label={t('warehouse.avatars.moveAlbumDownAria')}
                         onClick={() => void moveAlbum(album.id, 1)}
                       >
                         ↓
@@ -397,7 +426,7 @@ const WarehouseAvatarLibrary: React.FC = () => {
                       className={panel.ghostBtn}
                       onClick={() => setActiveAlbumId(album.id)}
                     >
-                      打开头像库
+                      {t('warehouse.avatars.openAlbum')}
                     </button>
                     <button
                       type="button"
@@ -407,7 +436,7 @@ const WarehouseAvatarLibrary: React.FC = () => {
                         setUploadOpen(true);
                       }}
                     >
-                      上传头像
+                      {t('warehouse.avatars.upload')}
                     </button>
                   </div>
                 </article>
@@ -416,11 +445,11 @@ const WarehouseAvatarLibrary: React.FC = () => {
           )}
         </div>
       ) : loading ? (
-        <div className={panel.empty}>加载中…</div>
+        <div className={panel.empty}>{t('common.loading')}</div>
       ) : items.length === 0 ? (
         <div className={panel.empty}>
           <WarehouseEmptyIcon />
-          <p>{scope === 'mine' ? '这个头像库还没有头像，上传一张吧。' : '暂无符合筛选的头像。'}</p>
+          <p>{scope === 'mine' ? t('warehouse.avatars.emptyAlbumItems') : t('warehouse.avatars.emptyFiltered')}</p>
         </div>
       ) : (
         <div className={panel.grid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
@@ -429,17 +458,17 @@ const WarehouseAvatarLibrary: React.FC = () => {
               <button type="button" style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%' }} onClick={() => setPreview(item)}>
                 <AvatarFrame
                   src={getImageUrl(resolveLibraryAvatarDisplayUrl(item))}
-                  alt={item.title || '头像'}
+                  alt={item.title || t('warehouse.avatars.altAvatar')}
                   variant="rounded"
                 />
               </button>
               <p className={panel.sub} style={{ margin: '8px 0 0', fontSize: 12 }}>
-                {avatarGenderLabel(item.gender)} · {avatarAgeLabel(item.ageGroup, tagOptions)} · {avatarBackgroundLabel(item.backgroundType, tagOptions)}
+                {item.stylePack ? `${avatarStylePackLabel(item.stylePack, tagOptions)} · ` : ''}{displayAssetGender(item.gender, t)} · {avatarAgeLabel(item.ageGroup, tagOptions)} · {avatarBackgroundLabel(item.backgroundType, tagOptions)}
               </p>
               {item.title ? <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--color-text)' }}>{item.title}</p> : null}
               {scope === 'mine' && (
                 <button type="button" className={panel.dangerBtn} style={{ marginTop: 8, width: '100%' }} onClick={() => setDeleteId(item.id)}>
-                  删除
+                  {t('warehouse.cards.delete')}
                 </button>
               )}
             </article>
@@ -449,9 +478,9 @@ const WarehouseAvatarLibrary: React.FC = () => {
 
       <ConfirmModal
         isOpen={!!deleteId}
-        title="删除头像"
-        message="删除库记录后无法恢复；正在使用该图的角色仍保留已绑定副本。确认删除？"
-        confirmButtonText="删除"
+        title={t('warehouse.avatars.deleteTitle')}
+        message={t('warehouse.avatars.deleteMessage')}
+        confirmButtonText={t('warehouse.cards.delete')}
         tone="dark"
         onConfirm={() => void onDelete()}
         onCancel={() => setDeleteId(null)}
@@ -459,24 +488,24 @@ const WarehouseAvatarLibrary: React.FC = () => {
 
       <ConfirmModal
         isOpen={!!preview}
-        title={preview?.title || '头像预览'}
+        title={preview?.title || t('warehouse.avatars.previewTitle')}
         message={preview ? (
           <div>
             <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 12px' }}>
               <AvatarFrame
                 src={getImageUrl(resolveLibraryAvatarDisplayUrl(preview))}
-                alt={preview.title || '预览'}
+                alt={preview.title || t('warehouse.avatars.altPreview')}
                 variant="rounded"
                 size={240}
               />
             </div>
             <p style={{ margin: 0, textAlign: 'center' }}>
-              {avatarGenderLabel(preview.gender)} · {avatarAgeLabel(preview.ageGroup, tagOptions)} · {avatarBackgroundLabel(preview.backgroundType, tagOptions)}
+              {preview.stylePack ? `${avatarStylePackLabel(preview.stylePack, tagOptions)} · ` : ''}{displayAssetGender(preview.gender, t)} · {avatarAgeLabel(preview.ageGroup, tagOptions)} · {avatarBackgroundLabel(preview.backgroundType, tagOptions)}
             </p>
           </div>
         ) : ''}
-        confirmButtonText="关闭"
-        cancelButtonText="关闭"
+        confirmButtonText={t('warehouse.cards.close')}
+        cancelButtonText={t('warehouse.cards.close')}
         variant="alert"
         tone="dark"
         onConfirm={() => setPreview(null)}
@@ -503,38 +532,38 @@ const WarehouseAvatarLibrary: React.FC = () => {
                   <button
                     type="button"
                     className={panel.avatarLibModalClose}
-                    aria-label="关闭"
+                    aria-label={t('warehouse.cards.close')}
                     disabled={uploading}
                     onClick={() => setUploadOpen(false)}
                   >
                     <span className={panel.avatarLibModalCloseIcon} aria-hidden="true" />
                   </button>
                   <h2 id="avatar-lib-upload-title" className={panel.avatarLibModalTitle}>
-                    上传私人头像
+                    {t('warehouse.avatars.uploadPrivateTitle')}
                   </h2>
                 </header>
                 <div className={panel.avatarLibModalBody}>
-                  <p className={panel.avatarLibModalHint}>{describeSquareAvatarUploadHints()}</p>
+                  <p className={panel.avatarLibModalHint}>{t('warehouse.avatars.uploadHints')}</p>
                   <div className={panel.avatarLibModalFields}>
-                    <SegOptions label="性别" value={formGender} options={AVATAR_ASSET_GENDERS} onChange={setFormGender} />
-                    <SegOptions label="年龄" value={formAge} options={ageOptions} onChange={setFormAge} />
-                    <SegOptions label="背景" value={formBg} options={backgroundOptions} onChange={setFormBg} />
+                    <SegOptions label={t('warehouse.avatars.filterGender')} value={formGender} options={assetGenderOptions} onChange={setFormGender} />
+                    <SegOptions label={t('warehouse.avatars.filterAge')} value={formAge} options={ageOptions} onChange={setFormAge} />
+                    <SegOptions label={t('warehouse.avatars.filterBackground')} value={formBg} options={backgroundOptions} onChange={setFormBg} />
                     {albums.length > 0 ? (
                       <SegOptions
-                        label="放入头像库"
+                        label={t('warehouse.avatars.putInAlbum')}
                         value={formAlbumId || albums[0]?.id || ''}
                         options={albums.map((a) => ({ id: a.id, label: a.title }))}
                         onChange={setFormAlbumId}
                       />
                     ) : null}
                     <label className={panel.avatarLibModalField}>
-                      <span className={panel.segBlockLabel}>标题</span>
+                      <span className={panel.segBlockLabel}>{t('warehouse.avatars.titleField')}</span>
                       <input
                         className={panel.avatarLibModalInput}
                         value={formTitle}
                         onChange={(e) => setFormTitle(e.target.value)}
                         maxLength={40}
-                        placeholder="可选，便于检索"
+                        placeholder={t('warehouse.avatars.titlePlaceholder')}
                         disabled={uploading}
                       />
                     </label>
@@ -543,7 +572,7 @@ const WarehouseAvatarLibrary: React.FC = () => {
                     <SquareAvatarCropGate
                       disabled={uploading}
                       buttonClassName={panel.avatarLibModalPrimary}
-                      buttonLabel={uploading ? '上传中…' : '上传'}
+                      buttonLabel={uploading ? t('warehouse.avatars.uploading') : t('warehouse.avatars.uploadBtn')}
                       onReady={(p) => void onUploadReady(p)}
                     />
                     <button
@@ -552,7 +581,7 @@ const WarehouseAvatarLibrary: React.FC = () => {
                       disabled={uploading}
                       onClick={() => setUploadOpen(false)}
                     >
-                      取消
+                      {t('warehouse.cards.cancel')}
                     </button>
                   </div>
                 </div>

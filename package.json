@@ -57,7 +57,7 @@
     "test:profileCompletion": "node --experimental-strip-types --test scripts/profileCompletion.check.mjs",
     "test:createRewardSettlement": "node --experimental-strip-types --test scripts/createRewardSettlement.check.mjs",
     "test:createWithdrawStatLayout": "node --experimental-strip-types --test scripts/createWithdrawStatLayout.check.mjs",
-    "test": "node --experimental-strip-types --test scripts/*.check.mjs checks/*.check.mjs"
+    "test": "node --experimental-strip-types --import ./scripts/strip-crlf-hook.mjs --import ./scripts/ts-ext-resolve-hooks.mjs --test scripts/*.check.mjs checks/*.check.mjs"
   },
   "dependencies": {
     "@ant-design/icons": "^6.3.4",

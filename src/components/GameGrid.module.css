@@ -67,13 +67,26 @@
     top: 10px;
 }
 
-/* 功能注释：无封面暗色占位，避免白底 welcome 图破坏 funloom 夜色卡面 */
+/* 功能注释：无封面暗色占位（仍保留，供其它入口复用） */
 .goodsImgPlaceholder {
     width: 100%;
     height: 100%;
     background:
         radial-gradient(ellipse at 50% 42%, color-mix(in srgb, var(--color-primary) 22%, transparent) 0%, transparent 58%),
         linear-gradient(160deg, var(--color-surface-2) 0%, var(--color-surface) 55%, var(--color-bg) 100%);
+}
+
+/* 功能注释：默认封面；暗色模式下压亮度，避免白底 welcome 刺眼 */
+.goodsImgDefaultCover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    display: block;
+}
+
+:global([data-mode="dark"]) .goodsImgDefaultCover {
+    filter: brightness(0.62) saturate(0.88);
 }
 
 .goodsImg::after {
@@ -184,6 +197,21 @@
     z-index: 3;
 }
 
+/* 功能注释：题材标签叠在封面左下，紧贴数据条上方，避开右上玩法角标 */
+.goodsCoverTags {
+    position: absolute;
+    left: 8px;
+    top: auto;
+    bottom: 42px;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    max-width: calc(100% - 72px);
+    pointer-events: none;
+}
+
 .goodsInfo {
     position: absolute;
     left: 0;
@@ -196,7 +224,8 @@
     padding: 40px 12px 12px;
     justify-content: space-between;
     align-items: center;
-    background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-surface) 70%, transparent) 70%, var(--color-surface) 100%);
+    /* 功能注释：只用暗色压底托统计胶囊，禁止渐变接到 surface 白/浅灰——否则封面与正文交界会出现一条横线 */
+    background: linear-gradient(180deg, transparent 0%, rgba(8, 6, 12, 0.45) 100%);
     z-index: 3;
     pointer-events: none;
 }
@@ -303,14 +332,13 @@
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    font-size: 16px;
-    font-weight: 700;
+    font-size: 14px;
+    font-weight: 650;
     color: var(--color-text);
     line-height: 1.35;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    white-space: nowrap;
     overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* 功能注释：效果图收藏徽标——酒红半透明底 + 浅粉字，非实心白字按钮 */
@@ -355,7 +383,7 @@
 }
 
 .goodsAuthorName {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     letter-spacing: 0.01em;
     color: var(--color-text-muted);
@@ -389,7 +417,7 @@
     margin-top: 2px;
 }
 
-/* 功能注释：效果图题材标签——#333 深灰底、白字、小圆角（非胶囊） */
+/* 功能注释：封面题材标签——深灰底白字小圆角；叠在封面上时加一点玻璃感 */
 .goodsTagPill {
     display: inline-flex;
     align-items: center;
@@ -397,14 +425,22 @@
     min-height: 24px;
     padding: 4px 10px;
     border-radius: 6px;
-    background: var(--color-surface-2);
-    color: var(--color-text);
+    background: #333333;
+    color: #FFFFFF;
     font-size: 12px;
     font-weight: 500;
     line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 35%, transparent);
+}
+
+.goodsCoverTags .goodsTagPill {
+    background: color-mix(in srgb, #1a1218 72%, transparent);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    color: #FFFFFF;
 }
 
 .goodsSubtitle {
@@ -455,17 +491,32 @@
     }
 
     .goodsTitle {
-        font-size: 17px;
+        font-size: 15px;
     }
 
     .goodsBody {
-        padding: 14px 14px 16px;
+        padding: 12px 14px 14px;
+    }
+
+    .goodsDesc {
+        font-size: 13px;
+    }
+
+    .goodsAuthorName {
+        font-size: 13px;
     }
 
     .goodsTagPill {
-        min-height: 30px;
-        padding: 6px 14px;
-        font-size: 13px;
+        min-height: 24px;
+        padding: 4px 10px;
+        font-size: 12px;
+    }
+
+    .goodsCoverTags {
+        left: 10px;
+        top: auto;
+        bottom: 46px;
+        gap: 6px;
     }
 }
 
@@ -484,7 +535,7 @@
 @media (max-width: 768px) {
     .grid4 {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px;
+        gap: 14px;
     }
 
     .goodsCard {
@@ -559,15 +610,15 @@
     }
 
     .goodsBody {
-        padding: 10px 10px 12px;
-        gap: 7px;
+        padding: 10px 12px 12px;
+        gap: 6px;
     }
 
     .goodsTitle {
-        font-size: 15px;
+        font-size: 14px;
     }
 
-    /* 功能注释：移动端保持效果图比例——半透明收藏徽标 + 浅灰题材胶囊 */
+    /* 功能注释：移动端保持效果图比例——半透明收藏徽标 */
     .goodsCollectBadge {
         min-height: 22px;
         font-size: 11px;
@@ -577,7 +628,7 @@
     }
 
     .goodsDesc {
-        font-size: 12px;
+        font-size: 13px;
     }
 
     .goodsTagPill {
@@ -585,8 +636,16 @@
         font-size: 12px;
         padding: 4px 10px;
         border-radius: 6px;
-        background: var(--color-surface-2);
-        color: var(--color-text);
+        background: #333333;
+        color: #FFFFFF;
+    }
+
+    .goodsCoverTags {
+        left: 8px;
+        top: auto;
+        bottom: 38px;
+        gap: 4px;
+        max-width: calc(100% - 64px);
     }
 
     .goodsAuthor {
@@ -603,56 +662,56 @@
     }
 
     .goodsAuthorName {
-        font-size: 11px;
+        font-size: 12px;
     }
 
     .goodsSubtitle {
-        font-size: 11px;
+        font-size: 12px;
     }
 }
 
-/* 功能注释：卡片对齐——正文固定结构：标题恒占两行、作者行固定高、标签行恒占一行，
-   且网格拉伸等高，避免标题长短/有无标签导致卡片参差 */
+/* 功能注释：正文随内容收高，禁止 stretch + margin-top:auto 把作者下方撑出大块空白 */
 .grid4,
-.gridHomeWide { align-items: stretch !important; }
-.goodsCard { height: 100%; }
-.goodsTitle { min-height: calc(1.35em * 2); }
-.goodsMetaRow { height: 22px; }
+.gridHomeWide { align-items: start !important; }
+.goodsCard { height: auto; }
+.goodsBody { flex: 0 0 auto; }
+.goodsTitle { min-height: 0; }
+.goodsMetaRow { height: auto; min-height: 22px; margin-top: 0; }
 .goodsTagRow {
-    margin-top: auto;
-    height: 24px;
-    flex-wrap: nowrap;
-    overflow: hidden;
+    display: none;
 }
 .goodsTagPill { flex: 0 1 auto; min-width: 0; }
 
-/* 功能注释：书架「我的作品」——按内容收紧，取消双行标题/空简介/空标签占位，去掉卡内大块空白 */
+/* 功能注释：书架「我的作品」——标题/作者行按内容收紧；同行卡片拉伸等高，
+   避免有标签/无标签两张白底信息区一高一矮像两块错位白盒子 */
 .gridWorks {
-    align-items: start !important;
+    align-items: stretch !important;
 }
 .goodsCardWorks {
-    height: auto;
+    height: 100%;
 }
 .goodsCardWorks .goodsBody {
-    flex: 0 0 auto;
-    gap: 6px;
+    flex: 1 1 auto;
+    /* 功能注释：标题→作者收紧，避免中间空出一大截 */
+    gap: 4px;
     padding: 8px 10px 10px;
+    /* 功能注释：与封面同色连续底，去掉「封面下一截白卡片」的割裂感 */
+    background: transparent;
 }
 .goodsCardWorks .goodsTitle {
     min-height: 0;
 }
+.goodsCardWorks .goodsDesc {
+    margin: 0;
+    line-height: 1.3;
+}
 .goodsCardWorks .goodsMetaRow {
     height: auto;
     min-height: 0;
-}
-.goodsCardWorks .goodsTagRow {
     margin-top: 0;
-    height: auto;
-    min-height: 0;
 }
-
 /* ===== 功能注释：卡片视觉精修 =====
-   层级：封面（数据角标）→ 标题 → 作者 → 题材；统一 12px 内边距与 8px 节奏 */
+   层级：封面（玩法角标 + 左侧题材 + 底栏数据）→ 标题 → 简介 → 作者；字号贴近同一档 */
 .goodsCard {
     border: 1px solid color-mix(in srgb, var(--color-text) 7%, transparent);
     transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
@@ -670,23 +729,22 @@
 .goodsInfo .goodsCollectBadge {
     min-height: 22px;
     padding: 2px 9px;
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 600;
     background: color-mix(in srgb, var(--color-primary) 82%, transparent);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
     box-shadow: 0 2px 8px color-mix(in srgb, var(--color-shadow) 35%, transparent);
 }
-.goodsBody { padding: 10px 12px 12px; gap: 8px; }
-.goodsTitle { font-size: 15px; letter-spacing: 0.01em; }
+.goodsBody { padding: 10px 12px 12px; gap: 6px; }
+.goodsTitle { font-size: 14px; letter-spacing: 0.01em; }
 .goodsTagPill {
-    min-height: 22px;
-    padding: 2px 8px;
-    font-size: 11.5px;
-    color: var(--color-text-muted);
-    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+    min-height: 24px;
+    padding: 4px 10px;
+    font-size: 12px;
+    color: #FFFFFF;
+    background: #333333;
 }
-.goodsTagRow { height: 22px; gap: 6px; }
 .goodsInfoBookmark {
     width: 14px;
     height: 15px;
@@ -694,8 +752,13 @@
     color: var(--color-primary-fg, var(--color-primary));
 }
 
-/* 功能注释：底部渐变下探 1px 盖住封面与正文之间的亚像素缝，消除横线 */
-.goodsInfo { bottom: -1px; }
+/* 功能注释：封面区下探 1px 与正文无缝衔接，避免亚像素发丝线 */
+.goodsImg {
+    margin-bottom: -1px;
+}
+.goodsInfo {
+    bottom: 0;
+}
 
 /* 功能注释：封面统计改为深色玻璃小胶囊——浅色模式下底部渐变发白，白字会看不清 */
 .goodsInfo { padding-top: 28px; }

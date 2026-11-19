@@ -6,7 +6,8 @@
 export const SCENE_PORTRAIT_WIDTH = 1080;
 export const SCENE_PORTRAIT_HEIGHT = 1920;
 export const SCENE_PORTRAIT_RATIO = SCENE_PORTRAIT_WIDTH / SCENE_PORTRAIT_HEIGHT; // 9:16
-export const SCENE_PORTRAIT_HINT = "场景图会裁成 9:16 竖图（1080×1920）";
+/** 功能注释：给创作者看的说明，避免甩分辨率数字；裁切规格仍是 9:16 / 1080×1920 */
+export const SCENE_PORTRAIT_HINT = "图片会自动裁成竖版，方便手机全屏显示";
 export const SCENE_PORTRAIT_GEN_SIZE = `${SCENE_PORTRAIT_WIDTH}x${SCENE_PORTRAIT_HEIGHT}`;
 
 /** 功能注释：严格校验像素尺寸（生图目标 / 回归用）。 */

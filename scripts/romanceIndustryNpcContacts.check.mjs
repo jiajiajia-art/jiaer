@@ -20,8 +20,9 @@ test('generateIndustry_无公司内容池时返回空花名册', () => {
 test('NpcTab_无人行业公司时不并入sim\.npcs花名册', () => {
   const npc = read('Romance/src/components/NpcTab.tsx');
   assert.match(npc, /COMPANIES\.length > 0/);
-  assert.match(npc, /poolEntries/);
-  assert.match(npc, /不并入|绝不塞|自由艺人/);
+  // 无行业公司时 poolKnown 为 []，不把 sim.npcs 并进友好度分组
+  assert.match(npc, /const poolKnown/);
+  assert.match(npc, /COMPANIES\.length > 0\s*\?[\s\S]*?:\s*\[\]/);
   // 仍保留已结识的作品人物列表
-  assert.match(npc, /game\.npcs\.filter\(\(n\) => s\.metPeople\.includes\(n\.id\)\)/);
+  assert.match(npc, /game\.npcs\.filter\(\(n\) => metSet\.has\(n\.id\)/);
 });

@@ -20,7 +20,6 @@ import {
     mapNovelEditErrorToI18nKey,
 } from '../../utils/novelEdit';
 import { isValidContentAudience, type ContentAudience } from '../../utils/contentAudience';
-import { hasBothGameCovers } from '../../utils/gameCovers.ts';
 import ContentAudienceField from '../ContentAudienceField';
 import CoverUpload from '../GameSettingEditor/WorldPanel/CoverUpload';
 import {
@@ -198,13 +197,11 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     const buildFormInput = useCallback(() => ({
         title,
         description,
-        hasCover: hasBothGameCovers({
-            cover_url: landscapePreview,
-            portrait_cover_url: portraitPreview,
-        }),
+        // 功能注释：发布只要求竖版封面一张（横版可选），产品口径见 11.18 交接文档
+        hasCover: Boolean(portraitPreview?.trim()),
         themeTagIds: selectedThemeTagIds,
         audienceType: selectedAudienceType,
-    }), [title, description, landscapePreview, portraitPreview, selectedThemeTagIds, selectedAudienceType]);
+    }), [title, description, portraitPreview, selectedThemeTagIds, selectedAudienceType]);
 
     const handleThemeTagToggle = (tagId: number) => {
         const { next, atMax } = toggleThemeTagSelection(selectedThemeTagIds, tagId);
@@ -306,10 +303,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             toast.error(t('common.publishSettings.descriptionTooLong', { max: NOVEL_DESCRIPTION_MAX_LENGTH }));
             return false;
         }
-        if (!hasBothGameCovers({
-            cover_url: landscapePreview,
-            portrait_cover_url: portraitPreview,
-        })) {
+        if (!portraitPreview?.trim()) {
             toast.error(t('common.publishSettings.coverRequired'));
             return false;
         }

@@ -5,7 +5,8 @@ import path from 'node:path'
 
 // 站点设置直接写在这里，不依赖 .figma 文件夹（删掉 .figma 后仍可正常运行与打包）
 const siteConfiguration: FigmaSiteConfiguration = {
-  title: '今夜她是主角',
+  // 功能注释：独立预览壳标题；嵌入主站时由 RomanceHost 覆盖为「生成世界 · Funloom」等
+  title: 'Romance · Funloom',
   description: '女性向沉浸式文字模拟游戏 · 可接入 AI · 支持自定义模组',
   language: 'zh-CN',
   robots: { index: false },
@@ -19,9 +20,14 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: process.env.FIGMA_PUBLIC_URL ? `${process.env.FIGMA_PUBLIC_URL}/` : '/',
+    // 功能注释：入口勿再用 index.html。主站 Vite 在 macOS 大小写不敏感盘上会把
+    // /funloom/romance/ 误匹配到 Romance/index.html（Figma 壳），引发 HYWenHei 等资产 404。
     build: {
       sourcemap: emitSourcemaps ? 'inline' : false,
       minify: !emitSourcemaps,
+      rollupOptions: {
+        input: path.resolve(__dirname, 'standalone.html'),
+      },
     },
     plugins: [
       react(),

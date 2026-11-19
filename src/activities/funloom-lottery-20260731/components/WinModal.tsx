@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import styles from './WinModal.module.css';
-import { PRIZE_DISPLAY, type PrizeKey } from '../lib/lotteryClient';
+import { type PrizeKey } from '../lib/lotteryClient';
 import { PRIZE_IMAGES } from './LotteryWheel';
 
 interface WinModalProps {
@@ -30,6 +31,9 @@ const WinModal: React.FC<WinModalProps> = ({
   onFillShipping,
   onRetryPoints,
 }) => {
+  const { t } = useTranslation();
+  const prizeLabel = (key: string) => t(`lottery.prizes.${key}.label`, { defaultValue: key });
+
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -41,9 +45,8 @@ const WinModal: React.FC<WinModalProps> = ({
 
   if (!open) return null;
 
-  const meta = PRIZE_DISPLAY[prizeKey as PrizeKey];
   const img = PRIZE_IMAGES[prizeKey as PrizeKey];
-  const displayName = prizeName || meta?.label || '';
+  const displayName = prizeName || prizeLabel(prizeKey);
 
   const modal = (
     <div
@@ -54,45 +57,45 @@ const WinModal: React.FC<WinModalProps> = ({
     >
       <div className={styles.card}>
         <h2 id="funloom-lottery-win-title" className={styles.title}>
-          恭喜中奖！！
+          {t('lottery.winModal.title')}
         </h2>
         <div className={styles.prizeFrame}>
           {img ? <img className={styles.prizeImg} src={img} alt={displayName} /> : null}
         </div>
         <p className={styles.prizeName}>{displayName}</p>
         <div className={styles.claimBox}>
-          <p className={styles.claimLabel}>领取方式</p>
+          <p className={styles.claimLabel}>{t('lottery.winModal.claimLabel')}</p>
           {fulfillment === 'points' && (
             <p className={styles.hint}>
               {pointsGrantStatus === 'granted'
-                ? `已自动发放 ${pointsAmount} 织梦豆到账`
+                ? t('lottery.winModal.pointsGranted', { amount: pointsAmount })
                 : pointsGrantStatus === 'failed'
-                  ? '织梦豆发放失败，请重试'
-                  : `中奖后自动发放 ${pointsAmount} 织梦豆`}
+                  ? t('lottery.winModal.pointsFailed')
+                  : t('lottery.winModal.pointsPending', { amount: pointsAmount })}
             </p>
           )}
           {fulfillment === 'onsite' && (
-            <p className={styles.hint}>{onsiteHint || '请到活动现场领取奖品'}</p>
+            <p className={styles.hint}>{onsiteHint || t('lottery.winModal.onsiteDefault')}</p>
           )}
           {fulfillment === 'shipping' && (
             <p className={styles.hint}>
-              邮寄领取：请填写收货人、地址与手机号，我们将安排寄送
+              {t('lottery.winModal.shippingHint')}
             </p>
           )}
         </div>
         <div className={styles.actions}>
           {fulfillment === 'shipping' && onFillShipping ? (
             <button type="button" className={styles.primary} onClick={onFillShipping}>
-              填写收货信息
+              {t('lottery.winModal.fillShipping')}
             </button>
           ) : null}
           {fulfillment === 'points' && pointsGrantStatus === 'failed' && onRetryPoints ? (
             <button type="button" className={styles.primary} onClick={onRetryPoints}>
-              重新领取织梦豆
+              {t('lottery.winModal.retryPoints')}
             </button>
           ) : null}
           <button type="button" className={styles.secondary} onClick={onClose}>
-            知道了
+            {t('lottery.winModal.dismiss')}
           </button>
         </div>
       </div>

@@ -175,6 +175,23 @@ function AttrPicker({ kind, attrKey, opts, attrs, onPick }: {
 }
 
 const selCls = "rounded-lg border border-line bg-paper-2 px-2 py-1 text-[12.5px] text-ink";
+/** 功能注释：计数器名候选（datalist）；编辑器统一渲染一份，条件 / 效果输入框共用，避免名字写错对不上 */
+export const COUNTER_LIST_ID = "author-counter-names";
+export function collectCounterNames(...sources: unknown[]): string[] {
+  const out = new Set<string>(["高压天数"]);
+  const walk = (x: unknown): void => {
+    if (Array.isArray(x)) { x.forEach(walk); return; }
+    if (!x || typeof x !== "object") return;
+    const o = x as Record<string, unknown>;
+    if (o.kind === "flag" && typeof o.key === "string" && o.key.trim() && !o.key.startsWith("chain:")) out.add(o.key.trim());
+    for (const v of Object.values(o)) if (v && typeof v === "object") walk(v);
+  };
+  sources.forEach(walk);
+  return [...out];
+}
+export function CounterNamesList({ names }: { names: string[] }) {
+  return <datalist id={COUNTER_LIST_ID}>{names.map((n) => <option key={n} value={n} />)}</datalist>;
+}
 const numCls = "w-16 rounded-lg border border-line bg-paper-2 px-2 py-1 text-[12.5px] tabular-nums text-ink";
 
 /* value/onChange 传入时为「模组编辑器」模式：编辑模组预设剧本（开新局写入），不碰当前存档。
@@ -277,7 +294,7 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
       case "event": return `已触发「${events.find((e) => e.id === c.key)?.name || "（未选）"}」`;
       case "time": return `开局后 ${c.op === "lte" ? "≤" : "≥"} ${c.value} ${TIME_UNIT_LABEL[c.unit]}`;
       case "date": return `日期${c.op === "lte" ? "不晚于" : "不早于"} ${c.date || "（未填）"}`;
-      case "flag": return `变量「${c.key || "未命名"}」${cmpSym(c.op)} ${c.value}`;
+      case "flag": return `计数器「${c.key || "未命名"}」${cmpSym(c.op)} ${c.value}`;
       case "clock": return `时段 ${c.from}~${c.to}`;
       case "quest": return `「${String(quests.find((q) => q.id === c.key)?.label ?? "").trim() || c.key || "未选"}」${QUEST_STATE_LABEL[c.state]}`;
       case "side": return `「${sides.find((q) => q.id === c.key)?.label || c.key || "未选"}」${SIDE_STATE_LABEL[c.state]}`;
@@ -294,7 +311,7 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
       case "addItem": return `获得「${itemName(f.key)}」`;
       case "removeItem": return `失去「${itemName(f.key)}」`;
       case "unlockLocation": return `解锁 ${locName(f.key)}`;
-      case "flag": return `变量「${f.key || "未命名"}」${f.set ? `设为 ${f.delta}` : d}`;
+      case "flag": return `计数器「${f.key || "未命名"}」${f.set ? `改成 ${f.delta}` : d}`;
       default: return effectBrief(f);
     }
   };
@@ -312,13 +329,13 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
     const missingAll = lib.events.filter((e) => !have.has(e.id)).length;
     const emptyLib = lib.groups.length === 0;
     return (
-      <div className="space-y-4">
-        <ModeSwitch mode={mode} setMode={setMode} />
+      <div className="space-y-3">
+        <ModeSwitch mode={mode} setMode={setMode} hidePreview={modMode} />
         {!modMode && <ScopeBanner scope="save">导入的事件写入当前存档。事件库内容来自当前世界观模组。</ScopeBanner>}
         {emptyLib ? (
           <EmptyState>
             {modMode
-              ? "这部作品还没有事件库。请到「编辑」里新建事件，或用「我的模板」套用；不会预置娱乐圈事件，也不会出现「全部导入」。"
+              ? "事件库还是空的。回到「编辑」新建，或用「我的模板」套用。"
               : "当前世界观没有提供事件库。"}
           </EmptyState>
         ) : (
@@ -423,10 +440,10 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
   if (mode === "preview") {
     const seen = events.filter((e) => fired.has(e.id));
     return (
-      <div className="space-y-4">
-        <ModeSwitch mode={mode} setMode={setMode} />
-        <p className="text-[12.5px] leading-relaxed text-ink-soft">
-          这是玩家视角：只显示已经实际触发过的固定事件。未满足条件的事件对玩家和 AI 完全不可见——不会出现在这里，也不会有任何「未解锁」提示。
+      <div className="space-y-3">
+        <ModeSwitch mode={mode} setMode={setMode} hidePreview={modMode} />
+        <p className="wg-field-help text-[12.5px] leading-relaxed text-ink-soft">
+          玩家视角：只显示已触发过的固定事件；未触发的对玩家和 AI 都不可见。
         </p>
         {seen.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-line bg-paper-2/50 px-4 py-8 text-center text-[13px] text-ink-soft">
@@ -448,17 +465,20 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
 
   /* ——— 编辑模式 ——— */
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {confirmEl}
-      <ModeSwitch mode={mode} setMode={setMode} />
+      <div className="flex flex-wrap items-center gap-2">
+        <ModeSwitch mode={mode} setMode={setMode} hidePreview={modMode} />
+        <AiEventWriter
+          existing={events}
+          world={worldContext}
+          onApply={(list) => { save(list); setOpenId(list[0]?.id ?? null); }}
+        />
+      </div>
       {!modMode && <ScopeBanner scope="save">固定事件只作用于当前存档，修改即时保存。模组预设剧本只在新开局时写入。</ScopeBanner>}
-      <p className="text-[12.5px] leading-relaxed text-ink-soft">
-        固定事件是可选的：不配置任何事件时，玩家可一直自由游玩。除「事件名称」「事件提示词」外，其余字段皆可留空。
-        所有条件默认需要<strong className="text-ink">同时满足</strong>；满足后由代码结算数值，再把提示词交 AI 演绎剧情与对白。
-      </p>
 
       {tpls.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-line bg-paper-2/40 px-3 py-2">
+        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-line bg-paper-2/40 px-3 py-2">
           <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-soft">我的模板</span>
           {tpls.map((t) => (
             <span key={t.id} className="inline-flex items-center overflow-hidden rounded-full border border-line bg-paper text-[12px]">
@@ -470,15 +490,12 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
       )}
       {toast && <p role="status" className="rounded-xl bg-jade/10 px-3 py-2 text-[12.5px] font-semibold text-jade">{toast}</p>}
 
-      <AiEventWriter
-        existing={events}
-        world={worldContext}
-        onApply={(list) => { save(list); setOpenId(list[0]?.id ?? null); }}
-      />
-
       {events.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-line bg-paper-2/50 px-4 py-6 text-center text-[13px] text-ink-soft">
-          还没有固定事件。点下方「＋ 新增固定事件」开始编排剧本。
+        <div className="wg-story-empty flex flex-col items-center gap-2.5 rounded-xl px-3 py-4 text-center">
+          <p className="text-[12px] text-ink-soft">还没有固定事件</p>
+          <button type="button" onClick={add} className="rounded-full border border-line bg-paper px-3.5 py-1.5 text-[12px] font-semibold text-ink transition hover:border-jade hover:text-jade">
+            ＋ 新增固定事件
+          </button>
         </div>
       )}
 
@@ -491,7 +508,7 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
           if (!matches(q, e.name, e.prompt)) return null;
           const open = openId === e.id;
           return (
-            <div key={e.id} id={auditDomId(`event:${e.id}`)} className="scroll-mt-3 overflow-hidden rounded-2xl border border-line bg-paper-2/60">
+            <div key={e.id} id={auditDomId(`event:${e.id}`)} className="scroll-mt-3 overflow-hidden rounded-xl border border-line bg-paper-2/60">
               <button onClick={() => setOpenId(open ? null : e.id)} className="flex w-full items-center gap-2 px-4 py-3 text-left">
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2">
@@ -608,7 +625,7 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
                         <option value="location">当前地点</option>
                         <option value="item">持有物品</option>
                         <option value="event">已触发事件</option>
-                        <option value="flag">规则变量（含事件链状态）</option>
+                        <option value="flag">计数器（含事件链状态）</option>
                         <option value="quest">主线节点</option>
                         <option value="side">支线进度</option>
                       </select>
@@ -662,7 +679,7 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
                         <p className="text-[11px] leading-relaxed text-ink-soft">
                           {e.limitDays
                             ? `触发后在支线里倒计时 ${e.limitDays} 天，玩家点开才演绎；到 0 记为超时失败，结算下面的「超时后果」。`
-                            : "不填时限：只在触发的这一回合可展开；下回合标灰过期，上面的属性变化照常结算（不写剧情）。"}
+                            : "不填时限：一直保留在支线里，直到玩家点开展开；不会自动过期。"}
                         </p>
                         {!!e.limitDays && (
                           <div className="space-y-2 rounded-lg border border-dashed border-line p-2">
@@ -759,21 +776,24 @@ export default function FixedEventsPanel({ value, storylines, sidelines, library
         })}
       </div>
 
-      <button onClick={add} className="w-full rounded-2xl border border-dashed border-jade/60 bg-jade/5 py-3 text-[13px] font-bold text-jade transition hover:bg-jade/10">
-        ＋ 新增固定事件
-      </button>
+      {events.length > 0 && (
+        <button type="button" onClick={add} className="w-full rounded-xl border border-dashed border-line py-2.5 text-[12.5px] font-semibold text-ink-soft transition hover:border-jade hover:text-jade">
+          ＋ 新增固定事件
+        </button>
+      )}
     </div>
   );
 }
 
 type Mode = "edit" | "library" | "preview";
 const MODE_LABEL: Record<Mode, string> = { edit: "编辑", library: "事件库", preview: "预览" };
-function ModeSwitch({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }) {
+function ModeSwitch({ mode, setMode, hidePreview }: { mode: Mode; setMode: (m: Mode) => void; hidePreview?: boolean }) {
+  const modes = (hidePreview ? (["edit", "library"] as const) : (["edit", "library", "preview"] as const));
   return (
-    <div className="inline-flex rounded-full border border-line bg-paper-2/60 p-0.5 text-[12.5px] font-bold">
-      {(["edit", "library", "preview"] as const).map((m) => (
-        <button key={m} onClick={() => setMode(m)}
-          className={`rounded-full px-4 py-1.5 transition ${mode === m ? "bg-gradient-to-r from-jade to-coral text-white shadow" : "text-ink-soft"}`}>
+    <div className="inline-flex rounded-full border border-line bg-paper-2/60 p-0.5 text-[12px] font-bold">
+      {modes.map((m) => (
+        <button key={m} type="button" onClick={() => setMode(m)}
+          className={`rounded-full px-3.5 py-1.5 transition ${mode === m ? "bg-jade text-white shadow-sm" : "text-ink-soft hover:text-ink"}`}>
           {MODE_LABEL[m]}
         </button>
       ))}
@@ -837,7 +857,7 @@ export function CondRow({ c, events, selfId, onChange, onDelete, srcs, people, q
       <select className={selCls} value={c.kind === "metric" ? "stat" : c.kind} onChange={(e) => {
         const k = e.target.value as FixedCond["kind"];
         const first = attrOpts[0];
-        onChange(k === "stat" ? { kind: first?.kind ?? "stat", key: first?.key ?? "", op: "gte", value: 1 } as FixedCond : defaultCond(k, draftRefs));
+        onChange(k === "stat" ? { kind: first?.kind ?? "stat", key: first?.key ?? "", op: "gte", value: 1 } as FixedCond : defaultCond(e.target.value as FixedCond["kind"], draftRefs));
       }}>
         <option value="stat">属性</option>
         <option value="rel">NPC 关系</option>
@@ -847,7 +867,7 @@ export function CondRow({ c, events, selfId, onChange, onDelete, srcs, people, q
         <option value="time">已过时间</option>
         <option value="date">游戏日期</option>
         <option value="clock">当日时段</option>
-        <option value="flag">规则变量</option>
+        <option value="flag">计数器</option>
         <option value="quest">主线进度</option>
         <option value="side">支线进度</option>
         {repOn && <option value="faction">阵营声望</option>}
@@ -1046,7 +1066,7 @@ export function CondRow({ c, events, selfId, onChange, onDelete, srcs, people, q
       )}
       {c.kind === "flag" && (
         <>
-          <input className={`${numCls} !w-28`} placeholder="变量名，如 连续加班" value={c.key} maxLength={24} onChange={(e) => onChange({ ...c, key: e.target.value.trim() })} />
+          <input className={`${numCls} !w-28`} list={COUNTER_LIST_ID} placeholder="计数器名，如 高压天数" value={c.key} maxLength={24} onChange={(e) => onChange({ ...c, key: e.target.value.trim() })} />
           <select className={selCls} value={c.op} onChange={(e) => onChange({ ...c, op: e.target.value as CmpOp })}>
             {CMP_OPS.map((o) => <option key={o.v} value={o.v}>{o.t}</option>)}
           </select>
@@ -1093,14 +1113,14 @@ export function EffectRow({ ef, onChange, onDelete }: { ef: FixedEffect; onChang
       <select className={selCls} value={ef.kind === "metric" ? "stat" : ef.kind} onChange={(e) => {
         const k = e.target.value as FixedEffect["kind"];
         const first = attrOpts[0];
-        onChange(k === "stat" ? { kind: first?.kind ?? "stat", key: first?.key ?? "", delta: 1 } as FixedEffect : defaultEffect(k, draftRefs));
+        onChange(k === "stat" ? { kind: first?.kind ?? "stat", key: first?.key ?? "", delta: 1 } as FixedEffect : defaultEffect(e.target.value as FixedEffect["kind"], draftRefs));
       }}>
         <option value="stat">增减属性</option>
         <option value="rel">NPC 关系</option>
         <option value="addItem">获得物品</option>
         <option value="removeItem">移除物品</option>
         <option value="unlockLocation">解锁地点</option>
-        <option value="flag">规则变量</option>
+        <option value="flag">计数器</option>
         {repOn && <option value="faction">阵营声望</option>}
         <option value="memory">记忆标记</option>
         <option value="modVar">MOD 私有变量</option>
@@ -1165,10 +1185,10 @@ export function EffectRow({ ef, onChange, onDelete }: { ef: FixedEffect; onChang
       )}
       {ef.kind === "flag" && (
         <>
-          <input className={`${numCls} !w-28`} placeholder="变量名" value={ef.key} maxLength={24} onChange={(e) => onChange({ ...ef, key: e.target.value.trim() })} />
+          <input className={`${numCls} !w-28`} list={COUNTER_LIST_ID} placeholder="计数器名，如 高压天数" value={ef.key} maxLength={24} onChange={(e) => onChange({ ...ef, key: e.target.value.trim() })} />
           <select className={selCls} value={ef.set ? "set" : "add"} onChange={(e) => onChange({ ...ef, set: e.target.value === "set" || undefined })}>
-            <option value="add">增减</option>
-            <option value="set">设为</option>
+            <option value="add">加上（负数为减）</option>
+            <option value="set">改成</option>
           </select>
           <input type="number" className={numCls} value={ef.delta} onChange={(e) => onChange({ ...ef, delta: Number(e.target.value) || 0 })} />
         </>
@@ -1200,4 +1220,3 @@ export function EffectRow({ ef, onChange, onDelete }: { ef: FixedEffect; onChang
     </div>
   );
 }
-

@@ -48,7 +48,9 @@ test('admin panel exposes a dedicated KK coin route and manager', () => {
   }
 
   assert.match(app, /path="\/admin\/diamonds"/);
-  assert.match(navigation, /key: 'diamonds', label: 'KK币管理', path: '\/admin\/diamonds'/);
+  assert.match(navigation, /key: 'currency'/);
+  assert.match(navigation, /pathname\.startsWith\('\/admin\/diamonds'\)/);
+  assert.match(readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8'), /"diamonds": "KK币"/);
   assert.match(panel, /activeTab === 'diamonds' && <DiamondAdminManager \/>/);
   assert.match(manager, /role="dialog"/);
   assert.match(manager, /当前KK币/);

@@ -67,7 +67,7 @@ test('ImagePicker_场景图上传裁切且链接改生图', async () => {
   assert.match(portrait, /SCENE_PORTRAIT_GEN_SIZE/);
   const mod = await import(pathToFileURL(join(romance, 'lib/scenePortrait.ts')).href);
   assert.equal(mod.SCENE_PORTRAIT_GEN_SIZE, '1080x1920');
-  assert.equal(mod.SCENE_PORTRAIT_HINT, '场景图会裁成 9:16 竖图（1080×1920）');
+  assert.equal(mod.SCENE_PORTRAIT_HINT, '图片会自动裁成竖版，方便手机全屏显示');
 });
 
 test('worldGen_地点字段要求desc必填且合并后ensure', () => {

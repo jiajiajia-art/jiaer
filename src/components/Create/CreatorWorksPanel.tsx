@@ -51,6 +51,33 @@ export const normalizeWorksTabKey = (value: string | null | undefined): WorksTab
     return isWorksTabKey(value) ? value : 'all';
 };
 
+type WorksCategoryKey = 'all' | 'aiWenyou' | 'story' | 'tavern' | 'ivg' | 'draft';
+const WORKS_CATEGORY_ORDER: WorksCategoryKey[] = ['all', 'aiWenyou', 'story', 'tavern', 'ivg', 'draft'];
+const WORKS_CATEGORY_LABELS: Record<WorksCategoryKey, { key: string; fallback: string }> = {
+    all: { key: 'create.worksCategory.all', fallback: '全部' },
+    aiWenyou: { key: 'gameType.labels.aiWenyou', fallback: 'AI文游' },
+    story: { key: 'gameType.labels.script', fallback: '剧本' },
+    tavern: { key: 'gameType.labels.tavern', fallback: '酒馆卡' },
+    ivg: { key: 'gameType.labels.ivg', fallback: '互动影游' },
+    draft: { key: 'create.worksCategory.draft', fallback: '草稿' },
+};
+const normalizeEngineCode = (value?: string | null): string => String(value || '')
+    .trim().replace(/^\[\s*/, '').replace(/\s*\]$/, '').split(',')[0]
+    .replace(/^["']|["']$/g, '').trim().toUpperCase();
+/** 功能注释：「我的作品」分类筛选；草稿按生命周期判断，其余按引擎码 */
+const matchWorksCategory = (game: UserGameData, key: WorksCategoryKey): boolean => {
+    if (key === 'all') return true;
+    if (key === 'draft') return isDraftSlotWork(game);
+    const code = normalizeEngineCode(game.engine || game.game_tags);
+    switch (key) {
+        case 'aiWenyou': return ['TXT', 'ROLE-PLAYING', '文字互动', '角色扮演'].includes(code);
+        case 'story': return ['ROMANCE', '剧本'].includes(code);
+        case 'tavern': return ['AVG', 'ST', 'WORLD', '世界互动'].includes(code);
+        case 'ivg': return ['IVG', '互动影游'].includes(code);
+        default: return false;
+    }
+};
+
 export type CreatorWorksPanelProps = {
     mode: 'preview' | 'full';
     initialTab?: WorksTabKey | 'drafts';
@@ -112,10 +139,15 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
         () => partitionCreatorGames(fileMetas),
         [fileMetas],
     );
-    const allTotalPages = Math.max(1, Math.ceil(allGames.length / WORKS_PAGE_SIZE));
+    const [worksCategory, setWorksCategory] = useState<WorksCategoryKey>('all');
+    const filteredAllGames = useMemo(
+        () => (worksCategory === 'all' ? allGames : allGames.filter((g) => matchWorksCategory(g, worksCategory))),
+        [allGames, worksCategory],
+    );
+    const allTotalPages = Math.max(1, Math.ceil(filteredAllGames.length / WORKS_PAGE_SIZE));
     const pagedAllGames = useMemo(
-        () => paginateItems(allGames, isPreview ? 1 : worksPage, listPageSize),
-        [allGames, worksPage, isPreview, listPageSize],
+        () => paginateItems(filteredAllGames, isPreview ? 1 : worksPage, listPageSize),
+        [filteredAllGames, worksPage, isPreview, listPageSize],
     );
 
     const publishedTotalPages = Math.max(1, Math.ceil(publishedGames.length / WORKS_PAGE_SIZE));
@@ -523,7 +555,7 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                                 className={`${styles.worksTab} ${worksTab === 'all' ? styles.worksTabActive : ''}`}
                                 onClick={() => handleWorksTabChange('all')}
                             >
-                                我的作品 ({allGames.length})
+                                {t('create.myWorksTab', { count: allGames.length })}
                             </button>
                         )}
                         {isVisitor && (
@@ -593,12 +625,31 @@ const CreatorWorksPanel: React.FC<CreatorWorksPanelProps> = ({
                 </div>
             ) : null}
 
+            {worksTab === 'all' && !isVisitor && !isDraftManageMode && allGames.length > 0 && (
+                <div className={styles.worksCategoryBar} role="tablist">
+                    {WORKS_CATEGORY_ORDER.map((key) => (
+                        <button
+                            key={key}
+                            type="button"
+                            role="tab"
+                            aria-selected={worksCategory === key}
+                            className={`${styles.worksCategoryChip} ${worksCategory === key ? styles.worksCategoryChipActive : ''}`}
+                            onClick={() => { setWorksCategory(key); setWorksPage(1); }}
+                        >
+                            {t(WORKS_CATEGORY_LABELS[key].key, { defaultValue: WORKS_CATEGORY_LABELS[key].fallback })}
+                        </button>
+                    ))}
+                </div>
+            )}
+
             <div className={styles.worksTabPanel}>
                 {worksTab === 'all' && (
                     isLoadingMyGames ? (
                         <GameGridSkeleton count={skeletonCount} layoutVariant="works" />
                     ) : allGames.length === 0 ? (
                         <div className={styles.worksEmpty}>还没有作品</div>
+                    ) : filteredAllGames.length === 0 ? (
+                        <div className={styles.worksEmpty}>该分类下暂无作品</div>
                     ) : (
                         <GameGrid
                             games={pagedAllGames}

@@ -55,6 +55,12 @@ export function sanitizeCreationBuiltin(
     const next: BuiltinCfg = {};
     const label = String(raw.label ?? "").trim();
     if (label) next.label = label;
+    // 功能注释：创作者预设值 + 锁定（玩家开局默认 / 固定为该值），仅姓名与性别
+    if (field.key === "name" || field.key === "gender") {
+      const value = String(raw.value ?? "").trim();
+      if (value) next.value = value;
+      if (value && raw.locked) next.locked = true;
+    }
     if (field.key === "gender") {
       const options = normalizeGenderOptions(raw.options);
       // 功能注释：只有额外自定义性别时才写入 options，避免每个作品都冗余存 ["男","女"]

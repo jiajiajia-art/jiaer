@@ -98,7 +98,9 @@ test('SystemsPanel_导入页含我的世界书入口', () => {
     'utf8',
   );
   assert.match(src, /id: 'mine'/);
-  assert.match(src, /我的世界书/);
+  // 「我的世界书」文案锁在 galgameUi.systems.form.tabMine
+  assert.match(src, /t\('galgameUi\.systems\.form\.tabMine'\)/);
+  assert.match(readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8'), /"tabMine": "我的世界书"/);
   assert.match(src, /warehouseWorldBookToEntries/);
   assert.match(src, /warehouseResourcesApi\.list/);
 });

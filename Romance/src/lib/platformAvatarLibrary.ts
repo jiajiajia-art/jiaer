@@ -9,12 +9,27 @@ export type PlatformAvatarItem = {
   gender: string;
   ageGroup: string;
   backgroundType: string;
+  stylePack?: string;
   imageUrl: string;
   thumbUrl?: string;
   originalUrl?: string;
   title?: string;
   kind?: string;
 };
+
+export type PlatformStylePackOption = {
+  id: string;
+  label: string;
+};
+
+const DEFAULT_STYLE_PACKS: readonly PlatformStylePackOption[] = Object.freeze([
+  { id: 'anime', label: '二次元' },
+  { id: 'realistic', label: '写实' },
+  { id: 'ink', label: '水墨' },
+]);
+
+/** 功能注释：缓存最近一次拉到的平台头像原数据，供风格包筛选本地重分组 */
+let cachedPlatformItems: PlatformAvatarItem[] | null = null;
 
 type GroupDef = {
   id: string;
@@ -156,11 +171,21 @@ async function listScope(token: string, scope: 'public' | 'system'): Promise<Pla
 
 /**
  * 功能注释：拉公共+系统库并按性别×年龄分组成 AvatarSource（供选择器 / 抽图缓存）。
+ * stylePack 有值时只保留该风格包素材。
  */
-export function groupPlatformAvatars(items: PlatformAvatarItem[]): AvatarSource[] {
+export function groupPlatformAvatars(
+  items: PlatformAvatarItem[],
+  { stylePack = '', background = '' }: { stylePack?: string; background?: string } = {},
+): AvatarSource[] {
+  const style = String(stylePack || '').trim();
+  const bg = String(background || '').trim();
+  // 功能注释：风格包 × 背景类型（古代 / 现代 / 西幻）两个维度筛选
+  const source = items.filter((it) =>
+    (!style || String(it.stylePack || '').trim() === style)
+    && (!bg || String(it.backgroundType || '').trim() === bg));
   const pools: AvatarSource[] = [];
   for (const g of PLATFORM_AVATAR_GROUPS) {
-    const images = items
+    const images = source
       .filter((it) => it.gender === g.gender && it.ageGroup === g.ageGroup)
       .map((it) => platformAvatarDisplayUrl(it))
       .filter(Boolean);
@@ -174,13 +199,13 @@ export function groupPlatformAvatars(items: PlatformAvatarItem[]): AvatarSource[
   }
   // 未落入三维桶的（缺标签）单独一栏，避免丢图
   const tagged = new Set(
-    items
+    source
       .filter((it) =>
         PLATFORM_AVATAR_GROUPS.some((g) => g.gender === it.gender && g.ageGroup === it.ageGroup),
       )
       .map((it) => it.id),
   );
-  const orphan = items
+  const orphan = source
     .filter((it) => !tagged.has(it.id))
     .map((it) => platformAvatarDisplayUrl(it))
     .filter(Boolean);
@@ -195,7 +220,68 @@ export function groupPlatformAvatars(items: PlatformAvatarItem[]): AvatarSource[
   return pools;
 }
 
-export async function fetchPlatformSystemAvatarPools(token?: string): Promise<AvatarSource[]> {
+export function getCachedPlatformAvatarItems(): PlatformAvatarItem[] {
+  return cachedPlatformItems ? [...cachedPlatformItems] : [];
+}
+
+/** 功能注释：基于缓存按风格包重分组，不重复请求 */
+export function regroupCachedPlatformAvatarPools(stylePack = '', background = ''): AvatarSource[] {
+  return groupPlatformAvatars(cachedPlatformItems || [], { stylePack, background });
+}
+
+/** 功能注释：背景类型（时代）筛选项——只列缓存里实际出现过的 */
+export const AVATAR_BACKGROUND_OPTIONS: readonly PlatformStylePackOption[] = Object.freeze([
+  { id: 'ancient', label: '古代' },
+  { id: 'modern', label: '现代' },
+  { id: 'fantasy', label: '西幻' },
+]);
+export function listCachedBackgroundIds(): string[] {
+  const seen = new Set<string>();
+  for (const it of cachedPlatformItems || []) {
+    const id = String(it.backgroundType || '').trim();
+    if (id) seen.add(id);
+  }
+  return [...seen];
+}
+
+/** 功能注释：从缓存推导出现有风格包 id，供筛选条展示 */
+export function listCachedStylePackIds(): string[] {
+  const seen = new Set<string>();
+  for (const it of cachedPlatformItems || []) {
+    const id = String(it.stylePack || '').trim();
+    if (id) seen.add(id);
+  }
+  return [...seen];
+}
+
+export async function fetchPlatformStylePackOptions(token?: string): Promise<PlatformStylePackOption[]> {
+  const t = String(token || readFunloomAuthToken() || '').trim();
+  if (!t) return [...DEFAULT_STYLE_PACKS];
+  try {
+    const res = await fetch(`${apiBase()}/api/avatar-library/tag-options?dimension=style_pack`, {
+      headers: {
+        Authorization: `Bearer ${t}`,
+        Accept: 'application/json',
+      },
+    });
+    const json = (await res.json().catch(() => null)) as {
+      success?: boolean;
+      data?: Array<{ id?: string; label?: string; status?: string }>;
+    } | null;
+    const list = Array.isArray(json?.data) ? json.data : [];
+    const active = list
+      .filter((x) => x && x.status !== 'disabled' && String(x.id || '').trim())
+      .map((x) => ({ id: String(x.id), label: String(x.label || x.id) }));
+    return active.length ? active : [...DEFAULT_STYLE_PACKS];
+  } catch {
+    return [...DEFAULT_STYLE_PACKS];
+  }
+}
+
+export async function fetchPlatformSystemAvatarPools(
+  token?: string,
+  { stylePack = '' }: { stylePack?: string } = {},
+): Promise<AvatarSource[]> {
   const t = String(token || readFunloomAuthToken() || '').trim();
   if (!t) throw new Error('请先登录后再浏览平台头像库');
   const [pub, sys] = await Promise.all([
@@ -211,5 +297,6 @@ export async function fetchPlatformSystemAvatarPools(token?: string): Promise<Av
     seen.add(url);
     merged.push(it);
   }
-  return groupPlatformAvatars(merged);
+  cachedPlatformItems = merged;
+  return groupPlatformAvatars(merged, { stylePack });
 }

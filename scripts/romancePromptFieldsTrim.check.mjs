@@ -1,5 +1,5 @@
 /**
- * 世界观提示词：术语等四项仍下架；三框已并入①基础「剧本基调」，剧情页不再展示。
+ * 世界观提示词：术语等四项仍下架；三框已并入①基础「系统提示词」，剧情页不再展示。
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -25,9 +25,9 @@ test('ModPromptEditor_不再作为三字段编辑入口', () => {
   assert.doesNotMatch(ed, /k: "endingHint"/);
 });
 
-test('ModEditorPanel_剧本基调在基础_剧情无世界观提示词三块', () => {
+test('ModEditorPanel_系统提示词在基础_剧情无世界观提示词三块', () => {
   const panel = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8');
-  assert.match(panel, /剧本基调/);
+  assert.match(panel, /系统提示词/);
   assert.doesNotMatch(panel, /title="世界观提示词"/);
   assert.doesNotMatch(panel, /label: "术语说明"/);
   assert.doesNotMatch(panel, /label: "开局导演指令"/);

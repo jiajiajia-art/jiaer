@@ -125,7 +125,7 @@ test('GameRulesEditor_默认单行展开且预设挂钩事件库', () => {
   assert.match(editor, /materializeRulePreset/);
   assert.match(editor, /libraryEvents/);
   assert.match(editor, /aria-expanded/);
-  assert.match(editor, /规则变量/);
+  assert.match(editor, /计数器/);
   assert.match(editor, /调用事件库/);
   assert.match(editor, /data-rule-role/);
   // 禁止默认把概率/冷却/否则整卡摊在外面（展开块须包在 open &&）
@@ -133,5 +133,5 @@ test('GameRulesEditor_默认单行展开且预设挂钩事件库', () => {
   assert.doesNotMatch(editor, /TEMPLATES\.map/);
   const panel = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8');
   assert.match(panel, /libraryEvents=\{c\.events\}/);
-  assert.match(panel, /判定时机 · 条件 · 调用事件库 · 规则变量/);
+  assert.match(panel, /触发事件或记一次数/);
 });

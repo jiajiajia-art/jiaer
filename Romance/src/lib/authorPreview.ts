@@ -125,7 +125,7 @@ const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
  * 功能注释：作者预览与发布共用必填清单。
  * 开局日期 / 开局资金 / 作品封面 / 开场不拦预览：日期与资金由生成世界观写入（资金默认 0），
  * 封面用引擎默认，开场默认不要也不生成。
- * 旧三栏只把「世界观设定」视为剧本基调正文，避免 GM/口吻占位误判成已填写。
+ * 旧三栏只把「世界观设定」视为系统提示词正文，避免 GM/口吻占位误判成已填写。
  */
 export function assessAuthorRequiredFields(mod: Mod): AuthorRequiredIssue[] {
   if (!mod || typeof mod !== "object" || mod.kind === "addon") return [];
@@ -135,7 +135,7 @@ export function assessAuthorRequiredFields(mod: Mod): AuthorRequiredIssue[] {
   if (!text(mod.name)) add({ field: "name", label: "作品名称", group: "base", target: "author-field-name" });
   const unifiedTone = text(c.prompt?.scriptTone);
   const legacyWorld = text(c.prompt?.worldIntro);
-  if (!unifiedTone && !legacyWorld) add({ field: "scriptTone", label: "剧本基调（或世界观设定）", group: "base", target: "author-field-script-tone" });
+  if (!unifiedTone && !legacyWorld) add({ field: "scriptTone", label: "系统提示词（或世界观设定）", group: "base", target: "author-field-script-tone" });
   const rooms = c.rooms && typeof c.rooms === "object" ? c.rooms : {};
   const roomIds = Object.keys(rooms);
   if (!roomIds.length) add({ field: "rooms", label: "地点（至少一处）", group: "base", target: "author-field-rooms" });

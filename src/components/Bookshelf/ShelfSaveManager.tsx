@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import styles from './Bookshelf.module.css';
 import ConfirmModal from '../CommonModal/ConfirmModal';
@@ -30,6 +31,7 @@ type SavesState =
  * 损坏 / 不兼容存档也在这里展示原因，由玩家决定是否删除。
  */
 const ShelfSaveManager: React.FC<ShelfSaveManagerProps> = ({ isOpen, games, onClose }) => {
+  const { t } = useTranslation();
   const [activeGame, setActiveGame] = useState<ShelfItem | null>(null);
   const [saves, setSaves] = useState<SavesState>({ status: 'idle' });
   const [pendingDelete, setPendingDelete] = useState<ShelfSaveEntry | null>(null);
@@ -67,11 +69,11 @@ const ShelfSaveManager: React.FC<ShelfSaveManagerProps> = ({ isOpen, games, onCl
       setSaves((prev) => (prev.status === 'ready'
         ? { status: 'ready', items: prev.items.filter((s) => s.saveId !== pendingDelete.saveId) }
         : prev));
-      toast.success('存档已删除');
+      toast.success(t('bookshelfUi.saveManager.deletedOk'));
       setPendingDelete(null);
     } catch (error) {
       console.error('[ShelfSaveManager] delete save failed:', error);
-      toast.error('删除失败，请稍后重试');
+      toast.error(t('bookshelfUi.saveManager.deleteFailed'));
     } finally {
       setDeleting(false);
     }
@@ -82,41 +84,41 @@ const ShelfSaveManager: React.FC<ShelfSaveManagerProps> = ({ isOpen, games, onCl
   return createPortal(
     <>
       <div className={styles.sheetOverlay} onClick={onClose}>
-        <div className={styles.sheet} role="dialog" aria-modal="true" aria-label="存档管理" onClick={(e) => e.stopPropagation()}>
+        <div className={styles.sheet} role="dialog" aria-modal="true" aria-label={t('bookshelfUi.saveManager.dialogAria')} onClick={(e) => e.stopPropagation()}>
           <div className={styles.sheetHeader}>
             {activeGame && (
-              <button type="button" className={styles.sheetClose} onClick={() => setActiveGame(null)} aria-label="返回剧本列表">‹</button>
+              <button type="button" className={styles.sheetClose} onClick={() => setActiveGame(null)} aria-label={t('bookshelfUi.saveManager.backToGamesAria')}>‹</button>
             )}
             <div className={styles.sheetHeading}>
-              <h3 className={styles.sheetTitle}>存档管理</h3>
-              <p className={styles.sheetSub}>{activeGame ? activeGame.title : '删除存档不会影响书架记录、收藏与购买'}</p>
+              <h3 className={styles.sheetTitle}>{t('bookshelfUi.saveManager.title')}</h3>
+              <p className={styles.sheetSub}>{activeGame ? activeGame.title : t('bookshelfUi.saveManager.subtitleDefault')}</p>
             </div>
-            <button type="button" className={styles.sheetClose} onClick={onClose} aria-label="关闭">×</button>
+            <button type="button" className={styles.sheetClose} onClick={onClose} aria-label={t('bookshelfUi.saveManager.closeAria')}>×</button>
           </div>
           <div className={styles.sheetBody}>
             {!activeGame && games.length === 0 && (
-              <div className={styles.sheetHint}>当前列表里没有可管理存档的剧本</div>
+              <div className={styles.sheetHint}>{t('bookshelfUi.saveManager.noGames')}</div>
             )}
             {!activeGame && games.map((game) => (
               <button key={game.fileId} type="button" className={styles.saveRow} onClick={() => openGame(game)}>
                 <span className={styles.saveRowMain}>
-                  <span className={styles.saveRowTitle}>{game.title || '未命名剧本'}</span>
+                  <span className={styles.saveRowTitle}>{game.title || t('bookshelfUi.saveManager.unnamedGame')}</span>
                   <span className={styles.saveRowMeta}>{game.author}</span>
                 </span>
                 <span className={styles.saveRowMeta}>›</span>
               </button>
             ))}
-            {activeGame && saves.status === 'loading' && <div className={styles.sheetHint}>正在读取存档…</div>}
+            {activeGame && saves.status === 'loading' && <div className={styles.sheetHint}>{t('bookshelfUi.saveManager.loadingSaves')}</div>}
             {activeGame && saves.status === 'error' && (
               <div className={styles.sheetHint}>
-                读取存档失败
+                {t('bookshelfUi.saveManager.loadFailed')}
                 <div className={styles.listFooter}>
-                  <button type="button" onClick={() => void loadSaves(activeGame)}>重试</button>
+                  <button type="button" onClick={() => void loadSaves(activeGame)}>{t('bookshelfUi.saveManager.retry')}</button>
                 </div>
               </div>
             )}
             {activeGame && saves.status === 'ready' && saves.items.length === 0 && (
-              <div className={styles.sheetHint}>这个剧本还没有手动存档</div>
+              <div className={styles.sheetHint}>{t('bookshelfUi.saveManager.noManualSaves')}</div>
             )}
             {activeGame && saves.status === 'ready' && saves.items.map((entry) => {
               const meta = [shelfSaveProgressLabel(entry), formatShelfSaveTime(entry.updatedAt || entry.createdAt)]
@@ -124,12 +126,12 @@ const ShelfSaveManager: React.FC<ShelfSaveManagerProps> = ({ isOpen, games, onCl
               return (
                 <div key={entry.saveId} className={`${styles.saveRow} ${entry.status !== 'ok' ? styles.saveRowInvalid : ''}`}>
                   <span className={styles.saveRowMain}>
-                    <span className={styles.saveRowTitle}>{entry.playerName || '存档'}</span>
+                    <span className={styles.saveRowTitle}>{entry.playerName || t('bookshelfUi.saveManager.saveFallback')}</span>
                     {meta && <span className={styles.saveRowMeta}>{meta}</span>}
                     {entry.summaryPreview && <span className={styles.saveRowSummary}>{entry.summaryPreview}</span>}
-                    {entry.status !== 'ok' && <span className={styles.saveRowReason}>{entry.reason || '存档无法读取'}</span>}
+                    {entry.status !== 'ok' && <span className={styles.saveRowReason}>{entry.reason || t('bookshelfUi.saveManager.unreadable')}</span>}
                   </span>
-                  <button type="button" className={styles.saveRowDelete} onClick={() => setPendingDelete(entry)}>删除</button>
+                  <button type="button" className={styles.saveRowDelete} onClick={() => setPendingDelete(entry)}>{t('bookshelfUi.saveManager.delete')}</button>
                 </div>
               );
             })}
@@ -139,10 +141,10 @@ const ShelfSaveManager: React.FC<ShelfSaveManagerProps> = ({ isOpen, games, onCl
       <ConfirmModal
         isOpen={Boolean(pendingDelete)}
         tone="dark"
-        title="删除存档"
-        message="删除后该存档无法恢复，书架记录、收藏与购买不受影响。确定删除吗？"
-        confirmButtonText={deleting ? '删除中…' : '删除'}
-        cancelButtonText="取消"
+        title={t('bookshelfUi.saveManager.confirmTitle')}
+        message={t('bookshelfUi.saveManager.confirmMessage')}
+        confirmButtonText={deleting ? t('bookshelfUi.saveManager.confirmDeleting') : t('bookshelfUi.saveManager.delete')}
+        cancelButtonText={t('bookshelfUi.saveManager.cancel')}
         onConfirm={() => void confirmDelete()}
         onCancel={() => { if (!deleting) setPendingDelete(null); }}
       />

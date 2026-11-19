@@ -75,14 +75,22 @@ test('flattenThemeTagTree_取叶子_去重_丢非法节点', async () => {
   assert.equal(parseGameThemeFromInfo(null), null);
 });
 
-// 编辑器内的世界题材表单（WorldThemeFields）已下线：题材改由平台作品信息下发，进编辑器时合入 Mod，
-// 并继续传给玩法商店与手机应用做题材筛选；通讯皮肤按题材自动判定（旧作显式 commsSkin 仍生效）
-test('ModEditorPanel_题材取自平台_并向玩法商店和手机应用传enabledThemeTags', () => {
+// 基本信息里作者自选题材（WorldThemeFields）；平台续编仍可补缺。玩法商店 / 手机应用继续吃 enabledThemeTags
+test('ModEditorPanel_基本信息挂WorldThemeFields_并向玩法商店和手机应用传enabledThemeTags', () => {
   const panel = read('components/ModEditorPanel.tsx');
-  assert.doesNotMatch(panel, /<WorldThemeFields /);
+  assert.match(panel, /<WorldThemeFields[\s\S]*?onPatch=\{/);
+  assert.equal((panel.match(/<WorldThemeFields[\s\S]*?\/>/g) || []).length, 2, '作者态 + 完整编辑器各一处');
+  assert.match(panel, /patchWorldTheme\(m, patch\)/);
   assert.equal((panel.match(/enabledThemeTags=\{enabledThemeTags\}/g) || []).length, 2, 'AddPlayModModal + PhoneAppsEditor');
   assert.match(panel, /fetchPlatformThemeTags\(\)/);
   assert.match(panel, /applyPlatformThemeToMod\(latest, theme\)/);
+  const fields = read('components/WorldThemeFields.tsx');
+  // 功能注释：跳转锚点在 WorldThemeFields 根节点，供发布门禁定位
+  assert.match(fields, /data-author-field="author-field-theme"/);
+  assert.match(fields, /题材 \*/);
+  assert.match(fields, /data-world-theme-tag/);
+  assert.match(fields, /只能勾选|平台题材/);
+  assert.doesNotMatch(fields, /直接填写即可/);
   const theme = read('lib/worldTheme.ts');
   assert.match(theme, /override: hint\.commsSkin/);
 });
@@ -91,7 +99,18 @@ test('PlayerPlayBootstrap_进局前补平台题材_失败不阻断', () => {
   const src = read('components/PlayerPlayBootstrap.tsx');
   assert.match(src, /fetchPlatformGameTheme\(fileId\)/);
   assert.match(src, /applyPlatformThemeToMod\(mod, theme\)/);
+  // 功能注释：正式 play 走 requestPlatformPlay；审核预览才 requestAuthorPreview
+  assert.match(src, /requestPlatformPlay\(playMod\)/);
+  assert.match(src, /mode === ["']reviewPreview["']/);
   assert.match(src, /requestAuthorPreview\(playMod,/);
+  assert.doesNotMatch(
+    src,
+    /requestAuthorPreview\(playMod,\s*mode === ["']reviewPreview["']/,
+  );
+  const play = read('lib/platformPlay.ts');
+  assert.match(play, /beginAuthorPreviewMod/);
+  assert.match(play, /PLATFORM_PLAY_START/);
+  assert.doesNotMatch(play, /requestAuthorPreview\(/);
   const lib = read('lib/platformThemeTags.ts');
   assert.match(lib, /\/api\/auth\/games\/info\?fileId=/);
   assert.match(lib, /gameThemeInflight/);

@@ -27,7 +27,7 @@ test('Home_精选区标题应为固定挑选文案且无红色方标', () => {
   const zh = read('src/i18n/locales/zh.json');
   assert.match(tsx, /home\.showcasePickTitle/);
   assert.doesNotMatch(tsx, /themeShowcaseTitleMarker/);
-  assert.match(zh, /"showcasePickTitle":\s*"为您挑选最值得一看的互动剧情"/);
+  assert.match(zh, /"showcasePickTitle":\s*"为您推荐"/);
 });
 
 test('Home_主题胶囊应为大号酒红选中态', () => {

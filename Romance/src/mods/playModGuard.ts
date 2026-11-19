@@ -13,7 +13,7 @@ export const PLAY_MOD_FORBIDDEN_FIELDS: Record<string, string> = {
   worldBook: "世界书",
   lore: "详细设定",
   festivals: "节日设定",
-  prompt: "剧本基调 / 提示词",
+  prompt: "系统提示词 / 提示词",
   terms: "术语表",
   startDate: "开局日期",
   startMoney: "开局资金",
@@ -165,7 +165,8 @@ export function cmpSemver(a: string, b: string): number {
 
 export function sanitizeConflictIds(v: unknown, selfId?: string): string[] {
   if (!Array.isArray(v)) return [];
-  const out = v.map((x) => String(x ?? "").trim().toLowerCase()).filter((x) => /^[a-z0-9][a-z0-9_-]{1,48}$/.test(x) && x !== selfId);
+  const self = selfId?.trim().toLowerCase();
+  const out = v.map((x) => String(x ?? "").trim().toLowerCase()).filter((x) => /^[a-z0-9][a-z0-9_-]{1,48}$/.test(x) && x !== self);
   return [...new Set(out)].slice(0, 20);
 }
 
@@ -184,13 +185,15 @@ export function playModInstallBlock(
 ): string | null {
   if (item.compatMin && cmpSemver(sdk, item.compatMin) < 0) return `需要更新的平台版本（≥ ${item.compatMin}），当前 ${sdk}`;
   if (item.compatMax && cmpSemver(sdk, item.compatMax) > 0) return `只支持到平台 ${item.compatMax}，当前 ${sdk}，等作者更新`;
-  const keys = new Set([item.slug, item.id].filter(Boolean) as string[]);
+  // 功能注释：互斥声明经 sanitizeConflictIds 统一小写，slug/id 也按小写比较
+  const norm = (xs: (string | undefined)[]) => new Set(xs.filter(Boolean).map((x) => String(x).trim().toLowerCase()));
+  const keys = norm([item.slug, item.id]);
   for (const slug of installedSlugs) {
-    if (keys.has(slug)) continue;
+    if (keys.has(slug.trim().toLowerCase())) continue;
     const other = lookup(slug);
-    const otherKeys = new Set([slug, other?.id].filter(Boolean) as string[]);
-    const mine = (item.conflictsWith ?? []).some((c) => otherKeys.has(c));
-    const theirs = (other?.conflictsWith ?? []).some((c) => keys.has(c));
+    const otherKeys = norm([slug, other?.id]);
+    const mine = (item.conflictsWith ?? []).some((c) => otherKeys.has(String(c).trim().toLowerCase()));
+    const theirs = (other?.conflictsWith ?? []).some((c) => keys.has(String(c).trim().toLowerCase()));
     if (mine || theirs) return `与已添加的「${other?.name ?? slug}」互斥，需先移除它`;
   }
   return null;

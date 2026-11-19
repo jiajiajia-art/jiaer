@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 type IndustryPageHeaderProps = {
   eyebrow?: string;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   icon?: ReactNode;
   action?: ReactNode;
 };
@@ -44,8 +44,8 @@ export default function IndustryPageHeader({ eyebrow, title, subtitle, icon, act
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <span aria-hidden className="h-10 w-[3px] shrink-0 rounded-[2px] bg-gradient-to-b from-[var(--jade)] to-[var(--coral)]" />
             <div className="min-w-0">
-              <p className="whitespace-nowrap text-[10.5px] font-bold tracking-[0.32em] text-ink-soft">{subtitle}</p>
-              <h1 className="mt-1 truncate font-serif text-[24px] font-black leading-[1.1] tracking-[0.1em] text-ink">{title}</h1>
+              {subtitle ? <p className="whitespace-nowrap text-[11px] font-semibold tracking-[0.08em] text-ink-soft">{subtitle}</p> : null}
+              <h1 className="mt-0.5 truncate text-[22px] font-bold leading-[1.15] tracking-[0.02em] text-ink">{title}</h1>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">

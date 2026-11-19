@@ -105,7 +105,7 @@ export default function WorldBookPanel() {
       <p className="text-[12.5px] leading-relaxed text-ink-soft">
         一条设定只写一遍（名称 · 正文 · 关键词）；地点与人物可选手动挂靠。
         有挂靠时：玩家在该地点、人物在场或正文提到关键词才注入。数字越小的条目越靠前。
-        始终生效的铁律请写进剧本基调。
+        始终生效的铁律请写进系统提示词。
       </p>
 
       {/* 统计条 + 蓝灯护栏 */}

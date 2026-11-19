@@ -37,8 +37,14 @@ test('warehouseCardAvatar_编辑表单有生图入口', () => {
   assert.match(npc, /WarehouseCardAvatarField/);
   assert.match(npc, /cardKind:\s*'npc'/);
   assert.match(npc, /onAvatarUrl/);
-  assert.match(field, /AI 生成图像|重新生成图像|后台生成中/);
-  assert.match(field, /上传图片/);
+  // 生图与上传文案锁在 warehouse.cards.avatar*
+  assert.match(field, /warehouse\.cards\.avatarAiGenerate|warehouse\.cards\.avatarRegenerate|warehouse\.cards\.avatarGeneratingBackground/);
+  assert.match(field, /warehouse\.cards\.avatarUploadImage/);
+  const zh = readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8');
+  assert.match(zh, /"avatarAiGenerate": "AI 生成图像/);
+  assert.match(zh, /"avatarRegenerate": "重新生成图像/);
+  assert.match(zh, /"avatarGeneratingBackground": "后台生成中…"/);
+  assert.match(zh, /"avatarUploadImage": "上传图片"/);
   assert.match(field, /compressImageFileToWebpUnderMaxBytes/);
   assert.match(field, /PLAYER_UPLOAD_AVATAR_MAX_BYTES/);
   assert.match(field, /avatarIdentityRow|avatarAside/);

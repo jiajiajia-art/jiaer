@@ -4,10 +4,12 @@
  * - 悬浮球可拖动；松手贴左 / 右边；拖到屏幕边缘收成半隐藏小标签，点一下弹回。位置记在本机。
  * - 后端暂无可选线路时仍显示（标「平台默认」），弹窗里说明暂无可切换线路；入口不再消失。
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './AiRouteFab.module.css';
 import AiRouteSheet from './AiRouteSheet';
+
+const AssetDetails = lazy(() => import('../../page/AssetDetails'));
 import { useAuthStore } from '../../store/useAuthStore';
 import {
   fetchAiRouteOptions,
@@ -19,7 +21,7 @@ import {
 
 type FabPos = { side: 'left' | 'right'; y: number; docked: boolean };
 const POS_KEY = 'funloom:aiRouteFab';
-const SIZE = 52;
+const SIZE = 48;
 const EDGE_DOCK_PX = 28;
 const DRAG_THRESHOLD = 6;
 
@@ -41,9 +43,11 @@ function savePos(p: FabPos) {
 
 const AiRouteFab: React.FC<{ label?: string }> = ({ label = 'AI 线路' }) => {
   const token = useAuthStore((s) => s.user?.token);
-  const [routes, setRoutes] = useState<AiRouteOption[] | null>(null);
+  // 功能注释：先空数组占位立刻画球，避免线路接口慢/失败时整颗悬浮球不出现
+  const [routes, setRoutes] = useState<AiRouteOption[]>([]);
   const [selectedId, setSelectedId] = useState(getSelectedAiRouteId);
   const [open, setOpen] = useState(false);
+  const [ledgerOpen, setLedgerOpen] = useState(false);
   const [pos, setPos] = useState<FabPos>(readPos);
   const [drag, setDrag] = useState<{ x: number; y: number } | null>(null);
   const startRef = useRef<{ px: number; py: number; moved: boolean } | null>(null);
@@ -55,7 +59,23 @@ const AiRouteFab: React.FC<{ label?: string }> = ({ label = 'AI 线路' }) => {
   useEffect(() => { load(); }, [load]);
   useEffect(() => subscribeAiRoute(() => setSelectedId(getSelectedAiRouteId())), []);
 
-  const active = routes ? resolveActiveRoute(routes, selectedId) : undefined;
+  useEffect(() => {
+    if (!ledgerOpen) return undefined;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setLedgerOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [ledgerOpen]);
+
+  // 功能注释：曾拖到贴边收起时，进局先展开一截，避免玩家以为悬浮球丢了
+  useEffect(() => {
+    if (!pos.docked) return;
+    const next = { ...pos, docked: false };
+    setPos(next);
+    savePos(next);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅挂载时纠正贴边收起态
+  }, []);
+
+  const active = resolveActiveRoute(routes, selectedId);
 
   const onPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
     if (e.button !== 0) return;
@@ -112,14 +132,12 @@ const AiRouteFab: React.FC<{ label?: string }> = ({ label = 'AI 线路' }) => {
     }
   };
 
-  // 功能注释：线路接口还没返回前不渲染；返回空列表也照常显示入口（走平台默认）
-  if (!routes) return null;
-
   const style: React.CSSProperties = drag
     ? { left: drag.x - SIZE / 2, top: drag.y - SIZE / 2 }
     : {
       top: `calc(${(pos.y * 100).toFixed(2)}% - ${SIZE / 2}px)`,
-      [pos.side]: pos.docked ? -SIZE * 0.58 : 12,
+      // 功能注释：收起只藏一半，移动端仍能看见握把
+      [pos.side]: pos.docked ? -SIZE * 0.45 : 12,
     };
 
   const name = active?.name ?? '平台默认';
@@ -141,12 +159,16 @@ const AiRouteFab: React.FC<{ label?: string }> = ({ label = 'AI 线路' }) => {
       >
         <span className={styles.ring} aria-hidden="true" />
         <span className={styles.core} aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="6" cy="18" r="2.2" />
-            <circle cx="18" cy="6" r="2.2" />
-            <path d="M6 15.8V10a4 4 0 0 1 4-4h5.8" />
-            <path d="M18 8.2V14a4 4 0 0 1-4 4H8.2" strokeOpacity="0.55" />
-          </svg>
+          {/* 功能注释：只用已有 1x logo；禁止写不存在的 @2x（Retina 会拿到 SPA HTML → 破图） */}
+          <img
+            className={styles.logo}
+            src={`${import.meta.env.BASE_URL}data/assets/funloom_icon.png`}
+            alt=""
+            draggable={false}
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
         </span>
         {pos.docked && !drag && <span className={styles.peekGrip} aria-hidden="true" />}
       </button>
@@ -156,7 +178,15 @@ const AiRouteFab: React.FC<{ label?: string }> = ({ label = 'AI 线路' }) => {
           selectedId={selectedId}
           onClose={() => setOpen(false)}
           onReload={() => load(true)}
+          onOpenAssetDetails={() => setLedgerOpen(true)}
         />
+      )}
+      {ledgerOpen && (
+        <div className={styles.ledgerOverlay} role="dialog" aria-modal="true" aria-label="消耗明细">
+          <Suspense fallback={<div className={styles.ledgerLoading}>加载中…</div>}>
+            <AssetDetails embedded onClose={() => setLedgerOpen(false)} />
+          </Suspense>
+        </div>
       )}
     </>,
     document.body,

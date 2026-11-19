@@ -9,7 +9,13 @@ import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { build } from 'esbuild';
+import { createRequire } from 'node:module';
+// 功能注释：esbuild 不是根项目直接依赖；先按包名找，找不到再借 vite 自带的那份，避免环境里「缺 esbuild」直接起不来
+const { build } = await import('esbuild').catch(() => {
+  const req = createRequire(import.meta.url);
+  const viteReq = createRequire(req.resolve('vite/package.json'));
+  return import(viteReq.resolve('esbuild'));
+});
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const romance = join(root, 'Romance/src');
@@ -216,8 +222,10 @@ test('新建条件效果默认值与规则预设_走本作品引用池', () => {
 });
 
 test('视角文案_题材中性_编辑器帮助文案不举片场例子', () => {
-  assert.doesNotMatch(read('components/PlayPrefsPicker.tsx'), /走进片场/);
-  assert.match(read('components/PlayPrefsPicker.tsx'), /走进场景/);
+  const picker = read('components/PlayPrefsPicker.tsx');
+  // 叙事视角只留人称名称，不再写走进场景/片场这类举例
+  assert.match(picker, /aria-label="叙事视角"/);
+  assert.doesNotMatch(picker, /走进片场|走进场景/);
   assert.doesNotMatch(read('components/EventAdvanced.tsx'), /去片场/);
   assert.doesNotMatch(read('components/AiEventWriter.tsx'), /改到片场/);
 });

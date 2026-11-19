@@ -180,7 +180,7 @@ export function useChat() {
           return x;
         });
       } catch {
-        fail("群里暂时没人回应，检查一下网络或 AI 配置");
+        fail("群里暂时没人回应，请检查网络或稍后重试");
       }
       setTypingIn(null);
       return true;
@@ -195,7 +195,7 @@ export function useChat() {
       reply = await requestChatReply(cfg, v.g, v.thread!, aiText, aiImg, { ...(money ? { money } : {}), stickers: stickerNames });
     } catch {
       setTypingIn(null);
-      fail(aiImg ? "对方没能看到图片：当前 AI 模型可能不支持识图，换一个多模态模型试试" : "消息发送失败，检查一下网络或 AI 配置");
+      fail(aiImg ? "对方没能看到图片：当前线路可能不支持识图，请换一条平台线路后再试" : "消息发送失败，请检查网络或登录状态后重试");
       return true;
     }
 
@@ -1028,7 +1028,7 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
         }, g));
       }
     } catch {
-      if (live()) flash("群里暂时没动静，检查一下网络或 AI 配置");
+      if (live()) flash("群里暂时没动静，请检查网络或稍后重试");
     } finally {
       if (live()) setWatching(false);
     }

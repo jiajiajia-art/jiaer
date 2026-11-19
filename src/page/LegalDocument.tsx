@@ -78,7 +78,8 @@ export default function LegalDocument({ document }: LegalDocumentProps) {
   const queryLanguage = typeof window !== 'undefined'
     ? new URLSearchParams(window.location.search).get('lang')
     : null;
-  const language: LegalLanguage = String(queryLanguage || i18n.resolvedLanguage || i18n.language || '').toLowerCase().startsWith('en')
+  const runtimeLang = String(queryLanguage || i18n.resolvedLanguage || i18n.language || '').toLowerCase();
+  const language: LegalLanguage = runtimeLang.startsWith('en') || runtimeLang.startsWith('ja')
     ? 'en'
     : 'zh';
   const selected = DOCUMENTS[document][language];

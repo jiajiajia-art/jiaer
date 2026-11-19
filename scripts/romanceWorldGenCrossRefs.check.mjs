@@ -373,9 +373,9 @@ test('crossRefs_第2次请求带第1次id与完整基调_世界书不在第1次�
   assert.equal(result.progress.failedCount, 0, JSON.stringify(result.progress.modules.filter((m) => m.error)));
   assert.equal(prompts.length, 3, '基础设定 → 人物与地点 → 事件与剧情线');
   const phase2 = prompts[1];
-  assert.ok(prompts[2].includes(tone), '第3次同样带完整剧本基调');
+  assert.ok(prompts[2].includes(tone), '第3次同样带完整系统提示词');
   assert.match(prompts[2], /lobby|旅店前厅/, '第3次须带第2次的地点上下文');
-  assert.ok(phase2.includes(tone), '第2次必须收到完整第1次剧本基调');
+  assert.ok(phase2.includes(tone), '第2次必须收到完整第1次系统提示词');
   assert.match(phase2, /insight=洞察/);
   assert.match(phase2, /charm=魅力/);
   assert.match(phase2, /moneyLabel：元/);

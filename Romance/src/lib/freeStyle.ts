@@ -1,5 +1,6 @@
 import { loadGlobal, saveGlobal } from "./saveScope";
 import { buildTopbarCss, type TopbarDiy } from "./topbarDiy";
+import { canSyncCreatorAssetsToCloud, syncRememberToCloud } from "./platformCreatorAssets";
 
 /* 自由美化（类酒馆）：任意颜色 / 字体文件 / 各部位贴图。
  * 生成一段 <style id="free-style">，放在皮肤之后、用户 CSS 之前；选择器加权以压过皮肤变量。 */
@@ -37,7 +38,8 @@ export function buildFreeCss(f?: FreeStyle): string {
   if (f.font?.url && f.font.name) {
     const fam = `"${f.font.name.replace(/"/g, "")}"`;
     out.push(`@font-face { font-family: ${fam}; src: ${q(f.font.url)}; font-display: swap; }`);
-    vars.push(`--font-serif: ${fam}, 'Noto Serif SC', serif;`, `--font-sans: ${fam}, 'Noto Sans SC', sans-serif;`);
+    // 功能注释：自定义字体只作用于剧情正文；顶栏底栏等 UI 仍用 --font-ui
+    vars.push(`--font-serif: ${fam}, 'Noto Serif SC', serif;`);
   }
   if (vars.length) out.push(`${R} { ${vars.join(" ")} }`);
   for (const [slot, img] of Object.entries(f.imgs ?? {}) as [FreeSlot, FreeImg][]) {
@@ -79,6 +81,22 @@ const lastUse = (a: Asset) => Math.max(a.at, a.usedAt ?? 0);
 export const assetDaysLeft = (a: Asset, now = Date.now()) => Math.max(0, Math.ceil((lastUse(a) + TEMP_ASSET_TTL - now) / 86400000));
 const emitAssets = () => { if (typeof window !== "undefined") window.dispatchEvent(new Event("star:assets")); };
 export const saveAssets = (a: Asset[]) => saveGlobal(K_ASSETS, a);
+/**
+ * 功能注释：写素材库遇到 localStorage 配额时，按最久未用依次淘汰「临时 + dataURL」素材后重试；
+ * keepUrl（本次刚写入的图）与已收藏素材永不淘汰。生图多为 1MB 级 dataURL，不淘汰时几张就写满。
+ */
+function saveAssetsEvicting(a: Asset[], keepUrl: string): boolean {
+  if (saveAssets(a)) return true;
+  const list = [...a];
+  const victims = list
+    .filter((x) => x.temp && x.url !== keepUrl && x.url.startsWith("data:"))
+    .sort((x, y) => lastUse(x) - lastUse(y));
+  for (const v of victims) {
+    list.splice(list.indexOf(v), 1);
+    if (saveAssets(list)) return true;
+  }
+  return false;
+}
 export const loadAssets = (): Asset[] => {
   const all = loadGlobal<Asset[]>(K_ASSETS, []) || [];
   const now = Date.now();
@@ -87,32 +105,37 @@ export const loadAssets = (): Asset[] => {
   return kept;
 };
 const newId = () => Math.random().toString(36).slice(2, 9);
-/** 功能注释：P8 采用生图后进「我的素材库」；同 URL 去重，写入后广播 star:assets。ImagePicker 与批量生图共用，勿各写一份。 */
+/** 功能注释：P8 采用生图后进「我的素材库」；同 URL 去重，写入后广播 star:assets，并同步云端。ImagePicker 与批量生图共用，勿各写一份。 */
 export function rememberImageAsset(url: string, name = "图片", kind?: AssetKind): boolean {
   if (!url) return false;
   const a = loadAssets();
   const hit = a.find((x) => x.url === url);
+  let ok: boolean;
   // 功能注释：已在库里则转长期保留并补分类，不重复写
   if (hit) {
     delete hit.temp;
     if (kind && !hit.kind) hit.kind = kind;
-    const ok = saveAssets(a);
+    ok = saveAssetsEvicting(a, url);
     emitAssets();
-    return ok;
+  } else {
+    ok = saveAssetsEvicting([{ id: newId(), name: name.slice(0, 24) || "图片", url, at: Date.now(), ...(kind ? { kind } : {}) }, ...a], url);
+    emitAssets();
   }
-  const ok = saveAssets([{ id: newId(), name: name.slice(0, 24) || "图片", url, at: Date.now(), ...(kind ? { kind } : {}) }, ...a]);
-  emitAssets();
-  return ok;
+  // 功能注释：本机写满不影响云端素材库；登录可同步时云端兜底，视为已入库
+  syncRememberToCloud(url, name);
+  return ok || canSyncCreatorAssetsToCloud();
 }
 /** 生图结果自动收进素材库（临时）；已存在则只刷新使用时间 */
 export function addTempAsset(url: string, name = "AI 生图", kind?: AssetKind): boolean {
   const a = loadAssets();
   const hit = a.find((x) => x.url === url);
   let ok: boolean;
-  if (hit) { hit.usedAt = Date.now(); if (kind && !hit.kind) hit.kind = kind; ok = saveAssets(a); }
-  else ok = saveAssets([{ id: newId(), name: name.slice(0, 24), url, at: Date.now(), temp: true, ...(kind ? { kind } : {}) }, ...a]);
+  if (hit) { hit.usedAt = Date.now(); if (kind && !hit.kind) hit.kind = kind; ok = saveAssetsEvicting(a, url); }
+  else ok = saveAssetsEvicting([{ id: newId(), name: name.slice(0, 24), url, at: Date.now(), temp: true, ...(kind ? { kind } : {}) }, ...a], url);
   emitAssets();
-  return ok;
+  // 功能注释：临时生图也进云端「我的」，7 天规则仍由 temp 标记；本机写满时云端兜底
+  syncRememberToCloud(url, name, { temp: true });
+  return ok || canSyncCreatorAssetsToCloud();
 }
 /** 收藏：长期保留（不在库里则直接加入） */
 export function keepAsset(url: string, name = "AI 生图", kind?: AssetKind): boolean {
@@ -209,9 +232,9 @@ export function buildDialogCss(d?: DialogDiy): string {
   if (d.letter != null) txt.push(`letter-spacing: ${d.letter / 100}em !important;`);
   if (txt.length) {
     o.push(
-      `${P} .story-prose, ${P} .dlg-bubble, ${P} .dlg-bubble-me, ` +
+      `${P} .story-prose, ${P} .dlg-bubble, ${P} .dlg-bubble-me, ${P} .story-thought, ${P} .option-btn, ${P} .story-input, ` +
         `${R} .novel-read-card .story-prose, ${R} .novel-read-card .dlg-bubble, ${R} .novel-read-card .dlg-bubble-me, ` +
-        `${R} [data-slot="scene-prose"] .story-prose, ${R} .story-narration-panel { ${txt.join(" ")} }`,
+        `${R} [data-slot="scene-prose"] .story-prose, ${R} .story-narration-panel, ${R} .option-btn, ${R} .story-input, ${R} .story-thought { ${txt.join(" ")} }`,
     );
   }
   const nm: string[] = [];

@@ -72,6 +72,36 @@
   cursor: not-allowed;
 }
 
+.btnGhost {
+  border: 1px solid color-mix(in srgb, var(--color-highlight) 70%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text);
+  padding: 7px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btnGhost:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.fieldLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.metaLine {
+  margin-top: 4px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .empty {
   color: var(--color-text-secondary);
   padding: 18px 0;

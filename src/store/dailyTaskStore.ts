@@ -1,8 +1,12 @@
 import type { AxiosError } from 'axios';
 import { create } from 'zustand';
+import i18n from '../i18n';
 import dailyTaskApi from '../api/statistics/dailyTaskApi';
 import {
     createDefaultDailyTaskList,
+    DAILY_TASK_ORDER,
+    deriveMakeupCardReward,
+    hasMakeupCardRewardInPayload,
     normalizeDailyTaskPayload,
     type DailyTaskClaimRequest,
     type DailyTaskItem,
@@ -73,15 +77,15 @@ const createRewardDigest = (items: DailyTaskRewardIssue[]): string =>
     );
 
 const claimErrorMessageMap: Record<string, string> = {
-    INVALID_TASK_CODE: '任务类型无效',
-    TASK_ALREADY_REWARDED: '今日该任务奖励已领取',
-    TASK_NOT_COMPLETED: '任务未达成，暂不可领取',
-    TASK_NOT_ACCEPTED: '请先领取任务',
+    INVALID_TASK_CODE: 'dailyTask.errors.invalidTaskCode',
+    TASK_ALREADY_REWARDED: 'dailyTask.errors.alreadyRewarded',
+    TASK_NOT_COMPLETED: 'dailyTask.errors.notCompleted',
+    TASK_NOT_ACCEPTED: 'dailyTask.errors.notAccepted',
 };
 
 const acceptErrorMessageMap: Record<string, string> = {
-    TASK_NOT_FOUND: '任务不存在或未发布',
-    TASK_NOT_ACTIVE: '任务当前不在有效期内',
+    TASK_NOT_FOUND: 'dailyTask.errors.notFound',
+    TASK_NOT_ACTIVE: 'dailyTask.errors.notActive',
 };
 
 const resolveActionErrorMessage = (
@@ -93,7 +97,7 @@ const resolveActionErrorMessage = (
         const axiosError = error as AxiosError<{ message?: string; errorCode?: string }>;
         const data = axiosError.response?.data;
         if (data?.errorCode && errorMessageMap?.[data.errorCode]) {
-            return errorMessageMap[data.errorCode];
+            return i18n.t(errorMessageMap[data.errorCode]);
         }
         if (data?.message) {
             return data.message;
@@ -102,7 +106,7 @@ const resolveActionErrorMessage = (
     if (error instanceof Error && error.message) {
         return error.message;
     }
-    return fallbackMessage;
+    return i18n.t(fallbackMessage);
 };
 
 const hasSummaryInPayload = (payload: DailyTaskPayload): boolean => {
@@ -155,10 +159,31 @@ const mergeTasksByUpdatedKeys = (
         mergedTaskMap.set(task.key, task);
     });
 
-    const fixedTasks = nextTasks.filter((task) => !task.isDynamic);
+    const prevFixedMap = new Map(
+        prevTasks.filter((task) => !task.isDynamic).map((task) => [String(task.code), task] as const),
+    );
+    const nextFixedMap = new Map(
+        nextTasks.filter((task) => !task.isDynamic).map((task) => [String(task.code), task] as const),
+    );
+    // 局部同步只覆盖出现过的固定任务，避免把点赞/游玩冲回默认未完成
+    const fixedTasks = DAILY_TASK_ORDER.map((code) => (
+        nextFixedMap.get(code) || prevFixedMap.get(code) || mergedTaskMap.get(code)
+    )).filter((task): task is DailyTaskItem => Boolean(task));
     const mergedDynamicTasks = Array.from(mergedTaskMap.values()).filter(isActiveDynamicTask);
 
     return [...fixedTasks, ...mergedDynamicTasks];
+};
+
+const resolveMakeupCardReward = (
+    tasks: DailyTaskItem[],
+    previous: DailyTaskMakeupCardReward,
+    payload: DailyTaskPayload | null | undefined,
+    normalizedFromPayload: DailyTaskMakeupCardReward,
+): DailyTaskMakeupCardReward => {
+    const claimed = hasMakeupCardRewardInPayload(payload)
+        ? normalizedFromPayload.claimed
+        : previous.claimed;
+    return deriveMakeupCardReward(tasks, { claimed, previous });
 };
 
 const setTaskActionLoading = (
@@ -261,19 +286,34 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
         const nextDigest = createRewardDigest(normalized.rewardsIssued);
         const hasNewReward = normalized.rewardsIssued.length > 0 && nextDigest !== previousDigest;
 
-        set((prev) => ({
-            ...prev,
-            isLoadedOnce: true,
-            errorMessage: '',
-            lastSyncedAt: Date.now(),
-            summary: payloadHasSummary ? normalized.summary : prev.summary,
-            tasks: mergeTasksByUpdatedKeys(prev.tasks, normalized.tasks, normalized.updatedTaskKeys),
-            makeupCardReward: normalized.makeupCardReward,
-            makeupCardCount: normalized.makeupCardCount,
-            updatedTaskKeys: normalized.updatedTaskKeys,
-            rewardsIssued: hasNewReward ? normalized.rewardsIssued : [],
-            lastRewardDigest: nextDigest,
-        }));
+        set((prev) => {
+            const mergedTasks = mergeTasksByUpdatedKeys(
+                prev.tasks,
+                normalized.tasks,
+                normalized.updatedTaskKeys,
+            );
+            const nextMakeupCount = hasMakeupCardRewardInPayload(payload)
+                ? normalized.makeupCardCount
+                : prev.makeupCardCount;
+            return {
+                ...prev,
+                isLoadedOnce: true,
+                errorMessage: '',
+                lastSyncedAt: Date.now(),
+                summary: payloadHasSummary ? normalized.summary : prev.summary,
+                tasks: mergedTasks,
+                makeupCardReward: resolveMakeupCardReward(
+                    mergedTasks,
+                    prev.makeupCardReward,
+                    payload,
+                    normalized.makeupCardReward,
+                ),
+                makeupCardCount: nextMakeupCount,
+                updatedTaskKeys: normalized.updatedTaskKeys,
+                rewardsIssued: hasNewReward ? normalized.rewardsIssued : [],
+                lastRewardDigest: nextDigest,
+            };
+        });
 
         return hasNewReward;
     },
@@ -296,7 +336,7 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
         try {
             const response = await dailyTaskApi.getDailyTasks();
             if (!response.data.success) {
-                throw new Error(response.data.message || '任务数据加载失败');
+                throw new Error(response.data.message || i18n.t('dailyTask.errors.loadFailed'));
             }
             const payload = normalizeDailyTaskPayload(response.data.data);
             const nextDigest = createRewardDigest(payload.rewardsIssued);
@@ -318,14 +358,19 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
                 lastSyncedAt: Date.now(),
                 summary: payload.summary,
                 tasks: mergedTasks,
-                makeupCardReward: payload.makeupCardReward,
+                makeupCardReward: resolveMakeupCardReward(
+                    mergedTasks,
+                    prev.makeupCardReward,
+                    response.data.data,
+                    payload.makeupCardReward,
+                ),
                 makeupCardCount: payload.makeupCardCount,
                 updatedTaskKeys: payload.updatedTaskKeys,
                 rewardsIssued: rewardsChanged ? payload.rewardsIssued : [],
                 lastRewardDigest: nextDigest,
             }));
         } catch (error) {
-            const message = error instanceof Error ? error.message : '任务数据加载失败';
+            const message = error instanceof Error ? error.message : i18n.t('dailyTask.errors.loadFailed');
             set((prev) => ({
                 ...prev,
                 isRefreshing: false,
@@ -343,14 +388,14 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
         if (!taskKey || typeof taskId !== 'number') {
             return {
                 success: false,
-                message: '任务参数缺失',
+                message: i18n.t('dailyTask.errors.missingParams'),
             };
         }
 
         if (state.taskActionLoadingMap[taskKey]) {
             return {
                 success: false,
-                message: '任务处理中，请稍候',
+                message: i18n.t('dailyTask.errors.processing'),
             };
         }
 
@@ -362,19 +407,19 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
         try {
             const response = await dailyTaskApi.acceptDailyTask(taskId);
             if (!response.data.success) {
-                throw new Error(response.data.message || '任务领取失败');
+                throw new Error(response.data.message || i18n.t('dailyTask.errors.acceptFailed'));
             }
 
             await get().refreshDailyTasks({ silent: true });
 
             return {
                 success: true,
-                message: response.data.message || '任务领取成功',
+                message: response.data.message || i18n.t('dailyTask.errors.acceptSuccess'),
             };
         } catch (error) {
             return {
                 success: false,
-                message: resolveActionErrorMessage(error, '任务领取失败', acceptErrorMessageMap),
+                message: resolveActionErrorMessage(error, 'dailyTask.errors.acceptFailed', acceptErrorMessageMap),
             };
         } finally {
             set((prev) => ({
@@ -392,14 +437,14 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
         if (!taskKey || !hasValidClaimRequest(claimRequest)) {
             return {
                 success: false,
-                message: '任务参数缺失',
+                message: i18n.t('dailyTask.errors.missingParams'),
             };
         }
 
         if (state.taskActionLoadingMap[taskKey]) {
             return {
                 success: false,
-                message: '任务奖励领取中，请稍候',
+                message: i18n.t('dailyTask.errors.claimingReward'),
             };
         }
 
@@ -411,7 +456,7 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
         try {
             const response = await dailyTaskApi.claimDailyTask(claimRequest);
             if (!response.data.success) {
-                throw new Error(response.data.message || '任务奖励领取失败');
+                throw new Error(response.data.message || i18n.t('dailyTask.errors.claimRewardFailed'));
             }
 
             if (response.data.data) {
@@ -421,12 +466,12 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
 
             return {
                 success: true,
-                message: response.data.message || '奖励领取成功',
+                message: response.data.message || i18n.t('dailyTask.errors.claimRewardSuccess'),
             };
         } catch (error) {
             return {
                 success: false,
-                message: resolveActionErrorMessage(error, '任务奖励领取失败', claimErrorMessageMap),
+                message: resolveActionErrorMessage(error, 'dailyTask.errors.claimRewardFailed', claimErrorMessageMap),
             };
         } finally {
             set((prev) => ({
@@ -438,7 +483,7 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
 
     claimMakeupCard: async () => {
         if (get().isClaimingMakeupCard) {
-            return { success: false, message: '补签卡领取中，请稍候' };
+            return { success: false, message: i18n.t('dailyTask.errors.makeupBusy') };
         }
 
         const wasClaimed = get().makeupCardReward.claimed;
@@ -446,27 +491,30 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
         try {
             const response = await dailyTaskApi.claimMakeupCard();
             if (!response.data.success) {
-                throw new Error(response.data.message || '补签卡领取失败');
+                throw new Error(response.data.message || i18n.t('dailyTask.errors.makeupFailed'));
             }
             if (response.data.data) {
                 const normalized = normalizeDailyTaskPayload(response.data.data);
                 set((state) => ({
                     ...state,
-                    makeupCardReward: normalized.makeupCardReward,
+                    makeupCardReward: deriveMakeupCardReward(state.tasks, {
+                        claimed: normalized.makeupCardReward.claimed,
+                        previous: normalized.makeupCardReward,
+                    }),
                     makeupCardCount: normalized.makeupCardCount,
                 }));
             }
             await get().refreshDailyTasks({ silent: true });
-            return { success: true, message: response.data.message || '补签卡 +1' };
+            return { success: true, message: response.data.message || i18n.t('dailyTask.errors.makeupPlusOne') };
         } catch (error) {
             await get().refreshDailyTasks({ silent: true });
             if (!wasClaimed && get().makeupCardReward.claimed) {
-                return { success: true, message: '补签卡领取成功' };
+                return { success: true, message: i18n.t('dailyTask.errors.makeupSuccess') };
             }
             return {
                 success: false,
-                message: resolveActionErrorMessage(error, '补签卡领取失败', {
-                    DAILY_TASKS_INCOMPLETE: '完成今日全部四项每日任务后才可领取',
+                message: resolveActionErrorMessage(error, 'dailyTask.errors.makeupFailed', {
+                    DAILY_TASKS_INCOMPLETE: 'dailyTask.errors.makeupIncomplete',
                 }),
             };
         } finally {

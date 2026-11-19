@@ -1,4 +1,4 @@
-/* 剧本基调：作者只编辑一处；旧模组的 GM 开场白 / 世界观设定 / 叙事口吻按序并入，发给模型仍是这段话。 */
+/* 系统提示词：作者只编辑一处；旧模组的 GM 开场白 / 世界观设定 / 叙事口吻按序并入，发给模型仍是这段话。 */
 import type { PromptFragments } from "../mods/types.ts";
 
 function str(v: unknown): string {
@@ -14,7 +14,7 @@ export function readScriptTone(p?: PromptFragments | null): string {
 }
 
 /**
- * 功能注释：作者改「剧本基调」时写入 scriptTone，并清掉旧三字段，避免运行时重复注入。
+ * 功能注释：作者改「系统提示词」时写入 scriptTone，并清掉旧三字段，避免运行时重复注入。
  * 空串则去掉 scriptTone；保留 terminology 等已下架但仍可能存在的字段。
  */
 export function applyScriptTone(p: PromptFragments | undefined, text: string): PromptFragments {

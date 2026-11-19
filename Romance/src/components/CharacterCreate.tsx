@@ -1,7 +1,5 @@
 import { feature } from "../mods/registry";
 import { wallet } from "../game/wallet";
-import { lazyPanel } from "../lib/lazyPanel";
-const WorldRuleCards = lazyPanel(() => import("./WorldRulesPanel").then((m) => ({ default: m.WorldRuleCards })));
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { useGame } from "../store/gameCtx";
 import { randomPlayerSeed } from "../lib/store";
@@ -20,6 +18,7 @@ import { factionSigningOffers, rollSigningOffers, type SigningContract } from ".
 import { creationVars, fillParts, fillText } from "../game/creationText";
 import { normalizeGenderOptions } from "../game/creationSystemFields";
 import { rollCreatorAttrStarts, visibleCreatorAttrs } from "../lib/creationItems";
+import { loadPathProgress, pathLockMet } from "../lib/pathProgress";
 import { attrChoiceOptions, attrStartMode, attrStartValue, attrUsesRandomStart, clampAttrStart } from "../lib/attrInit";
 import type { AttrDef } from "../lib/types";
 import { shouldShowPathPicker } from "../lib/pathPicker";
@@ -29,7 +28,8 @@ import { syncCloudSaves } from "../lib/storage";
 import { asModArray } from "../lib/asModArray";
 import PathRouteMap from "./PathRouteMap";
 import { pathRouteNodes } from "../lib/pathRoute";
-import { getWorldStorylines } from "../mods/registry";
+import { getWorldEndings, getWorldFixedEvents, getWorldStorylines } from "../mods/registry";
+import { formatPathLockHint, isPathLockCond } from "../lib/pathDeps";
 
 /** 功能注释：锁定图标统一走 Lucide；open=true 时略透明表示「未锁」。 */
 function LockGlyph({ open, className }: { open?: boolean; className?: string }) {
@@ -122,7 +122,9 @@ export default function CharacterCreate() {
   const seed = randomPlayerSeed();
   const cc = creationCopy();
   // 功能注释：AI 常把 paths/fields/startFactions 写成单对象；一律 asModArray，禁止 .filter / 展开崩建角
-  const PATHS = asModArray<NonNullable<typeof cc.paths>[number]>(cc.paths);
+  // 功能注释：未解锁线路若满足跨周目条件（二周目 / 结局 / 线路通关 / 事件），本次建角视为已解锁
+  const progress = loadPathProgress();
+  const PATHS = asModArray<NonNullable<typeof cc.paths>[number]>(cc.paths).map((p) => (!p.open && pathLockMet(p.lockConds, progress) ? { ...p, open: true } : p));
   // 功能注释：开放路径 >1 才弹窗自选；仅 1 条直接用，不再看 pathPicker
   const PICKABLE = shouldShowPathPicker(PATHS);
   const [pathId, setPathId] = useState<string | null>(PATHS.find((p) => p.open)?.id ?? "free");
@@ -130,11 +132,18 @@ export default function CharacterCreate() {
   const [wizOpen, setWizOpen] = useState(true);
   const [stepK, setStepK] = useState<string>(PICKABLE ? "path" : "who");
   const topRef = useRef<HTMLDivElement>(null);
+  // 功能注释：创作者在「建角 · 内置字段」预设的值优先作开局默认（不锁定时玩家仍可改），没预设才随机——避免中世纪作品一进来就是中文名
+  const preset = (c: typeof cc, k: BuiltinFieldKey) => String(c.builtin?.[k]?.value ?? "").trim();
+  const presetGender = (c: typeof cc, fb: string) => {
+    const opts = normalizeGenderOptions(c.builtin?.gender?.options);
+    const v = preset(c, "gender");
+    return v && opts.includes(v) ? v : opts.includes(fb) ? fb : "女";
+  };
   const [form, setForm] = useState({
-    name: seed.name!,
+    name: preset(cc, "name") || seed.name!,
     age: cc.fixedAge ?? seed.age!,
-    gender: normalizeGenderOptions(cc.builtin?.gender?.options).includes(seed.gender!) ? seed.gender! : "女",
-    description: seed.description!,
+    gender: presetGender(cc, seed.gender!),
+    description: preset(cc, "description") || seed.description!,
     birthMonth: 1 + Math.floor(Math.random() * 12),
     birthDay: 1 + Math.floor(Math.random() * 28),
     avatar: "",
@@ -144,6 +153,9 @@ export default function CharacterCreate() {
   /* 系统字段：只读显示名；旧稿 hidden 对系统四项无效 */
   const bf = (k: BuiltinFieldKey): BuiltinFieldCfg => cc.builtin?.[k] ?? {};
   const bl = (k: BuiltinFieldKey, fb: string) => bf(k).label || fb;
+  // 功能注释：创作者锁定的系统字段（姓名 / 性别）——玩家只能看，不能改
+  const nameFixed = !!(bf("name").locked && String(bf("name").value ?? "").trim());
+  const genderFixed = !!(bf("gender").locked && String(bf("gender").value ?? "").trim());
   // 功能注释：建角页预览隐藏项不展示；开局仍按完整 customAttrs 写入
   const creatorAttrs = visibleCreatorAttrs(selectedSlot("customAttrs"));
   const creatorAttrsKey = creatorAttrs.map((a) => a.id).join("|");
@@ -184,6 +196,7 @@ export default function CharacterCreate() {
   /* 开局游玩偏好：世界观默认预选模式/视角；屏幕方向默认竖屏，换世界观时保留玩家已选方向 */
   const playSlot = selectedSlot("play");
   const playKey = JSON.stringify(playSlot ?? {});
+  const [endless, setEndless] = useState(false);
   const [prefs, setPrefs] = useState<PlayPrefs>(() => ({ mode: "novel", pov: playSlot?.pov, orient: "portrait" }));
   useEffect(() => {
     setPrefs(() => ({ mode: "novel", pov: playSlot?.pov, orient: "portrait" }));
@@ -209,7 +222,7 @@ export default function CharacterCreate() {
   // 所签合约绑定的阵营总是计入「已加入」
   const signedFaction = offers.find((o) => o.id === contractId)?.factionId;
   const joined = signedFaction && !joinedRaw.includes(signedFaction) ? [signedFaction, ...joinedRaw] : joinedRaw;
-  const [worldRules, setWorldRulesState] = useState(defaultWorldRules);
+  const [worldRules] = useState(defaultWorldRules);
 
   // 切换世界观：按新世界的建角池重置选项（避免残留上一个世界的 id）
   useEffect(() => {
@@ -223,9 +236,10 @@ export default function CharacterCreate() {
     setWizOpen(true);
     setForm((f) => ({
       ...f,
+      name: preset(c, "name") || s0.name!,
       age: c.fixedAge ?? s0.age!,
-      gender: normalizeGenderOptions(c.builtin?.gender?.options).includes(s0.gender!) ? s0.gender! : "女",
-      description: s0.description!,
+      gender: presetGender(c, s0.gender!),
+      description: preset(c, "description") || s0.description!,
       birthMonth: 1 + Math.floor(Math.random() * 12),
       birthDay: 1 + Math.floor(Math.random() * 28),
     }));
@@ -315,13 +329,14 @@ export default function CharacterCreate() {
         fx,
         // 功能注释：始终带上游玩偏好（含屏幕方向），开局写入 theme.orient，不再弹首次方向窗；开局日期不由玩家覆盖
         playPrefs: { ...prefs, orient: prefs.orient ?? "portrait" },
+        endless: hasWorkLimit && endless,
         // 功能注释：线路人际 npcs 也可能是脏对象；开局前收成数组
         pathNpcs: asModArray((PATHS.find((p) => p.id === pathId) ?? PATHS.find((p) => p.open))?.npcs),
         route: PATHS.find((p) => p.id === pathId) ?? PATHS.find((p) => p.open),
         // 功能注释：startFactions 可能是 AI 单对象；开局前收成数组，避免 GameContext 侧再炸
         factions: asModArray<NonNullable<typeof cc.startFactions>[number]>(cc.startFactions),
         joined,
-        ...(Object.keys(attrStarts).length ? { cattrStarts: attrStarts } : {}),
+        ...(Object.keys(attrStarts).length ? { cattrStarts: withPathFixedAttrs(attrStarts) } : {}),
       },
     );
   };
@@ -369,8 +384,25 @@ export default function CharacterCreate() {
   const whoComplete = systemFieldsComplete && customFieldsComplete;
   const okToFinish = whoComplete && (!needSigning || !!contractId);
   const path = PATHS.find((p) => p.id === pathId);
+  // 功能注释：线路「锁定属性」——选这条线路时这些属性固定为作者设定的初始值，玩家不可改
+  const pathFixedAttrs = new Set(asModArray<string>(path?.fixed));
+  const withPathFixedAttrs = (cur: Record<string, number>) => ({
+    ...cur,
+    ...Object.fromEntries(creatorAttrs.filter((a) => pathFixedAttrs.has(a.label)).map((a) => [a.id, clampAttrStart(a, a.init)])),
+  });
   // 人物线路 · 预设主角：选中后用 TA 的档案填好自设页（玩家仍可微调）
   const heroId = path?.hero;
+  const heroCustom = !heroId ? path?.heroCustom : undefined;
+  useEffect(() => {
+    if (!heroCustom?.name?.trim()) return;
+    setForm((f) => ({
+      ...f,
+      name: heroCustom.name.trim(),
+      ...(heroCustom.age ? { age: String(heroCustom.age) } : {}),
+      ...(heroCustom.gender ? { gender: heroCustom.gender } : {}),
+      description: heroCustom.bio || f.description,
+    }));
+  }, [heroCustom?.name, heroCustom?.age, heroCustom?.gender, heroCustom?.bio]);
   useEffect(() => {
     const h = heroId ? worldPersonById(heroId) : undefined;
     if (!h) return;
@@ -404,9 +436,27 @@ export default function CharacterCreate() {
 
   /* ① 路径：多条开放路径时弹窗；卡片只展示路径名 + 开局处境 */
   const STORYLINES = asModArray<import("../lib/types").Storyline>(getWorldStorylines());
+  // 功能注释：锁定线路的提示按当前配置实时生成，避免旧草稿里过期的提示文案
+  const lockHintPools = {
+    events: asModArray<{ id: string; name?: string }>(getWorldFixedEvents()).map((e) => ({ id: e.id, label: e.name || e.id })),
+    endings: asModArray<{ id: string; title?: string }>(getWorldEndings()).map((e) => ({ id: e.id, label: e.title || e.id })),
+    routes: PATHS.map((p) => ({ id: p.id, label: String(p.name || p.id) })),
+  };
   const stepPath = (
     <div className="space-y-2.5">
       {cc.pathIntro && <p className="text-[12.5px] leading-relaxed text-ink-soft"><Tpl text={cc.pathIntro} vars={tv} /></p>}
+      {PATHS.filter((p) => !p.open && asModArray(p.lockConds).some(isPathLockCond)).map((p) => {
+        const hint = formatPathLockHint(p.lockConds, lockHintPools);
+        return (
+        <div key={`locked-${p.id}`} className="flex w-full items-center gap-2.5 rounded-2xl border border-dashed border-line bg-paper-2/40 px-3.5 py-3 text-left opacity-75" aria-disabled>
+          <IconLock size={14} className="shrink-0 text-ink-soft" />
+          <div className="min-w-0 flex-1">
+            <span className="text-[14px] font-bold text-ink-soft">{p.name}</span>
+            {hint && <p className="mt-0.5 text-[11.5px] text-ink-soft">{hint}</p>}
+          </div>
+        </div>
+        );
+      })}
       {PATHS.filter((p) => p.open).map((p) => {
         const current = pathId === p.id;
         return (
@@ -450,11 +500,11 @@ export default function CharacterCreate() {
             className={`rounded-full px-2 py-0.5 text-[10.5px] font-medium transition ${nameStyle === k ? "bg-paper text-jade shadow-sm" : "text-ink-soft"}`}>{t}</button>
         ))}
       </div>
-      <button type="button" disabled={locked.name} onClick={() => setPlayerName(genName(form.gender))}
+      <button type="button" disabled={locked.name || nameFixed} onClick={() => setPlayerName(genName(form.gender))}
         className="inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-[10.5px] text-ink transition hover:border-jade hover:text-jade disabled:opacity-40">
         <IconDiceDuo size={12} />换一个
       </button>
-      <button type="button" disabled={locked.name} onClick={() => setPickName(true)}
+      <button type="button" disabled={locked.name || nameFixed} onClick={() => setPickName(true)}
         className="rounded-full border border-jade/40 bg-jade/10 px-2 py-0.5 text-[10.5px] font-semibold text-jade disabled:opacity-40">字库</button>
     </div>
   );
@@ -463,12 +513,16 @@ export default function CharacterCreate() {
    * 功能注释：人设页不展示 formIntro / 作品简介——地点季节与生成提示词只干扰填表 */
   const stepWho = (
     <>
+      {/* 功能注释：创作者备注——告诉玩家扮演的是谁、怎么填 */}
+      {String(cc.playerNote ?? "").trim() && (
+        <p className="rounded-xl border border-line bg-paper-2/60 px-3 py-2 text-[12.5px] leading-relaxed text-ink">{String(cc.playerNote).trim()}</p>
+      )}
       <Card title="基本信息">
         <div className="flex items-start gap-3">
           <div className="shrink-0 pt-6"><Avatar src={form.avatar} name={form.name} size={68} onPick={(d) => upd({ avatar: d })} avatarSlot={selectedSlot("avatars") ?? null} /></div>
           <fieldset className="min-w-0 flex-1">
             <Head k="name" text={bl("name", "姓名")} extra={nameStyleBar} />
-            <input className={field} value={form.name} onChange={(e) => setPlayerName(e.target.value)} placeholder={form.gender === "男" ? "为他取个名字" : "为她取个名字"} />
+            <input className={field} value={form.name} readOnly={nameFixed} title={nameFixed ? "创作者已固定主角姓名" : undefined} onChange={(e) => setPlayerName(e.target.value)} placeholder={form.gender === "男" ? "为他取个名字" : "为她取个名字"} />
             {pickName && <NamePicker gender={form.gender as NameGender} value={form.name} onClose={() => setPickName(false)} onPick={(n) => setPlayerName(n)} />}
           </fieldset>
         </div>
@@ -481,7 +535,7 @@ export default function CharacterCreate() {
             <Head k="gender" text={bl("gender", "性别")} />
             <div role="radiogroup" className="grid gap-1 rounded-xl bg-ink/[0.05] p-1" style={{ gridTemplateColumns: `repeat(${normalizeGenderOptions(bf("gender").options).length}, minmax(0, 1fr))` }}>
               {normalizeGenderOptions(bf("gender").options).map((g) => (
-                <button key={g} type="button" role="radio" aria-checked={form.gender === g}
+                <button key={g} type="button" role="radio" aria-checked={form.gender === g} disabled={genderFixed && form.gender !== g}
                   onClick={() => upd(!locked.name && autoNames.current.has(form.name) ? { gender: g, name: genName(g) } : { gender: g })}
                   className={`rounded-lg py-1.5 text-[13px] font-bold transition ${form.gender === g ? "bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] text-white shadow-sm" : "text-ink-soft hover:bg-paper"}`}>{g}</button>
               ))}
@@ -521,8 +575,9 @@ export default function CharacterCreate() {
             </div>
             <ul className="space-y-1.5">
               {creatorAttrs.map((a) => {
-                const mode = attrStartMode(a);
-                const v = attrStarts[a.id];
+                const pathLocked = pathFixedAttrs.has(a.label);
+                const mode = pathLocked ? "locked" : attrStartMode(a);
+                const v = pathLocked ? clampAttrStart(a, a.init) : attrStarts[a.id];
                 const maxN = Number(a.max);
                 const range = `${a.min ?? 0}~${Number.isFinite(maxN) && maxN > 0 ? maxN : "∞"}`;
                 return (
@@ -624,15 +679,26 @@ export default function CharacterCreate() {
     </Card>
   ) : null;
 
-  /* ③ 开局 · 游玩偏好 · 开局日期 · 世界规则 */
+  /* ③ 开局 · 游玩偏好 · 无限模式。
+   * 功能注释：世界规则创作者无处配置，建角不再让玩家选（按默认规则）；作品设了时限时，玩家可勾选无限模式 */
+  const workLimit = [...getSelectedWorld().chain].reverse().map((m) => m.content?.timeLimit).find((t) => t !== undefined);
+  const hasWorkLimit = !!(workLimit && (workLimit.endDate || (workLimit.value ?? 0) > 0));
   const stepSetup = (
     <>
       <Card title="游玩偏好">
         <PlayPrefsPicker value={prefs} onChange={setPrefs} />
       </Card>
-      <Card title="世界规则" desc="恋爱、婚姻、继承与社会秩序——决定这个世界怎么看待你">
-        <WorldRuleCards rules={worldRules} onChange={setWorldRulesState} female={!/男/.test(form.gender ?? "女")} compact />
-      </Card>
+      {hasWorkLimit && (
+        <Card title="游玩时长">
+          <label className="flex cursor-pointer items-start gap-2 text-[13px] text-ink">
+            <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--jade)]" checked={endless} onChange={(e) => setEndless(e.target.checked)} />
+            <span>
+              无限模式
+              <span className="mt-0.5 block text-[11.5px] text-ink-soft">不按作品设定的时限结算，玩到你想结束为止；不勾选则按作品时限进入结局</span>
+            </span>
+          </label>
+        </Card>
+      )}
     </>
   );
 
@@ -711,7 +777,7 @@ export default function CharacterCreate() {
     setup: <div className="space-y-3">{needSigning && stepSign}{stepFactions}{stepSetup}</div>,
   };
 
-  // 功能注释：底栏走 Modal.footer，钉在 85% 框底；滚动只发生在 ui-dialog-body，属性不被按钮盖住
+  // 功能注释：底栏走 Modal.footer；弹窗高度随内容（最高 85dvh），短表单不撑空白；溢出才在 body 内滚
   // 第一步：作者预览可退出；有存档可读取；不再回封面开始菜单
   const wizardFoot = (
     <div className="ui-sheet-foot">

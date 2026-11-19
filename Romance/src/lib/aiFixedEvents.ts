@@ -76,7 +76,7 @@ export function buildAiFixedEventsSystemPrompt(
   const worldBits = [
     ctx.title ? `作品名：${ctx.title}` : "",
     ctx.setting ? `故事设定：${ctx.setting}` : "",
-    ctx.scriptTone ? `剧本基调：${ctx.scriptTone}` : "",
+    ctx.scriptTone ? `系统提示词：${ctx.scriptTone}` : "",
   ]
     .filter(Boolean)
     .join("\n");

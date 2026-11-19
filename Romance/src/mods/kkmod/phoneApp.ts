@@ -64,7 +64,11 @@ export const KKAPP_BLOCK_KINDS = ["header", "text", "notice", "stats", "list", "
 type Rec = Record<string, unknown>;
 const isRec = (v: unknown): v is Rec => !!v && typeof v === "object" && !Array.isArray(v);
 const str = (v: unknown, fb = "") => (typeof v === "string" ? v : typeof v === "number" ? String(v) : fb);
-const num = (v: unknown, fb = 0) => (typeof v === "number" && Number.isFinite(v) ? v : fb);
+// 功能注释：AI 常把数字写成字符串（"delta": "5"），按数值读，避免效果被静默当成 0
+const num = (v: unknown, fb = 0) => {
+  const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
+  return Number.isFinite(n) ? n : fb;
+};
 const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 const op = (v: unknown): "gte" | "lte" => (v === "lte" ? "lte" : "gte");
 const slug = (v: unknown, fb: string) => {
@@ -96,7 +100,7 @@ function normEffect(raw: unknown): KkAppEffect | null {
 function normAction(raw: unknown): KkAppAction | undefined {
   if (!isRec(raw)) return undefined;
   const a: KkAppAction = {};
-  if (str(raw.go)) a.go = str(raw.go);
+  if (str(raw.go).trim()) a.go = str(raw.go).trim();
   const effects = arr(raw.effects).map(normEffect).filter((x): x is KkAppEffect => !!x);
   if (effects.length) a.effects = effects;
   const when = normConds(raw.when);
@@ -155,14 +159,18 @@ function normBlock(raw: unknown, i: number): KkAppBlock | null {
 export function normalizeKkApp(raw: unknown, fallbackType: KkAppType = "browse"): KkAppSpec | null {
   if (!isRec(raw)) return null;
   const type = (KKAPP_TYPES as readonly string[]).includes(str(raw.type)) ? (raw.type as KkAppType) : fallbackType;
+  // 功能注释：重复页 id 会让跳转永远落到第一页，后出现的自动加后缀
+  const seen = new Set<string>();
+  const uniqId = (id: string) => { let u = id, k = 2; while (seen.has(u)) u = `${id}-${k++}`; seen.add(u); return u; };
   const pages = arr(raw.pages).filter(isRec).map((p, i) => ({
-    id: slug(p.id, `page${i + 1}`),
+    id: uniqId(slug(p.id, `page${i + 1}`)),
     title: str(p.title, `页面${i + 1}`),
     ...(str(p.tab) ? { tab: str(p.tab) } : {}),
     blocks: arr(p.blocks).map(normBlock).filter((b): b is KkAppBlock => !!b),
   }));
   if (!pages.length) return null;
-  const home = pages.some((p) => p.id === raw.home) ? str(raw.home) : pages[0].id;
+  const wantHome = str(raw.home).trim();
+  const home = pages.some((p) => p.id === wantHome) ? wantHome : pages[0].id;
   const theme = isRec(raw.theme) ? {
     ...(/^#[0-9a-f]{3,8}$/i.test(str(raw.theme.accent)) ? { accent: str(raw.theme.accent) } : {}),
     ...(raw.theme.dark === true ? { dark: true } : {}),
@@ -179,7 +187,7 @@ export function validateKkApp(raw: unknown): string[] {
   const ids = new Set<string>();
   pages.forEach((p, i) => {
     if (!isRec(p)) { errs.push(`pages[${i}] 不是对象`); return; }
-    const id = str(p.id);
+    const id = str(p.id).trim();
     if (!id) errs.push(`第 ${i + 1} 页缺少 id`);
     else if (ids.has(id)) errs.push(`页面 id「${id}」重复`);
     ids.add(id);
@@ -187,7 +195,7 @@ export function validateKkApp(raw: unknown): string[] {
       if (!isRec(b) || !(KKAPP_BLOCK_KINDS as readonly string[]).includes(str(b.kind))) errs.push(`页面「${id || i + 1}」第 ${j + 1} 块类型不支持：${isRec(b) ? str(b.kind) : "?"}`);
     });
   });
-  if (raw.home !== undefined && !ids.has(str(raw.home))) errs.push(`首页「${str(raw.home)}」不存在`);
+  if (raw.home !== undefined && !ids.has(str(raw.home).trim())) errs.push(`首页「${str(raw.home)}」不存在`);
   for (const go of collectKkAppGoTargets(raw)) if (!ids.has(go)) errs.push(`跳转目标页「${go}」不存在`);
   return errs;
 }
@@ -198,7 +206,7 @@ export function collectKkAppGoTargets(raw: unknown): string[] {
   const walk = (v: unknown) => {
     if (Array.isArray(v)) { v.forEach(walk); return; }
     if (!isRec(v)) return;
-    if (typeof v.go === "string" && v.go) out.add(v.go);
+    if (typeof v.go === "string" && v.go.trim()) out.add(v.go.trim());
     for (const x of Object.values(v)) walk(x);
   };
   walk(raw);

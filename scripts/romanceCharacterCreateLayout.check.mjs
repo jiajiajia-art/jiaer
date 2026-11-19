@@ -67,13 +67,14 @@ test('CharacterCreate_底栏走Modal.footer禁止sticky盖住属性', () => {
   assert.match(ui, /panelClassName\?: string/);
 });
 
-test('uiDialogCreate_宽高均为屏幕85%', () => {
+test('uiDialogCreate_宽85vw高度随内容最高85dvh', () => {
   const box = rule('.ui-dialog.ui-dialog-create');
   assert.match(box, /width:\s*85vw/);
   assert.match(box, /max-width:\s*85vw/);
-  assert.match(box, /height:\s*85vh/);
-  assert.match(box, /height:\s*85dvh/);
+  // 建角框高度随内容，最高 85dvh；body 不 flex-grow
+  assert.match(box, /(?<![\w-])height:\s*auto/);
+  assert.match(box, /max-height:\s*85vh/);
   assert.match(box, /max-height:\s*85dvh/);
   const body = rule('.ui-dialog.ui-dialog-create > .ui-dialog-body');
-  assert.match(body, /flex:\s*1 1 auto/);
+  assert.match(body, /flex:\s*0 1 auto/);
 });

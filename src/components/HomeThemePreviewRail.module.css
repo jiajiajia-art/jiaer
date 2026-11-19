@@ -68,21 +68,24 @@
     border-radius: 14px;
 }
 
-.cardButton:hover .card {
-    transform: translateY(-6px);
-    border-color: color-mix(in srgb, var(--color-text) 16%, transparent);
-    box-shadow:
-        0 30px 56px color-mix(in srgb, var(--color-shadow) 36%, transparent),
-        0 0 0 1px color-mix(in srgb, var(--color-text) 4%, transparent),
-        0 18px 42px color-mix(in srgb, var(--color-primary) 14%, transparent);
-}
+/* 仅真·鼠标悬停才抬升，避免手机点按后残留 hover/active 发暗发扁 */
+@media (hover: hover) and (pointer: fine) {
+    .cardButton:hover .card {
+        transform: translateY(-6px);
+        border-color: color-mix(in srgb, var(--color-text) 16%, transparent);
+        box-shadow:
+            0 30px 56px color-mix(in srgb, var(--color-shadow) 36%, transparent),
+            0 0 0 1px color-mix(in srgb, var(--color-text) 4%, transparent),
+            0 18px 42px color-mix(in srgb, var(--color-primary) 14%, transparent);
+    }
 
-.cardButton:hover .coverImage {
-    transform: scale(1.04);
-}
+    .cardButton:hover .coverImage {
+        transform: scale(1.04);
+    }
 
-.cardButton:active .card {
-    transform: translateY(-2px) scale(0.985);
+    .cardButton:active .card {
+        transform: translateY(-2px) scale(0.985);
+    }
 }
 
 .coverWrap {
@@ -427,11 +430,6 @@
         box-shadow: 0 18px 36px color-mix(in srgb, var(--color-shadow) 35%, transparent);
     }
 
-    .cardButton:hover .card {
-        border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
-        box-shadow: 0 26px 42px color-mix(in srgb, var(--color-shadow) 40%, transparent);
-    }
-
     .coverWrap::before {
         background:
             linear-gradient(180deg, color-mix(in srgb, var(--color-text) 8%, transparent) 0%, color-mix(in srgb, var(--color-text) 28%, transparent) 40%, color-mix(in srgb, var(--color-shadow) 88%, transparent) 100%);
@@ -728,14 +726,13 @@
     }
 }
 
-/* ===== 功能注释：视觉精修——封面文字区统一使用深色遮罩（不随浅色模式变白），
-   保证白字标题/作者清晰，去掉发灰重影；统计胶囊改为轻玻璃 ===== */
+/* ===== 功能注释：底部托底遮罩放轻——白字靠 text-shadow 保可读，避免像按下发黑 ===== */
 .coverWrap::before {
     background:
-        linear-gradient(180deg, color-mix(in srgb, #000 28%, transparent) 0%, transparent 24%),
-        linear-gradient(180deg, transparent 40%, color-mix(in srgb, #000 55%, transparent) 72%, color-mix(in srgb, #000 82%, transparent) 100%);
+        linear-gradient(180deg, color-mix(in srgb, #000 16%, transparent) 0%, transparent 22%),
+        linear-gradient(180deg, transparent 52%, color-mix(in srgb, #000 28%, transparent) 78%, color-mix(in srgb, #000 48%, transparent) 100%);
 }
-.coverWrap::after { opacity: 0.35; }
+.coverWrap::after { opacity: 0.22; }
 .title {
     font-size: 19px;
     letter-spacing: 0.01em;

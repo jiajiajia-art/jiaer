@@ -93,7 +93,7 @@ export default function AiEventWriter({
     <div className="space-y-2 rounded-xl border border-line bg-paper-2/50 p-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[12px] font-semibold text-ink">AI 帮写固定事件</span>
-        <span className="text-[11px] text-ink-soft">建议约 {AI_FIXED_EVENTS_SUGGEST_MIN}–{AI_FIXED_EVENTS_COUNT + 2} 条，只读本作品地点/人物/属性</span>
+        <span className="wg-field-help text-[11px] text-ink-soft">约 {AI_FIXED_EVENTS_SUGGEST_MIN}–{AI_FIXED_EVENTS_COUNT + 2} 条，只读本作品地点/人物/属性</span>
         <button type="button" className={`${btn} ml-auto`} onClick={() => { setOpen(false); setDraft(null); setErr(""); }}>收起</button>
       </div>
       <textarea

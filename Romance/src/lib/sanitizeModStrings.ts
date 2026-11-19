@@ -112,6 +112,22 @@ function coerceStringList(raw: unknown): string[] | undefined {
 }
 
 /**
+ * 功能注释：地点表是 id→房间对象；旧清洗把 id「shop/items/…」误当成数组字段名，收成 [{…}]。
+ * 已脏稿：若整房是「单元素对象数组」，拆回对象，避免 validateMod 报 desc 缺失。
+ */
+export function unwrapRoomRow(raw: unknown): Record<string, unknown> | null {
+  if (Array.isArray(raw)) {
+    const first = raw.find((row) => row && typeof row === "object" && !Array.isArray(row));
+    if (first && typeof first === "object" && !Array.isArray(first)) {
+      return { ...(first as Record<string, unknown>) };
+    }
+    return null;
+  }
+  if (raw && typeof raw === "object") return { ...(raw as Record<string, unknown>) };
+  return null;
+}
+
+/**
  * 功能注释：递归把 content 树里该是字符串的字段收干净。
  * 仅洗字段名命中 / labels·terms 类映射 / 字符串数组；不改 number/boolean 玩法值。
  */
@@ -134,6 +150,22 @@ function deepCoerceContent(value: unknown, keyHint = ""): unknown {
     }
     if (k === "timeline") {
       out[k] = coerceTimeline(v).map((row, i) => normalizeTimelineRow(row, i));
+      continue;
+    }
+    // 功能注释：rooms 的 key 是地点 id（常有 shop/items/paths），绝不能走 ARRAY_FIELD_KEYS
+    if (k === "rooms") {
+      if (!v || typeof v !== "object" || Array.isArray(v)) {
+        out[k] = {};
+        continue;
+      }
+      const roomsOut: Record<string, unknown> = {};
+      for (const [rid, room] of Object.entries(v as Record<string, unknown>)) {
+        const row = unwrapRoomRow(room);
+        if (!row) continue;
+        // 功能注释：房间内部仍可洗 items 等真数组字段；不再把 rid 当 keyHint
+        roomsOut[rid] = deepCoerceContent(row);
+      }
+      out[k] = roomsOut;
       continue;
     }
     if (k === "gameRules") {
@@ -328,14 +360,18 @@ export function sanitizeModStrings(mod: Mod): Mod {
 
   if (m.content && typeof m.content === "object") {
     m.content = deepCoerceContent(m.content) as ModContent;
-    // 功能注释：房间 name 空时回落 id；desc 必填，空则按地名补一句
+    // 功能注释：房间 name 空时回落 id；desc 必填，空则按地名补一句；数组脏房先拆回对象
     const rooms = m.content.rooms;
     if (rooms && typeof rooms === "object") {
       for (const [id, room] of Object.entries(rooms)) {
-        if (!room || typeof room !== "object") continue;
-        const r = room as { name?: string; desc?: string };
-        if (!r.name) r.name = id;
-        if (typeof r.desc !== "string") r.desc = "";
+        const row = unwrapRoomRow(room);
+        if (!row) {
+          delete rooms[id];
+          continue;
+        }
+        if (!row.name) row.name = id;
+        if (typeof row.desc !== "string") row.desc = "";
+        rooms[id] = row as NonNullable<ModContent["rooms"]>[string];
       }
       ensureRoomSceneDescs(rooms);
     }

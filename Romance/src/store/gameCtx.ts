@@ -16,11 +16,13 @@ export type StartOpts = {
   playPrefs?: import("../lib/types").PlayPrefs;
   startDate?: string;
   pathNpcs?: import("../game/data").PathNpc[];
-  route?: Pick<import("../game/data").CreationPath, "hero" | "room" | "memory" | "event" | "eventId" | "fx">;
+  route?: Pick<import("../game/data").CreationPath, "id" | "hero" | "heroCustom" | "room" | "memory" | "event" | "eventId" | "fx">;
   factions?: import("../game/data").StartFaction[];
   joined?: string[];
   /** 功能注释：建角页已掷的自定义属性开局值；有则开局沿用，避免预览与入局再掷不一致 */
   cattrStarts?: Record<string, number>;
+  /** 功能注释：玩家勾选「无限模式」——本局不按作品时限结算 */
+  endless?: boolean;
 };
 /* 弹窗重试参数：弹窗类行动（事件 / 支线 / 询问）演绎失败时存下原请求，供「重新触发」原样重发 */
 export type PopupRetry = { input: string; hideInput?: boolean; journalMeta?: Omit<import("../lib/types").JournalEntry, "id" | "ts" | "text">; preSettled?: boolean };
@@ -69,6 +71,9 @@ export type Ctx = {
   setNpcDim: (pid: string, label: string, value: number) => void; // 手动调节情感印象（爱慕/友善/敌意…）
   saveNow: () => Promise<boolean>; // 立即把当前进度刷入自动存档
   regenerate: () => void; // 重新生成上一回合（AI 输出异常时）
+  rerollTurn: (turnId: string) => void; // 重新生成最新的成功 AI 回合（换一版剧情）
+  rewindTo: (turnId: string) => boolean; // 回溯到某个 AI 回合刚落地时的状态，之后的进度丢弃
+  snapIds: string[]; // 本次会话内可重新生成 / 回溯的 AI 回合 id
   saveEpoch: number; // 切档代数：游戏界面以此为 key 整树重挂载
   canRetry: boolean; // 最近一次主线请求失败，可重新生成
   retryPopup: () => void; // 弹窗行动失败后「重新触发」

@@ -9,6 +9,8 @@ lerna-debug.log*
 
 node_modules
 dist
+# 功能注释：Romance 独立构建产物；残留 dist/index.html 会在 macOS 上污染 /romance/ 标题
+Romance/dist/
 dist-ssr
 # 功能注释：分环境构建产物（cn-test / cn-prod），勿提交
 # 功能注释：分环境构建产物，勿提交
@@ -21,7 +23,8 @@ dist-cn-prod/
 !.cursor/rules/**
 
 # Editor directories and files
-.figma/*
+# 功能注释：Figma Make 本地目录整棵忽略，禁止再入库
+.figma/
 .vscode/*
 !.vscode/extensions.json
 .idea

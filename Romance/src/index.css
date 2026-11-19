@@ -101,11 +101,7 @@ html[data-romance] .romance-host {
 }
 
 
-/* 线下见面弹窗（Figma 设计稿字体） */
-@font-face { font-family: "Noto Sans SC:Medium"; src: url("https://static.figma.com/font/NotoSansSC-VF_2") format("woff2"); font-style: normal; font-weight: 500; font-display: swap; }
-@font-face { font-family: "Noto Sans SC:Regular"; src: url("https://static.figma.com/font/NotoSansSC-VF_2") format("woff2"); font-style: normal; font-weight: 400; font-display: swap; }
-@font-face { font-family: "Noto Serif SC:Regular"; src: url("https://static.figma.com/font/NotoSerifSC-VF_3") format("woff2"); font-style: normal; font-weight: 400; font-display: swap; }
-@font-face { font-family: "Noto Serif SC:SemiBold"; src: url("https://static.figma.com/font/NotoSerifSC-VF_3") format("woff2"); font-style: normal; font-weight: 600; font-display: swap; }
+/* 功能注释：Figma 远程字形已去掉；宋/黑预设走系统栈，展示字由 public/fonts/game 本地注入 */
 
 /* 主题色以运行时 CSS 变量驱动，支持深色/浅色与主题色全局切换 */
 @theme {
@@ -120,8 +116,14 @@ html[data-romance] .romance-host {
   --color-danger: var(--danger);
   --color-line: var(--line);
 
-  --font-serif: 'Noto Serif SC', serif;
-  --font-sans: 'Noto Sans SC', sans-serif;
+  /*
+   * 功能注释：字体只两套，禁止再加第三套例外。
+   * --font-ui / --font-sans = 平台 UI（主站圆角黑体）：弹窗、设置、创作壳、编辑器、局内顶栏底栏、小说顶栏/内容卡
+   * --font-serif = 局内游戏模式剧情（设置·剧情字体）：旁白/气泡/选项等；小说阅读卡改走 --font-ui 与设置一致
+   */
+  --font-ui: 'Sarasa Gothic Rounded', 'Source Han Rounded SC', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  --font-sans: var(--font-ui);
+  --font-serif: 'Noto Serif SC', 'Source Han Serif SC', serif;
 
   /* —— 全局设计令牌（8pt 栅格）：圆角 / 阴影 / 动效，全部组件共用 —— */
   --radius-ui-sm: 8px;   /* 输入框、小按钮 */
@@ -132,47 +134,75 @@ html[data-romance] .romance-host {
   --ease-ui: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* —— 字体皮肤：整体换字，仅改字形不动布局 ——
-   通过 <html class="font-xxx"> 同时覆盖 --font-serif / --font-sans，
-   让正文（story-prose）、对话气泡、界面 chrome 都跟到同一套预设。
-   默认（font-song）两侧皆用思源宋体；字形由 lib/gameFonts.ts 注入的镜像 stylesheet 提供。 */
+/* —— 字体皮肤：设置里换字 → 同时覆盖 --font-serif / --font-sans（对话与正文跟套）；
+   局内顶栏·底栏·输入仍用 --font-ui。字形由 lib/gameFonts.ts 注入本地包。 */
 html[data-romance].font-song {
-  --font-serif: 'Noto Serif SC', serif;
-  --font-sans: 'Noto Serif SC', serif;
+  --font-serif: 'Source Han Serif SC', 'Songti SC', 'Noto Serif SC', serif;
+  --font-sans: 'Source Han Serif SC', 'Songti SC', 'Noto Serif SC', serif;
 }
 html[data-romance].font-hei {
-  --font-serif: 'Noto Sans SC', sans-serif;
-  --font-sans: 'Noto Sans SC', sans-serif;
+  --font-serif: var(--font-ui);
+  --font-sans: var(--font-ui);
 }
 html[data-romance].font-round {
-  --font-serif: 'ZCOOL KuaiLe', 'Noto Sans SC', sans-serif;
-  --font-sans: 'ZCOOL KuaiLe', 'Noto Sans SC', sans-serif;
+  --font-serif: 'ZCOOL KuaiLe', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-sans: 'ZCOOL KuaiLe', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 html[data-romance].font-elegant {
-  --font-serif: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
-  --font-sans: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+  --font-serif: 'ZCOOL XiaoWei', 'Source Han Serif SC', 'Songti SC', serif;
+  --font-sans: 'ZCOOL XiaoWei', 'Source Han Serif SC', 'Songti SC', serif;
 }
 html[data-romance].font-brush {
-  --font-serif: 'Ma Shan Zheng', 'Noto Serif SC', serif;
-  --font-sans: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  --font-serif: 'Ma Shan Zheng', 'Source Han Serif SC', 'Songti SC', serif;
+  --font-sans: 'Ma Shan Zheng', 'Source Han Serif SC', 'Songti SC', serif;
 }
 html[data-romance].font-hand {
-  --font-serif: 'Long Cang', 'Noto Serif SC', serif;
-  --font-sans: 'Long Cang', 'Noto Serif SC', serif;
+  --font-serif: 'Long Cang', 'Source Han Serif SC', 'Songti SC', serif;
+  --font-sans: 'Long Cang', 'Source Han Serif SC', 'Songti SC', serif;
 }
 html[data-romance].font-cursive {
-  --font-serif: 'Zhi Mang Xing', 'Noto Serif SC', serif;
-  --font-sans: 'Zhi Mang Xing', 'Noto Serif SC', serif;
+  --font-serif: 'Zhi Mang Xing', 'Source Han Serif SC', 'Songti SC', serif;
+  --font-sans: 'Zhi Mang Xing', 'Source Han Serif SC', 'Songti SC', serif;
 }
 html[data-romance].font-pixel {
-  --font-serif: 'Pixelify Sans', 'VT323', 'Noto Sans SC', monospace;
-  --font-sans: 'Pixelify Sans', 'VT323', 'Noto Sans SC', monospace;
+  --font-serif: 'Pixelify Sans', 'VT323', 'PingFang SC', 'Microsoft YaHei', monospace;
+  --font-sans: 'Pixelify Sans', 'VT323', 'PingFang SC', 'Microsoft YaHei', monospace;
 }
 
-/* 功能注释：对话气泡显式跟预设，避免局部 utility 把字体重置回系统默认 */
-html[data-romance] .dlg-bubble,
-html[data-romance] .dlg-bubble-me {
-  font-family: var(--font-serif);
+/*
+ * 功能注释：平台与壳层一律 --font-ui（含弹窗 portal、创作向导、编辑器、局内顶栏底栏）。
+ * 剧情正文字体只由下方 .story-prose / .dlg-bubble 等规则接管，不再按页面拆多套。
+ */
+html[data-romance] :is(
+  .romance-platform,
+  [data-platform-ui="1"],
+  .world-gen-shell,
+  .world-gen-editor,
+  .mod-editor-root,
+  .editor-hub,
+  .mud-shell,
+  .app-topbar,
+  .modal-sheet,
+  .ui-overlay
+),
+html[data-romance] :is(
+  .romance-platform,
+  [data-platform-ui="1"],
+  .world-gen-shell,
+  .world-gen-editor,
+  .mod-editor-root,
+  .editor-hub,
+  .mud-shell,
+  .app-topbar,
+  .modal-sheet,
+  .ui-overlay
+) :where(*):not(.phone-os, .phone-os *, .font-mono, [class*="font-mono"]) {
+  font-family: var(--font-ui);
+  letter-spacing: normal;
+}
+/* 功能注释：顶栏禁止再用 font-serif 工具类盖过平台字，与设置/底栏保持一套 */
+html[data-romance] .app-topbar :where(.font-serif) {
+  font-family: var(--font-ui) !important;
 }
 
 /* 星光2005 · 年代美术：奶油纸白 / 旧报深褐 / 酒红 / 唱片墨绿 */
@@ -245,7 +275,7 @@ html[data-romance] body,
 html[data-romance] .romance-host {
   height: 100%;
   min-height: 100%;
-  font-family: var(--font-sans);
+  font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
   transition: background-color 0.4s ease, color 0.4s ease;
 }
@@ -316,9 +346,10 @@ input[type="range"]::-moz-range-thumb {
 /* 剧情文本换行与排版 */
 .story-prose {
   /* 剧情正文统一跟随「设置 · 游戏字体」——用 --font-serif（宋/圆/雅/毛笔/手写/自定义皆随之切换）；
-     字号跟 --story-font-size（对话框 DIY「字号」写入）；中文禁止斜体。 */
+     字号跟 --story-font-size（对话框 DIY「字号」写入）；中文禁止斜体；字重与选项同为 400（常规，不加粗）。 */
   font-family: var(--font-serif);
   font-style: normal;
+  font-weight: 400;
   font-size: var(--story-font-size, 15px);
   white-space: pre-wrap;
   line-height: 1.95;
@@ -382,6 +413,150 @@ input[type="range"]::-moz-range-thumb {
 .map-vignette {
   box-shadow: inset 0 0 60px color-mix(in srgb, var(--ink) 18%, transparent),
               inset 0 0 0 1px color-mix(in srgb, var(--gold) 12%, transparent);
+}
+
+/* ═══ 舆图舞台：无底图时的纸质舆图氛围 + 有底图时的统一暗角/罗盘 ═══ */
+.city-map-stage {
+  position: relative;
+  isolation: isolate;
+  background: color-mix(in srgb, var(--paper-2) 88%, var(--jade) 12%);
+}
+.city-map-atlas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 70% 55% at 28% 32%, color-mix(in srgb, var(--jade) 16%, transparent), transparent 62%),
+    radial-gradient(ellipse 55% 48% at 78% 68%, color-mix(in srgb, var(--coral) 14%, transparent), transparent 60%),
+    radial-gradient(ellipse 90% 70% at 50% 100%, color-mix(in srgb, var(--gold, #c4a35a) 12%, transparent), transparent 55%),
+    linear-gradient(165deg,
+      color-mix(in srgb, var(--paper) 92%, var(--jade) 8%) 0%,
+      color-mix(in srgb, var(--paper-2) 85%, var(--ink) 15%) 48%,
+      color-mix(in srgb, var(--paper) 78%, var(--coral) 22%) 100%);
+}
+.city-map-atlas__grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 11px, color-mix(in srgb, var(--ink) 5%, transparent) 11px, color-mix(in srgb, var(--ink) 5%, transparent) 12px),
+    repeating-linear-gradient(90deg, transparent, transparent 11px, color-mix(in srgb, var(--ink) 5%, transparent) 11px, color-mix(in srgb, var(--ink) 5%, transparent) 12px);
+  mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, #000 20%, transparent 78%);
+}
+.city-map-atlas__paths {
+  position: absolute;
+  inset: -8%;
+  opacity: 0.55;
+  background:
+    radial-gradient(circle at 42% 48%, transparent 0 7%, color-mix(in srgb, var(--jade) 22%, transparent) 7.5%, transparent 8.2%),
+    radial-gradient(circle at 58% 36%, transparent 0 5%, color-mix(in srgb, var(--coral) 20%, transparent) 5.4%, transparent 6%),
+    radial-gradient(ellipse 42% 28% at 50% 52%, transparent 40%, color-mix(in srgb, var(--ink) 10%, transparent) 41%, transparent 42%),
+    radial-gradient(ellipse 60% 40% at 50% 55%, transparent 55%, color-mix(in srgb, var(--jade) 14%, transparent) 56%, transparent 58%);
+}
+.city-map-atlas__mist {
+  position: absolute;
+  inset: -20%;
+  pointer-events: none;
+  background: radial-gradient(ellipse 45% 30% at 30% 40%, color-mix(in srgb, var(--paper) 55%, transparent), transparent 70%);
+  animation: city-map-drift 18s ease-in-out infinite alternate;
+  opacity: 0.7;
+}
+.city-map-atlas__mist--b {
+  background: radial-gradient(ellipse 40% 28% at 72% 62%, color-mix(in srgb, var(--jade) 18%, transparent), transparent 68%);
+  animation-duration: 22s;
+  animation-direction: alternate-reverse;
+  opacity: 0.55;
+}
+@keyframes city-map-drift {
+  from { transform: translate3d(-2%, -1%, 0) scale(1); }
+  to { transform: translate3d(3%, 2%, 0) scale(1.06); }
+}
+.city-map-vignette {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  box-shadow:
+    inset 0 0 80px color-mix(in srgb, var(--ink) 22%, transparent),
+    inset 0 28px 48px -28px color-mix(in srgb, var(--ink) 28%, transparent),
+    inset 0 -36px 56px -28px color-mix(in srgb, var(--ink) 26%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--gold, #c4a35a) 16%, transparent);
+}
+.city-map-compass {
+  pointer-events: none;
+  position: absolute;
+  right: 12px;
+  bottom: 14px;
+  z-index: 3;
+  width: 52px;
+  height: 52px;
+  opacity: 0.72;
+  color: color-mix(in srgb, var(--ink) 70%, var(--jade) 30%);
+  filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--ink) 25%, transparent));
+  animation: city-map-compass-in 0.7s ease-out both;
+}
+@keyframes city-map-compass-in {
+  from { opacity: 0; transform: scale(0.86) rotate(-12deg); }
+  to { opacity: 0.72; transform: none; }
+}
+.city-map-toolbar {
+  position: relative;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--paper-2) 92%, var(--jade) 8%), var(--paper-2));
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 80%, var(--jade) 20%);
+  box-shadow: 0 8px 20px -16px color-mix(in srgb, var(--ink) 40%, transparent);
+}
+.city-map-toolbar::after {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--jade) 55%, transparent), color-mix(in srgb, var(--coral) 45%, transparent), transparent);
+  opacity: 0.85;
+}
+.city-map-legend {
+  pointer-events: none;
+  position: absolute;
+  left: 12px;
+  bottom: 14px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: min(70%, 16rem);
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--line) 70%, white 30%);
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 6px 18px -10px color-mix(in srgb, var(--ink) 40%, transparent);
+  backdrop-filter: blur(8px);
+  animation: city-map-legend-in 0.55s ease-out 0.12s both;
+}
+@keyframes city-map-legend-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.city-map-legend__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--coral);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--coral) 28%, transparent);
+  flex-shrink: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .city-map-atlas__mist,
+  .city-map-compass,
+  .city-map-legend {
+    animation: none !important;
+  }
 }
 
 /* ═══════════ MUD 石牌点选皮肤（.mud-shell，不影响封面/建角） ═══════════ */
@@ -606,11 +781,14 @@ input[type="range"]::-moz-range-thumb {
 .dy-progress { animation: dy-progress 18s linear infinite; }
 .dy-progress-paused { animation-play-state: paused; }
 
-/* 灵动岛 */
+/* 灵动岛：浅色壁纸上也要看得见轮廓 */
 .dynamic-island {
-  background: #000;
+  background: #0a0a0a;
   border-radius: 999px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.35),
+    0 1px 3px rgba(0, 0, 0, 0.28),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 /* 微信气泡尾巴（左右两向） */
@@ -1233,7 +1411,9 @@ html[data-bubble="comic"] .dlg-bubble::after {
 html[data-bubble="plain"] .dlg-bubble { background: transparent; border-color: transparent; box-shadow: none; backdrop-filter: none; padding-left: 4px; }
 html[data-bubble="plain"] .dlg-bubble-me { background: transparent; color: var(--coral); box-shadow: none; padding-right: 4px; }
 
-html[data-avatar="circle"] .dlg-avatar { border-radius: 9999px !important; }
+/* 功能注释：对话头像「圆形」也改成大方圆角，避免小说页再出现突兀正圆字头 */
+html[data-avatar="circle"] .dlg-avatar { border-radius: 10px !important; }
+html[data-avatar="rounded"] .dlg-avatar { border-radius: 8px !important; }
 html[data-avatar="hidden"] .dlg-avatar { display: none !important; }
 html[data-aframe="accent"] .dlg-avatar { --tw-ring-color: var(--jade); }
 html[data-aframe="glow"] .dlg-avatar { --tw-ring-color: color-mix(in srgb, var(--coral) 70%, white); box-shadow: 0 0 0 4px color-mix(in srgb, var(--coral) 18%, transparent), 0 0 14px color-mix(in srgb, var(--coral) 45%, transparent); }
@@ -1281,15 +1461,14 @@ html[data-stone="dusk"] .scene-img { filter: blur(var(--scene-blur, 0px)) satura
   color: transparent;
 }
 
-/* 输入胶囊：聚焦时主色柔光描边 */
+/* 输入区：轻量底板，聚焦只加描边，不叠重阴影抢底栏 */
 .action-capsule {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--paper-2) 92%, white), color-mix(in srgb, var(--jade) 4%, var(--paper-2)));
-  box-shadow: 0 8px 24px -16px var(--dream-glow), 0 1px 0 rgba(255, 255, 255, 0.7) inset;
-  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+  background: color-mix(in srgb, var(--paper) 92%, var(--paper-2));
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .action-capsule:focus-within {
-  border-color: color-mix(in srgb, var(--jade) 48%, transparent);
-  box-shadow: 0 10px 28px -14px var(--dream-glow), 0 0 0 2px color-mix(in srgb, var(--jade) 18%, transparent);
+  border-color: color-mix(in srgb, var(--jade) 42%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--jade) 14%, transparent);
 }
 .send-btn:not(:disabled) {
   background: linear-gradient(125deg, var(--jade), var(--coral));
@@ -1301,9 +1480,62 @@ html[data-stone="dusk"] .scene-img { filter: blur(var(--scene-blur, 0px)) satura
   box-shadow: none;
 }
 
-/* 设置页：字体颜色固定为中性色，切换皮肤 / 主色时保持不变（仅区分深浅模式） */
-.settings-fixed { --ink: #2a2a30; --ink-soft: #6c6c74; }
-html[data-romance].dark .settings-fixed { --ink: #eaeaef; --ink-soft: #a6a6af; }
+/* 设置页：跟当前皮肤 / 主色美化，不再锁中性灰字色 */
+.settings-fixed {
+  color: var(--ink);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--jade) 6%, transparent) 0%,
+      transparent 7rem
+    );
+}
+.settings-fixed .settings-card {
+  border-color: color-mix(in srgb, var(--jade) 18%, var(--line));
+  background: color-mix(in srgb, var(--paper) 92%, var(--jade));
+  box-shadow: 0 8px 22px -18px var(--dream-glow, color-mix(in srgb, var(--jade) 35%, transparent));
+}
+.settings-fixed .settings-card:hover {
+  border-color: color-mix(in srgb, var(--jade) 32%, var(--line));
+}
+.settings-fixed .settings-chip {
+  border-color: color-mix(in srgb, var(--jade) 28%, var(--line));
+  background: color-mix(in srgb, var(--jade) 10%, var(--paper-2));
+  color: var(--jade-deep);
+}
+.settings-fixed .settings-card-body {
+  border-top-color: color-mix(in srgb, var(--jade) 14%, var(--line));
+  background: color-mix(in srgb, var(--paper-2) 88%, var(--jade));
+}
+/* 可爱 / 梦幻皮：设置卡再叠一层柔光玻璃感 */
+html[data-romance].skin-cute .settings-fixed .settings-card,
+html[data-romance].skin-dream .settings-fixed .settings-card {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--paper) 78%, #fff) 0%,
+      color-mix(in srgb, var(--jade) 8%, var(--paper)) 100%
+    );
+  box-shadow:
+    0 10px 28px -18px var(--dream-glow, color-mix(in srgb, var(--jade) 40%, transparent)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+html[data-romance].skin-cute.dark .settings-fixed .settings-card,
+html[data-romance].skin-dream.dark .settings-fixed .settings-card {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--paper) 88%, var(--jade)) 0%,
+      color-mix(in srgb, var(--paper-2) 90%, var(--coral)) 100%
+    );
+  box-shadow:
+    0 10px 28px -16px var(--dream-glow, color-mix(in srgb, var(--jade) 45%, transparent)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+html[data-romance].skin-bloody .settings-fixed .settings-card {
+  background: color-mix(in srgb, var(--paper) 90%, var(--coral));
+  border-color: color-mix(in srgb, var(--coral) 28%, var(--line));
+}
 
 /* 对话面板 · 选项按钮：悬停浮起 + 主色柔光描边，随皮肤取色 */
 .option-btn:hover {
@@ -1404,17 +1636,23 @@ html[data-romance][class] .phone-os :is(*, input, textarea, button, select) {
 
 /* 叙事分色：动作神态描写 vs 说出口的话。
    不用斜体：中文字体没有真斜体，浏览器会把字硬拉斜，看起来像换了一套字体，与「设置 · 字体」对不上。
-   剧情模式普通段落固定近黑，避免皮肤把字染成酒红/淡紫导致叠景看不清。 */
-.story-action {
+   剧情模式普通段落固定近黑，避免皮肤把字染成酒红/淡紫导致叠景看不清。
+   旁白 / 台词字重与字色统一（同 --story-ink、同 500），只靠引号本身区分，避免“腾”这类字看起来更粗。 */
+.story-action,
+.story-speech {
   color: var(--story-ink);
   font-style: normal;
+  font-weight: 400;
   font-family: var(--font-serif);
 }
-.story-speech {
-  color: var(--story-ink-strong);
-  font-weight: 600;
-  font-style: normal;
-  font-family: var(--font-serif);
+/* 功能注释：正文里偶发 b/strong（统计芯片等）也不抬字重，全局粗细跟旁白一致 */
+.story-prose b,
+.story-prose strong,
+.story-narration-panel b,
+.story-narration-panel strong,
+.novel-read-card .story-prose b,
+.novel-read-card .story-prose strong {
+  font-weight: 400 !important;
 }
 
 /* 功能注释：叠图旁白 / 地点说明的浅色半透明底；透明度由 --story-panel-a（设置可调）驱动 */
@@ -1429,27 +1667,73 @@ html[data-romance][class] .phone-os :is(*, input, textarea, button, select) {
   text-shadow: none;
 }
 
-/* 功能注释：小说内容卡底板同样跟设置透明度；文字保持近黑 + 预设字体/字号，不斜体 */
+/* 功能注释：小说内容卡底板同样跟设置透明度；文字保持近黑 + 预设字号，不斜体 */
 .novel-read-card {
   background: color-mix(in srgb, var(--paper) calc(var(--story-panel-a, 0.88) * 100%), transparent) !important;
   color: var(--story-ink);
 }
 .novel-read-card .story-prose {
-  font-family: var(--font-serif);
   font-style: normal;
   font-size: var(--story-font-size, 15px);
   color: var(--story-ink);
 }
+/* 功能注释：小说顶栏 + 内容卡正文跟设置/底栏同一套平台字（--font-ui），勿再套剧情宋体造成两套字 */
+.novel-topbar,
+.novel-topbar :where(*):not(.font-mono, [class*="font-mono"]),
+.novel-read-card .story-prose,
+.novel-read-card .story-prose *,
+.novel-read-card .story-action,
+.novel-read-card .story-speech,
+.novel-read-card .story-narration-panel,
+.novel-read-card .story-narration-panel *,
+.novel-read-card .dlg-bubble,
+.novel-read-card .dlg-bubble *,
+.novel-read-card .dlg-bubble-me,
+.novel-read-card .dlg-bubble-me *,
+.novel-read-card .story-thought,
+.novel-read-card .story-thought *,
+.novel-read-card .option-btn,
+.novel-read-card .option-btn *,
+.novel-read-card .story-input,
+.novel-read-card .action-capsule input,
+.novel-read-card .action-capsule textarea,
+/* 功能注释：剧情模式下选项 / 灵感 / 输入在内容卡外面，也跟正文同一套字，避免选项宋体、正文平台字 */
+[data-novel-play] .option-btn,
+[data-novel-play] .option-btn *,
+[data-novel-play] #action-ideas,
+[data-novel-play] #action-ideas :where(*),
+[data-novel-play] .action-capsule input,
+[data-novel-play] .action-capsule textarea {
+  font-family: var(--font-ui) !important;
+  font-style: normal;
+  font-weight: 400 !important;
+  letter-spacing: normal;
+}
 
-/* 功能注释：叙事相关文字统一走游戏字体（3.3）——旁白 / 气泡 / 心事 / 玩家行动条同一字形家族；
-   行动条只加粗字重，不换字形；界面 chrome（底栏 / 菜单）不在此列。 */
+/* 功能注释：仅局内剧情区走游戏字体；平台弹窗/设置/创作壳已统一 --font-ui，勿再往外扩。
+   主站 `*` 会打断 inherit，故用 !important。option-btn 不在 action-capsule 内。
+   正文 / 台词 / 选项 / 灵感同一字重，避免旁白细、台词粗、选项又一套。 */
 .story-prose, .story-prose *, .story-action, .story-speech, .story-narration-panel, .story-narration-panel *,
 .dlg-bubble, .dlg-bubble *, .dlg-bubble-me, .dlg-bubble-me *, .story-thought, .story-thought *,
-.action-capsule input, .action-capsule .option-btn {
-  font-family: var(--font-serif);
+.option-btn, .option-btn *,
+#action-ideas, #action-ideas :where(*) {
+  font-family: var(--font-serif) !important;
+  font-style: normal;
+  font-weight: 400 !important;
+  font-synthesis: none;
+}
+/* 功能注释：行动输入跟剧情正文字体；人脉页是局内面板但属 UI 壳，跟平台字，不进游戏字体 */
+.action-capsule input,
+.action-capsule textarea,
+.story-input {
+  font-family: var(--font-serif) !important;
+  font-weight: 400;
   font-style: normal;
 }
-.action-capsule input { font-weight: 500; }
+.option-btn {
+  font-size: var(--story-font-size, 15px);
+  font-weight: 400;
+}
 
 /* 功能注释：暗色可读（3.2）——底栏未选中字、在场人物名标不被浅底吞掉 */
 html[data-romance].dark .nav-txt:not(.nav-txt-on) { color: color-mix(in srgb, var(--ink) 82%, transparent); }
@@ -1575,13 +1859,14 @@ html.nav-label-c .nav-txt-on { color: var(--nav-label) !important; }
   .ui-dialog > * { flex-shrink: 0; }
   /* 功能注释：body 不 flex-grow，短内容不撑空；父级触顶后由 flex-shrink + overflow 滚动 */
   .ui-dialog > .ui-dialog-body { flex: 0 1 auto; min-height: 0; overflow-y: auto; overflow-x: auto; overscroll-behavior: contain; }
-  /* 功能注释：建角向导固定为屏宽/屏高 85%（vh+dvh 双写，避免移动端地址栏跳动铺太高） */
+  /* 功能注释：建角向导宽仍 85vw；高度随内容，最高 85dvh——短表单不再每次撑出大块空白 */
   .ui-dialog.ui-dialog-create {
     width: 85vw; max-width: 85vw;
-    height: 85vh; max-height: 85vh;
-    height: 85dvh; max-height: 85dvh;
+    height: auto;
+    max-height: 85vh;
+    max-height: 85dvh;
   }
-  .ui-dialog.ui-dialog-create > .ui-dialog-body { flex: 1 1 auto; }
+  .ui-dialog.ui-dialog-create > .ui-dialog-body { flex: 0 1 auto; }
   /* 功能注释：游戏尺寸——玩家游玩时的弹窗（场景、人物资料、背包、存档、确认等）：比工具弹窗窄，四周露出游戏画面，过高时内部滚动 */
   .ui-dialog.ui-dialog-game {
     width: min(520px, calc(100vw - 40px));
@@ -1803,7 +2088,7 @@ html[data-ibtnfill="outline"] .diy-btn { background: color-mix(in srgb, var(--pa
   .end-snap .end-rise, .end-snap .end-bob { animation: none; }
 }
 /* 按钮（不进层）：按压缩放与全局兜底同为 scale .98，不叠加 */
-.end-btn { position: relative; display: flex; align-items: center; justify-content: center; gap: .6rem; min-height: 64px; padding: .65rem 1rem; border-radius: 999px; color: #fff; background: linear-gradient(180deg, var(--b1) 0%, var(--b2) 100%); border: 3px solid var(--e-card); box-shadow: 0 0 0 1.5px var(--b3), 0 14px 24px -14px var(--b2), inset 0 3px 0 color-mix(in srgb, var(--e-card) 45%, transparent), inset 0 -4px 0 rgba(0, 0, 0, .08); text-shadow: 0 1px 2px rgba(0, 0, 0, .25); transition: transform .15s ease, filter .15s ease, scale .15s ease; }
+.end-btn { position: relative; display: flex; align-items: center; justify-content: center; gap: .55rem; min-height: 54px; padding: .5rem .9rem; border-radius: 999px; color: #fff; background: linear-gradient(180deg, var(--b1) 0%, var(--b2) 100%); border: 3px solid var(--e-card); box-shadow: 0 0 0 1.5px var(--b3), 0 12px 20px -14px var(--b2), inset 0 3px 0 color-mix(in srgb, var(--e-card) 45%, transparent), inset 0 -3px 0 rgba(0, 0, 0, .08); text-shadow: 0 1px 2px rgba(0, 0, 0, .25); transition: transform .15s ease, filter .15s ease, scale .15s ease; }
 .end-btn:hover { filter: brightness(1.05); transform: translateY(-1px); }
 .end-btn:active { transform: translateY(1px); scale: .98; }
 .end-btn:focus-visible { outline: 3px solid var(--b3); outline-offset: 3px; }
@@ -1870,30 +2155,35 @@ html[data-romance].skin-dream.dark, html[data-romance].skin-bloody.dark, html[da
 .ui-sheet [class*="bg-paper"] { backdrop-filter: none; -webkit-backdrop-filter: none; }
 
 /* ═══════════════════════════════════════════════════════════════
- * 平台创作壳：对齐 funloom 暗色酒红（GameSettingEditor / DocumentsPanel）
- * 生成世界两屏挂在 .romance-platform > .world-gen-shell，不跟局内可爱/宣纸浅色。
+ * 平台创作壳：跟主站皮肤变量（--color-*），与首页 / 创作者中心一致
+ * 生成世界两屏挂在 .romance-platform > .world-gen-shell
  * ═══════════════════════════════════════════════════════════════ */
 .romance-platform {
   min-height: 100%;
-  /* 功能注释：平台暗红创作壳唯一色板；弹窗 / toast / 表单一律吃这些变量，禁止再写死白绿 */
-  --fl-bg: #000000;
-  --fl-surface: #0A0A0A;
-  --fl-raised: #141416;
-  --fl-sheet: #1C1C1E;
-  --fl-input: #121214;
-  --fl-ink: #ffffff;
-  --fl-muted: rgba(255, 255, 255, 0.55);
-  --fl-faint: rgba(255, 255, 255, 0.12);
-  --fl-line: rgba(255, 255, 255, 0.16);
-  --fl-wine: #A8283C;
-  --fl-wine-deep: #8E2135;
-  --fl-rose: #FF8A9A;
-  --fl-gold: #C9A227;
-  --fl-danger: #FF6B7A;
-  --fl-glow: rgba(168, 40, 60, 0.35);
+  /* 功能注释：创作壳吃主站皮肤；缺省时回退到 funloom 浅色红主题 */
+  --fl-bg: var(--color-bg, #faf6f5);
+  /* 功能注释：宿主皮肤的实心纸面，供 .world-gen-editor 读取（子级重定义 --fl-* 会循环，故另起名） */
+  --fl-host-surface: var(--color-surface, #ffffff);
+  --fl-host-raised: var(--color-surface-2, #f7f4f2);
+  --fl-host-input: var(--color-bg, #faf6f5);
+  --fl-surface: var(--color-surface, #ffffff);
+  --fl-raised: var(--color-surface-2, #f6eceb);
+  --fl-sheet: var(--color-surface, #ffffff);
+  --fl-input: var(--color-bg, #faf6f5);
+  --fl-ink: var(--color-text, #17171a);
+  --fl-muted: var(--color-text-secondary, #5c5c66);
+  --fl-faint: color-mix(in srgb, var(--color-text, #17171a) 10%, transparent);
+  --fl-line: var(--color-border, #ecdcdb);
+  --fl-wine: var(--color-primary, #d42a2a);
+  --fl-wine-deep: var(--color-primary-bold, var(--color-primary, #b01c1f));
+  --fl-rose: var(--color-primary-fg, #b01c1f);
+  --fl-gold: var(--color-warning, #c9a227);
+  --fl-danger: var(--color-danger, #e11d48);
+  --fl-glow: color-mix(in srgb, var(--color-primary, #d42a2a) 32%, transparent);
+  --fl-on-primary: var(--color-on-primary, #ffffff);
   color: var(--fl-ink);
   background: var(--fl-bg);
-  /* 功能注释：覆写 Romance token；须同时写 --color-*，否则 Tailwind bg-jade/bg-line 仍吃 :root 浅色 */
+  /* 功能注释：覆写 Romance token；须同时写 --color-*，否则 Tailwind bg-jade 仍吃宣纸绿 */
   --paper: var(--fl-surface);
   --paper-2: var(--fl-raised);
   --ink: var(--fl-ink);
@@ -1904,8 +2194,8 @@ html[data-romance].skin-dream.dark, html[data-romance].skin-bloody.dark, html[da
   --coral: var(--fl-rose);
   --gold: var(--fl-gold);
   --danger: var(--fl-danger);
-  --cute-glow: rgba(168, 40, 60, 0.28);
-  --dream-glow: rgba(168, 40, 60, 0.22);
+  --cute-glow: color-mix(in srgb, var(--fl-wine) 22%, transparent);
+  --dream-glow: color-mix(in srgb, var(--fl-wine) 18%, transparent);
   --color-paper: var(--fl-surface);
   --color-paper-2: var(--fl-raised);
   --color-ink: var(--fl-ink);
@@ -1916,14 +2206,13 @@ html[data-romance].skin-dream.dark, html[data-romance].skin-bloody.dark, html[da
   --color-coral: var(--fl-rose);
   --color-gold: var(--fl-gold);
   --color-danger: var(--fl-danger);
-  /* 功能注释：ui-sheet / 遮罩跟平台壳，避免 portal 弹窗仍是奶油白面 */
   --sheet-solid: var(--fl-sheet);
-  --sheet-bg: linear-gradient(180deg, var(--fl-sheet), color-mix(in srgb, var(--fl-wine) 8%, var(--fl-sheet)));
+  --sheet-bg: linear-gradient(180deg, var(--fl-sheet), color-mix(in srgb, var(--fl-wine) 4%, var(--fl-sheet)));
   --sheet-border: var(--fl-line);
-  --sheet-hi: rgba(255, 255, 255, 0.06);
-  --sheet-shadow: 0 28px 64px -24px rgba(0, 0, 0, 0.72), 0 0 0 1px color-mix(in srgb, var(--fl-wine) 22%, transparent);
-  --overlay-bg: color-mix(in srgb, var(--fl-bg) 72%, transparent);
-  --overlay-bg-heavy: color-mix(in srgb, var(--fl-bg) 82%, transparent);
+  --sheet-hi: color-mix(in srgb, var(--fl-ink) 4%, transparent);
+  --sheet-shadow: 0 24px 64px color-mix(in srgb, var(--color-shadow, #000) 18%, transparent);
+  --overlay-bg: color-mix(in srgb, var(--color-shadow, #000) 55%, transparent);
+  --overlay-bg-heavy: color-mix(in srgb, var(--color-shadow, #000) 70%, transparent);
 }
 
 /* 功能注释：平台壳内弹窗表单/主按钮统一走 token，覆盖宣纸默认浅色 */
@@ -1936,47 +2225,44 @@ html[data-romance].skin-dream.dark, html[data-romance].skin-bloody.dark, html[da
 }
 .romance-platform .ui-btn-primary {
   background: var(--jade);
-  color: var(--fl-ink);
+  color: var(--fl-on-primary, #fff);
   box-shadow: 0 6px 16px -10px var(--fl-glow);
 }
 .romance-platform .ui-btn-primary.tone-danger {
   background: var(--danger);
 }
 
-/* 功能注释：平台生成世界时宿主也压成黑底，避免四周露奶油纸 */
+/* 功能注释：平台生成世界时宿主跟主站底色，避免四周露宣纸奶油或纯黑 */
 .romance-host:has([data-platform-ui="1"]) {
-  background: var(--fl-bg, #000000) !important;
-  color: var(--fl-ink, #ffffff) !important;
+  background: var(--fl-bg, var(--color-bg, #faf6f5)) !important;
+  color: var(--fl-ink, var(--color-text, #17171a)) !important;
 }
 
 /*
- * 功能注释：平台壳打开时，主站 Toaster 仍挂在 body；用 :has 把 toast 收成暗红账本，
- * 禁止再露出白底绿成功条。色值走 --fl-*（无平台壳时不生效）。
+ * 功能注释：平台壳打开时，主站 Toaster 仍挂在 body；跟主站皮肤，避免暗壳白条冲突。
  */
 html:has([data-platform-ui="1"]) .funloom-toast {
-  --funloom-toast-accent: var(--fl-wine, #A8283C);
-  border-color: color-mix(in srgb, var(--fl-wine, #A8283C) 28%, transparent) !important;
-  background:
-    linear-gradient(180deg, var(--fl-sheet, #1C1C1E) 0%, var(--fl-raised, #141416) 100%) padding-box,
-    linear-gradient(135deg, color-mix(in srgb, var(--fl-wine, #A8283C) 55%, transparent), color-mix(in srgb, var(--fl-rose, #FF8A9A) 25%, transparent)) border-box !important;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.06) inset !important;
-  color: var(--fl-ink, #ffffff) !important;
+  --funloom-toast-accent: var(--fl-wine, var(--color-primary, #d42a2a));
+  border-color: color-mix(in srgb, var(--fl-wine, var(--color-primary, #d42a2a)) 22%, transparent) !important;
+  background: var(--fl-surface, var(--color-surface, #fff)) !important;
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--color-shadow, #000) 18%, transparent) !important;
+  color: var(--fl-ink, var(--color-text, #17171a)) !important;
 }
 html:has([data-platform-ui="1"]) .funloom-toast-success {
-  --funloom-toast-accent: var(--fl-wine, #A8283C);
-  border-color: color-mix(in srgb, var(--fl-wine, #A8283C) 32%, transparent) !important;
+  --funloom-toast-accent: var(--fl-wine, var(--color-primary, #d42a2a));
 }
 html:has([data-platform-ui="1"]) .funloom-toast-error {
-  --funloom-toast-accent: var(--fl-danger, #FF6B7A);
+  --funloom-toast-accent: var(--fl-danger, var(--color-danger, #e11d48));
 }
 html:has([data-platform-ui="1"]) .funloom-toast-blank,
 html:has([data-platform-ui="1"]) .funloom-toast-loading {
-  --funloom-toast-accent: var(--fl-gold, #C9A227);
+  --funloom-toast-accent: var(--fl-gold, var(--color-warning, #c9a227));
 }
 
 /*
  * 功能注释：仅「生成世界 → 完整编辑器」壳内压实半透明纸面，对齐 funloom 暗色；
  * 不改局内其它入口的 ModEditorPanel。
+ * 落地：纸面改暖玫瑰米色（禁惨白）、区块加厚、间距收紧，避免「太空太淡」。
  */
 .world-gen-editor {
   color: var(--ink);
@@ -1985,6 +2271,232 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  /*
+   * 功能注释：纸面必须实心不透明，对齐设定页 .world-gen-card（--wg-sheet）。
+   * 禁止 --paper ↔ --wg-sheet ↔ --fl-sheet 循环引用，否则计算为空、bg-paper 变成全透明。
+   * paper-2 也用实心浅灰白，禁止玫瑰半透色，否则在格子底纹上会像「透出背景」。
+   */
+  --paper: var(--wg-sheet);
+  --paper-2: var(--wg-sheet-2);
+  --fl-input: var(--wg-input);
+  --fl-surface: var(--wg-sheet);
+  --fl-raised: var(--wg-sheet-2);
+  --fl-sheet: var(--wg-sheet);
+  --wg-sheet: var(--fl-host-surface, #ffffff);
+  --wg-sheet-2: var(--fl-host-raised, #f7f4f2);
+  --wg-input: var(--fl-host-input, #faf6f5);
+  --line: color-mix(in srgb, var(--color-text, #17171a) 10%, transparent);
+  --color-paper: var(--wg-sheet);
+  --color-paper-2: var(--wg-sheet-2);
+  --color-surface: var(--wg-sheet);
+  --color-surface-2: var(--wg-sheet-2);
+  --color-line: var(--line);
+  /*
+   * 功能注释：编辑器强调色固定为编辑器酒红，禁止吃主站 --color-primary / .romance-platform 的平台红。
+   * 中性纸面可跟宿主深浅；主色 / 辅色 / 辉光一律用编辑器自己的 token。
+   */
+  --wg-wine: #a8283c;
+  --wg-wine-deep: #8e2135;
+  --wg-rose: #c45a6a;
+  --wg-glow: color-mix(in srgb, #a8283c 32%, transparent);
+  --wg-on-primary: #ffffff;
+  --fl-wine: #a8283c;
+  --fl-wine-deep: #8e2135;
+  --fl-rose: #c45a6a;
+  --fl-glow: color-mix(in srgb, #a8283c 32%, transparent);
+  --fl-on-primary: #ffffff;
+  --jade: #a8283c;
+  --jade-deep: #8e2135;
+  --coral: #c45a6a;
+  --cute-glow: color-mix(in srgb, #a8283c 22%, transparent);
+  --dream-glow: color-mix(in srgb, #a8283c 18%, transparent);
+  --color-jade: #a8283c;
+  --color-jade-deep: #8e2135;
+  --color-coral: #c45a6a;
+}
+
+/* 功能注释：宿主深色皮肤下，编辑器酒红提亮一档，保证在深色纸面上的对比度 */
+html[data-mode="dark"] .world-gen-editor {
+  --wg-wine: #e0566b;
+  --wg-wine-deep: #f07b8c;
+  --wg-rose: #f29aa6;
+  --fl-wine: #e0566b;
+  --fl-wine-deep: #f07b8c;
+  --fl-rose: #f29aa6;
+  --jade: #e0566b;
+  --jade-deep: #f07b8c;
+  --coral: #f29aa6;
+  --color-jade: #e0566b;
+  --color-jade-deep: #f07b8c;
+  --color-coral: #f29aa6;
+}
+
+/* 功能注释：作品展示封面——整卡左右结构（预览 | 设置），禁止再上下拆两块 */
+.cover-bg-only {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: stretch;
+  gap: 0;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
+  /* 功能注释：实心底，禁止渐变末端 transparent 透出壳层底纹 */
+  background: var(--wg-sheet);
+  background-color: var(--wg-sheet);
+  box-shadow: 0 10px 24px -20px color-mix(in srgb, var(--ink) 50%, transparent);
+}
+.cover-bg-only-panel button[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--jade) 55%, transparent);
+  background: color-mix(in srgb, var(--jade) 12%, transparent);
+  color: var(--jade);
+  font-weight: 750;
+}
+.cover-bg-only-stage {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 8.1rem;
+  min-width: 8.1rem;
+  padding: 0.65rem 0.55rem;
+  border-right: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  background: color-mix(in srgb, var(--ink) 3.5%, transparent);
+}
+.cover-bg-only-stage > div:first-child {
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 16px -12px color-mix(in srgb, var(--ink) 65%, transparent);
+}
+.cover-bg-only-caption {
+  margin: 0;
+  max-width: 7.2rem;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink-soft);
+}
+.cover-bg-only-panel {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.7rem 0.8rem 0.75rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.cover-bg-only-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.cover-bg-only-panel-title {
+  font-size: 12.5px;
+  font-weight: 750;
+  color: var(--ink);
+}
+.cover-bg-only-panel-desc {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.cover-bg-only-panel-head .cover-bg-only-clear {
+  margin-left: auto;
+}
+.cover-bg-only-label {
+  margin: 0.45rem 0 0.3rem;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.cover-bg-only-body {
+  display: grid;
+  gap: 0.35rem;
+}
+.cover-bg-only-body > p.mb-1\.5 {
+  margin-top: 0.55rem;
+  margin-bottom: 0.3rem;
+}
+.cover-bg-only-clear {
+  margin: 0;
+  padding: 0.15rem 0.2rem;
+  border: 0;
+  background: transparent;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.cover-bg-only-clear:hover {
+  color: var(--danger, #9a3540);
+}
+/* 功能注释：养成·日程分类行高压缩，避免每条占一大块 */
+.world-gen-editor .schedule-cat-row {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+.world-gen-editor .schedule-cat-list {
+  gap: 0.35rem;
+}
+@media (max-width: 420px) {
+  .cover-bg-only {
+    flex-direction: column !important;
+  }
+  .cover-bg-only-stage {
+    width: 100%;
+    min-width: 0;
+    border-right: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+    padding-bottom: 0.55rem;
+  }
+}
+.world-gen-editor details.group,
+.world-gen-editor details.world-gen-card {
+  border-radius: 0.95rem;
+  border: 1px solid var(--wg-faint, color-mix(in srgb, var(--color-text, #17171a) 10%, transparent)) !important;
+  /* 功能注释：与设定页 .world-gen-card 同款实心白底 + 同阴影，禁止磨砂/半透 */
+  background: var(--wg-sheet) !important;
+  background-color: var(--wg-sheet) !important;
+  background-image: none !important;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-shadow, #000) 7%, transparent);
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  isolation: isolate;
+}
+.world-gen-editor details.group > summary,
+.world-gen-editor details.world-gen-card > summary {
+  padding-top: 0.65rem !important;
+  padding-bottom: 0.65rem !important;
+  background: var(--wg-sheet) !important;
+  background-color: var(--wg-sheet) !important;
+}
+.world-gen-editor details.group > div,
+.world-gen-editor details.world-gen-card > div {
+  background: var(--wg-sheet) !important;
+  background-color: var(--wg-sheet) !important;
+  padding-top: 0.7rem !important;
+  padding-bottom: 0.75rem !important;
+}
+/* 功能注释：区块内字段间距收紧，消灭大块留白 */
+.world-gen-editor details.group > div.space-y-3 {
+  gap: 0;
+}
+.world-gen-editor details.group > div.space-y-3 > * + * {
+  margin-top: 0.55rem !important;
 }
 /*
  * 功能注释：生成世界编辑器宽度契约
@@ -1997,22 +2509,58 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
   max-width: 1200px !important;
   margin-inline: auto;
   box-sizing: border-box;
+  gap: 0;
+}
+.world-gen-editor .mod-editor-root.space-y-2\.5 > * + * {
+  margin-top: 0.55rem !important;
 }
 .world-gen-editor .mod-editor-chrome {
-  /* 功能注释：刘海屏顶栏避开状态栏 */
-  top: env(safe-area-inset-top, 0px);
-  background-color: color-mix(in srgb, var(--paper) 94%, transparent) !important;
-  border-color: var(--fl-faint, var(--line)) !important;
+  /* 功能注释：顶栏贴屏幕上沿与左右；实心白底对齐设定页卡片，禁止磨砂半透明 */
+  top: 0;
+  width: calc(100% + 1.5rem);
+  max-width: none;
+  margin-left: -0.75rem;
+  margin-right: -0.75rem;
+  border-radius: 0 !important;
+  padding-top: calc(0.4rem + env(safe-area-inset-top, 0px)) !important;
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
+  background: var(--wg-sheet) !important;
+  background-color: var(--wg-sheet) !important;
+  background-image: none !important;
+  border-color: color-mix(in srgb, var(--color-text, #17171a) 10%, transparent) !important;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-shadow, #000) 7%, transparent);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  opacity: 1 !important;
+}
+@media (min-width: 640px) {
+  .world-gen-editor .mod-editor-chrome {
+    width: calc(100% + 2.5rem);
+    margin-left: -1.25rem;
+    margin-right: -1.25rem;
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
+  }
 }
 .world-gen-editor .sticky {
-  background-color: color-mix(in srgb, var(--paper) 94%, transparent) !important;
-  border-color: var(--fl-faint, var(--line)) !important;
+  background-color: var(--wg-sheet) !important;
+  border-color: color-mix(in srgb, var(--color-text, #17171a) 10%, transparent) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 @media (max-width: 640px) {
-  /* 功能注释：窄屏壳层贴边，内容区真正占满设备宽 */
+  /* 功能注释：窄屏壳层贴边，内容区真正占满设备宽；顶栏负边距与壳层左右 padding 对齐 */
   .world-gen-shell.world-gen-editor {
     padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
     padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
+  }
+  .world-gen-editor .mod-editor-chrome {
+    width: calc(100% + 2 * max(0.5rem, env(safe-area-inset-left, 0px)));
+    margin-left: calc(-1 * max(0.5rem, env(safe-area-inset-left, 0px)));
+    margin-right: calc(-1 * max(0.5rem, env(safe-area-inset-right, 0px)));
+    padding-left: max(0.5rem, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(0.5rem, env(safe-area-inset-right, 0px)) !important;
   }
   .world-gen-editor .mod-editor-root {
     max-width: 100% !important;
@@ -2027,32 +2575,123 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
   }
 }
 .world-gen-editor [class*="bg-paper-2"] {
-  background-color: var(--paper-2) !important;
+  background-color: var(--wg-sheet-2) !important;
   background-image: none !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 .world-gen-editor [class*="bg-paper"]:not([class*="bg-paper-2"]):not([class*="bg-paper/"]) {
-  background-color: var(--paper) !important;
+  background-color: var(--wg-sheet) !important;
   background-image: none !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 .world-gen-editor [class*="bg-paper/"] {
-  background-color: color-mix(in srgb, var(--paper-2) 92%, transparent) !important;
+  /* 功能注释：半透明 utility（/60 /80）一律实心白，与设定页卡片不透明度一致 */
+  background-color: var(--wg-sheet) !important;
+  background-image: none !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 .world-gen-editor [class*="text-ink-soft"] { color: var(--ink-soft) !important; }
 .world-gen-editor [class*="text-ink"]:not([class*="text-ink-soft"]) { color: var(--ink) !important; }
-.world-gen-editor [class*="border-line"] { border-color: color-mix(in srgb, var(--line) 88%, transparent) !important; }
+.world-gen-editor [class*="border-line"] { border-color: color-mix(in srgb, var(--line) 92%, #b87882) !important; }
 .world-gen-editor input,
 .world-gen-editor textarea,
 .world-gen-editor select {
-  background-color: var(--fl-input, var(--paper-2)) !important;
+  background-color: var(--fl-input, #faf0ea) !important;
   color: var(--ink) !important;
-  border-color: var(--line) !important;
+  border-color: color-mix(in srgb, var(--fl-wine, var(--jade)) 18%, var(--line)) !important;
+  box-shadow: inset 0 1px 2px color-mix(in srgb, #5a2432 8%, transparent);
+}
+/* 功能注释：题材等 pill 未选中态加暖底，避免一排惨白空胶囊 */
+.world-gen-editor button.rounded-full[class*="border-line"]:not([class*="bg-jade"]) {
+  background-color: color-mix(in srgb, var(--wg-sheet-2) 92%, var(--wg-wine)) !important;
+}
+.world-gen-editor .cover-bg-only {
+  /* 功能注释：封面块也用实心白，对齐设定页卡片；去掉粉渐变以免像透底 */
+  border-color: var(--wg-faint, color-mix(in srgb, var(--color-text, #17171a) 10%, transparent)) !important;
+  background: var(--wg-sheet) !important;
+  background-color: var(--wg-sheet) !important;
+  background-image: none !important;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-shadow, #000) 7%, transparent);
+  opacity: 1 !important;
+}
+.world-gen-editor .cover-bg-only-stage {
+  background: var(--wg-sheet-2) !important;
+  border-right-color: var(--wg-faint, color-mix(in srgb, var(--color-text, #17171a) 10%, transparent)) !important;
+}
+/* 功能注释：页底「上一步 / 下一步」托底条实心白，与设定页卡片同不透明度 */
+.world-gen-editor .mod-editor-root > .flex.gap-2:has(button) {
+  margin-top: 0.35rem;
+  padding: 0.55rem;
+  border-radius: 1rem;
+  border: 1px solid var(--wg-faint, color-mix(in srgb, var(--color-text, #17171a) 10%, transparent));
+  background: var(--wg-sheet) !important;
+  background-color: var(--wg-sheet) !important;
+  background-image: none !important;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-shadow, #000) 7%, transparent);
+  opacity: 1 !important;
+}
+.world-gen-editor .mod-editor-root > .flex.gap-2:has(button) > button {
+  border-style: solid !important;
+  border-radius: 0.85rem !important;
+  padding-top: 0.7rem !important;
+  padding-bottom: 0.7rem !important;
+}
+.world-gen-editor .mod-editor-root > .flex.gap-2:has(button) > button.flex-1 {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--jade) 82%, #fff) 0%, var(--jade) 100%) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--jade) 55%, transparent);
+}
+.world-gen-editor .mod-editor-root > p.text-\[11px\] {
+  margin-top: 0.35rem !important;
+  text-align: center;
+  opacity: 0.85;
 }
 .world-gen-editor button[class*="bg-jade"]:not([class*="bg-jade/"]),
-.world-gen-editor .ui-btn-primary {
+.world-gen-editor .ui-btn-primary,
+.world-gen-editor button.wg-ai-action {
   background-color: var(--jade) !important;
   background-image: none !important;
-  color: var(--ink) !important;
+  color: var(--fl-on-primary, #fff) !important;
   border-color: transparent !important;
+}
+/* 功能注释：人物线路等 AI 主按钮——酒红底白字，不被 soft tint / 渐变剥离规则洗成看不见 */
+html[data-romance] button.wg-ai-action {
+  background-color: var(--jade) !important;
+  background-image: none !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+/* 功能注释：创作世界表单收敛——隐藏冗长说明 / AI 对话条 / JSON 导入导出，保留可操作字段 */
+.world-gen-editor .wg-ai-chat-banner,
+.world-gen-editor .wg-scope-banner,
+.world-gen-editor .wg-field-help,
+.world-gen-editor .wg-json-io {
+  display: none !important;
+}
+/* 功能注释：剧情页空态轻量化——去掉厚粉底与粗虚线框 */
+.world-gen-editor .wg-story-empty {
+  border: 1px dashed color-mix(in srgb, var(--line) 70%, transparent);
+  background: var(--wg-sheet-2) !important;
+  opacity: 1 !important;
+}
+/* 功能注释：开局日期下拉必须浅底深字；禁止被暗色回退写死成黑底看不清 */
+.world-gen-editor .start-date-panel {
+  background: var(--wg-sheet) !important;
+  color: var(--ink) !important;
+}
+.world-gen-editor .start-date-opt {
+  color: var(--ink) !important;
+}
+.world-gen-editor .start-date-opt.is-on {
+  color: var(--jade) !important;
 }
 .world-gen-editor button[class*="border-jade"] {
   border-color: color-mix(in srgb, var(--jade) 55%, transparent) !important;
@@ -2085,7 +2724,7 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
 }
 /* 功能注释：选中页签的已填数量须深字白底；开关滑块规则会把带 bg-white 的圆角 span 刷成白底，数字若仍是白色就看不见。 */
 .world-gen-editor button[aria-pressed="true"] .wg-tab-count.is-on {
-  background-color: #ffffff !important;
+  background-color: var(--wg-sheet) !important;
   color: #6e1228 !important;
 }
 
@@ -2136,6 +2775,167 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
 .world-gen-editor .codex-ui .codex-composer-send:disabled {
   opacity: 0.36;
 }
+
+/* 功能注释：对话生成玩法底部输入坞——暖色玻璃卡片贴在视口内，提示不再被裁掉 */
+.world-gen-editor .wg-play-dock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+  padding: 0.45rem 0.45rem 0.4rem;
+  padding-bottom: max(0.4rem, env(safe-area-inset-bottom));
+  border-radius: 1.35rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--wg-sheet) 88%, transparent), color-mix(in srgb, var(--wg-sheet) 92%, var(--wg-wine)));
+  border: 1px solid color-mix(in srgb, var(--wg-wine, #a8283c) 24%, var(--wg-sheet));
+  box-shadow:
+    0 18px 40px -26px rgba(110, 28, 42, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+}
+.world-gen-editor .wg-play-dock > div:first-child {
+  border-color: color-mix(in srgb, var(--wg-wine, #a8283c) 16%, var(--wg-sheet)) !important;
+  background: color-mix(in srgb, var(--wg-sheet) 90%, var(--wg-wine)) !important;
+  background-color: color-mix(in srgb, var(--wg-sheet) 90%, var(--wg-wine)) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+.world-gen-editor .wg-play-dock > div:first-child:focus-within {
+  border-color: color-mix(in srgb, var(--wg-wine, #a8283c) 48%, transparent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wg-wine, #a8283c) 16%, transparent) !important;
+}
+.world-gen-editor .wg-play-dock button[aria-label="玩法起步"] {
+  width: auto;
+  height: 2rem;
+  padding: 0 0.75rem 0 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--wg-wine, #a8283c) 12%, var(--wg-sheet));
+  color: var(--wg-wine-deep, #8e2135);
+}
+.world-gen-editor .codex-ui .wg-play-dock .codex-composer-send {
+  width: 2.15rem;
+  height: 2.15rem;
+}
+.world-gen-editor .codex-ui .wg-play-dock .codex-composer-send:disabled {
+  opacity: 1;
+  filter: none;
+  background: linear-gradient(160deg, #d47886 0%, #a8283c 100%) !important;
+  background-image: linear-gradient(160deg, #d47886 0%, #a8283c 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 6px 16px -6px rgba(168, 40, 60, 0.45);
+  cursor: not-allowed;
+}
+.world-gen-editor .wg-play-dock-hint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0;
+  margin: 0 0.35rem 0.05rem;
+}
+.world-gen-editor .wg-play-dock-hint span {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--wg-muted, #6b5458);
+}
+.world-gen-editor .wg-play-dock-hint span + span::before {
+  content: "·";
+  margin: 0 0.4rem;
+  color: color-mix(in srgb, var(--wg-wine, #a8283c) 40%, transparent);
+}
+
+/* 功能注释：对话生成玩法工坊——草稿卡 / 步骤芯片 / 聊天区 / 发送圆钮，对齐酒红暗壳 */
+.world-gen-editor .wg-draft-card {
+  background:
+    linear-gradient(155deg, color-mix(in srgb, var(--fl-wine, #A8283C) 10%, #161618) 0%, #121214 55%, #0e0e10 100%);
+  box-shadow: 0 16px 36px -28px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.world-gen-editor .wg-draft-mark {
+  color: var(--fl-rose, #FF8A9A);
+  background: color-mix(in srgb, var(--fl-wine, #A8283C) 22%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--fl-wine, #A8283C) 35%, transparent);
+}
+.world-gen-editor .wg-step-chip {
+  border-color: color-mix(in srgb, var(--line) 90%, transparent);
+  background: color-mix(in srgb, var(--fl-raised, #141416) 88%, transparent);
+  color: var(--ink-soft);
+}
+.world-gen-editor .wg-step-chip:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--fl-wine, #A8283C) 45%, transparent);
+  color: var(--ink);
+}
+.world-gen-editor .wg-step-chip.is-done {
+  border-color: color-mix(in srgb, var(--fl-wine, #A8283C) 55%, transparent);
+  background: color-mix(in srgb, var(--fl-wine, #A8283C) 16%, transparent);
+  color: var(--fl-rose, #FF8A9A);
+}
+.world-gen-editor .wg-step-index {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  background: color-mix(in srgb, var(--fl-wine, #A8283C) 78%, #000);
+}
+.world-gen-editor .wg-chat-panel {
+  background: linear-gradient(180deg, #121214, #0c0c0e);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+.world-gen-editor .wg-chat-hint {
+  border: 1px dashed color-mix(in srgb, var(--line) 80%, transparent);
+  background: color-mix(in srgb, var(--fl-wine, #A8283C) 7%, transparent);
+}
+.world-gen-editor .wg-composer {
+  background: var(--fl-input, var(--paper-2)) !important;
+}
+.world-gen-editor .wg-send-btn {
+  isolation: isolate;
+}
+.world-gen-editor .wg-send-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: conic-gradient(from 180deg, #ff8a9a, #a8283c, #c9a227, #a8283c, #ff8a9a);
+  opacity: 0.55;
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  animation: advance-spin 8s linear infinite;
+}
+.world-gen-editor .wg-send-core {
+  background: linear-gradient(160deg, #d47886 0%, #a8283c 72%, #8e2135 100%);
+  box-shadow:
+    0 8px 18px -8px rgba(168, 40, 60, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+.world-gen-editor .wg-send-btn:hover:not(:disabled) .wg-send-ring {
+  opacity: 0.9;
+}
+.world-gen-editor .wg-send-btn:hover:not(:disabled) .wg-send-core {
+  filter: brightness(1.06);
+}
+.world-gen-editor .wg-send-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.world-gen-editor .wg-send-btn:disabled .wg-send-ring {
+  opacity: 0.18;
+  animation: none;
+}
+.world-gen-editor .wg-send-btn:disabled .wg-send-core {
+  opacity: 0.42;
+  filter: grayscale(0.2);
+  box-shadow: none;
+}
+.world-gen-editor .wg-playtest-card {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--fl-wine, #A8283C) 12%, #161618), #101012);
+}
+.world-gen-editor .wg-playtest-btn {
+  box-shadow: 0 10px 22px -12px rgba(168, 40, 60, 0.7);
+}
+.world-gen-editor .wg-preview-tabs {
+  background: var(--fl-input, var(--paper-2)) !important;
+}
+
 .codex-chip { border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--ink-soft); background: transparent; transition: color .15s, border-color .15s, background .15s; }
 .codex-chip:hover { color: var(--ink); border-color: color-mix(in srgb, var(--ink) 30%, var(--line)); }
 .codex-chip.is-on { color: var(--paper-2); background: var(--ink); border-color: var(--ink); }
@@ -2163,124 +2963,667 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   生成世界向导 · funloom 暗色创作壳
-   记忆点：酒红序号章 + 预计耗时胶囊 + 流光进度带
+   生成世界向导 · 跟主站皮肤变量
    ═══════════════════════════════════════════════════════════════ */
 .world-gen-shell {
-  /* 功能注释：向导壳色板对齐 .romance-platform，避免两套硬编码分叉 */
-  --wg-bg: var(--fl-bg, #000000);
-  --wg-panel: var(--fl-surface, #0A0A0A);
-  --wg-sheet: var(--fl-sheet, #1C1C1E);
-  --wg-sheet-2: #222226;
-  --wg-ink: var(--fl-ink, #ffffff);
-  --wg-muted: var(--fl-muted, rgba(255, 255, 255, 0.55));
-  --wg-faint: var(--fl-faint, rgba(255, 255, 255, 0.12));
-  --wg-wine: var(--fl-wine, #A8283C);
-  --wg-wine-deep: var(--fl-wine-deep, #8E2135);
-  --wg-rose: var(--fl-rose, #FF8A9A);
-  --wg-glow: var(--fl-glow, rgba(168, 40, 60, 0.35));
+  /*
+   * 功能注释：向导/编辑器壳——中性色可跟宿主纸面；强调色固定编辑器酒红，
+   * 不跟主站 --color-primary / 平台皮肤走，避免平台红混进编辑器。
+   */
+  --wg-bg: var(--fl-bg, var(--color-bg, #faf6f5));
+  --wg-panel: var(--fl-surface, var(--color-surface, #ffffff));
+  --wg-sheet: var(--fl-sheet, var(--color-surface, #ffffff));
+  --wg-sheet-2: var(--fl-raised, var(--color-surface-2, #f6eceb));
+  --wg-ink: var(--fl-ink, var(--color-text, #17171a));
+  --wg-muted: var(--fl-muted, var(--color-text-secondary, #5c5c66));
+  --wg-faint: var(--fl-faint, color-mix(in srgb, var(--color-text, #17171a) 10%, transparent));
+  --wg-wine: #a8283c;
+  --wg-wine-deep: #8e2135;
+  --wg-rose: #c45a6a;
+  --wg-glow: color-mix(in srgb, #a8283c 32%, transparent);
+  --wg-on-primary: #ffffff;
   position: relative;
   isolation: isolate;
   min-height: 100vh;
   color: var(--wg-ink);
-  background:
-    radial-gradient(55% 40% at 0% 0%, rgba(168, 40, 60, 0.18), transparent 62%),
-    radial-gradient(45% 36% at 100% 8%, rgba(142, 33, 53, 0.14), transparent 65%),
-    linear-gradient(180deg, #050505, var(--wg-bg) 40%, #070707);
+  /* 功能注释：壳层只用暖浅纯色，不再铺格子底图（设定页 / 完整编辑器同壳） */
+  background-color: #faf6f4;
+  background-image: none;
+  font-family: var(--font-ui);
 }
-.world-gen-shell::before {
-  content: "";
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  opacity: 0.4;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.035) 0.6px, transparent 0.7px);
-  background-size: 3px 3px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), transparent 85%);
+.world-gen-shell::before,
+.world-gen-shell::after {
+  content: none;
+  display: none;
 }
 .world-gen-shell > * {
   position: relative;
   z-index: 1;
 }
 
+/* 功能注释：设定页左右留白只给表单卡；顶栏自己贴上沿和左右边 */
+.world-gen-page {
+  margin-inline: auto;
+  display: flex;
+  width: 100%;
+  max-width: 36rem;
+  min-height: 100vh;
+  flex-direction: column;
+  padding: 0 1rem calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 640px) {
+  .world-gen-page {
+    padding-inline: 1.25rem;
+  }
+}
+/* 功能注释：顶栏铺满页宽并贴顶，四周不留底纹空隙；返回仍是左侧胶囊，标题绝对居中 */
+.world-gen-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  width: calc(100% + 2rem);
+  min-height: 3.15rem;
+  margin: 0 -1rem 0.7rem;
+  padding: calc(0.35rem + env(safe-area-inset-top, 0px)) 0.85rem 0.35rem;
+  box-sizing: border-box;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--wg-wine, #a8283c) 12%, #fff);
+  border-radius: 0;
+  background: var(--wg-sheet, #fff);
+  box-shadow: none;
+}
+@media (min-width: 640px) {
+  .world-gen-topbar {
+    width: calc(100% + 2.5rem);
+    margin-inline: -1.25rem;
+  }
+}
+.world-gen-topbar .world-gen-back {
+  position: relative;
+  z-index: 1;
+  align-self: center;
+  min-height: 2.05rem;
+  margin: 0;
+  padding: 0 0.8rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--wg-wine, #a8283c) 9%, #fff);
+  color: var(--wg-ink);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+.world-gen-topbar .world-gen-back:hover {
+  background: color-mix(in srgb, var(--wg-wine, #a8283c) 15%, #fff);
+  color: var(--wg-ink);
+}
+.world-gen-topbar .world-gen-title {
+  position: absolute;
+  left: 50%;
+  justify-content: center;
+  margin: 0;
+  max-width: calc(100% - 8.5rem);
+  padding: 0;
+  font-size: 1.12rem;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  transform: translateX(-50%);
+}
+.world-gen-topbar .world-gen-title::before {
+  width: 0.38rem;
+  height: 0.38rem;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wg-wine, #a8283c) 16%, transparent);
+}
+.world-gen-stack {
+  display: grid;
+  gap: 0.75rem;
+}
+.world-gen-field {
+  display: block;
+  margin-bottom: 0.7rem;
+}
+.world-gen-field:last-of-type {
+  margin-bottom: 0.55rem;
+}
+.world-gen-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.55rem;
+}
+.world-gen-mod-scroll {
+  max-height: min(48vh, 22rem);
+  overflow-y: auto;
+  padding-right: 0.15rem;
+}
+.world-gen-mod-lead {
+  margin: -0.2rem 0 0.55rem;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--wg-muted);
+}
+.world-gen-field-hint {
+  margin: 0.35rem 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--wg-muted);
+}
+/* 功能注释：AI 整理开关做成轻量选项卡，选中酒红描边，不抢主字段 */
+.world-gen-polish {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  width: 100%;
+  margin: 0.15rem 0 0;
+  padding: 0.72rem 0.85rem;
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--wg-ink) 12%, transparent);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--wg-wine) 7%, transparent),
+      color-mix(in srgb, var(--wg-ink) 2%, transparent)
+    );
+  color: var(--wg-ink);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.world-gen-polish:hover {
+  border-color: color-mix(in srgb, var(--wg-wine) 35%, transparent);
+}
+.world-gen-polish.is-on {
+  border-color: color-mix(in srgb, var(--wg-wine) 55%, transparent);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--wg-wine) 14%, transparent),
+      color-mix(in srgb, var(--wg-wine) 5%, transparent)
+    );
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wg-wine) 12%, transparent);
+}
+.world-gen-polish-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  margin-top: 0.08rem;
+  border-radius: 0.35rem;
+  border: 1.5px solid color-mix(in srgb, var(--wg-ink) 28%, transparent);
+  background: transparent;
+  color: transparent;
+  flex-shrink: 0;
+}
+.world-gen-polish.is-on .world-gen-polish-mark {
+  border-color: var(--wg-wine);
+  background: var(--wg-wine);
+  color: #fff;
+}
+.world-gen-polish-copy {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+.world-gen-polish-title {
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.3;
+  color: var(--wg-ink);
+}
+.world-gen-polish-desc {
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--wg-muted);
+}
+.world-gen-polish.is-on .world-gen-polish-desc {
+  color: color-mix(in srgb, var(--wg-ink) 62%, var(--wg-muted));
+}
+/* 功能注释：扁平模块勾选——轻描边 + 淡红勾选，禁止整行大红块 */
+.world-gen-mod-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+@media (min-width: 520px) {
+  .world-gen-mod-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.world-gen-mod-pick {
+  display: flex;
+  min-height: 2.55rem;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--wg-faint);
+  background: color-mix(in srgb, var(--wg-ink) 2%, transparent);
+  padding: 0.45rem 0.55rem;
+  text-align: left;
+  color: var(--wg-ink);
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.world-gen-mod-pick:hover {
+  border-color: color-mix(in srgb, var(--wg-wine) 42%, transparent);
+  background: color-mix(in srgb, var(--wg-wine) 5%, transparent);
+}
+.world-gen-mod-pick.is-on {
+  border-color: color-mix(in srgb, var(--wg-wine) 55%, transparent);
+  background: color-mix(in srgb, var(--wg-wine) 9%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wg-wine) 12%, transparent);
+}
+.world-gen-mod-pick-check {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 0.3rem;
+  border: 1.5px solid color-mix(in srgb, var(--wg-ink) 28%, transparent);
+  background: var(--wg-sheet);
+  color: transparent;
+}
+.world-gen-mod-pick.is-on .world-gen-mod-pick-check {
+  border-color: var(--wg-wine);
+  background: var(--wg-wine);
+  color: var(--wg-on-primary);
+}
+.world-gen-mod-pick-name {
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--wg-ink);
+}
+.world-gen-route-list {
+  display: grid;
+  gap: 0.45rem;
+}
+.world-gen-route-hint {
+  margin: -0.15rem 0 0.15rem;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--wg-muted);
+}
+.world-gen-route-empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem 0.75rem;
+  margin: 0;
+  border-radius: 0.85rem;
+  border: 1px dashed color-mix(in srgb, var(--wg-wine) 28%, transparent);
+  background: color-mix(in srgb, var(--wg-wine) 6%, transparent);
+  padding: 0.75rem 0.85rem;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--wg-muted);
+}
+.world-gen-route-empty p {
+  margin: 0;
+  flex: 1 1 12rem;
+}
+.world-gen-route-rate {
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--wg-ink) 6%, transparent);
+  padding: 0.15rem 0.55rem;
+  font-size: 12.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--wg-ink);
+}
+.world-gen-choice.is-on .world-gen-route-rate {
+  background: color-mix(in srgb, var(--wg-on-primary) 22%, transparent);
+  color: var(--wg-on-primary);
+}
+.world-gen-route-rate.is-up {
+  background: color-mix(in srgb, var(--wg-wine) 12%, transparent);
+  color: var(--wg-wine);
+}
+.world-gen-route-rate.is-down {
+  background: color-mix(in srgb, #1f9d6a 14%, transparent);
+  color: #1f9d6a;
+}
+.world-gen-choice.is-on .world-gen-route-rate.is-up,
+.world-gen-choice.is-on .world-gen-route-rate.is-down {
+  background: color-mix(in srgb, var(--wg-on-primary) 22%, transparent);
+  color: var(--wg-on-primary);
+}
+.world-gen-choice.is-disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+.world-gen-choice-inline {
+  align-items: center;
+  padding: 0.55rem 0.75rem;
+}
+.world-gen-chip-accent {
+  border-color: color-mix(in srgb, var(--wg-wine) 35%, transparent);
+  background: color-mix(in srgb, var(--wg-wine) 10%, transparent);
+  color: var(--wg-wine);
+}
+.world-gen-choice.is-on .world-gen-chip,
+.world-gen-choice.is-on .world-gen-chip-accent {
+  border-color: color-mix(in srgb, var(--wg-on-primary) 45%, transparent);
+  background: color-mix(in srgb, var(--wg-on-primary) 16%, transparent);
+  color: var(--wg-on-primary);
+}
+
+.world-gen-back {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  align-self: flex-start;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0.55rem 0.2rem;
+  border: 0;
+  background: transparent;
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.4;
+  color: var(--wg-muted);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.world-gen-back:hover {
+  color: var(--wg-ink);
+}
+
+/* 功能注释：生成世界校验弹窗跟主站主色；字体已由上方平台壳 --font-ui 统一接管，不再单独开例外 */
+.world-gen-err-dialog .ui-sheet-head-bar {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--fl-wine, var(--jade)) 8%, var(--fl-sheet, var(--paper))) 0%,
+    transparent 100%
+  );
+}
+/* 功能注释：校验弹窗正文——直接说缺什么，禁止再做成粉框假输入 */
+.world-gen-err-body {
+  padding: 0.15rem 0.1rem 0.35rem;
+}
+.world-gen-err-tip-text {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.65;
+  color: var(--fl-ink, var(--ink));
+}
+.world-gen-err-hint {
+  margin: 0.45rem 0 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--fl-muted, var(--ink-soft));
+}
+.world-gen-err-dialog .ui-sheet-foot {
+  border-top-color: color-mix(in srgb, var(--fl-wine, var(--jade)) 12%, transparent);
+  background: color-mix(in srgb, var(--fl-wine, var(--jade)) 4%, var(--fl-sheet, var(--paper)));
+}
+
 .world-gen-kicker {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
+  margin: 0;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  letter-spacing: 0.08em;
   color: var(--wg-rose);
+  white-space: nowrap;
 }
 .world-gen-kicker::before {
   content: "";
-  width: 0.45rem;
-  height: 0.45rem;
+  width: 0.35rem;
+  height: 0.35rem;
   border-radius: 999px;
   background: var(--wg-wine);
-  box-shadow: 0 0 0 4px rgba(168, 40, 60, 0.22);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wg-wine) 22%, transparent);
 }
 
 .world-gen-title {
-  margin-top: 0.45rem;
-  font-family: var(--font-sans), "Noto Sans SC", system-ui, sans-serif;
-  font-size: clamp(1.55rem, 3.6vw, 1.9rem);
+  display: inline-flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-family: inherit;
+  font-size: clamp(1.2rem, 3.4vw, 1.45rem);
   font-weight: 800;
   letter-spacing: 0.02em;
-  line-height: 1.15;
+  line-height: 1.2;
   color: var(--wg-ink);
-  text-wrap: balance;
+  white-space: nowrap;
+}
+.world-gen-title::before {
+  content: "";
+  flex-shrink: 0;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: var(--wg-wine);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wg-wine) 22%, transparent);
 }
 
 .world-gen-lead {
-  margin-top: 0.55rem;
-  max-width: 38rem;
-  font-size: 0.92rem;
-  line-height: 1.7;
+  margin-top: 0.25rem;
+  max-width: 36rem;
+  font-size: 0.84rem;
+  line-height: 1.45;
   color: var(--wg-muted);
 }
 
-.world-gen-card {
+/* 功能注释：对话生成玩法顶栏。窄屏标题另起一行，宽屏同一行；禁止 nowrap 把标题顶出屏幕。 */
+.wg-play-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  min-width: 0;
+  margin-bottom: 0.45rem;
+}
+.wg-play-head-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem 0.7rem;
+  min-width: 0;
+}
+.wg-play-head .world-gen-kicker {
+  flex: 0 1 auto;
+  min-width: 0;
+  letter-spacing: 0.04em;
+}
+.wg-play-head .world-gen-title {
+  flex: 1 1 11rem;
+  min-width: min(100%, 8.5rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wg-play-head .world-gen-lead {
+  margin-top: 0;
+  max-width: none;
+}
+
+/* 功能注释：操作条。窄屏两个选择器各占一行，按钮另起一行均分；宽屏回到一行。 */
+.wg-play-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
   border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--line) 92%, #b87882);
+  background: color-mix(in srgb, var(--paper-2) 72%, transparent);
+  padding: 0.55rem 0.65rem;
+}
+.wg-play-bar-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.4rem;
+  min-width: 0;
+}
+.wg-play-field {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  width: 100%;
+}
+.wg-play-field select {
+  min-width: 0;
+  width: 100%;
+}
+.wg-play-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.wg-play-bar-actions > button {
+  display: inline-flex;
+  flex: 1 1 5.5rem;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+}
+.wg-play-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.55rem;
+  min-width: 0;
+  padding: 0 0.1rem;
+}
+.wg-play-meta-line {
+  flex: 1 1 12rem;
+  min-width: 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  /* 功能注释：中文按词断行，避免「美化」被拆到两行 */
+  word-break: keep-all;
+}
+.world-gen-editor .wg-play-meta [role="note"] {
+  flex: 1 1 auto;
+  max-width: 100%;
+  justify-content: center;
+  white-space: normal;
+  text-align: center;
+}
+.wg-play-assist-sub {
+  display: -webkit-box;
+  overflow: hidden;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+@media (min-width: 520px) and (max-width: 839px) {
+  .wg-play-bar-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+@media (min-width: 840px) {
+  .wg-play-bar {
+    flex-direction: row;
+    align-items: center;
+  }
+  .wg-play-bar-fields {
+    flex: 1 1 auto;
+    grid-template-columns: minmax(0, 1.35fr) minmax(9.5rem, 1fr);
+  }
+  .wg-play-bar-actions {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+  }
+  .wg-play-bar-actions > button {
+    flex: 0 0 auto;
+  }
+  .world-gen-editor .wg-play-meta [role="note"] {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  .wg-play-assist-sub {
+    display: block;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    -webkit-line-clamp: unset;
+  }
+}
+
+/* 功能注释：起步建议。窄屏标签不拆字，说明最多两行；避免 4.5em 把「规则与开关」拆成两行、说明被省略号裁光。 */
+.world-gen-editor .ui-list > li > button.group > span:first-child {
+  width: auto;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+@media (max-width: 839px) {
+  .world-gen-editor .ui-list > li > button.group {
+    align-items: flex-start;
+  }
+  .world-gen-editor .ui-list > li > button.group > span:last-child {
+    display: -webkit-box;
+    overflow: hidden;
+    white-space: normal;
+    text-overflow: unset;
+    line-height: 1.45;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+}
+
+/* 功能注释：对话生成玩法页再收紧块间距，避免中间大片空白显得乱 */
+.world-gen-editor .wg-step-chip {
+  padding: 0.2rem 0.55rem;
+  font-size: 11px;
+}
+.world-gen-editor .wg-chat-panel {
+  min-height: 7rem;
+}
+
+.world-gen-card {
+  border-radius: 0.95rem;
   border: 1px solid var(--wg-faint);
-  background: linear-gradient(165deg, #161618, var(--wg-sheet));
-  box-shadow: 0 18px 40px -28px rgba(0, 0, 0, 0.9);
-  padding: 1.05rem 1.05rem 1.15rem;
-  animation: world-gen-rise 0.42s ease both;
+  background: var(--wg-sheet);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-shadow, #000) 7%, transparent);
+  padding: 0.85rem 0.9rem 0.9rem;
+  animation: world-gen-rise 0.36s ease both;
 }
 .world-gen-card + .world-gen-card {
-  animation-delay: 0.05s;
+  animation-delay: 0.04s;
 }
 
 .world-gen-card-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.85rem;
+  gap: 0.65rem;
+  margin-bottom: 0.65rem;
 }
 .world-gen-card-index {
   display: inline-grid;
   place-items: center;
-  min-width: 1.55rem;
-  height: 1.55rem;
-  margin-right: 0.45rem;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  margin-right: 0.4rem;
   border-radius: 999px;
   border: 1px solid transparent;
   background: var(--wg-wine-deep);
   color: #fff;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
-  box-shadow: 0 0 0 4px rgba(142, 33, 53, 0.22);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wg-wine) 20%, transparent);
   vertical-align: 0.05em;
 }
 .world-gen-card-title {
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 0.95rem;
+  font-weight: 750;
   color: var(--wg-ink);
   letter-spacing: 0.01em;
 }
@@ -2290,8 +3633,8 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   align-items: baseline;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 0.4rem;
-  font-size: 0.9rem;
+  margin-bottom: 0.3rem;
+  font-size: 0.84rem;
   font-weight: 700;
   color: var(--wg-ink);
 }
@@ -2316,57 +3659,63 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
 .world-gen-input,
 .world-gen-textarea {
   width: 100%;
-  border-radius: 0.9rem;
+  border-radius: 0.8rem;
   border: 1px solid var(--wg-faint);
-  background: #121214;
-  padding: 0.75rem 0.9rem;
-  font-size: 0.95rem;
+  background: var(--fl-input, var(--wg-bg));
+  padding: 0.62rem 0.78rem;
+  font-size: 0.9rem;
   color: var(--wg-ink);
   outline: none;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
 }
 /* 功能注释：故事设定高度跟字走，禁止固定大空白；过长时框内滚动，手机桌面都适配 */
 .world-gen-textarea {
-  min-height: 2.75rem;
-  max-height: min(42vh, 18rem);
+  min-height: 2.5rem;
+  max-height: min(36vh, 14rem);
   height: auto;
   resize: none;
   overflow-y: auto;
-  line-height: 1.65;
+  line-height: 1.55;
   field-sizing: content;
 }
 .world-gen-input::placeholder,
 .world-gen-textarea::placeholder {
-  color: rgba(255, 255, 255, 0.32);
+  color: color-mix(in srgb, var(--wg-ink) 38%, transparent);
 }
 .world-gen-input:focus,
 .world-gen-textarea:focus {
   border-color: var(--wg-wine);
-  background: #17171a;
-  box-shadow: 0 0 0 3px rgba(168, 40, 60, 0.28);
+  background: var(--wg-panel);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wg-wine) 22%, transparent);
 }
 
 .world-gen-choice {
   display: flex;
   width: 100%;
   align-items: flex-start;
-  gap: 0.75rem;
-  border-radius: 0.95rem;
+  gap: 0.6rem;
+  border-radius: 0.85rem;
   border: 1px solid var(--wg-faint);
-  background: rgba(255, 255, 255, 0.02);
-  padding: 0.85rem 0.9rem;
+  background: color-mix(in srgb, var(--wg-ink) 2.5%, transparent);
+  padding: 0.62rem 0.72rem;
   text-align: left;
   color: var(--wg-ink);
   transition: border-color 0.18s ease, background-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 .world-gen-choice:hover {
-  border-color: rgba(168, 40, 60, 0.45);
-  background: #222226;
+  border-color: color-mix(in srgb, var(--wg-wine) 45%, transparent);
+  background: color-mix(in srgb, var(--wg-ink) 5%, transparent);
 }
 .world-gen-choice.is-on {
   border-color: var(--wg-wine);
-  background: linear-gradient(145deg, rgba(168, 40, 60, 0.22), rgba(28, 28, 30, 0.95));
-  box-shadow: 0 0 0 3px rgba(168, 40, 60, 0.18);
+  background: var(--wg-wine);
+  color: var(--wg-on-primary);
+  box-shadow: none;
+}
+.world-gen-choice.is-on .text-ink,
+.world-gen-choice.is-on .text-ink-soft,
+.world-gen-choice.is-on [class*="text-ink"] {
+  color: var(--wg-on-primary) !important;
 }
 .world-gen-choice-mark {
   margin-top: 0.2rem;
@@ -2374,12 +3723,12 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   width: 1rem;
   height: 1rem;
   border-radius: 999px;
-  border: 2px solid rgba(255, 255, 255, 0.28);
+  border: 2px solid color-mix(in srgb, var(--wg-ink) 28%, transparent);
   background: transparent;
 }
 .world-gen-choice.is-on .world-gen-choice-mark {
-  border-color: var(--wg-wine);
-  background: radial-gradient(circle at 50% 50%, var(--wg-wine) 0 42%, transparent 44%);
+  border-color: var(--wg-on-primary);
+  background: radial-gradient(circle at 50% 50%, var(--wg-on-primary) 0 42%, transparent 44%);
 }
 .world-gen-choice-check {
   margin-top: 0.15rem;
@@ -2389,30 +3738,30 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   width: 1.05rem;
   height: 1.05rem;
   border-radius: 0.3rem;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: 1px solid color-mix(in srgb, var(--wg-ink) 28%, transparent);
   background: transparent;
   color: transparent;
 }
 .world-gen-choice.is-on .world-gen-choice-check {
-  border-color: var(--wg-wine);
-  background: var(--wg-wine);
-  color: #fff;
+  border-color: var(--wg-on-primary);
+  background: var(--wg-on-primary);
+  color: var(--wg-wine);
 }
 
 .world-gen-chip {
   border-radius: 999px;
   border: 1px solid var(--wg-faint);
-  background: #1C1C1E;
+  background: var(--wg-sheet-2);
   padding: 0.32rem 0.8rem;
   font-size: 11.5px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--wg-ink);
   transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
 }
 .world-gen-chip:hover {
-  border-color: rgba(168, 40, 60, 0.5);
-  color: #fff;
-  background: #222226;
+  border-color: color-mix(in srgb, var(--wg-wine) 45%, transparent);
+  color: var(--wg-wine);
+  background: color-mix(in srgb, var(--wg-wine) 8%, transparent);
 }
 
 .world-gen-dock {
@@ -2421,22 +3770,41 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   bottom: 0;
   z-index: 30;
   border-top: 1px solid var(--wg-faint);
-  background: rgba(10, 10, 10, 0.92);
+  background: color-mix(in srgb, var(--wg-panel) 92%, transparent);
   backdrop-filter: blur(14px) saturate(1.1);
   -webkit-backdrop-filter: blur(14px) saturate(1.1);
-  box-shadow: 0 -16px 36px -24px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 -12px 28px color-mix(in srgb, var(--color-shadow, #000) 10%, transparent);
+}
+.world-gen-dock-row {
+  margin-inline: auto;
+  display: flex;
+  max-width: 36rem;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.7rem 1rem;
+  white-space: nowrap;
+}
+.world-gen-dock-row--end {
+  justify-content: flex-end;
+}
+@media (min-width: 640px) {
+  .world-gen-dock-row {
+    padding-inline: 1.5rem;
+  }
 }
 .world-gen-cta {
-  border-radius: 999px;
+  border-radius: 12px;
   border: 1px solid transparent;
-  background: linear-gradient(180deg, var(--wg-wine), var(--wg-wine-deep));
-  color: #fff;
-  padding: 0.72rem 1.4rem;
-  font-size: 0.92rem;
+  background: var(--wg-wine);
+  color: var(--wg-on-primary);
+  padding: 0.65rem 1.1rem;
+  font-size: 0.88rem;
   font-weight: 700;
   letter-spacing: 0.01em;
-  box-shadow: 0 10px 24px -12px var(--wg-glow);
-  transition: filter 0.15s ease, transform 0.15s ease;
+  box-shadow: none;
+  transition: filter 0.15s ease, transform 0.15s ease, background 0.15s ease;
 }
 .world-gen-cta:hover:not(:disabled) {
   filter: brightness(1.08);
@@ -2446,7 +3814,7 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   opacity: 0.5;
 }
 .world-gen-ghost {
-  border-radius: 999px;
+  border-radius: 12px;
   padding: 0.65rem 0.9rem;
   font-size: 0.92rem;
   font-weight: 600;
@@ -2454,8 +3822,8 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   transition: color 0.15s ease, background-color 0.15s ease;
 }
 .world-gen-ghost:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.05);
+  color: var(--wg-ink);
+  background: color-mix(in srgb, var(--wg-ink) 6%, transparent);
 }
 
 .world-gen-progress-stage {
@@ -2463,27 +3831,38 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   min-height: 100vh;
   align-items: center;
   justify-content: center;
-  padding: 2rem 1rem;
+  /* 功能注释：四周留白，进度卡不要贴屏边 */
+  padding: 1.75rem max(1.25rem, env(safe-area-inset-right, 0px)) 1.75rem max(1.25rem, env(safe-area-inset-left, 0px));
+  box-sizing: border-box;
 }
 .world-gen-progress-card {
-  width: 100%;
-  max-width: 32rem;
+  width: min(100%, 32rem);
+  max-width: calc(100vw - 2.5rem);
   border-radius: 1.2rem;
   border: 1px solid var(--wg-faint);
-  background: linear-gradient(165deg, #151517, var(--wg-sheet));
-  box-shadow: 0 28px 56px -28px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(168, 40, 60, 0.08);
-  padding: 1.3rem 1.2rem 1.2rem;
+  background: var(--wg-sheet);
+  box-shadow: 0 18px 40px color-mix(in srgb, var(--color-shadow, #000) 12%, transparent);
+  padding: 1.35rem 1.25rem 1.25rem;
   animation: world-gen-rise 0.45s ease both;
+}
+@media (max-width: 480px) {
+  .world-gen-progress-stage {
+    padding: 1.5rem 1.15rem;
+  }
+  .world-gen-progress-card {
+    max-width: calc(100vw - 2.3rem);
+    padding: 1.2rem 1.05rem 1.1rem;
+  }
 }
 .world-gen-eta {
   flex-shrink: 0;
   min-width: 4.8rem;
   border-radius: 1rem;
-  border: 1px solid rgba(168, 40, 60, 0.45);
-  background: linear-gradient(165deg, rgba(168, 40, 60, 0.22), #1C1C1E);
+  border: 1px solid color-mix(in srgb, var(--wg-wine) 35%, transparent);
+  background: color-mix(in srgb, var(--wg-wine) 10%, var(--wg-sheet));
   padding: 0.55rem 0.7rem 0.6rem;
   text-align: center;
-  box-shadow: 0 0 0 4px rgba(168, 40, 60, 0.12);
+  box-shadow: none;
 }
 .world-gen-eta-label {
   font-size: 10px;
@@ -2500,7 +3879,7 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  color: #fff;
+  color: var(--wg-ink);
 }
 .world-gen-eta-num {
   font-size: 1.25rem;
@@ -2518,7 +3897,7 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   height: 0.5rem;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--wg-ink) 8%, transparent);
 }
 .world-gen-bar > i {
   display: block;
@@ -2562,14 +3941,20 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   gap: 0.55rem;
   border-radius: 0.85rem;
   border: 1px solid var(--wg-faint);
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in srgb, var(--wg-sheet-2) 70%, var(--wg-panel));
   padding: 0.55rem 0.7rem;
   transition: border-color 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease;
 }
 .world-gen-mod-row.is-running {
-  border-color: rgba(168, 40, 60, 0.55);
-  background: linear-gradient(120deg, rgba(168, 40, 60, 0.2), rgba(28, 28, 30, 0.95) 55%);
-  box-shadow: 0 0 0 1px rgba(168, 40, 60, 0.18), 0 10px 22px -16px rgba(168, 40, 60, 0.45);
+  border-color: color-mix(in srgb, var(--wg-wine) 42%, transparent);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--wg-wine) 14%, var(--wg-panel)),
+    color-mix(in srgb, var(--wg-wine) 6%, var(--wg-sheet-2)) 55%,
+    var(--wg-panel)
+  );
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--wg-wine) 12%, transparent),
+    0 10px 22px -16px color-mix(in srgb, var(--wg-wine) 35%, transparent);
   animation: world-gen-row-active 1.6s ease-in-out infinite;
 }
 .world-gen-mod-row.is-running::before,
@@ -2582,17 +3967,23 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   width: 3px;
   border-radius: 0 2px 2px 0;
   background: linear-gradient(180deg, var(--wg-rose), var(--wg-wine));
-  box-shadow: 0 0 10px rgba(168, 40, 60, 0.45);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--wg-wine) 28%, transparent);
 }
 /* 功能注释：生成结束滚到失败项时强调约 2.5s，让用户第一眼看到 */
 .world-gen-mod-row.is-failed {
-  border-color: rgba(255, 107, 122, 0.4);
-  background: rgba(255, 107, 122, 0.08);
+  border-color: color-mix(in srgb, var(--color-danger, #e11d48) 28%, transparent);
+  background: color-mix(in srgb, var(--color-danger, #e11d48) 7%, var(--wg-panel));
 }
 .world-gen-mod-row.is-failed.is-attention {
-  border-color: rgba(255, 107, 122, 0.7);
-  background: linear-gradient(120deg, rgba(255, 107, 122, 0.18), rgba(28, 28, 30, 0.95) 58%);
-  box-shadow: 0 0 0 2px rgba(255, 107, 122, 0.28), 0 14px 28px -14px rgba(255, 107, 122, 0.4);
+  border-color: color-mix(in srgb, var(--color-danger, #e11d48) 45%, transparent);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--color-danger, #e11d48) 12%, var(--wg-panel)),
+    color-mix(in srgb, var(--color-danger, #e11d48) 5%, var(--wg-sheet-2)) 58%,
+    var(--wg-panel)
+  );
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-danger, #e11d48) 18%, transparent),
+    0 14px 28px -14px color-mix(in srgb, var(--color-danger, #e11d48) 28%, transparent);
   animation: world-gen-fail-attention 0.85s ease-in-out 3;
   z-index: 1;
 }
@@ -2607,35 +3998,37 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--wg-muted);
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--wg-ink) 6%, transparent);
 }
 .world-gen-mod-status.is-running {
-  color: #fff;
-  background: rgba(168, 40, 60, 0.85);
-  box-shadow: 0 0 0 0 rgba(168, 40, 60, 0.35);
+  color: var(--wg-on-primary);
+  background: var(--wg-wine);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--wg-wine) 35%, transparent);
   animation: world-gen-pulse 1.4s ease infinite;
 }
-/* 功能注释：已完成 = 绿色胶囊，与失败红、进行中酒红区分 */
+/* 功能注释：已完成 = 浅绿胶囊，与失败红、进行中主色区分 */
 .world-gen-mod-status.is-done {
-  color: #0d2818;
-  background: #3dd68c;
-  box-shadow: 0 0 0 1px rgba(61, 214, 140, 0.35);
+  color: #166534;
+  background: color-mix(in srgb, #22c55e 22%, #fff);
+  box-shadow: 0 0 0 1px color-mix(in srgb, #22c55e 28%, transparent);
 }
 .world-gen-mod-row.is-done {
-  border-color: rgba(61, 214, 140, 0.28);
-  background: rgba(61, 214, 140, 0.06);
+  border-color: color-mix(in srgb, #22c55e 22%, transparent);
+  background: color-mix(in srgb, #22c55e 6%, var(--wg-panel));
 }
 /* 功能注释：失败 = 实心红胶囊，原因行另用 text-danger */
 .world-gen-mod-status.is-failed {
   color: #fff;
-  background: #e23d55;
-  box-shadow: 0 0 0 1px rgba(226, 61, 85, 0.45);
+  background: var(--color-danger, #e11d48);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-danger, #e11d48) 35%, transparent);
 }
 
 .world-gen-shell .text-ink { color: var(--wg-ink) !important; }
 .world-gen-shell .text-ink-soft { color: var(--wg-muted) !important; }
 .world-gen-shell .text-jade { color: var(--wg-rose) !important; }
-.world-gen-shell .text-danger { color: #FF8A9A !important; }
+/* 功能注释：暗色创作壳上原深红字对比度不够（世界书等提示看不清），提亮到浅珊瑚红 */
+.world-gen-shell .text-danger { color: #ff8f99 !important; }
+.world-gen-shell .text-coral { color: #ffa08a !important; }
 .world-gen-shell [class*="border-line"] { border-color: var(--wg-faint) !important; }
 
 @keyframes world-gen-rise {
@@ -2647,25 +4040,29 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   100% { background-position: 200% 50%; }
 }
 @keyframes world-gen-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(168, 40, 60, 0.35); }
-  50% { box-shadow: 0 0 0 5px rgba(168, 40, 60, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--wg-wine) 35%, transparent); }
+  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--wg-wine) 0%, transparent); }
 }
 @keyframes world-gen-row-active {
   0%, 100% {
-    box-shadow: 0 0 0 1px rgba(168, 40, 60, 0.18), 0 10px 22px -16px rgba(168, 40, 60, 0.35);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--wg-wine) 12%, transparent),
+      0 10px 22px -16px color-mix(in srgb, var(--wg-wine) 28%, transparent);
   }
   50% {
-    box-shadow: 0 0 0 2px rgba(168, 40, 60, 0.35), 0 12px 26px -12px rgba(168, 40, 60, 0.45);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--wg-wine) 22%, transparent),
+      0 12px 26px -12px color-mix(in srgb, var(--wg-wine) 32%, transparent);
   }
 }
 @keyframes world-gen-fail-attention {
   0%, 100% {
     transform: translateX(0);
-    box-shadow: 0 0 0 2px rgba(255, 107, 122, 0.25), 0 14px 28px -14px rgba(255, 107, 122, 0.35);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-danger, #e11d48) 18%, transparent),
+      0 14px 28px -14px color-mix(in srgb, var(--color-danger, #e11d48) 22%, transparent);
   }
   35% {
     transform: translateX(-2px);
-    box-shadow: 0 0 0 3px rgba(255, 107, 122, 0.4), 0 16px 30px -12px rgba(255, 107, 122, 0.45);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger, #e11d48) 28%, transparent),
+      0 16px 30px -12px color-mix(in srgb, var(--color-danger, #e11d48) 28%, transparent);
   }
   70% {
     transform: translateX(2px);
@@ -2746,7 +4143,7 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   }
 }
 
-/* —— 开局日期：div 模拟下拉，对齐推进节奏卡酒红选中态；禁止原生 select —— */
+/* —— 开局日期：div 模拟下拉；浅色纸面 + 深字，跟创作壳/主站皮肤变量走，禁止写死黑底 —— */
 .start-date-selects {
   display: flex;
   flex-wrap: wrap;
@@ -2766,24 +4163,24 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   gap: 0.28rem;
   min-width: 4.2rem;
   border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--color-line, #2a2a2e) 100%, transparent);
-  background: color-mix(in srgb, var(--color-paper, #121214) 92%, #000);
+  border: 1px solid var(--line, var(--color-line, #ecdcdb));
+  background: var(--paper-2, var(--fl-raised, var(--color-surface-2, #f6eceb)));
   padding: 0.42rem 0.7rem;
-  color: var(--color-ink, #fff);
+  color: var(--ink, var(--color-ink, #17171a));
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1.2;
   transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 .start-date-trigger:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--color-jade, #a8283c) 55%, transparent);
+  border-color: color-mix(in srgb, var(--jade, var(--color-jade, #a8283c)) 55%, transparent);
 }
 .start-date-trigger.is-open,
 .start-date-trigger.has-value.is-open {
-  border-color: var(--color-jade, #a8283c);
-  background: color-mix(in srgb, var(--color-jade, #a8283c) 12%, #121214);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-jade, #a8283c) 28%, transparent);
-  color: var(--color-jade, #a8283c);
+  border-color: var(--jade, var(--color-jade, #a8283c));
+  background: color-mix(in srgb, var(--jade, var(--color-jade, #a8283c)) 12%, var(--paper, #fff));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--jade, var(--color-jade, #a8283c)) 28%, transparent);
+  color: var(--jade, var(--color-jade, #a8283c));
 }
 .start-date-trigger-num {
   font-variant-numeric: tabular-nums;
@@ -2793,10 +4190,10 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
 .start-date-trigger-unit {
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--color-ink-soft, rgba(255, 255, 255, 0.55));
+  color: var(--ink-soft, var(--color-ink-soft, #5c5c66));
 }
 .start-date-trigger.is-open .start-date-trigger-unit {
-  color: color-mix(in srgb, var(--color-jade, #a8283c) 75%, #fff);
+  color: color-mix(in srgb, var(--jade, var(--color-jade, #a8283c)) 80%, var(--ink, #17171a));
 }
 .start-date-panel {
   position: absolute;
@@ -2808,9 +4205,11 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   overflow-y: auto;
   overscroll-behavior: contain;
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--color-jade, #a8283c) 28%, transparent);
-  background: linear-gradient(165deg, #161618, #121214 55%, #0e0e10);
-  box-shadow: 0 16px 36px -18px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  border: 1px solid color-mix(in srgb, var(--jade, var(--color-jade, #a8283c)) 22%, var(--line, #ecdcdb));
+  background: var(--paper, var(--fl-surface, #ffffff));
+  box-shadow:
+    0 14px 32px -16px color-mix(in srgb, var(--ink, #17171a) 28%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--line, #ecdcdb) 70%, transparent);
   padding: 0.28rem;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2829,17 +4228,17 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   font-size: 12px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
-  color: var(--color-ink, #fff);
+  color: var(--ink, var(--color-ink, #17171a));
   transition: border-color 0.12s ease, background-color 0.12s ease, color 0.12s ease;
 }
 .start-date-opt:hover {
-  border-color: color-mix(in srgb, var(--color-jade, #a8283c) 35%, transparent);
-  background: rgba(255, 255, 255, 0.04);
+  border-color: color-mix(in srgb, var(--jade, var(--color-jade, #a8283c)) 30%, transparent);
+  background: color-mix(in srgb, var(--jade, var(--color-jade, #a8283c)) 8%, transparent);
 }
 .start-date-opt.is-on {
-  border-color: var(--color-jade, #a8283c);
-  background: color-mix(in srgb, var(--color-jade, #a8283c) 14%, transparent);
-  color: var(--color-jade, #a8283c);
+  border-color: var(--jade, var(--color-jade, #a8283c));
+  background: color-mix(in srgb, var(--jade, var(--color-jade, #a8283c)) 12%, transparent);
+  color: var(--jade, var(--color-jade, #a8283c));
 }
 .start-date-clear {
   border: none;
@@ -2847,12 +4246,12 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   padding: 0.2rem 0.35rem;
   font-size: 11px;
   font-weight: 600;
-  color: var(--color-ink-soft, rgba(255, 255, 255, 0.55));
+  color: var(--ink-soft, var(--color-ink-soft, #5c5c66));
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 .start-date-clear:hover {
-  color: var(--color-jade, #a8283c);
+  color: var(--jade, var(--color-jade, #a8283c));
 }
 
 /* ——— P4.1 传讯（书信风）：data-comms-skin="letter" 时把绿信的灰白 / 微信绿换成纸笺与墨褐 ———
@@ -2947,3 +4346,82 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
 /* 场景弹窗：书页式排版，去掉逐段竖线 */
 .scene-sheet .story-prose { padding-left: 0; text-indent: 2em; font-size: 15.5px; line-height: 1.95; letter-spacing: 0.02em; }
 .scene-sheet .story-prose::before { display: none; }
+
+/* ═══════════ 编辑器 × 局内皮肤隔离 ═══════════
+ * 功能注释：毛玻璃/可爱/梦幻/血腥玛丽皮肤会给 bg-paper、按钮写半透明白面、模糊与白色悬停，
+ * 在编辑器里与宿主深浅冲突（深色下白底浅字）。编辑器统一回到 --wg-* 实心纸面。 */
+.world-gen-editor {
+  --cute-face: var(--wg-sheet);
+  --cute-frame: var(--line);
+  --cute-tint: color-mix(in srgb, var(--wg-wine) 12%, var(--wg-sheet));
+  --cute-glow: color-mix(in srgb, var(--wg-wine) 22%, transparent);
+  --bloody-glow: color-mix(in srgb, var(--wg-wine) 24%, transparent);
+  --glass-blur: 0px;
+}
+html[data-romance] .world-gen-editor :is([class*="bg-paper"], .ui-card, .ui-list, .ui-btn, .ui-input, .ui-inputbar, .ui-chip) {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-romance] .world-gen-editor button[class~="border"][class*="border-line"]:not([aria-pressed="true"], .rounded-full) {
+  background-color: var(--wg-sheet) !important;
+  color: var(--ink);
+  box-shadow: none !important;
+}
+html[data-romance] .world-gen-editor button[class~="border"][class*="border-line"]:not(:disabled, [aria-pressed="true"]):hover {
+  background-color: color-mix(in srgb, var(--wg-wine) 8%, var(--wg-sheet)) !important;
+  border-color: color-mix(in srgb, var(--wg-wine) 45%, var(--line)) !important;
+}
+/* 主按钮：可爱皮肤会改成淡底主色字，编辑器保持实心酒红白字 */
+html[data-romance] .world-gen-editor :is(.ui-btn-primary, button[class*="bg-jade"]:not([class*="bg-jade/"]), button[class*="from-[var(--jade)]"]) {
+  background-image: none !important;
+  background-color: var(--wg-wine) !important;
+  color: var(--wg-on-primary) !important;
+  border-color: transparent !important;
+}
+html[data-romance] .world-gen-editor :is(input, textarea, select) {
+  background-color: var(--wg-input) !important;
+  color: var(--ink) !important;
+  border-color: var(--line);
+}
+html[data-romance] .world-gen-editor :is(input, textarea)::placeholder {
+  color: color-mix(in srgb, var(--ink-soft) 75%, transparent);
+}
+.world-gen-editor .stone-tablet {
+  background: var(--wg-sheet-2) !important;
+  border-color: var(--line) !important;
+}
+
+/* 地图亮光点位：发光核心 + 柔光晕 + 呼吸外环；颜色取 --pin（默认主题色） */
+.glow-pin {
+  --pin: var(--jade);
+  position: relative;
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 50% 45%, #fff 0 28%, color-mix(in srgb, var(--pin) 55%, #fff) 42%, var(--pin) 72%);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, #fff 85%, transparent),
+    0 0 10px 3px color-mix(in srgb, var(--pin) 75%, transparent),
+    0 0 22px 8px color-mix(in srgb, var(--pin) 35%, transparent);
+}
+.glow-pin::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+  border: 2px solid color-mix(in srgb, var(--pin) 70%, #fff);
+  opacity: 0;
+  animation: glow-pin-pulse 2.2s ease-out infinite;
+}
+.glow-pin[data-tone="active"] { --pin: var(--coral); width: 18px; height: 18px; }
+.glow-pin[data-tone="visited"] { --pin: var(--gold); }
+.glow-pin[data-tone="off"] { --pin: #8a8090; box-shadow: 0 0 0 2px rgba(255,255,255,.7); }
+.glow-pin[data-tone="off"]::after { animation: none; }
+@keyframes glow-pin-pulse {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glow-pin::after { animation: none; }
+}

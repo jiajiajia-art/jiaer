@@ -1,4 +1,5 @@
 import { loadGlobal, saveGlobal } from "./saveScope";
+import { BASE_STYLE_PRESET } from "./presets/stylePreset";
 import { randomName, type NameGender, type NameStyle } from "../game/names";
 /* ————— 本地持久化（localdb）+ 默认值 + 随机生成 ————— */
 import type { AIConfig, GameState, Npc, Player, SignedContract } from "./types";
@@ -24,8 +25,9 @@ export const defaultConfig: AIConfig = {
   apiKey: "",
   model: "",
   models: [],
-  temperature: 0.9,
-  topP: 0.95,
+  // 功能注释：采样默认值取文风基底预设推荐（0.8 / 0.9）；玩家在 AI 设置里保存过的值仍优先
+  temperature: BASE_STYLE_PRESET.config.temperature,
+  topP: BASE_STYLE_PRESET.config.topP,
 };
 
 export function loadConfig(): AIConfig {

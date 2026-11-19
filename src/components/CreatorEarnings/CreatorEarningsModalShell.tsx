@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { IoClose } from 'react-icons/io5';
 import styles from './CreatorEarnings.module.css';
 
@@ -15,6 +16,7 @@ interface Props {
 const CreatorEarningsModalShell: React.FC<Props> = ({
     open, title, onClose, children, actions, wide, closeDisabled = false,
 }) => {
+    const { t } = useTranslation();
     useEffect(() => {
         if (!open) return undefined;
         const previousOverflow = document.body.style.overflow;
@@ -41,7 +43,7 @@ const CreatorEarningsModalShell: React.FC<Props> = ({
             >
                 <header className={styles.modalHeader}>
                     <h2>{title}</h2>
-                    <button type="button" onClick={onClose} aria-label="关闭" disabled={closeDisabled}>
+                    <button type="button" onClick={onClose} aria-label={t('common.close')} disabled={closeDisabled}>
                         <IoClose aria-hidden="true" />
                     </button>
                 </header>

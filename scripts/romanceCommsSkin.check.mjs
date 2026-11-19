@@ -84,11 +84,11 @@ test('WeChatApp_品牌串全部走brand_外壳带data-comms-skin_letter隐藏现
   assert.doesNotMatch(src, /label="绿信安全中心"/);
   assert.doesNotMatch(src, /title="关于绿信"/);
   assert.doesNotMatch(src, /label: "绿信"/);
-  // 书信风：朋友圈改用书信术语（commTerm）、隐藏摇一摇；视频号已整体下线
+  // 书信风：朋友圈改用书信术语；视频号只在现代皮（!letterSkin）渲染
   assert.match(src, /letterSkin = useCommsBrand\(\)\.skin === "letter"/);
   assert.match(src, /!letterSkin && .*label="朋友圈"/s);
   assert.match(src, /letterSkin && \(\s*<div><Item.*?label=\{commTerm\("moments"\)\}/s);
-  assert.doesNotMatch(src, /label="视频号"/);
+  assert.match(src, /!letterSkin && \(\s*<div>\s*<Item[\s\S]*?label="视频号"/);
   assert.match(src, /!letterSkin && \(\s*<div>\s*<Item.*?label="摇一摇"/s);
 });
 
@@ -97,7 +97,10 @@ test('index_css_letter皮肤_纸笺背景_不改modern', () => {
   assert.match(css, /\[data-comms-skin="letter"\]/);
   assert.match(css, /\[data-wx-chat-bg="default"\]/);
   // 所有传讯规则都必须挂在 letter 选择器下，避免污染 modern
-  const block = css.slice(css.indexOf('P4.1 传讯'));
+  // 功能注释：只检查传讯区块本身（到「编辑器 × 局内皮肤隔离」之前），后面的编辑器规则不属于传讯
+  const start = css.indexOf('P4.1 传讯');
+  const endAt = css.indexOf('编辑器 × 局内皮肤隔离', start);
+  const block = css.slice(start, endAt > start ? endAt : undefined);
   for (const line of block.split('\n').filter((l) => /\{\s*$|^\[/.test(l) && l.includes('[data-'))) {
     assert.match(line, /data-comms-skin="letter"/);
   }
@@ -107,8 +110,9 @@ test('index_css_letter皮肤_纸笺背景_不改modern', () => {
 
 test('useCommsBrand_读世界合并链', () => {
   const src = read('components/phone/commsBrand.ts');
-  // 功能注释：品牌与 commTerm / 古风样式共用 worldPhoneCommSkinSet 一个开关，避免标题与正文用语不一致
-  assert.match(src, /resolveCommsBrand\(\{ override: worldPhoneCommSkinSet\(\) \? "letter" : "modern" \}\)/);
+  // 未显式选皮肤时强制 modern；选了则链上 letter 用链，否则 override letter
+  assert.match(src, /if \(!worldPhoneCommSkinSet\(\)\) return resolveCommsBrand\(\{ override: "modern" \}\)/);
+  assert.match(src, /return fromChain\.skin === "letter" \? fromChain : resolveCommsBrand\(\{ override: "letter" \}\)/);
 });
 
 test('chat_绿信语音视频红包转账串走brand_不写死', () => {

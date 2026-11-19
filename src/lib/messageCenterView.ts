@@ -15,7 +15,8 @@ export type MessageFeedItemType =
   | 'report_received'
   | 'report_resolved'
   | 'moderation'
-  | 'feedback_reply';
+  | 'feedback_reply'
+  | 'operator_direct';
 
 export type CreatorEarningWithdrawalMessageInput = {
   notificationType: 'approved' | 'paid' | 'rejected';
@@ -84,6 +85,7 @@ export function resolveMessageListSection(itemType: MessageFeedItemType): Messag
   if (
     itemType === 'announcement'
     || itemType === 'feedback_reply'
+    || itemType === 'operator_direct'
     || itemType === 'game_moderation'
     || itemType === 'game_publish_appeal'
     || itemType === 'creator_earning_withdrawal'

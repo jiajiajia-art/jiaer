@@ -228,15 +228,14 @@ export function LoadMoreButton({ loading, onClick, color = "#666", className = "
 /* 生成「不要重复」提示用的近期内容摘要 */
 export const seenOf = (texts: string[], n = 12) => texts.slice(-n).map((t) => (t || "").slice(0, 30)).join("｜");
 
-/* 未接入 AI 时的统一提示：不再展示与剧情无关的模板内容，引导玩家去接入 AI */
+/* 功能注释：局内已走平台 AI，不再引导去填个人 Key；未登录时提示登录平台 */
 export const openAiConfig = () => window.dispatchEvent(new CustomEvent("star:openaicfg"));
 export function NeedAI({ what, accent = "#07c160", dark, compact }: { what: string; accent?: string; dark?: boolean; compact?: boolean }) {
   return (
     <div className={`flex flex-col items-center text-center ${compact ? "px-4 py-5" : "px-6 py-12"}`}>
       <span className="grid h-12 w-12 place-items-center rounded-[14px] text-[22px] font-black text-white shadow-md" style={{ background: accent }}>AI</span>
-      <p className={`mt-3 text-[14.5px] font-bold ${dark ? "text-white" : "text-[#1a1a1a]"}`}>需要接入 AI</p>
-      <p className={`mt-1 max-w-[260px] text-[12.5px] leading-relaxed ${dark ? "text-white/70" : "text-[#888]"}`}>{what}会由 AI 结合当前剧情、人物与记忆实时生成。接入后即可使用。</p>
-      <button onClick={openAiConfig} className="mt-4 rounded-full px-5 py-2 text-[13px] font-semibold text-white shadow-sm active:scale-95" style={{ background: accent }}>去接入 AI</button>
+      <p className={`mt-3 text-[14.5px] font-bold ${dark ? "text-white" : "text-[#1a1a1a]"}`}>需要登录平台</p>
+      <p className={`mt-1 max-w-[260px] text-[12.5px] leading-relaxed ${dark ? "text-white/70" : "text-[#888]"}`}>{what}由平台 AI 结合当前剧情、人物与记忆实时生成。请先登录平台账号后再试。</p>
     </div>
   );
 }

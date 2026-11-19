@@ -4,11 +4,17 @@
  * 进入时剥离主站 html.dark / accent / skin / font（否则 Romance 令牌被主站深色壳劫持成图1那种深紫底）；
  * 离开时清掉 Romance 主题 class，并恢复进页前主站 class。
  */
-import { Suspense, lazy, useEffect, useState, type ComponentType } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useState, type ComponentType } from 'react';
+import toast from 'react-hot-toast';
 import AuthModal from '../components/AuthModal';
 import AiRouteFab from '../components/AiRoute/AiRouteFab';
+import RechargeModal from '../components/Purchase/RechargeModal';
 import { useLocation } from 'react-router-dom';
-import { authModalStore } from '../store/useAuthStore';
+import { resolveRomanceDocumentTitle } from '../lib/romanceDocumentTitle';
+import { authModalStore, useAuthStore } from '../store/useAuthStore';
+import payApi from '../api/pay/payApi';
+import type { PayOrderRequest } from '../api/pay/pay.type';
+import { auth } from '../api/account/authApi';
 
 import 'virtual:romance-css';
 
@@ -44,14 +50,28 @@ function clearRomanceHtmlClasses() {
 
 export default function RomanceHost() {
   const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
-  // 功能注释：只在玩家游玩（?play=1&fileId=）时显示 AI 线路悬浮球；创作 / 编辑器里线路在各自面板选
+  const updateUser = useAuthStore((s) => s.updateUser);
+  const [rechargeOpen, setRechargeOpen] = useState(false);
+  const [rechargeTab, setRechargeTab] = useState<'diamonds' | 'membership'>('membership');
+  // 功能注释：玩家进局 / 审核预览显示 AI 线路悬浮球；创作编辑器本体不显示，Studio 预览靠 romance:screen
   const { search } = useLocation();
   const q = new URLSearchParams(search);
-  const isPlayerPlay = q.get('play') === '1' && !!q.get('fileId');
-  // 功能注释：Romance 内部进入游戏画面（含编辑器 Studio 预览）时广播 romance:screen，宿主据此显示 AI 线路悬浮球
-  const [inGame, setInGame] = useState(() => (window as unknown as { __romanceScreen?: string }).__romanceScreen === 'game');
+  const fileId = String(q.get('fileId') || '').trim();
+  const isPlayerPlay = !!fileId && (q.get('play') === '1' || q.get('reviewPreview') === '1');
+  // 功能注释：对话生成玩法 / 生成世界创作壳默认不挂悬浮球；进入试玩（screen=game）时仍显示
+  const isCreatorShell = q.get('createPlayMod') === '1' || q.get('createPlayMod') === 'true'
+    || q.get('createWorld') === '1' || q.get('createWorld') === 'true'
+    || q.get('worldGen') === '1' || q.get('worldGen') === 'true';
+  // 功能注释：局内 game / opening 都要用 AI，开幕页也挂悬浮球；含编辑器 Studio 预览
+  const [inGame, setInGame] = useState(() => {
+    const s = (window as unknown as { __romanceScreen?: string }).__romanceScreen;
+    return s === 'game' || s === 'opening';
+  });
   useEffect(() => {
-    const h = (e: Event) => setInGame((e as CustomEvent<string>).detail === 'game');
+    const h = (e: Event) => {
+      const s = (e as CustomEvent<string>).detail;
+      setInGame(s === 'game' || s === 'opening');
+    };
     window.addEventListener('romance:screen', h);
     return () => window.removeEventListener('romance:screen', h);
   }, []);
@@ -61,6 +81,42 @@ export default function RomanceHost() {
     window.addEventListener('funloom:open-auth', openAuth);
     return () => window.removeEventListener('funloom:open-auth', openAuth);
   }, [setIsAuthModalOpen]);
+
+  useEffect(() => {
+    // 功能注释：存档配额「开通会员」→ 充值中心会员页（detail.tab = membership | diamonds）
+    const openRecharge = (e: Event) => {
+      const tab = (e as CustomEvent<{ tab?: string }>).detail?.tab;
+      setRechargeTab(tab === 'diamonds' ? 'diamonds' : 'membership');
+      setRechargeOpen(true);
+    };
+    window.addEventListener('funloom:open-recharge', openRecharge);
+    return () => window.removeEventListener('funloom:open-recharge', openRecharge);
+  }, []);
+
+  const handleRecharge = useCallback(async (order: PayOrderRequest) => {
+    try {
+      const response = await payApi.getPayQrCode(order);
+      if (response.data.code === 200 && response.data.data) return response.data.data;
+      toast.error(response.data.message || '创建充值订单失败');
+    } catch {
+      toast.error('创建充值订单失败');
+    }
+    return null;
+  }, []);
+
+  const closeRecharge = useCallback(() => {
+    setRechargeOpen(false);
+    void auth.getUserInfo().then((res) => {
+      if (res.data.success && res.data.data) updateUser(res.data.data);
+    }).catch(() => undefined);
+  }, [updateUser]);
+  useEffect(() => {
+    const prev = document.title;
+    document.title = resolveRomanceDocumentTitle(search);
+    return () => {
+      document.title = prev || 'funloom';
+    };
+  }, [search]);
   useEffect(() => {
     const root = document.documentElement;
     // 功能注释：先记下主站主题 class，再摘掉，避免与 Romance 同名 dark/accent 抢 CSS 变量
@@ -92,8 +148,14 @@ export default function RomanceHost() {
       >
         <RomanceApp />
       </Suspense>
-      {(isPlayerPlay || inGame) && <AiRouteFab />}
+      {(isPlayerPlay || inGame) && (!isCreatorShell || inGame) && <AiRouteFab />}
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      <RechargeModal
+        isOpen={rechargeOpen}
+        onClose={closeRecharge}
+        onRecharge={handleRecharge}
+        fixedTab={rechargeTab}
+      />
     </div>
   );
 }

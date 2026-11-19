@@ -1,12 +1,10 @@
-import { lazyPanel } from "../lib/lazyPanel";
 import { FrameOverlay } from "./FrameDiy";
 import { useEffect, useMemo, useState } from "react";
 import { useGame } from "../store/gameCtx";
 import { deleteSlot, listSaves, type CoverDiy, type SaveSlot } from "../lib/store";
 import { syncCloudSaves } from "../lib/storage";
 import { Modal } from "./ui";
-const AIConfigPanel = lazyPanel(() => import("./AIConfigPanel"));
-import { IconHeart, IconPlay, IconRefresh, IconSettings, IconSpark } from "../lib/icons";
+import { IconHeart, IconPlay, IconRefresh, IconSpark } from "../lib/icons";
 import { getWorld } from "../mods/registry";
 import { isAuthorPreview } from "../lib/authorPreview";
 import type { CoverCgOpts, CoverCopy } from "../mods/types";
@@ -36,7 +34,7 @@ const BTN = {
   rose: { main: "bg-gradient-to-r from-[#e88aa6] to-[#f4b7c6] text-white font-bold shadow-[0_14px_30px_-12px_rgba(232,138,166,0.9)]", sub: "border border-white/45 bg-white/10 text-white backdrop-blur-md hover:bg-white/20" },
   text: { main: "text-white font-black tracking-[0.3em] hover:tracking-[0.4em]", sub: "text-white/80 tracking-[0.25em] hover:text-white hover:tracking-[0.35em]" },
 } as const;
-const DEF_LABEL = { start: "开始游戏", continue: "继续游戏", config: "配置 AI" } as const;
+const DEF_LABEL = { start: "开始游戏", continue: "继续游戏" } as const;
 
 /* 氛围特效：星光 / 花瓣 / 雪 / 萤火 / 爱心（确定性伪随机，避免每次渲染跳动） */
 export function CoverFx({ kind }: { kind: NonNullable<CoverDiy["fx"]> }) {
@@ -143,10 +141,10 @@ function CoverBg({ images, opts, blur, preview }: { images: string[]; opts: Cove
   );
 }
 
-type CoverHandlers = { onStart: () => void; onContinue: () => void; onConfig: () => void };
+type CoverHandlers = { onStart: () => void; onContinue: () => void };
 
 /* 封面主体：世界封面（cv）+ 玩家 DIY（d），玩家填写的项优先；preview=编辑器缩略预览（不响应点击）
- * displayOnly：作品展示封面——只渲染背景图，禁止标题/简介/「开始游戏·继续游戏·配置 AI」（列表/详情/书架用，不是开局菜单） */
+ * displayOnly：作品展示封面——只渲染背景图，禁止标题/简介/「开始游戏·继续游戏」（列表/详情/书架用，不是开局菜单） */
 export function CoverView({ cv, d: d0, preview, displayOnly, ...h }: { cv: CoverCopy; d?: CoverDiy; preview?: boolean; displayOnly?: boolean } & CoverHandlers) {
   // 作者样式层（模组 cover.style）打底，玩家 DIY 叠在上面；玩家关掉「我的封面」时只剩作者样式
   const d: CoverDiy = withAuthorStyle(cv.style, d0 && d0.on !== false ? d0 : {});
@@ -186,7 +184,6 @@ export function CoverView({ cv, d: d0, preview, displayOnly, ...h }: { cv: Cover
   const btnBase = `group relative flex items-center justify-center gap-2 overflow-hidden ${shape} py-3 text-sm transition-all duration-300 hover:-translate-y-0.5`;
   const subs = ([
     ["continue", h.onContinue, <IconRefresh key="i" width={16} height={16} className="transition-transform duration-500 group-hover:rotate-180" />],
-    ["config", h.onConfig, <IconSettings key="i" width={16} height={16} />],
   ] as const).filter(([k]) => !d.hide?.[k]);
   const gridCls = layout === "row" ? "flex flex-wrap gap-2.5 [&>*]:min-w-[7rem] [&>*]:flex-1" : layout === "stack" ? "grid gap-2.5" : "grid gap-2.5 sm:grid-cols-2";
 
@@ -252,7 +249,7 @@ export function CoverView({ cv, d: d0, preview, displayOnly, ...h }: { cv: Cover
 export default function Cover() {
   const { go, loadState, look } = useGame();
   /* 功能注释：作品 content.cover 只给列表/详情/书架展示，开局菜单不再套用该图；玩家可在美化·封面 DIY。 */
-  const [modal, setModal] = useState<null | "config" | "continue">(null);
+  const [modal, setModal] = useState<null | "continue">(null);
   const [saves, setSaves] = useState<SaveSlot[]>([]);
   const cv: CoverCopy = {};
 
@@ -272,13 +269,7 @@ export default function Cover() {
   return (
     <div className="relative">
       {/* 功能注释：开局菜单用默认底；作品展示封面不在此屏出现 */}
-      <CoverView cv={cv} d={isAuthorPreview() ? undefined : look.cover} onStart={() => go("create")} onContinue={openContinue} onConfig={() => setModal("config")} />
-
-      {modal === "config" && (
-        <Modal title="AI 配置" onClose={() => setModal(null)}>
-          <AIConfigPanel />
-        </Modal>
-      )}
+      <CoverView cv={cv} d={isAuthorPreview() ? undefined : look.cover} onStart={() => go("create")} onContinue={openContinue} />
 
       {modal === "continue" && (
         <Modal panelClassName="ui-dialog-game" title="继续游戏 · 读取存档" onClose={() => setModal(null)}>

@@ -30,7 +30,13 @@ export async function fetchGeoRegion(): Promise<GeoRegionData> {
   try {
     const response = await api.get<GeoRegionApiResponse>('/geo/region');
     const data = response.data?.data;
-    if (data && (data.language === 'zh' || data.language === 'zh-TW' || data.language === 'en')) {
+    if (
+      data
+      && (data.language === 'zh'
+        || data.language === 'zh-TW'
+        || data.language === 'en'
+        || data.language === 'ja')
+    ) {
       return {
         country: data.country ?? null,
         language: data.language,

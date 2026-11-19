@@ -1,6 +1,8 @@
 import { nextTurnCueBlock } from "./eventNotices.ts";
 import { mobsHere } from "../game/mud";
-import { applyMemory, chronicleFallbackSummary, memoryBlock } from "./chronicle";
+import { applyMemory, chronicleFallbackSummary, memoryBlock, recalledMemoryIds } from "./chronicle";
+import { isValid } from "./memory/lifecycle";
+import { stylePresetPostHistory, stylePresetSystemBlock } from "./presets/stylePreset";
 import { parseStepJson, type StepParseFail } from "./stepParse.ts";
 import { affinityCapOf } from "../worlds/star2005/content";
 import { clampAffinity, engineRulesBlock, fillPlaceholders, oocText, parseRp, rulesOf, seqRandom } from "../game/engineRules";
@@ -21,6 +23,7 @@ import { TIME_UNIT_LABEL, limitDays } from "./types";
 import { uid } from "./store";
 import { canRomance, phaseOf, startDateLabel } from "../game/logic";
 import { ensureBirthday, findNpc, isPlaceholderName, normName, tickBirthdays, tickPlayerAge } from "./npcIdentity";
+import { healRuntimeNpcName, isProperPersonName } from "./personName";
 import { STAT_LABELS, STAT_ORDER, WORLD_RULE_DIMS, fameTier, tierOf, clampStat, worldRuleLabel, creationCopy } from "../game/data";
 import { creationVars, fillText } from "../game/creationText";
 import { defaultWorldBook } from "../game/worldbook";
@@ -315,9 +318,19 @@ export async function completeWithTools(
   tools: ToolDef[],
   timeoutMs?: number,
 ): Promise<{ text: string; calls: ToolCall[]; native: boolean }> {
-  // 功能注释：平台文案链路暂不透传 tools，退回普通 complete（与接口不支持 tools 时一致）
+  // 功能注释：平台 JWT 链路同样透传 tools / tool_calls，供模组工坊等原生 function calling
   if (hasPlatformPlayAuth()) {
-    return { text: await complete(cfg, messages, timeoutMs), calls: [], native: false };
+    const r = await completePlayViaPlatform(toPlatformMessages(messages), {
+      timeoutMs,
+      tools,
+      feature: "romance.completeWithTools",
+    });
+    const calls: ToolCall[] = (r.tool_calls ?? []).map((c) => ({
+      name: c.name,
+      args: c.args,
+      raw: c.raw,
+    }));
+    return { text: r.text, calls, native: calls.length > 0 };
   }
   const ctl = timeoutMs && timeoutMs > 0 ? new AbortController() : undefined;
   const dog = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : undefined;
@@ -349,16 +362,33 @@ export async function completeWithTools(
 
 /* ————— 内容解析 ————— */
 
+/** 功能注释：模型常把本该进 JSON options 的行动建议写进正文末尾（- / • / 1.）；从文末剥掉，不进旁白 */
+const OPTION_BULLET = /^\s*(?:[-•*·]|\d+[.)、])\s+\S/;
+const OPTION_HEAD = /^\s*(?:你可以|你可以选择|后续(?:行动)?选项|行动选项|可选行动|选项)\s*[:：]?\s*$/;
+
+export function stripTrailingPlayerOptions(text: string): string {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  let end = lines.length;
+  while (end > 0 && !lines[end - 1].trim()) end--;
+  let i = end;
+  while (i > 0 && OPTION_BULLET.test(lines[i - 1])) i--;
+  if (i < end && i > 0 && OPTION_HEAD.test(lines[i - 1])) i--;
+  // 至少两行才当「选项列表」剥；单行短破折号可能是叙事
+  if (end - i < 2) return text.trimEnd();
+  while (i > 0 && !lines[i - 1].trim()) i--;
+  return lines.slice(0, i).join("\n").trimEnd();
+}
+
 // 流式过程中，把 JSON 数据块从展示文本里剔除（玩家只看到剧情）
 export function displayText(full: string): string {
   let t = full;
   const fence = t.search(/```json|```\s*\{/i);
   if (fence >= 0) t = t.slice(0, fence);
   else {
-    const brace = t.search(/\n\s*\{[\s\S]*"(narrative|state_diff|narration|options|world|player_changes|npc_changes)"/);
+    const brace = t.search(/(^|\n)\s*\{[\s\S]*"(narrative|state_diff|narration|options|world|player_changes|npc_changes)"/);
     if (brace >= 0) t = t.slice(0, brace);
   }
-  return stripMarkup(t);
+  return stripTrailingPlayerOptions(stripMarkup(t));
 }
 
 /* 剥离模型漏出的提示词残骸：「# 谨遵指令」类指令行、--- 分隔线、各级 markdown 标题符号与加粗符号。
@@ -411,6 +441,13 @@ export function stripFieldLabel(line: string): string {
   return line.trim().replace(/^[【\[](剧情)?正文[】\]]\s*[:：]?\s*/, "").trim();
 }
 
+/* 功能注释：方括号里的系统类标签（【系统提示】【旁白】【任务】…）不是说话人，整行按旁白 / 系统提示处理 */
+const NON_SPEAKER = /^(系统|系统提示|提示|旁白|画外音|任务|主线|支线|通知|公告|注|备注|场景|地点|时间|状态|获得|物品|结局|序章|尾声)$/;
+/* 「他低声道：“…”」这类是旁白里的引语，不是说话人标签：代词开头或以说话动词结尾的不算名字 */
+const NARRATED_SPEECH = /^(他|她|它|你|我|他们|她们|我们|你们|众人|大家)|(道|说|问|答|喊|叫|笑|叹|骂|吼|嘀咕|低语|开口|回应|补充)$/;
+const QUOTED = /^[“"「『](.*)[”"」』]$/s;
+const unquote = (t: string) => { const q = t.trim().match(QUOTED); return q ? q[1].trim() : t.trim(); };
+
 // 把散文剧情解析为分段（旁白 / 对话）
 export function proseToSegments(prose: string): Segment[] {
   const segs: Segment[] = [];
@@ -420,10 +457,22 @@ export function proseToSegments(prose: string): Segment[] {
     const line = stripFieldLabel(raw);
     if (!line) continue;
     if (isChapterTitle(line)) continue; // 「【序章 · 天光未亮】」这类章节标题不展示
-    // 约定格式「角色名」：台词——用「」时必须带冒号（不带冒号的「…」多半是台词本身）；【角色名】冒号可省
-    const m = line.match(/^([【「\[])(.+?)[】」\]]([:：]?)\s*(.*)$/);
-    if (m && m[4] && isSpeakerName(m[2].trim()) && (m[1] !== "「" || m[3])) segs.push({ kind: "dialogue", speaker: m[2].trim(), text: m[4] });
-    else segs.push({ kind: "narration", text: line });
+    // 约定格式「角色名」：台词——用「」时必须带冒号（不带冒号的「…」多半是台词本身）；【角色名】冒号可省；
+    // 名字后可带（动作）括注，如「苏晴」（低声）：……
+    const m = line.match(/^([【「\[])(.+?)[】」\]]\s*([（(][^）)]{1,16}[）)])?\s*([:：]?)\s*(.*)$/);
+    if (m && m[5] && isSpeakerName(m[2].trim()) && (m[1] !== "「" || m[4])) {
+      const who = m[2].trim();
+      if (NON_SPEAKER.test(who)) { segs.push({ kind: "narration", text: m[5] }); continue; }
+      segs.push({ kind: "dialogue", speaker: who, text: `${m[3] ? `${m[3]}` : ""}${unquote(m[5])}` });
+      continue;
+    }
+    // 兼容常见变体：苏晴：“台词” / 苏晴（低声）：「台词」——不带括号的名字必须后接引号台词，避免把「时间：傍晚」误判成对话
+    const b = line.match(/^([^\s：:“"「『【\[（(]{1,12})\s*([（(][^）)]{1,16}[）)])?\s*[:：]\s*([“"「『].*[”"」』])\s*$/s);
+    if (b && isSpeakerName(b[1].trim()) && !NON_SPEAKER.test(b[1].trim()) && !NARRATED_SPEECH.test(b[1].trim())) {
+      segs.push({ kind: "dialogue", speaker: b[1].trim(), text: `${b[2] ?? ""}${unquote(b[3])}` });
+      continue;
+    }
+    segs.push({ kind: "narration", text: line });
   }
   return segs;
 }
@@ -479,7 +528,7 @@ export function normalizeStep(raw: AIStep): AIStep {
     }
     if (attrs.length) st.player_changes = { ...(pc0 as object), attrs } as AIStep["player_changes"];
   }
-  if (st.narration) st.narration = stripMarkup(st.narration);
+  if (st.narration) st.narration = stripTrailingPlayerOptions(stripMarkup(st.narration));
   st.need_clarification = (Array.isArray(raw.need_clarification) ? raw.need_clarification : []).map(String).map((q) => q.trim()).filter(Boolean);
   return st;
 }
@@ -540,12 +589,14 @@ function customAttrLine(state: GameState): string {
 }
 
 /* 游玩偏好：本局设定 > 世界观默认；视角不填 = 跟随世界观叙事口吻；方向仅本局（设备偏好，不跟世界观） */
+export const DEFAULT_POV: import("./types").Pov = "2";
 export function playPrefsOf(state: Pick<GameState, "playPrefs">): import("./types").PlayPrefs {
   const d = getWorldSlot("play");
   return {
     // 功能注释：游戏模式暂未开放，固定剧情模式（世界观默认 / 旧存档里的游戏模式也按剧情模式）
     mode: "novel" as const,
-    pov: state.playPrefs?.pov ?? d?.pov,
+    // 功能注释：人称必须明确；玩家 / 世界观都没指定时默认第二人称
+    pov: state.playPrefs?.pov ?? d?.pov ?? DEFAULT_POV,
     // 功能注释：横竖屏暂不支持选择，旧存档里的横屏也按竖屏
     orient: "portrait" as const,
   };
@@ -555,6 +606,19 @@ const POV_RULE: Record<import("./types").Pov, string> = {
   "2": "第二人称：旁白一律以「你」指代主角，像在对玩家耳语；其他人物用名字或他 / 她",
   "3": "第三人称：旁白以主角姓名或「她 / 他」指代主角，保持旁观的叙述距离",
 };
+/** 功能注释：人称提醒（P-11）。系统提示很长、最近剧情原文的人称会把模型带偏，所以在玩家输入前再强调一次 */
+export function povReminder(state: Pick<GameState, "playPrefs">): string {
+  const pov = playPrefsOf(state).pov;
+  return pov ? `【叙事视角 · 本回合必须遵守】${POV_RULE[pov]}。即使前文用了别的人称，从本回合起也按此写。` : "";
+}
+export const POV_LABEL: Record<import("./types").Pov, string> = { "1": "第一人称", "2": "第二人称", "3": "第三人称" };
+/** 当面对话等以 NPC 口吻输出的场景：动作描写里怎么指代主角 */
+export function povPlayerRef(state: Pick<GameState, "playPrefs" | "player">): string {
+  const pov = playPrefsOf(state).pov;
+  if (!pov) return "";
+  const ref = pov === "1" ? "「我」" : pov === "2" ? "「你」" : `「${state.player?.name || "主角姓名"}」或「她 / 他」`;
+  return `动作描写中指代主角一律用${ref}（玩家选择了${POV_LABEL[pov]}）。`;
+}
 function playPrefsBlock(state: GameState): string {
   const p = playPrefsOf(state);
   const parts = [
@@ -587,7 +651,7 @@ export function buildSystemPrompt(state: GameState): string {
   const npcEx = promptFrag("npcExample", firstNpc ? { id: firstNpc.id, name: firstNpc.name } : { id: "npc1", name: "某人" });
   // 时限天数与结算同口径：存档没有自选开局日期时，从世界观实际开局日（day 0）起算
   const limDays = limitDays(state.timeLimit, state.startDate || startDateLabel());
-  // 功能注释：剧本基调必须来自作品；留空时不注入娱乐圈引擎的默认 GM 话术。
+  // 功能注释：系统提示词必须来自作品；留空时不注入娱乐圈引擎的默认 GM 话术。
   return `${getWorldPromptHeader()}
 
 ${engineRulesBlock(rulesOf(state), (id) => state.npcs.find((n) => n.id === id)?.name)}${limDays > 0 ? `【本局时限】整个故事${state.timeLimit?.endDate ? `截止于 ${state.timeLimit.endDate}` : `只有 ${state.timeLimit!.value}${TIME_UNIT_LABEL[state.timeLimit!.unit]}`}（共 ${limDays} 天），当前第 ${(state.sim?.day ?? 0)} 天，剩余 ${Math.max(0, limDays - (state.sim?.day ?? 0))} 天。叙事节奏须与之匹配，不得写超出时限的情节。\n\n` : ""}【主角设定】
@@ -616,7 +680,7 @@ ${state.npcs
 【人物关系网】（人物之间只有下列关系是明确设定的；主角自己的家人与恋人见上方各人物的「与主角」。没列出的伴侣、前任、父母、子女一律视为未设定：不得凭姓氏、称谓、年龄、身份或常识推断谁和谁是亲属或伴侣，也不得替未设定的人编出具体的家人姓名）
 ${relNetPromptLines(state).map((l) => `- ${l}`).join("\n") || "（暂无明确设定的人物关系）"}
 
-【已知记忆（前情摘要）】
+【长期记忆 · 前情摘要】（较早剧情的压缩；近况见后文【剧情记忆】，两者冲突时以较新的【剧情记忆】为准）
 ${state.memory || "（游戏刚刚开始）"}
 
 【输出规范 · 严格遵守】
@@ -626,7 +690,7 @@ ${state.memory || "（游戏刚刚开始）"}
   "narrative": "本回合剧情文本（与正文一致的纯文本）",
   "state_diff": {"world": {}, "player_changes": {}, "npc_changes": []},
   "tabs": {"story":"本回合一句话摘要","character":"主角状态变化要点","npc":"相关人物动向","map":"地点/事件变化","settings":"可省略"},
-  "memory_updates": [{"scope":"main","text":"本回合真正发生、值得长期记住的事（一句话，写清谁做了什么）","imp":1,"who":["相关人物全名"],"keys":["可选：日后提起时可能出现的关键词"]},{"scope":"npc","npc":"角色名","text":"该角色应记住的事"}],
+  "memory_updates": [{"scope":"main","text":"本回合真正发生、值得长期记住的事（一句话，写清谁做了什么）","imp":1,"who":["相关人物全名"],"keys":["可选：日后提起时可能出现的关键词"],"op":"可省略；add 新增 / update 推翻旧事实 / delete 撤销旧事实","replaces":"op 为 update/delete 时必填：被推翻的那条旧记忆原句或其关键片段"},{"scope":"npc","npc":"角色名","text":"该角色应记住的事"}],
   "scene_memory": {"facts":["仅当此地陈设/状态有新出现或改变时写，如：前台的铜铃坏了"],"looks":[{"name":"在场人物全名","outfit":"仅当其穿着变化或首次描写时写"}]},
   "save_summary": "30字内的存档摘要：时间·地点·关键进展",
   "need_clarification": ["仅当玩家指令信息不足、无法判定结果时列出要补充的问题，否则给空数组"],
@@ -642,10 +706,11 @@ ${state.memory || "（游戏刚刚开始）"}
   "game_end": false,
   "epilogue": "仅当你判定结局到来时给出，≥1000字的主角生平后记"
 }
-2.0 记忆：memory_updates 里 scope=main 只记本回合真正发生的新事实（不写猜测、不复述旧事），imp 为重要度：1 日常、2 重要（关系转折、承诺、秘密）、3 关键（改变剧情走向、日后必须记得的事，极少使用）；who 填相关人物全名。scene_memory 只在此地陈设、状态或在场者穿着发生变化时填写，没有变化整个省略。
+2.0 记忆：memory_updates 里 scope=main 只记本回合真正发生的新事实（不写猜测、不复述旧事）；若本回合让【剧情记忆】或前情里的某条事实不再成立（分手、搬走、物品损坏、真相反转、承诺取消），用 op=update 写新事实并在 replaces 填旧说法，单纯失效用 op=delete，系统会让旧说法失效；imp 为重要度：1 日常、2 重要（关系转折、承诺、秘密）、3 关键（改变剧情走向、日后必须记得的事，极少使用）；who 填相关人物全名。scene_memory 只在此地陈设、状态或在场者穿着发生变化时填写，没有变化整个省略。
 2.1 state_diff 与下方的 world / player_changes / npc_changes 等价，二选一填写即可，不要两边重复写同一变动。不要输出 world.note，不要写「局势」摘要。
 2.2 禁止剧情重复：不得复述上一回合已经写过的段落、台词或情节，每回合都必须推进新的事件或新的情绪。
 2.4 台词与旁白去 AI 味：人物说话必须符合其身份、年龄、性格与当下处境，像真实活人在日常开口——口语化、自然平实、有烟火气；严禁书面腔、严禁排比与金句堆砌、严禁拿人物职业硬拗生硬比喻（如用修桥、算账、做菜去硬套人生哲理），严禁「把这话说得很轻，轻得像……」「那口气只有……才懂」「眼底闪过一丝不易察觉的……」「先说清楚/我只说一次」等矫揉造作的 AI 惯用语；段落结尾严禁旁白对玩家总结、喊话或抒情收尾（如「接下来怎么走，全看你自己」「故事才刚刚开始」「这一天注定不平凡」），停在具体的动作、台词或画面上即可。
+2.4.1 活人感：人说话有长有短、会停顿、会被打断、会答非所问、会用语气词（嗯、啊、欸、行吧）和口头禅；情绪多藏在潜台词和小动作里，不把心理活动直接说破；人物各有私心与习惯，不会句句围着主角转、事事都给出完美回应；同一场景里不必每段都写表情和眼神，旁白可以只写一两个关键细节。
 2.5 角色不知道游戏数值：任何人物的台词与心事里，一律不得出现属性名、数值、分数、等级、「八维」「好感度」「名气值」等游戏术语（如「演技180」）；要评价主角，只能用该角色在剧情里亲眼所见、亲耳所闻的具体表现来说（如「你上回试镜那段哭戏还行」），数值只放进 JSON。
 2.6 动作与台词分开写：动作神态写在旁白里，台词放进引号「」；台词行内如需小动作，用全角括号（）包住。
 2.7 换场景：主角本回合移动到另一个地点时，world.location 必须写成目的地的正式地名（优先用地图上已有的地名：${(() => { try { return [...new Set(Object.keys(state.mapEdits ?? {}).filter((k) => k !== "_config").map((k) => (state.mapEdits as Record<string, { name?: string }>)[k]?.name).filter(Boolean))].slice(0, 30).join("、") || "按世界观地图"; } catch { return "按世界观地图"; } })()}）；地点没变就保持原值。
@@ -653,7 +718,7 @@ ${state.memory || "（游戏刚刚开始）"}
 2.3 正文中不得出现「# 谨遵指令」「---」分隔线、markdown 标题或任何字段名。
 3. thoughts：给本回合每位在场的重要 NPC 各写一句心事（不含主角），要与台词形成反差或补充，让玩家有「偷看到」的感觉；diary 只在情绪有明显波动时写，不要每回合都写。
 4. options 固定给 3 个（不要多于 3 个），文案就是玩家点击后要发生的事，具体可玩。没有数值变化的字段就省略，不要编造无意义的变动。
-5. 人物命名铁律：凡在剧情中出场或说话的人物（含来电、亲戚、路人里有台词者），都必须有具体姓名。台词行的「角色名」一律写全名（如「苏桂芬」），不得只写「二姨」「男人」「陌生人」等称谓；称谓写进 aliases。首次出场的新人物必须写进 npc_changes（含 name/gender/age/identity/relation/bio；gender 只能是「男」「女」或「其他」），已出场的人物沿用原名、id 与性别，只更新变化的字段，绝不另建同名或同一人的新角色。
+5. 人物命名铁律：凡在剧情中出场或说话的人物（含来电、亲戚、路人里有台词者），都必须有完整的真实姓名（如「苏桂芬」「冯建国」「沈晚晴」，示例只示意格式）。姓名必须符合本作世界观的文化背景：西式 / 中世纪奇幻用西式名（如「艾琳·霍克」），日式背景用日式名，架空世界沿用世界书与已有人物的命名风格，不得在非中文背景里起中文名。台词行的「角色名」一律写全名，不得只写「二姨」「男人」「陌生人」「烤红薯摊主」「老板娘」「小贩」等称谓或职业；称谓/职业写进 identity，口头称呼写进 aliases。首次出场的新人物必须写进 npc_changes（含 name/gender/age/identity/relation/bio；name 必须有名有姓，identity 写身份如「街边烤红薯摊主」；gender 只能是「男」「女」或「其他」），已出场的人物沿用原名、id 与性别，只更新变化的字段，绝不另建同名或同一人的新角色。
 5.1 人物关系：新人物与【核心人物】里已有人物的关系，只有剧情明确交代时才写进该新人物的 links（按 [id: …] 引用，没有 id 时写对方全名到 name），kind 指对方是新人物的什么人：parent=父亲或母亲，child=子女，partner=现任伴侣或配偶，ex=前任，other=其他明确关系（note 写清是什么关系，如 同门师兄）；拿不准就不写。links 只用于新人物，不得借此改写已有人物之间的关系；【人物关系网】以外的关系一律按未设定处理。
 5.2 性别与人称：旁白与台词指代人物时，代词必须与其性别一致——女用「她」，男用「他」，其他用「TA」；不得把女角色写成「他」或男性外貌动作，也不得把男角色写成「她」。【核心人物】里已标明的性别不可改写。
 6. 只有当故事自然抵达结局（${promptFrag("endingHint", "达成目标/离开/婚恋定局/意外")}等）才把 game_end 设为 true 并给出 epilogue。
@@ -848,9 +913,15 @@ function sceneNpcIds(state: GameState, input: string): string[] {
 /* Prompt 占位符上下文：{{user}} {{time}} {{location}} {{day}}（{{char}} 由调用方补） */
 const phCtx = (state: GameState) => ({ user: state.player?.name, time: state.world?.time, location: state.world?.location, day: state.sim?.day });
 
-export function buildMessages(state: GameState, userInput: string, wbPick?: WorldBookPick): ChatMsg[] {
+/* 短期上下文（工作记忆）：最近回合原文按字数预算自适应取用，至少 MIN 回合、至多 MAX 回合；更早的交给中 / 长期记忆 */
+const SHORT_MIN_TURNS = 4;
+const SHORT_MAX_TURNS = 10;
+const SHORT_CHAR_BUDGET = 5000;
+
+export function buildMessages(state: GameState, userInput: string, wbPick?: WorldBookPick, opts: { model?: string } = {}): ChatMsg[] {
   const input = typeof userInput === "string" ? userInput : String(userInput ?? "");
-  const msgs: ChatMsg[] = [{ role: "system", content: buildSystemPrompt(state) }];
+  // 文风基底预设放最前：通用写作偏好垫底，后面的作品设定 / 输出规范在冲突时优先
+  const msgs: ChatMsg[] = [{ role: "system", content: stylePresetSystemBlock(opts.model) }, { role: "system", content: buildSystemPrompt(state) }];
   // 知识库：按玩家输入检索 help 文档，命中则注入，避免模型编造游戏机制/世界设定
   const kb = knowledgeBlock(input);
   if (kb) msgs.push({ role: "system", content: kb });
@@ -891,12 +962,21 @@ export function buildMessages(state: GameState, userInput: string, wbPick?: Worl
   const hist = state.story.filter((t) => !t.error);
   const lastT = hist[hist.length - 1];
   if (lastT?.role === "player" && lastT.segments.map((x) => x.text).join("").trim() === input.trim()) hist.pop();
-  const recent = hist.slice(-4);
-  for (const t of recent) {
-    const text = t.segments.map((s) => (s.kind === "dialogue" ? `「${s.speaker}」：${s.text}` : s.text)).join("\n");
-    msgs.push({ role: t.role === "player" ? "user" : "assistant", content: text });
+  const turnText = (t: (typeof hist)[number]) => t.segments.map((s) => (s.kind === "dialogue" ? `「${s.speaker}」：${s.text}` : s.text)).join("\n");
+  const recent: typeof hist = [];
+  let shortUsed = 0;
+  for (let i = hist.length - 1; i >= 0 && recent.length < SHORT_MAX_TURNS; i--) {
+    const len = turnText(hist[i]).length;
+    if (recent.length >= SHORT_MIN_TURNS && shortUsed + len > SHORT_CHAR_BUDGET) break;
+    recent.unshift(hist[i]);
+    shortUsed += len;
   }
+  for (const t of recent) msgs.push({ role: t.role === "player" ? "user" : "assistant", content: turnText(t) });
   for (const b of stateBlocks) msgs.push({ role: "system", content: b });
+  const pov = povReminder(state);
+  if (pov) msgs.push({ role: "system", content: pov });
+  const post = stylePresetPostHistory();
+  if (post) msgs.push({ role: "system", content: post });
   // OOC：按底层规则的标记符识别，作为场外话交给模型，不推进剧情
   const ooc = oocText(input, rulesOf(state).narrative.oocMarks);
   // RP 文本标记：*动作* /「台词」标注后交给模型，区分玩家动作与玩家台词
@@ -906,15 +986,29 @@ export function buildMessages(state: GameState, userInput: string, wbPick?: Worl
 
 /* —— 记忆压缩（每 5 回合，异步，仅主线） —— */
 export async function compressMemory(cfg: AIConfig, state: GameState): Promise<string> {
-  const transcript = state.story
+  // 功能注释：只取上次压缩之后的新回合（旧的已在旧摘要里），并放宽到 12000 字；
+  // 原先取全文末尾 4000 字，新增剧情超过 4000 字时最早一段既没进摘要、又随后被裁掉，造成记忆断层
+  const sinceTurns = Math.max(1, (state.turnCount ?? 0) - (state.memAt ?? 0));
+  const fresh = state.story.filter((t) => !t.error).slice(-sinceTurns * 2);
+  const transcript = fresh
     .map((t) => t.segments.map((s) => (s.kind === "dialogue" ? `${s.speaker}:${s.text}` : s.text)).join(" "))
     .join("\n");
-  const prompt = `请把下面这段养成剧情压缩成不超过 400 字的主线记忆摘要，只保留：关键剧情推进、人物关系变化、主角重要抉择与结果。不要写无关细节。已有旧摘要可并入。
+  // 长期记忆巩固：旧摘要 + 已晋升的长期事件 + 近期原文 → 分栏的长期摘要（被推翻的旧事实不再带入）
+  const longFacts = (state.chronicle ?? []).filter((e) => isValid(e) && (e.tier === "long" || e.imp >= 2)).slice(-30).map((e) => `· 第${e.day}天 ${e.text}`).join("\n");
+  const prompt = `请把下面的养成剧情整理成不超过 500 字的长期记忆摘要，按以下四栏输出（某栏没有内容就省略该栏）：
+【主线进展】按时间顺序的关键推进与主角重要抉择
+【人物关系】各主要人物与主角的关系现状及转折
+【承诺与秘密】尚未兑现的约定、已知或隐瞒的秘密
+【未解悬念】仍在发展、日后需要回收的线索
+要求：只写已经发生的事实；以较新的信息为准，被推翻的旧说法直接删除；不写无关细节，不写分析。
 
 旧摘要：${state.memory || "无"}
 
+长期事件：
+${longFacts || "无"}
+
 近期剧情：
-${transcript.slice(-4000)}`;
+${transcript.slice(-12000)}`;
   if (isConfigured(cfg)) {
     try {
       const out = await complete(cfg, [{ role: "user", content: prompt }]);
@@ -935,6 +1029,35 @@ ${transcript.slice(-4000)}`;
 export function newlyUnlockedCgs(state: GameState): string[] {
   if (!state.sim) return [];
   return (state.cgs ?? []).filter((c) => c.enabled !== false && !!(c.imageFileId || c.image) && c.conds.length > 0 && !state.cgUnlocked?.[c.id] && c.conds.every((k) => evalFixedCond(k, state.sim))).map((c) => c.id);
+}
+
+/** 功能注释：id 撞上了已有人物，但名字明显是另一个人（不是全名/简称/别名关系）且带新人物资料（年龄/身份/简介） */
+function looksLikeOtherPerson(npc: Npc, name: string, nc: { age?: unknown; bio?: unknown; identity?: unknown }): boolean {
+  const n = normName(name);
+  if (!n || !isProperPersonName(name)) return false;
+  const known = [npc.name, ...(npc.aliases ?? [])].map(normName).filter(Boolean);
+  if (known.some((k) => k === n || k.includes(n) || n.includes(k))) return false;
+  return !!(nc.age || nc.bio || nc.identity);
+}
+
+/**
+ * 功能注释：正文里开口说话、但模型没写进 npc_changes 的有名有姓的人，补一条最小登场记录，
+ * 让 TA 有档案、进在场名单、出初遇名片，而不是「说了话却查无此人」。主角本人、已有人物、占位称呼都跳过。
+ */
+export function withSpeakerNewcomers(state: GameState, step: AIStep, segments: Segment[]): AIStep {
+  const declared = new Set((step.npc_changes ?? []).map((nc) => normName(typeof nc?.name === "string" ? nc.name : "")).filter(Boolean));
+  const me = normName(state.player?.name ?? "");
+  const extra: NonNullable<AIStep["npc_changes"]> = [];
+  for (const sg of segments) {
+    if (sg.kind !== "dialogue") continue;
+    const name = sg.speaker.trim();
+    const n = normName(name);
+    if (!n || n === me || declared.has(n) || isPlaceholderName(name) || !isProperPersonName(name)) continue;
+    if (findNpc(state.npcs, undefined, name)) continue;
+    declared.add(n);
+    extra.push({ name, relation: "初识", identity: "初次登场", interaction: `与你说上了话：「${sg.text.slice(0, 30)}」` } as NonNullable<AIStep["npc_changes"]>[number]);
+  }
+  return extra.length ? { ...step, npc_changes: [...(step.npc_changes ?? []), ...extra] } : step;
 }
 
 export function applyStep(state: GameState, step: AIStep): { next: GameState; changes: string[] } {
@@ -963,7 +1086,7 @@ export function applyStep(state: GameState, step: AIStep): { next: GameState; ch
       if (a.key === "money") continue; // 资金只记一本账：sim.money / 绑定货币（见下方），不另建「money」属性
       let attr = next.player.attrs.find((x) => x.key === a.key || x.label === a.label);
       if (!attr) {
-        attr = { key: a.key || a.label || uid(), label: a.label || a.key || "属性", value: 0, max: a.max ?? 999, icon: a.icon };
+        attr = { key: a.key || a.label || uid(), label: a.label || a.key || "属性", value: 0, max: a.max ?? 999 };
         next.player.attrs.push(attr);
       }
       const before = attr.value;
@@ -1022,19 +1145,47 @@ export function applyStep(state: GameState, step: AIStep): { next: GameState; ch
   const cleanTags = (raw: unknown): string[] =>
     Array.isArray(raw) ? Array.from(new Set(raw.map((t) => (typeof t === "string" ? t.trim() : "")).filter(Boolean))) : [];
 
+  // 功能注释：落账前先自愈存档里已有的职业占位名（烤红薯摊主 → 有姓有名）
+  {
+    const avoid = new Set(next.npcs.map((n) => n.name).filter(Boolean));
+    next.npcs = next.npcs.map((n) => {
+      const h = healRuntimeNpcName(n, avoid);
+      if (!h.healed) return n;
+      const { healed: _h, ...rest } = h;
+      changes.push(`更名 ${n.name} → ${rest.name}`);
+      return rest as Npc;
+    });
+  }
+
   // NPC 变更
   for (const nc of step.npc_changes ?? []) {
     if (!nc || typeof nc !== "object") continue;
-    const ncName = typeof nc.name === "string" ? nc.name.trim() : "";
-    let npc: Npc | undefined = findNpc(next.npcs, nc.id, ncName);
+    const rawNcName = typeof nc.name === "string" ? nc.name.trim() : "";
+    // 功能注释：职业/称谓不得当姓名；先挪到 identity，再补有姓有名
+    let ncName = rawNcName;
+    let ncIdentity = typeof nc.identity === "string" ? nc.identity.trim() : "";
+    let ncAliases = Array.isArray(nc.aliases) ? [...nc.aliases] : [];
+    if (ncName && !isPlaceholderName(ncName) && !isProperPersonName(ncName)) {
+      if (!ncIdentity) ncIdentity = ncName;
+      else if (ncIdentity !== ncName) ncAliases.push(ncName);
+      const gHint = typeof nc.gender === "string" ? nc.gender : (/女|姐|妹|娘|她/.test(`${ncName}${ncIdentity}${nc.bio ?? ""}`) ? "女" : "男");
+      const healed = healRuntimeNpcName({ name: ncName, identity: ncIdentity, aliases: ncAliases, persona: { gender: gHint } });
+      ncName = healed.name;
+      ncIdentity = healed.identity || ncIdentity;
+      ncAliases = healed.aliases ?? ncAliases;
+    }
+    let npc: Npc | undefined = findNpc(next.npcs, nc.id, rawNcName) ?? findNpc(next.npcs, nc.id, ncName);
+    // 功能注释：模型常照抄示例里的已有 id 去建新人物——按 id 命中、但名字是另一个完整人名且带新人物资料时，视为新人物，不并进旧角色
+    let freshId = false;
+    if (npc && nc.id && npc.id === nc.id && looksLikeOtherPerson(npc, ncName, nc)) { npc = findNpc(next.npcs, undefined, ncName); freshId = true; }
     if (!npc) {
       // 新人物必须有具体名字：陌生人/某人/男子/他/她 之类占位称呼不建档
-      if (isPlaceholderName(ncName)) continue;
+      if (isPlaceholderName(ncName) || !isProperPersonName(ncName)) continue;
       npc = {
-        id: nc.id || uid(),
+        id: !freshId && nc.id && !next.npcs.some((x) => x.id === nc.id) ? nc.id : uid(),
         name: ncName,
         age: nc.age || "",
-        identity: nc.identity || "神秘人物",
+        identity: ncIdentity || "神秘人物",
         relation: nc.relation || "初识",
         avatar: "",
         bio: nc.bio || "",
@@ -1049,24 +1200,28 @@ export function applyStep(state: GameState, step: AIStep): { next: GameState; ch
         attrs: [],
         affinityHistory: [],
         interactions: [],
+        aliases: ncAliases.length ? Array.from(new Set(ncAliases.map((a) => String(a).trim()).filter(Boolean))) : undefined,
       };
       // 头像：AI 指定的同名池优先，否则从本剧随机池抽（都没开 → 留空，沿用首字头像）
       // 功能注释：本剧池抽不到时套用平台头像库（按性别 / 年龄段分类）；性别一并写入 persona，后续剧情提示才能锁定人称
       const gIn = typeof nc.gender === "string" ? nc.gender.trim() : "";
-      const gNorm = gIn === "男" || gIn === "女" || gIn === "其他" ? gIn : (/女|姐|妹|娘|她/.test(`${ncName}${nc.identity ?? ""}${nc.bio ?? ""}`) ? "女" : /男|哥|弟|他/.test(`${ncName}${nc.identity ?? ""}${nc.bio ?? ""}`) ? "男" : undefined);
+      const gNorm = gIn === "男" || gIn === "女" || gIn === "其他" ? gIn : (/女|姐|妹|娘|她/.test(`${ncName}${ncIdentity}${nc.bio ?? ""}`) ? "女" : /男|哥|弟|他/.test(`${ncName}${ncIdentity}${nc.bio ?? ""}`) ? "男" : undefined);
       if (gNorm) npc.persona = { ...(npc.persona ?? {}), gender: gNorm };
-      const av = drawProfileAvatar(npc.id, { name: ncName, age: nc.age, identity: nc.identity, bio: nc.bio, gender: gNorm, variant: typeof nc.avatar_variant === "string" ? nc.avatar_variant : undefined });
+      const av = drawProfileAvatar(npc.id, { name: ncName, age: nc.age, identity: ncIdentity || nc.identity, bio: nc.bio, gender: gNorm, variant: typeof nc.avatar_variant === "string" ? nc.avatar_variant : undefined });
       if (av.url) { npc.avatar = av.url; npc.avatarVariant = av.variant; }
       npc = ensureBirthday(npc, next.sim?.day ?? 0);
+      // 功能注释：本回合登场的新人物落到当前房间，才能进 walkers / 在场条（无 home 的人不上地图）
+      const here = next.sim?.room;
+      if (here) {
+        npc.home = here;
+        next.sim = { ...next.sim, mobs: { ...(next.sim.mobs ?? {}), [npc.id]: here } };
+      }
       next.npcs.push(npc);
       // 只是剧情里初次登场：是否结识由玩家在回合底部的人物名片上决定（见 game/npcIntro）
       changes.push(`初遇 ${npc.name}`);
       if (Array.isArray(nc.links) && nc.links.length) newLinks.push({ id: npc.id, links: nc.links });
-    } else if (ncName && !isPlaceholderName(ncName) && normName(ncName) !== normName(npc.name) && !(npc.aliases ?? []).some((a) => normName(a) === normName(ncName))) {
+    } else if (ncName && !isPlaceholderName(ncName) && isProperPersonName(ncName) && normName(ncName) !== normName(npc.name) && !(npc.aliases ?? []).some((a) => normName(a) === normName(ncName))) {
       npc.aliases = [...(npc.aliases ?? []), ncName]; // 按 id 命中但换了称呼：记为别名，后续同名不再另建
-    }
-    for (const a of nc.aliases ?? []) {
-      if (a && normName(a) !== normName(npc.name) && !(npc.aliases ?? []).some((x) => normName(x) === normName(a))) npc.aliases = [...(npc.aliases ?? []), a];
     }
     // 功能注释：已有人物缺性别时，用本回合 AI 给出的 gender 补上（不覆盖玩家已设定）
     if (!npc.persona?.gender) {
@@ -1074,7 +1229,13 @@ export function applyStep(state: GameState, step: AIStep): { next: GameState; ch
       if (gIn === "男" || gIn === "女" || gIn === "其他") npc.persona = { ...(npc.persona ?? {}), gender: gIn };
     }
     if (nc.age && !npc.age) npc.age = nc.age;
-    if (nc.identity) npc.identity = nc.identity;
+    if (ncIdentity) npc.identity = ncIdentity;
+    else if (nc.identity) npc.identity = nc.identity;
+    for (const a of ncAliases) {
+      if (a && normName(a) !== normName(npc.name) && !(npc.aliases ?? []).some((x) => normName(x) === normName(a))) {
+        npc.aliases = [...(npc.aliases ?? []), a];
+      }
+    }
     if (nc.relation) npc.relation = nc.relation;
     if (nc.bio) npc.bio = nc.bio;
     if (nc.mood) npc.mood = nc.mood;
@@ -1170,7 +1331,10 @@ export function applyStep(state: GameState, step: AIStep): { next: GameState; ch
       .map((m) => (typeof m === "string" ? { scope: "main" as const, text: m } : m))
       .filter((m) => m && m.scope !== "npc" && String(m.text ?? "").trim());
     const roomName = (id?: string) => (id ? spotName(next, id) ?? worldLocOf(id)?.name ?? id : "");
-    const mem = applyMemory(next, mains, step.scene_memory, { roomName, defaultBook: defaultWorldBook });
+    // 功能注释：本回合注入过的记忆做间隔重复加固（与 buildMessages 同一检索口径：上一位玩家输入 + 近期对话）
+    const lastInput = [...state.story].reverse().find((t) => t.role === "player")?.segments.map((x) => x.text).join("") ?? "";
+    const recalled = recalledMemoryIds(state, wbHay(state, lastInput), presentNpcIds(state), roomName);
+    const mem = applyMemory(next, mains, step.scene_memory, { roomName, defaultBook: defaultWorldBook, recalled });
     if (mem !== next) Object.assign(next, mem);
   }
   if (typeof step.save_summary === "string" && step.save_summary.trim()) next.saveSummary = step.save_summary.trim().slice(0, 60);

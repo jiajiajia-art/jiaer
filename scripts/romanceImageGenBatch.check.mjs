@@ -186,7 +186,9 @@ test('ModRoomTreeEditor_挂载批量生图并一次commit回写', () => {
   assert.match(src, /import ModBatchImageGen from "\.\/ModBatchImageGen"/);
   assert.match(src, /<ModBatchImageGen[^>]*imageGen=\{imageGen\}/);
   assert.match(src, /applyBatchPatch\(allRooms, maps, patch\)/);
-  assert.equal((src.match(/\{batchPanel\}/g) ?? []).length, 2, '空态与正常态都要挂');
+  // 功能注释：批量生图已移到地点区底部、跨两栏铺开，空态与正常态共用同一处
+  assert.equal((src.match(/\{batchPanel\}/g) ?? []).length, 1, '只挂一处，空态与正常态共用');
+  assert.match(src, /sm:col-span-2">\{batchPanel\}/);
 });
 
 test('ImagePicker与批量共用rememberImageAsset_不再各写一份素材库逻辑', () => {

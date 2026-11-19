@@ -1,13 +1,25 @@
 import type { ThemePref } from "./store";
 
-/** 功能注释：国内可用的 Google Fonts 镜像；禁止 fonts.googleapis.com（国内常超时）。 */
-export const GAME_FONTS_STYLESHEET =
-  "https://fonts.loli.net/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;700&family=ZCOOL+KuaiLe&family=ZCOOL+XiaoWei&family=Ma+Shan+Zheng&family=Long+Cang&family=Zhi+Mang+Xing&family=Pixelify+Sans&family=VT323&display=swap";
-
 const LINK_ID = "romance-game-fonts";
 
 /**
- * 功能注释：把 8 款预设字体拉进页面一次。
+ * 功能注释：本地字体 CSS 路径（随 VITE_BASE，如 /funloom/fonts/game/fonts.css）。
+ * 禁止再注入任何第三方字体 CDN。
+ */
+export function resolveGameFontsStylesheetHref(
+  baseUrl = typeof import.meta !== "undefined"
+    ? String((import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env?.BASE_URL || "/")
+    : "/",
+): string {
+  const base = String(baseUrl || "/").replace(/\/?$/, "/");
+  return `${base}fonts/game/fonts.css`;
+}
+
+/** @deprecated 兼容旧单测字段名；实际为本地相对路径解析结果 */
+export const GAME_FONTS_STYLESHEET = resolveGameFontsStylesheetHref("/");
+
+/**
+ * 功能注释：把预设展示字体拉进页面一次。
  * 只设 class / CSS 变量而不加载字形时，浏览器会回落到系统默认字，点选预设看起来「没换字」。
  */
 export function ensureGameFontsLoaded(): void {
@@ -16,7 +28,7 @@ export function ensureGameFontsLoaded(): void {
   const link = document.createElement("link");
   link.id = LINK_ID;
   link.rel = "stylesheet";
-  link.href = GAME_FONTS_STYLESHEET;
+  link.href = resolveGameFontsStylesheetHref();
   document.head.appendChild(link);
 }
 

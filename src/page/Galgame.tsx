@@ -1726,19 +1726,24 @@ const Galgame = () => {
             });
     }, [controller.setInsufficientDiamondsVisible, updateUser]);
 
+    // 功能注释：AI 线路悬浮球在加载中也挂上（回放不调用 AI 则不显示），避免进局后半天才出现或一直看不到
+    const aiRouteFab = !controller.isReplay ? <AiRouteFab /> : null;
+
     if (controller.isLoading) {
         return (
-            <FullPageLoading
-                rootClassName={styles.pageRoot}
-                contentClassName={styles.mainContent}
-            />
+            <>
+                {aiRouteFab}
+                <FullPageLoading
+                    rootClassName={styles.pageRoot}
+                    contentClassName={styles.mainContent}
+                />
+            </>
         );
     }
 
     return (
         <>
-            {/* 功能注释：AI 线路悬浮球（回放不调用 AI，不显示） */}
-            {!controller.isReplay && <AiRouteFab />}
+            {aiRouteFab}
             <div className={styles.pageRoot}>
                 <div
                     className={`${styles.mainContent} ${characterAnimation === 'injury' ? styles.worldInjury : ''}${controller.isTextMode ? ` ${styles.mainContentTextMode}` : ''}`}

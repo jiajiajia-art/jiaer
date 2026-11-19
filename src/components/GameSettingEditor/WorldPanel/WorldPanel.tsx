@@ -739,7 +739,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         if (isWorldInteractionMode && storylines.length === 0) {
             setStorylineError(t('createGame.storylineRequired'));
             setIsStorylineExpanded(true);
-            showWorldPanelErrorToast('请至少添加一条故事线（世界交互模式下为必填）');
+            showWorldPanelErrorToast(t('createGame.storylineRequired'));
             return false;
         }
         setStorylineError('');

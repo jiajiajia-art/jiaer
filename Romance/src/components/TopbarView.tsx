@@ -1,19 +1,33 @@
 import { getWorld } from "../mods/registry";
 import { Fragment, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import { limitDays, type GameState } from "../lib/types";
+import { tierOf } from "../game/data";
 import { walletDef, wallet } from "../game/wallet";
 import { apPerMove, tripPoints, tripPointsMax } from "../game/mud";
 import { startDateLabel } from "../game/logic";
 import { IconClock, IconFlag, IconPin, IconWallet, IconMenu } from "../lib/icons";
 import DiyIcon from "./DiyIcon";
 import {
-  AVATAR_TOKEN, MODULE_LABELS, apText, applyTopbarRegex, daysText, escapeHtml, rawBarText, renderTopbarTemplate, resolveTopbarDiy,
+  AVATAR_TOKEN, MODULE_LABELS, TOPBAR_HERO_ATTR_LIMIT, apText, applyTopbarRegex, daysText, escapeHtml, rawBarText, renderTopbarTemplate, resolveTopbarDiy,
   type RxOut, type TopbarAvatarFrame, type TopbarAvatarShape, type TopbarBarStyle, type TopbarBg, type TopbarCardStyle,
-  type TopbarData, type TopbarDiy, type TopbarModuleKey, type TopbarRegexTarget,
+  type TopbarData, type TopbarDiy, type TopbarHeroAttr, type TopbarModuleKey, type TopbarRegexTarget,
 } from "../lib/topbarDiy";
 
 /* 顶栏：竖屏主界面、横屏顶栏与「美化 · 顶栏」预览共用这一个组件，所见即所得。
  * 结构由 TopbarDiy 自由组合；颜色 / 贴图 / 正则 CSS 由 buildTopbarCss 注入到 .app-topbar。 */
+
+/** 功能注释：作者 pin 属性 → 顶栏主属性胶囊数据（按定义顺序截取上限） */
+export function heroAttrsOf(game: GameState, limit = TOPBAR_HERO_ATTR_LIMIT): TopbarHeroAttr[] {
+  const defs = (game.attrDefs ?? []).filter((d) => d.pin).slice(0, Math.max(0, limit));
+  return defs.map((d) => {
+    const v = game.player?.attrs?.find((a) => a.key === d.id)?.value ?? d.init;
+    const show = d.display ?? "both";
+    const tier = show !== "num" ? tierOf(v, d.tiers) : undefined;
+    const numTxt = Number.isFinite(v) ? String(v) : "—";
+    const text = tier && show === "tier" ? tier : tier && show !== "num" ? `${tier}·${numTxt}` : numTxt;
+    return { id: d.id, label: d.label || d.id, text, color: d.color };
+  });
+}
 
 export function topbarDataOf(game: GameState, worldName = ""): TopbarData {
   const time = game.world?.time ?? "";
@@ -42,6 +56,7 @@ export function topbarDataOf(game: GameState, worldName = ""): TopbarData {
     apLow: sim ? (ap ?? 0) <= apPerMove() : false,
     daysLeft: game.timeLimit && sim ? Math.max(0, limitDays(game.timeLimit, game.startDate || startDateLabel()) - sim.day) : undefined,
     world: worldName.split(" ")[0] || "",
+    heroAttrs: heroAttrsOf(game),
   };
 }
 
@@ -80,14 +95,15 @@ export function TopbarAvatar({ data, shape, frame, size, frameImg, frameScale = 
 }) {
   if (shape === "hidden") return null;
   const diamond = shape === "diamond";
-  const r = shape === "circle" ? "rounded-full" : diamond ? "rounded-[22%]" : "rounded-[30%]";
+  /* 功能注释：rounded=圆角方（方形头像框），勿再做成接近圆形的 30% 圆角 */
+  const r = shape === "circle" ? "rounded-full" : diamond ? "rounded-[22%]" : "rounded-[10px]";
   const core = Math.round(diamond ? size * 0.74 : size);
   const face = (
     <span className={`relative block overflow-hidden bg-gradient-to-br from-jade/25 to-coral/15 ${r}`} style={{ width: core, height: core }}>
       {data.avatar ? (
         <img src={data.avatar} alt="" className={`h-full w-full object-cover object-top ${diamond ? "-rotate-45 scale-[1.42]" : ""}`} />
       ) : (
-        <span className={`flex h-full w-full items-center justify-center font-serif font-bold text-jade ${diamond ? "-rotate-45" : ""}`} style={{ fontSize: Math.round(size * 0.42) }}>
+        <span className={`flex h-full w-full items-center justify-center font-bold text-jade ${diamond ? "-rotate-45" : ""}`} style={{ fontSize: Math.round(size * 0.42) }}>
           {data.initial}
         </span>
       )}
@@ -185,7 +201,7 @@ export default function TopbarView({ data, diy, topbar = "gradient", topbarText,
           {(c.showName || c.showAge) && (
             <span className="flex items-center gap-1.5">
               {c.showName && (
-                <span className={`truncate font-serif font-black tracking-wide text-jade-deep ${small ? "text-[14px]" : "text-[17.5px]"}`}><Rx v={nameRx} /></span>
+                <span className={`truncate font-black tracking-wide text-jade-deep ${small ? "text-[14px]" : "text-[17.5px]"}`}><Rx v={nameRx} /></span>
               )}
               {c.showAge && <span className="shrink-0 rounded-full bg-jade/12 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-jade-deep">{data.age}岁</span>}
             </span>
@@ -206,13 +222,13 @@ export default function TopbarView({ data, diy, topbar = "gradient", topbarText,
   /* —— 居中标题：有标语 → 流光渐变字；否则世界名 + 主标（窄屏收起） —— */
   const showTitle = c.showCenterTitle && (layout === "double" || layout === "reverse" || layout === "profileOnly");
   const title = !showTitle ? null : slogan ? (
-    <span className="topbar-title mx-2 min-w-0 flex-1 truncate bg-gradient-to-r from-jade via-gold to-coral bg-clip-text text-center font-serif text-[15px] font-extrabold tracking-[0.16em] text-transparent">
+    <span className="topbar-title mx-2 min-w-0 flex-1 truncate bg-gradient-to-r from-jade via-gold to-coral bg-clip-text text-center text-[15px] font-extrabold tracking-[0.16em] text-transparent">
       <Rx v={rx("title", slogan)} />
     </span>
   ) : (
     <div className="topbar-title pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 flex-col items-center leading-none @min-[40rem]:flex" aria-hidden>
-      <span className="font-serif text-[10.5px] font-bold tracking-[0.36em] text-ink-soft/70">{c.titleSub?.trim() || data.world}</span>
-      <span className="mt-1 font-serif text-[15.5px] font-black tracking-[0.14em] text-jade-deep drop-shadow-[0_1px_6px_var(--dream-glow)]">
+      <span className="text-[10.5px] font-bold tracking-[0.36em] text-ink-soft/70">{c.titleSub?.trim() || data.world}</span>
+      <span className="mt-1 text-[15.5px] font-black tracking-[0.14em] text-jade-deep drop-shadow-[0_1px_6px_var(--dream-glow)]">
         <Rx v={rx("title", titleMain)} />
       </span>
     </div>
@@ -225,7 +241,7 @@ export default function TopbarView({ data, diy, topbar = "gradient", topbarText,
         <div data-tour={preview ? undefined : "ap"} title="行动点：每回合回满，换地点扣点"
           className="topbar-ap flex items-center gap-1.5 rounded-full border border-white/55 bg-paper/75 px-2.5 py-1.5 shadow-[0_3px_10px_-4px_var(--dream-glow)] ring-1 ring-inset ring-white/40 backdrop-blur-sm">
           <span className="text-[10px] font-bold tracking-wider text-jade-deep">行动</span>
-          <span className={`font-serif text-[13.5px] font-black leading-none tabular-nums ${data.apLow ? "text-danger" : "text-ink"}`}>
+          <span className={`text-[13.5px] font-black leading-none tabular-nums ${data.apLow ? "text-danger" : "text-ink"}`}>
             {apRx.changed ? <Rx v={apRx} /> : <>{data.ap}<span className="text-[10px] font-normal text-ink-soft">/{data.apMax}</span></>}
           </span>
         </div>
@@ -389,59 +405,79 @@ export default function TopbarView({ data, diy, topbar = "gradient", topbarText,
   /* —— 版式组合 —— */
   const row = (kids: ReactNode, cls = "") => <div className={`relative flex items-center justify-between gap-2 ${cls}`}>{kids}</div>;
   let body: ReactNode;
-  // 功能注释：小说模式固定排版优先于 DIY 模板，保证验收结构一致；色值仍走皮肤 CSS 变量
+  // 功能注释：小说模式固定排版——方头像、单行名牌、轻量主线；少玻璃胶囊，避免顶栏堆乱
   if (novelLayout && !compact && !questOnly) {
-    const weekLabel = `第${String(data.weekNum).padStart(2, "0")}周`;
     const pct = Math.round(Math.min(1, Math.max(0, data.questProgress ?? 0)) * 100);
     const hasQuest = !!(data.questStep?.trim());
+    const novelAva = Math.min(Math.max(ava, 40), 44);
     const novelMenu = (
       <Press preview={preview} label="牌坊菜单" expanded={menuOpen} onPress={onMenu}
-        className={`diy-btn flex h-9 w-9 items-center justify-center rounded-[var(--radius-ui-sm)] border border-line bg-paper text-[16px] font-bold text-ink shadow-[var(--shadow-ui)] transition ${
-          menuOpen ? "bg-jade text-paper-2" : "hover:border-jade hover:text-jade"
+        className={`diy-btn flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border transition ${
+          menuOpen
+            ? "border-transparent bg-gradient-to-br from-[color:var(--jade)] to-[color:var(--coral)] text-white shadow-[0_6px_16px_-8px_color-mix(in_srgb,var(--jade)_55%,transparent)]"
+            : "border-line/70 bg-paper/90 text-jade-deep hover:border-jade/40 hover:text-jade"
         }`}>
-        <DiyIcon slot="top.menu" size={18}><IconMenu width={17} height={17} /></DiyIcon>
+        <DiyIcon slot="top.menu" size={16}><IconMenu width={15} height={15} /></DiyIcon>
       </Press>
     );
+    /* 功能注释：名牌——方头像 + 大名/年龄 + 日期一行，属性最多 2 个内联，不另堆胶囊 */
+    const heroAttrs = (data.heroAttrs ?? []).slice(0, TOPBAR_HERO_ATTR_LIMIT);
     const novelProfile = (
       <Press preview={preview} label="打开人物档案" onPress={onProfile}
-        className="topbar-profile-card group relative z-10 flex min-w-0 shrink items-center gap-2.5 text-left">
-        <TopbarAvatar data={data} shape={c.avatarShape === "hidden" ? "circle" : c.avatarShape} frame={c.avatarFrame} size={ava}
+        className="topbar-profile-card group relative z-10 flex min-w-0 flex-1 items-center gap-2.5 text-left">
+        <TopbarAvatar data={data} shape="rounded" frame={c.avatarFrame && c.avatarFrame !== "none" ? c.avatarFrame : "white"} size={novelAva}
           frameImg={c.active ? c.avatarFrameImg : undefined} frameScale={c.frameScale} />
-        <span className="min-w-0 leading-tight">
-          <span className="flex items-center gap-1.5">
-            <span className="truncate font-serif text-[16px] font-black tracking-wide text-ink"><Rx v={nameRx} /></span>
-            <span className="shrink-0 text-[12px] font-semibold tabular-nums text-ink-soft">{data.age}岁</span>
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 items-baseline gap-1.5">
+            <span className="truncate text-[16px] font-bold tracking-[0.04em] text-ink group-hover:text-jade-deep">
+              <Rx v={nameRx} />
+            </span>
+            <span className="shrink-0 text-[11.5px] font-medium tabular-nums text-ink-soft">{data.age}岁</span>
           </span>
-          <span className="mt-0.5 block text-[11px] font-medium text-ink-soft group-hover:text-jade">
-            {c.archiveText?.replace(/[›>]\s*$/, "").trim() || "查看档案"}
-            <span aria-hidden className="ml-0.5">›</span>
+          <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] text-ink-soft">
+            {data.date ? <span className="truncate tabular-nums tracking-wide">{data.date}</span> : null}
+            {heroAttrs.map((h) => {
+              const accent = h.color?.startsWith("#") ? h.color : h.color ? `var(--${h.color})` : "var(--jade)";
+              return (
+                <span key={h.id} className="inline-flex max-w-[6.5rem] shrink-0 items-center gap-0.5 truncate" title={`${h.label} ${h.text}`}>
+                  <span className="text-ink-soft/70">·</span>
+                  <span className="truncate font-semibold tabular-nums" style={{ color: accent }}>{h.text}</span>
+                </span>
+              );
+            })}
           </span>
         </span>
       </Press>
     );
-    const questTitle = data.questLineName?.trim() || data.questStep?.trim() || "当前主线";
-    body = (
-      <div className="novel-topbar mb-1 flex flex-col gap-2" data-layout="novel">
-        {row(<>{novelProfile}{novelMenu}</>)}
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[12px] text-ink">
-          <span className="rounded-[var(--radius-ui-sm)] bg-jade px-2 py-0.5 text-[11px] font-bold tabular-nums text-paper-2">{weekLabel}</span>
-          <span className="font-semibold tabular-nums text-ink-soft">{data.date}</span>
-          <span className="ml-auto flex items-center gap-3">
-            {data.ap != null && (
-              <span data-tour={preview ? undefined : "ap"} className="tabular-nums text-ink">
-                行动 <b className={data.apLow ? "text-danger" : ""}>{data.ap}</b>
-                <span className="text-ink-soft">/{data.apMax}</span>
-              </span>
-            )}
-            {data.money != null && (
-              <span className={`inline-flex items-center gap-1 font-bold tabular-nums ${data.negative ? "text-danger" : "text-ink"}`}>
-                <IconWallet width={12} height={12} className="shrink-0 text-ink-soft" aria-hidden />
-                {data.money}
-              </span>
-            )}
+    const questLine = data.questLineName?.trim();
+    const questStep = data.questStep?.trim();
+    const questTitle = questStep || questLine || "暂无主线目标";
+    /* 功能注释：行动 / 资产并成一条轻量数字，去掉多层玻璃 pill */
+    const novelMetrics = (data.ap != null || data.money != null) ? (
+      <div className="flex shrink-0 items-center gap-2 text-[12px] tabular-nums">
+        {data.ap != null && (
+          <span data-tour={preview ? undefined : "ap"} className={`font-semibold ${data.apLow ? "text-danger" : "text-ink"}`} title="行动点">
+            <span className="mr-0.5 text-[10px] font-bold tracking-wider text-jade">行动</span>
+            {data.ap}<span className="text-[10px] font-medium text-ink-soft">/{data.apMax}</span>
           </span>
+        )}
+        {data.ap != null && data.money != null && <span className="h-3 w-px bg-line/80" aria-hidden />}
+        {data.money != null && (
+          <span className={`inline-flex items-center gap-0.5 font-semibold ${data.negative ? "text-danger" : "text-ink"}`}>
+            <IconWallet width={11} height={11} className="shrink-0 text-gold" aria-hidden />
+            {data.money}
+          </span>
+        )}
+      </div>
+    ) : null;
+    body = (
+      <div className="novel-topbar flex flex-col gap-2" data-layout="novel">
+        <div className="relative flex items-center gap-2">
+          {novelProfile}
+          {novelMetrics}
+          {novelMenu}
         </div>
-        {/* 功能注释：主线行加高；点开派发任务弹窗，与状态行同一入口 */}
+        {/* 功能注释：主线条用细底边，少一层胶囊外壳 */}
         <div className="novel-quest">
           <button
             type="button"
@@ -451,17 +487,33 @@ export default function TopbarView({ data, diy, topbar = "gradient", topbarText,
               e.stopPropagation();
               openQuest();
             }}
-            className="flex w-full items-center gap-2.5 rounded-[var(--radius-ui)] border border-line bg-paper/90 px-3 py-2.5 text-left shadow-[var(--shadow-ui)] transition hover:border-jade/40"
+            className="group flex w-full items-center gap-2 rounded-[10px] border border-line/60 bg-paper/55 px-2.5 py-1.5 text-left transition hover:border-jade/30 hover:bg-paper/80 active:scale-[0.995]"
           >
-            <span className="min-w-0 shrink truncate text-[13.5px] font-bold leading-snug text-ink">
+            <span className="shrink-0 rounded-[6px] bg-jade/12 px-1.5 py-0.5 text-[10px] font-bold tracking-[0.12em] text-jade-deep">
+              主线
+            </span>
+            <span className="min-w-0 flex-1 truncate text-[12px] font-medium tracking-wide text-ink">
               {questTitle}
+              {hasQuest && questLine && questStep && questLine !== questStep ? (
+                <span className="ml-1.5 text-[10.5px] font-normal text-ink-soft">{questLine}</span>
+              ) : null}
             </span>
-            <span className={`relative h-1.5 min-w-[3.5rem] flex-1 overflow-hidden rounded-full bg-line ${hasQuest ? "" : "opacity-40"}`} aria-hidden>
-              <span className="absolute inset-y-0 left-0 rounded-full bg-jade" style={{ width: `${hasQuest ? pct : 0}%` }} />
+            {hasQuest ? (
+              <span className="flex w-[48px] shrink-0 items-center gap-1" aria-hidden>
+                <span className="relative h-0.5 min-w-0 flex-1 overflow-hidden rounded-sm bg-jade/12">
+                  <span
+                    className="absolute inset-y-0 left-0 rounded-sm bg-gradient-to-r from-[color:var(--jade)] to-[color:var(--coral)] transition-[width] duration-300"
+                    style={{ width: `${pct}%` }}
+                  />
+                </span>
+                <span className="text-[9.5px] font-semibold tabular-nums text-jade">{pct}%</span>
+              </span>
+            ) : null}
+            <span className="grid h-5 w-5 shrink-0 place-items-center rounded-[6px] text-jade/70 transition group-hover:bg-jade/10 group-hover:text-jade" aria-hidden>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+                <path d="m9 6 6 6-6 6" />
+              </svg>
             </span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="shrink-0 text-ink-soft" aria-hidden>
-              <path d="m9 6 6 6-6 6" />
-            </svg>
           </button>
         </div>
       </div>
@@ -537,8 +589,9 @@ export default function TopbarView({ data, diy, topbar = "gradient", topbarText,
         <div aria-hidden className="pointer-events-none absolute -right-10 -bottom-12 h-32 w-40 rounded-full bg-jade/35 blur-3xl" />
       </>)}
       {topbar !== "plain" && <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-line to-transparent" />}
-      <div className={`topbar-inner relative ${compact ? "px-4 py-1.5" : "mx-auto max-w-3xl px-3.5 py-1.5 @min-[40rem]:px-5"}`}>
+      <div className={`topbar-inner relative ${compact ? "px-4 py-1.5" : novelLayout ? "mx-auto max-w-3xl px-4 py-2.5 @min-[40rem]:px-6" : "mx-auto max-w-3xl px-3.5 py-1.5 @min-[40rem]:px-5"}`}>
         {body}
+        {data.note ? <p className="topbar-note truncate px-0.5 pt-1 text-[11px] leading-snug text-ink-soft">{data.note}</p> : null}
       </div>
       {children}
     </Tag>

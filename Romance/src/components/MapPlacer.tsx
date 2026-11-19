@@ -98,8 +98,8 @@ export default function MapPlacer({ bg, dots, activeId, onPick, onPlace, onBlank
           const on = o.id === activeId;
           return (
             <span key={o.id} data-pin={o.id} className={`absolute flex origin-bottom -translate-x-1/2 -translate-y-full cursor-grab flex-col items-center ${on ? "z-10" : ""}`} style={{ left: `${o.x}%`, top: `${o.y}%`, scale: `${1 / z}` }}>
-              <span className={`whitespace-nowrap rounded-full border px-1.5 py-px text-[10px] font-bold shadow ${on ? "border-coral bg-coral text-white" : "border-line bg-paper/90 text-ink"}`}>{o.label}</span>
-              <span className={`block h-2.5 w-2.5 rounded-full border-2 border-white shadow ${on ? "bg-coral" : "bg-jade"}`} />
+              <span className={`mb-1.5 whitespace-nowrap rounded-full px-1.5 py-px text-[10px] font-bold shadow-[0_2px_8px_rgba(0,0,0,.35)] backdrop-blur-sm ${on ? "bg-coral text-white" : "bg-black/45 text-white"}`}>{o.label}</span>
+              <span className="glow-pin translate-y-1/2" data-tone={on ? "active" : undefined} />
             </span>
           );
         })}

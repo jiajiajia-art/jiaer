@@ -70,6 +70,36 @@
     margin: 0;
 }
 
+.heroCopy {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+}
+
+.queueTitle {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 750;
+    color: var(--color-text);
+}
+
+.queueDesc {
+    margin: 0;
+    max-width: 36em;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.machineHint {
+    display: block;
+    margin-top: 6px;
+    color: var(--color-text-muted);
+    font-size: 12px;
+    line-height: 1.4;
+    font-weight: 600;
+}
+
 .heroMetric {
     position: relative;
     z-index: 1;
@@ -266,9 +296,24 @@
 
 .commentContent {
     display: flex;
+    flex-wrap: wrap;
     align-items: flex-start;
     gap: 6px;
     min-width: 0;
+}
+
+.commentEmpty {
+    flex: 1 1 160px;
+    color: var(--color-highlight);
+    line-height: 1.6;
+    font-size: 14px;
+}
+
+.commentMeta {
+    flex: 1 1 100%;
+    color: color-mix(in srgb, var(--color-text) 68%, transparent);
+    font-size: 12px;
+    line-height: 1.5;
 }
 
 .commentQuote {
@@ -703,9 +748,65 @@
         align-items: stretch;
     }
 
+    .tableWrapper {
+        overflow: visible;
+        border: none;
+        background: transparent;
+    }
+
+    .table thead {
+        display: none;
+    }
+
+    .table,
+    .table tbody,
+    .table tr,
+    .table td {
+        display: block;
+        width: auto;
+    }
+
+    .table tr {
+        margin-bottom: 12px;
+        padding: 14px;
+        border: 1px solid color-mix(in srgb, var(--color-highlight) 45%, transparent);
+        border-radius: 16px;
+        background: var(--color-surface);
+    }
+
+    .table td {
+        padding: 0;
+        border-bottom: none;
+        text-align: left;
+    }
+
+    .table tbody td.colContent,
+    .table tbody td.colStatus,
+    .table tbody td.colAction {
+        text-align: left;
+    }
+
+    .colStatus {
+        margin-top: 10px;
+    }
+
+    .colAction {
+        margin-top: 12px;
+    }
+
+    .actionCluster {
+        min-width: 0;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+
+    .commentText {
+        -webkit-line-clamp: 6;
+    }
+
     .table th,
     .table td {
-        padding: 14px 10px;
+        padding: 0;
     }
 
     .pagination {

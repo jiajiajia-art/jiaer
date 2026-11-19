@@ -45,12 +45,12 @@ test('CreateType_二级弹窗文案_SDK归平台禁止产出专属', () => {
 test('PlayModCreateShell与手机应用页_禁止生成专属SDK话术', () => {
   const shell = read('Romance/src/components/PlayModCreateShell.tsx');
   const page = read('src/page/CreatePlatformApp.tsx');
-  assert.match(shell, /能力都来自平台 SDK/);
+  assert.match(shell, /适配平台 SDK/);
   assert.match(shell, /上传玩法包到组件商店/);
   assert.doesNotMatch(shell, /生成专属 SDK/);
   // 功能注释：需求 C0 起不再写「不产出专属 SDK」这类否定句，直接改成上传应用草稿 + 运行在平台 SDK 上
   assert.doesNotMatch(page, /不产出专属 SDK|专属 SDK|生成 SDK/);
-  assert.match(page, /上传应用草稿/);
+  assert.match(page, /把应用草稿打成/);
   assert.match(page, /应用运行在平台 SDK 上/);
   assert.doesNotMatch(page, /自动产出专属/);
   assert.doesNotMatch(page, /已生成专属 SDK/);
@@ -77,6 +77,9 @@ test('CreatePlatformApp_对话生成与phone_app_SDK', () => {
   assert.match(page, /buildPhoneAppKkmodPackage/);
   assert.match(page, /uploadKkmod/);
   assert.match(page, /play\/complete|completePhoneAppChat/);
+  assert.match(page, /judgePhoneAppTurn/);
+  assert.match(page, /phoneAppEditTools/);
+  assert.match(page, /buildPhoneAppRepairUser/);
   assert.match(page, /保存草稿/);
   assert.match(page, /上架/);
 });
@@ -113,6 +116,79 @@ test('phoneAppAiChat_解析补丁与非法type回落', async () => {
   const bad = mod.applyPhoneAppAiPatch(draft, { name: 'x', type: 'hack' });
   assert.equal(bad.type, 'browse');
   assert.equal(mod.stripPhoneAppJsonFence('说明```json\n{}\n```尾'), '说明尾');
+
+  const prompt = mod.buildPhoneAppSystemPrompt(draft);
+  assert.match(prompt, /apply_phone_app_edit/);
+  assert.doesNotMatch(prompt, /积木 type 限/);
+
+  const added = mod.judgePhoneAppTurn(draft, {
+    text: '加了详情页',
+    toolCalls: [{
+      name: 'apply_phone_app_edit',
+      arguments: {
+        name: '闲潮',
+        summary: '二手闲置',
+        category: '生活',
+        type: 'browse',
+        app: {
+          pages: [{
+            id: 'detail',
+            title: '商品详情',
+            blocks: [
+              { kind: 'header', title: '旧相机' },
+              { kind: 'text', text: '成色良好' },
+              { kind: 'buttons', items: [{ id: 'back', label: '返回', action: { go: 'home' } }] },
+            ],
+          }],
+        },
+      },
+    }],
+  });
+  assert.equal(added.applied, true);
+  assert.match(added.summary, /名称改为「闲潮」/);
+  assert.match(added.summary, /新增页面「商品详情」/);
+  assert.match(added.draft.contentText, /"kind": "text"/);
+  assert.equal(added.draft.name, '闲潮');
+
+  const rejected = mod.judgePhoneAppTurn(draft, {
+    text: '跳到不存在的页',
+    toolCalls: [{
+      name: 'apply_phone_app_edit',
+      arguments: {
+        name: '不该写入',
+        app: {
+          pages: [{
+            id: 'detail',
+            title: '详情',
+            blocks: [{ kind: 'buttons', items: [{ id: 'go', label: '走', action: { go: 'missing' } }] }],
+          }],
+        },
+      },
+    }],
+  });
+  assert.equal(rejected.applied, false);
+  assert.equal(rejected.needsRepair, true);
+  assert.equal(rejected.draft.name, '旧名');
+  assert.match(rejected.issues.join('\n'), /missing/);
+
+  const noAction = mod.judgePhoneAppTurn(draft, {
+    text: '加一个按钮',
+    toolCalls: [{
+      name: 'apply_phone_app_edit',
+      arguments: {
+        app: { pages: [{ id: 'home', title: '首页', blocks: [{ kind: 'buttons', items: [{ id: 'buy', label: '买下' }] }] }] },
+      },
+    }],
+  });
+  assert.equal(noAction.applied, false);
+  assert.match(noAction.issues.join('\n'), /action/);
+
+  const legacy = mod.applyPhoneAppAiPatch(draft, {
+    pages: [{ id: 'home', name: '首页', blocks: [{ type: 'text', text: '你好' }, { type: 'list', title: '在售', items: ['旧相机'] }] }],
+  });
+  assert.match(legacy.contentText, /"kind": "text"/);
+  assert.match(legacy.contentText, /旧相机/);
+  assert.equal(legacy.pages, undefined);
 });
 
 test('kkmodFromCreators_玩法与手机应用都能打包', async () => {

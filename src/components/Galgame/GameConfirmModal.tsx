@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './GameConfirmModal.module.css';
 
 interface GameConfirmModalProps {
@@ -27,16 +28,21 @@ interface GameConfirmModalProps {
  */
 const GameConfirmModal: React.FC<GameConfirmModalProps> = ({
   isOpen,
-  title = '确认操作',
-  message = '请确认是否继续此操作？',
-  confirmText = '确认',
-  cancelText = '取消',
+  title,
+  message,
+  confirmText,
+  cancelText,
   overlayZIndex,
   variant = 'light',
   children,
   onConfirm,
   onCancel,
 }) => {
+  const { t } = useTranslation();
+  const resolvedTitle = title ?? t('galgameUi.gameConfirm.defaultTitle');
+  const resolvedMessage = message ?? t('galgameUi.gameConfirm.defaultMessage');
+  const resolvedConfirm = confirmText ?? t('galgameUi.gameConfirm.confirm');
+  const resolvedCancel = cancelText ?? t('galgame.cancel');
   if (!isOpen) return null;
 
   const isDossier = variant === 'dossier';
@@ -52,27 +58,30 @@ const GameConfirmModal: React.FC<GameConfirmModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className={`${styles.header} ${isDossier ? styles.headerDossier : ''}`}>
-          <h3 className={`${styles.title} ${isDossier ? styles.titleDossier : ''}`}>{title}</h3>
+          <h3 className={`${styles.title} ${isDossier ? styles.titleDossier : ''}`}>{resolvedTitle}</h3>
           <button
             type="button"
             className={`${styles.closeButton} ${isDossier ? styles.closeButtonDossier : ''}`}
             onClick={onCancel}
-            aria-label="关闭"
+            aria-label={t('galgameUi.gameConfirm.closeAria')}
           >
             ×
           </button>
         </div>
         <div className={`${styles.body} ${isDossier ? styles.bodyDossier : ''}`}>
           <div className={styles.messageBlock}>
-            {typeof message === 'string' ? (
-              <p className={`${styles.message} ${isDossier ? styles.messageDossier : ''}`}>
-                {message}
-              </p>
-            ) : (
-              <div className={`${styles.message} ${isDossier ? styles.messageDossier : ''}`}>
-                {message}
-              </div>
-            )}
+            {(() => {
+              const body = message !== undefined ? message : resolvedMessage;
+              return typeof body === 'string' ? (
+                <p className={`${styles.message} ${isDossier ? styles.messageDossier : ''}`}>
+                  {body}
+                </p>
+              ) : (
+                <div className={`${styles.message} ${isDossier ? styles.messageDossier : ''}`}>
+                  {body}
+                </div>
+              );
+            })()}
             {children}
           </div>
           <div className={styles.buttons}>
@@ -81,14 +90,14 @@ const GameConfirmModal: React.FC<GameConfirmModalProps> = ({
               className={`${styles.btn} ${styles.btnPrimary} ${isDossier ? styles.btnDossierPrimary : ''}`}
               onClick={onConfirm}
             >
-              {confirmText}
+              {resolvedConfirm}
             </button>
             <button
               type="button"
               className={`${styles.btn} ${styles.btnSecondary} ${isDossier ? styles.btnDossierSecondary : ''}`}
               onClick={onCancel}
             >
-              {cancelText}
+              {resolvedCancel}
             </button>
           </div>
         </div>

@@ -101,7 +101,7 @@ export default function FactionsPanel() {
                     当前声望
                     <input type="range" min={REP_MIN} max={REP_MAX} value={rep} onChange={(e) => setRep(f.id, Number(e.target.value))} className="w-40 accent-[var(--jade)]" />
                     <span className="tabular-nums font-bold">{rep}</span>
-                    <span className="text-[11px] text-ink-soft">{repTier(rep)} · 价格 ×{repPriceMult(rep).toFixed(2)} · 规则变量 <code className="text-jade">{factionFlag(f.id)}</code></span>
+                    <span className="text-[11px] text-ink-soft">{repTier(rep)} · 价格 ×{repPriceMult(rep).toFixed(2)} · 计数器 <code className="text-jade">{factionFlag(f.id)}</code></span>
                   </label>
                 </>)}
 

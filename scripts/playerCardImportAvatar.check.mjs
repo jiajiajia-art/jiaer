@@ -55,7 +55,12 @@ test('PlayerArchive_导入列表须渲染card.avatarUrl', () => {
 test('PlayerArchive_预览须展示立绘', () => {
   assert.match(archive, /previewAvatarWrap/);
   assert.match(archive, /previewAvatarSrc/);
-  assert.match(archive, /带上卡库立绘/);
+  // 带上卡库立绘文案锁在 playerArchive.import.previewWithAvatar
+  assert.match(archive, /t\('galgameUi\.playerArchive\.import\.previewWithAvatar'\)/);
+  assert.match(
+    readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8'),
+    /"previewWithAvatar": "导入将覆盖当前玩家档案并带上卡库立绘，之后仍可在档案中重新生成头像。"/,
+  );
   assert.match(archive, /TrimmedTransparentImg[\s\S]*?variant="bust"/);
 });
 

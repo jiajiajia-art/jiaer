@@ -19,7 +19,8 @@ test('编辑器皮肤美化_无试用条无面板皮肤动画块_音乐在基础
   assert.match(panel, /title="皮肤美化"/);
   assert.match(panel, /ModThemeEditor/);
   // 功能注释：C1.2 音乐已迁到①基础，美化组不得再挂音乐
-  assert.match(panel, /g="base" title="音乐"/);
+  // 功能注释：音乐并入①基础「基本信息」底部
+  assert.match(panel, /音乐并入基本信息底部/);
   assert.doesNotMatch(panel, /g="look" title="音乐"/);
   assert.doesNotMatch(panel, /ModSkinEditor/);
   assert.doesNotMatch(panel, /<summary[^>]*>高级<\/summary>/);

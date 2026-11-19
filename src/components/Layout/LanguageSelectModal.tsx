@@ -60,8 +60,9 @@ const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
         onClick={(event) => event.stopPropagation()}
       >
         <div className={styles.header}>
+          {/* 功能注释：平台化语言面板标题固定英文 Language，与选项英文主名一致 */}
           <h2 id="language-select-title" className={styles.title}>
-            {t('nav.chooseLanguage')}
+            Language
           </h2>
           <button
             type="button"
@@ -72,7 +73,7 @@ const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
             ×
           </button>
         </div>
-        <div className={styles.options} role="listbox" aria-label={t('nav.language')}>
+        <div className={styles.options} role="listbox" aria-label="Language">
           {APP_LANGUAGE_OPTIONS.map((option) => {
             const active = option.code === activeLanguage;
             return (
@@ -87,7 +88,12 @@ const LanguageSelectModal: React.FC<LanguageSelectModalProps> = ({
                   onClose();
                 }}
               >
-                <span className={styles.optionLabel}>{option.label}</span>
+                <span className={styles.optionText}>
+                  <span className={styles.optionLabel}>{option.label}</span>
+                  {option.nativeLabel !== option.label ? (
+                    <span className={styles.optionNative}>{option.nativeLabel}</span>
+                  ) : null}
+                </span>
                 {active ? (
                   <span className={styles.check} aria-hidden="true">
                     ✓

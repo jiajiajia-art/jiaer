@@ -16,7 +16,7 @@ export type AttrTier = { min: number; label: string; prompt?: string }; // promp
 export type AttrDef = {
   id: string;
   label: string;
-  icon?: string; // emoji
+  icon?: string; // 仅货币属性使用（钱包显示）
   init: number; // 固定开局值；勾选「固定数值」时用；不勾则开局在 min～max 随机
   /** 开局取值：缺省 / fixed = 作者锁定用 init；random = 最小～最大随机（玩家可重掷）；
    * choice = 玩家从 options 里选；custom = 玩家在最小～最大内自填；dice 为旧稿，开局按 random 处理 */
@@ -30,7 +30,8 @@ export type AttrDef = {
   color?: string; // 进度条颜色：jade/coral/gold/danger 或 #hex
   tiers?: AttrTier[]; // 分档（按 min 升序）：达到即显示该档名
   display?: "num" | "tier" | "both"; // 只显示数值 / 只显示档位 / 都显示（缺省 both）
-  pin?: boolean; // 显示在顶部状态栏
+  /** 功能注释：顶栏主属性（小说顶栏名下最多展示 2 个；勾选顺序靠前优先） */
+  pin?: boolean;
   /** 功能注释：建角页隐藏（仍写入开局 attrs / 可上状态栏）；创作者在「建角字段」里配 */
   hidden?: boolean;
   tierEvent?: boolean; // 升到新档位时触发一段 AI 剧情
@@ -235,6 +236,7 @@ export type GameState = {
   endingTitle?: string; // 结局定级标题（依据名气/口碑/奖项或破产）
   endingTag?: string; // 结局定级副标题
   endingId?: string; // 命中的自定义结局 id
+  routeId?: string; // 开局所选人物线路 id（跨周目解锁用）
   endingBadge?: string; // 结局类型标签（如「隐藏结局」「真结局」「结局 2/5」）
   endingSubTitle?: string; // 同时获得的副称号（如「超级美」）
   endingQuote?: string; // 结局画框底部寄语金句
@@ -892,7 +894,7 @@ export type AIStep = {
   narrative?: string; // 本回合剧情文本（= narration）
   state_diff?: { world?: Partial<World>; player_changes?: AIStep["player_changes"]; npc_changes?: AIStep["npc_changes"]; intimate?: string[]; game_end?: boolean };
   tabs?: Record<string, unknown>; // 分发给各 Tab 的数据（仅作展示提示，事实以状态中枢为准）
-  memory_updates?: { scope?: "main" | "npc"; npc?: string; text: string; imp?: number; who?: string[]; keys?: string[] }[] | string[];
+  memory_updates?: { scope?: "main" | "npc"; npc?: string; text: string; imp?: number; who?: string[]; keys?: string[]; op?: "add" | "update" | "delete"; replaces?: string }[] | string[];
   scene_memory?: import("./chronicle").SceneUpdate; // 此地陈设 / 状态与在场者穿着的变化（无变化省略）
   save_summary?: string;
   need_clarification?: string[];

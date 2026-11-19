@@ -84,7 +84,9 @@ test('经济收官与balance库不套用娱乐圈对比', () => {
   assert.doesNotMatch(ecoUi, /billsSlot\(\)/);
   assert.doesNotMatch(ecoUi, /startMoney\(\)/);
   assert.match(ecoUi, /经济规则/);
-  assert.match(ecoUi, /① 基础 → 建角/);
+  assert.match(ecoUi, /透支超过破产线时结束游戏/);
+  // 「① 基础 → 建角」说明现写在编辑器养成帮助，不在经济面板
+  assert.match(editor, /① 基础 → 建角/);
   assert.doesNotMatch(ecoUi, /和娱乐圈原版比/);
 });
 

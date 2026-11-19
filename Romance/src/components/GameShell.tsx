@@ -1,4 +1,5 @@
 import { wallet } from "../game/wallet";
+import { recordFiredEvents } from "../lib/pathProgress";
 import { lazyPanel } from "../lib/lazyPanel";
 import DiaryCard from "./DiaryCard";
 import DiyIcon from "./DiyIcon";
@@ -8,7 +9,7 @@ import { tierOf } from "../game/data";
 import { withFontPreset } from "../lib/gameFonts";
 import { FONTS } from "../lib/skins";
 import BgmPanel, { hookWorldBgm } from "./BgmPanel";
-import { enterScene, setWorkVolume, switchBgm } from "../game/audioEngine";
+import { enterScene, switchBgm } from "../game/audioEngine";
 import { setAuthorAudio } from "../game/audioLib";
 import { roomBgmOf } from "../game/mud";
 const CustomCssPanel = lazyPanel(() => import("./CustomCssPanel"));
@@ -20,7 +21,6 @@ const NavStylePanel = lazyPanel(() => import("./NavStylePanel"));
 const IconDiyPanel = lazyPanel(() => import("./IconDiyPanel"));
 const CoverDiyPanel = lazyPanel(() => import("./CoverDiyPanel"));
 import DialogDiyPanel, { DialogPreview } from "./DialogDiyPanel";
-import { PlotLookPanel } from "./LookRulesEditor";
 import { Suspense, lazy, useCallback, useEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { romancePortalRoot } from "../lib/romancePortalRoot";
@@ -36,7 +36,6 @@ const Phone = lazyPanel(() => import("./Phone"));
 const Finance = lazyPanel(() => import("./Finance"));
 const Works = lazyPanel(() => import("./Works"));
 import BreachDialog from "./BreachDialog";
-const AIConfigPanel = lazyPanel(() => import("./AIConfigPanel"));
 const WorldRulesPanel = lazyPanel(() => import("./WorldRulesPanel"));
 const WorldBookPanel = lazyPanel(() => import("./WorldBookPanel"));
 // 编辑器体积大、只有打开时才需要：按需加载，缩短首屏加载
@@ -47,10 +46,10 @@ const PanelLoading = () => <p className="py-10 text-center text-[12px] text-ink-
 const NpcKbPanel = lazyPanel(() => import("./NpcKbPanel"));
 import EditorHub from "./EditorHub";
 import PlayPrefsPicker from "./PlayPrefsPicker";
-import { playPrefsOf } from "../lib/ai";
+import { playPrefsOf, POV_LABEL } from "../lib/ai";
 import { LIVE_LOCATIONS } from "../mods/registry";
 import AllowanceWatcher from "./AllowanceWatcher";
-import { feature, getWorldStorylines, useMods, worldGrowEnabled, worldHas } from "../mods/registry";
+import { feature, getWorldStorylines, getWorldEventDates, useMods, worldGrowEnabled, worldHas } from "../mods/registry";
 import { shouldShowPlayModMenuEntry } from "../mods/playModCatalog";
 import { EDITOR_HUB_MENUS } from "../lib/editorHubMenus";
 const EndingsPanel = lazyPanel(() => import("./EndingsPanel"));
@@ -66,7 +65,7 @@ import ScheduleBoard from "./ScheduleBoard";
 import { Chip, Modal, toneColor } from "./ui";
 import NewSpotImagePrompt from "./NewSpotImagePrompt";
 import { useConfirm } from "./EditorKit";
-import { IconBook, IconCamera, IconClose, IconFlag, IconHeart, IconMenu, IconMoon, IconMusic, IconPin, IconPlay, IconSave, IconScroll, IconSettings, IconSpark, IconSparkle, IconStar, IconSun, IconUser, IconWallet, IconClock } from "../lib/icons";
+import { IconBook, IconCamera, IconClose, IconFlag, IconHeart, IconMenu, IconMoon, IconMusic, IconPin, IconPlay, IconSave, IconScroll, IconSpark, IconSparkle, IconStar, IconSun, IconUser, IconWallet, IconClock } from "../lib/icons";
 import { Segments, CastRow } from "./StoryTab";
 import NewcomerCards from "./NewcomerCards";
 import BranchSheet from "./BranchSheet";
@@ -76,9 +75,23 @@ import FrameEditor, { FrameOverlay } from "./FrameDiy";
 import { topbarSummary } from "../lib/topbarDiy";
 import { defaultWorldBook } from "../game/worldbook";
 import { EntityProvider } from "./EntityText";
-import { listManualSaves, saveToSlot, deleteSlot, renameSlot, getSlot, MAX_SLOTS, AUTO_SLOT_ID, type SaveSlot, defaultTheme } from "../lib/store";
-import { syncCloudSaves } from "../lib/storage";
+import { listManualSaves, saveToSlot, deleteSlot, renameSlot, getSlot, AUTO_SLOT_ID, type SaveSlot, defaultTheme } from "../lib/store";
+import { syncCloudSaves, currentSaveGameId } from "../lib/storage";
 import CloudSaveStatus from "./CloudSaveStatus";
+import {
+  CLOUD_FREE_LIMIT,
+  CLOUD_MEMBER_LIMIT,
+  canCreateManualCloudSave,
+  cloudOffReason,
+  defaultCloudQuota,
+  getCloudQuota,
+  nearLimitMemberHint,
+  onCloudQuota,
+  openCloudLogin,
+  openCloudMembership,
+  refreshCloudQuota,
+  type CloudQuota,
+} from "../lib/cloudSaves";
 import { isAuthorPreview } from "../lib/authorPreview";
 import { homeMainQuest } from "../lib/homeMainQuest";
 import { dayDateLabel } from "../game/logic";
@@ -93,6 +106,7 @@ import { resolveCgImageFile } from "../game/cgImageStore";
 import { applyCgUnlocks, cgRevealBatch, hasCgMenu, latestCgDialogue } from "../lib/cgGallery";
 import { liveTerm as T } from "../mods/live";
 const GameTour = lazyPanel(() => import("./GameTour"));
+const PhoneTour = lazyPanel(() => import("./PhoneTour"));
 
 type Tab = MudTab;
 
@@ -102,24 +116,22 @@ const ROMAJI: Record<string, string> = {
   works: "ZUOPIN", bag: "XINGNANG", finance: "MOD", theme: "MODE",
 };
 
-/* 设置里的「小分支」：一行摘要，点开才展开选项 */
-function SettingBranch({ title, en, desc, current, swatch, children, defaultOpen = false }: { title: string; en: string; desc: string; current: string; swatch?: ReactNode; children: ReactNode; defaultOpen?: boolean }) {
+/* 设置里的「小分支」：一行摘要，点开才展开选项；配色跟当前皮肤美化 */
+function SettingBranch({ title, en: _en, desc, current, swatch, children, defaultOpen = false }: { title: string; en?: string; desc?: string; current: string; swatch?: ReactNode; children: ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-paper">
-      <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-paper-2">
+    <div className="settings-card overflow-hidden rounded-2xl border bg-paper transition">
+      <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center gap-3 px-3.5 py-3 text-left transition hover:bg-paper-2/60">
         <div className="min-w-0 flex-1">
-          <span className="flex items-baseline gap-1.5">
-            <span className="text-[14px] font-bold tracking-[0.06em] text-ink">{title}</span>
-          </span>
-          <span className="block truncate text-[11px] text-ink-soft">{desc}</span>
+          <span className="block text-[14px] font-bold text-ink">{title}</span>
+          {desc ? <span className="mt-0.5 block truncate text-[11px] text-ink-soft">{desc}</span> : null}
         </div>
-        <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-paper-2 px-2.5 py-1 text-[11.5px] font-semibold text-ink">
-          {swatch}{current}
+        <span className="settings-chip flex max-w-[42%] shrink-0 items-center gap-1 truncate rounded-full border px-2.5 py-1 text-[11.5px] font-semibold">
+          {swatch}<span className="truncate">{current}</span>
         </span>
-        <span className={`shrink-0 text-[18px] leading-none text-ink-soft transition-transform ${open ? "rotate-90" : ""}`}>›</span>
+        <span className={`shrink-0 text-[16px] leading-none text-jade transition-transform ${open ? "rotate-90" : ""}`}>›</span>
       </button>
-      {open && <div className="border-t border-line bg-paper-2/40 p-3">{children}</div>}
+      {open && <div className="settings-card-body border-t p-3">{children}</div>}
     </div>
   );
 }
@@ -154,15 +166,12 @@ function PlayerSkinPicker({ skin, onPick }: { skin: string; onPick: (id: (typeof
             onClick={() => onPick(sk.id)}
             className={`flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition ${
               cur
-                ? "border-white/80 bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] text-white shadow-lg ring-2 ring-fuchsia-300/50"
+                ? "border-white/80 bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] text-white shadow-lg ring-2 ring-[color-mix(in_srgb,var(--jade)_45%,transparent)]"
                 : "border-line bg-paper text-ink-soft hover:border-jade/60 hover:bg-paper-2"
             }`}
           >
             <span className="shrink-0 leading-none">{sk.glyph}</span>
-            <div className="flex min-w-0 flex-col">
-              <span className={`text-[12.5px] font-bold ${cur ? "text-white" : "text-ink"}`}>{sk.label}</span>
-              <span className={`truncate text-[10px] ${cur ? "text-white/85" : "text-ink-soft"}`}>{sk.desc}</span>
-            </div>
+            <span className={`min-w-0 truncate text-[12.5px] font-bold ${cur ? "text-white" : "text-ink"}`}>{sk.label}</span>
           </button>
         );
       })}
@@ -193,9 +202,9 @@ function SubTabs({ tabs }: { tabs: [string, ReactNode][] }) {
 function BeautyGroup({ no, title, en, desc }: { no: string; title: string; en: string; desc: string }) {
   return (
     <div className="flex items-end gap-3 px-1 pt-4 first:pt-0">
-      <span className="font-serif text-[26px] font-black leading-none text-jade/30 tabular-nums">{no}</span>
-      <div className="min-w-0 flex-1 border-b border-line pb-1.5">
-        <p className="flex items-baseline gap-2"><span className="text-[15px] font-bold tracking-[0.08em] text-ink">{title}</span><span className="text-[9.5px] font-bold tracking-[0.25em] text-ink-soft/70">{en}</span></p>
+      <span className="font-serif text-[26px] font-black leading-none text-jade/35 tabular-nums">{no}</span>
+      <div className="min-w-0 flex-1 border-b pb-1.5" style={{ borderColor: "color-mix(in srgb, var(--jade) 22%, var(--line))" }}>
+        <p className="flex items-baseline gap-2"><span className="text-[15px] font-bold tracking-[0.08em] text-ink">{title}</span><span className="text-[9.5px] font-bold tracking-[0.25em] text-jade/55">{en}</span></p>
         <p className="mt-0.5 text-[11px] text-ink-soft">{desc}</p>
       </div>
     </div>
@@ -205,17 +214,23 @@ function BeautyGroup({ no, title, en, desc }: { no: string; title: string; en: s
 /* 美化页分组导航：吸顶胶囊条，点一组只看这一组（分支自动展开），「全部」回到总览 */
 const BEAUTY_GROUPS = [
   ["all", "全部"], ["preset", "主题包"], ["global", "全局风格"], ["dialog", "对话框"], ["scene", "场景"],
-  ["chrome", "栏与图标"], ["cover", "封面"], ["plot", "剧情美化"], ["assets", "素材与代码"],
+  ["chrome", "栏与图标"], ["cover", "封面"], ["assets", "素材与代码"],
 ] as const;
 type BeautyKey = (typeof BEAUTY_GROUPS)[number][0];
 function BeautyNav({ cur, onPick }: { cur: BeautyKey; onPick: (k: BeautyKey) => void }) {
   const i = BEAUTY_GROUPS.findIndex(([k]) => k === cur);
   return (
-    <div className="sticky top-0 z-20 -mx-4 border-b border-line bg-paper-2/90 px-4 py-2 backdrop-blur-md">
+    <div
+      className="sticky top-0 z-20 -mx-4 border-b px-4 py-2 backdrop-blur-md"
+      style={{
+        borderColor: "color-mix(in srgb, var(--jade) 18%, var(--line))",
+        background: "color-mix(in srgb, var(--paper-2) 82%, var(--jade))",
+      }}
+    >
       <div role="tablist" aria-label="美化分组" className="flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
         {BEAUTY_GROUPS.map(([k, l], n) => (
           <button key={k} role="tab" aria-selected={cur === k} onClick={() => onPick(k)}
-            className={`flex shrink-0 items-center gap-1 rounded-full border px-3 py-1 text-[12px] font-bold transition ${cur === k ? "border-jade bg-jade text-white shadow-[0_6px_14px_-8px_var(--jade)]" : "border-line bg-paper text-ink-soft hover:border-jade hover:text-jade"}`}>
+            className={`flex shrink-0 items-center gap-1 rounded-full border px-3 py-1 text-[12px] font-bold transition ${cur === k ? "border-jade bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] text-white shadow-[0_6px_14px_-8px_var(--jade)]" : "border-line bg-paper text-ink-soft hover:border-jade hover:text-jade"}`}>
             {n > 0 && <span className={`font-serif text-[10px] tabular-nums ${cur === k ? "text-white/75" : "text-jade/50"}`}>{String(n).padStart(2, "0")}</span>}{l}
           </button>
         ))}
@@ -232,7 +247,7 @@ function BeautyNav({ cur, onPick }: { cur: BeautyKey; onPick: (k: BeautyKey) => 
 
 /* 美化页顶部：当前外观一览 + 恢复默认（仅外观字段；屏幕方向、深浅模式、自定义 CSS 不动） */
 function BeautySummary() {
-  const { theme, setTheme, activeLooks } = useGame();
+  const { theme, setTheme } = useGame();
   const [confirm, confirmEl] = useConfirm();
   const tags = [
     (SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.cute)[0],
@@ -247,19 +262,15 @@ function BeautySummary() {
     theme.icons ? "图标自定" : "",
     theme.cover && theme.cover.on !== false ? "封面自定" : "",
     theme.sceneBg ? "自定义场景" : "",
-    (theme.lookRules?.length ?? 0) > 0 ? `剧情美化 ${theme.lookRules!.length} 条` : "",
   ].filter(Boolean);
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-line bg-gradient-to-r from-jade/10 via-paper to-coral/10 px-4 py-3">
+    <div className="settings-card flex items-center gap-3 rounded-2xl border bg-gradient-to-r from-jade/10 via-paper to-coral/10 px-4 py-3">
       {confirmEl}
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-bold tracking-[0.2em] text-ink-soft">当前外观</p>
+        <p className="text-[11px] font-bold tracking-[0.2em] text-jade">当前外观</p>
         <div className="mt-1 flex flex-wrap gap-1">
-          {tags.map((t) => <span key={t} className="rounded-full border border-line bg-paper px-2 py-0.5 text-[11px] text-ink">{t}</span>)}
+          {tags.map((t) => <span key={t} className="settings-chip rounded-full border px-2 py-0.5 text-[11px]">{t}</span>)}
         </div>
-        {activeLooks.length > 0 && (
-          <p className="mt-1.5 text-[11px] text-jade">剧情美化生效中：{activeLooks.map((a) => a.rule.name || "未命名").join("、")} · 部分外观暂时被覆盖，条件不满足后恢复</p>
-        )}
       </div>
       <button className="shrink-0 rounded-full border border-line bg-paper px-3 py-1 text-[11.5px] font-semibold text-ink-soft transition hover:border-danger hover:text-danger"
         onClick={async () => { if (await confirm("把外观恢复为默认？\n屏幕方向、深浅模式与自定义 CSS 保留；建议先在「一键套用」里收藏当前外观。", { ok: "恢复默认" })) setTheme({ ...defaultTheme, mode: theme.mode, orient: theme.orient }); }}>
@@ -272,7 +283,7 @@ function BeautySummary() {
 /* 设置页面板：界面皮肤 / 字体风格 / 版式方向（作为常驻页签内容，与其他页面同级） */
 function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; section?: "general" | "beauty"; /** @deprecated 玩家设置不再跳进完整美化 */ onBeauty?: () => void }) {
   const beauty = section === "beauty";
-  const { theme, setTheme, activeLooks, game, patchGame } = useGame();
+  const { theme, setTheme, game, patchGame } = useGame();
   // 美化分组导航：全部 / 单组；单组时只渲染该组，分支默认展开
   const [beautyGroup, setBeautyGroup] = useState<BeautyKey>("all");
   const bg = (k: BeautyKey) => beautyGroup === "all" || beautyGroup === k;
@@ -287,8 +298,8 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
       {!bare && (
         <IndustryPageHeader
           title={beauty ? "美化" : "设置"}
-          subtitle={beauty ? "主题包 · 风格 · 对话 · 场景 · 图标 · 封面" : "偏好与设定"}
-          eyebrow="STAR CITY"
+          subtitle={beauty ? "外观与主题" : "偏好"}
+          eyebrow={undefined}
           icon={
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="4" />
@@ -298,10 +309,10 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
         />
       )}
       {/* 功能注释：弹窗内（bare）不再叠一层左右内边距——弹窗本体已有，双层会把卡片挤窄 */}
-      <div className={bare ? "space-y-3 pt-1" : "mx-auto max-w-3xl px-4 py-5 space-y-4"}>
+      <div className={bare ? "space-y-2.5 pt-1" : "mx-auto max-w-3xl space-y-2.5 px-4 py-4"}>
         {/* 功能注释：玩家「游戏设置」只留皮肤风格选择；主题包/对话框/图标等仍在编辑器·美化 */}
         {!beauty && (
-        <SettingBranch title="美化" en="SKIN STYLE" desc="选择界面皮肤风格" current={(SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.dream)[0]} swatch={<span>{(SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.dream)[1]}</span>}>
+        <SettingBranch title="皮肤" current={(SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.dream)[0]} swatch={<span>{(SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.dream)[1]}</span>}>
           {/* 功能注释：默认收起——标题行已显示当前皮肤，点开再选，避免一打开设置就是一大片皮肤卡 */}
           <PlayerSkinPicker skin={theme.skin ?? "cute"} onPick={(skin) => setTheme({ ...theme, skin })} />
         </SettingBranch>
@@ -313,16 +324,10 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
           data-dark-toggle="1"
           onClick={toggleDarkMode}
           aria-pressed={isDark}
-          className="flex w-full items-center gap-3 overflow-hidden rounded-2xl border border-line bg-paper px-4 py-3 text-left transition hover:bg-paper-2"
+          className="settings-card flex w-full items-center gap-3 overflow-hidden rounded-2xl border bg-paper px-3.5 py-3 text-left transition hover:bg-paper-2/60"
         >
-          <span className="min-w-0 flex-1">
-            <span className="flex items-baseline gap-1.5">
-              <span className="text-[14px] font-bold tracking-[0.06em] text-ink">暗色模式</span>
-              <span className="text-[9.5px] font-semibold tracking-[0.2em] text-ink-soft">DARK MODE</span>
-            </span>
-            <span className="block truncate text-[11px] text-ink-soft">点一下立即切换界面明暗，护眼夜读</span>
-          </span>
-          <span className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold ${isDark ? "border-jade bg-jade/10 text-jade" : "border-line bg-paper-2 text-ink"}`}>
+          <span className="min-w-0 flex-1 text-[14px] font-bold text-ink">暗色模式</span>
+          <span className={`settings-chip flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold ${isDark ? "!border-jade !bg-jade/15 !text-jade" : ""}`}>
             {isDark ? <IconMoon size={16} /> : <IconSun size={16} />}{isDark ? "已开启" : "已关闭"}
           </span>
         </button>
@@ -374,7 +379,7 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
           <SubTitle t="自定义取色" d="覆盖皮肤与主色，留空跟随" />
           <FreeColors />
         </SettingBranch>
-        <SettingBranch title="字体" en="FONT" desc="预设 8 款游戏字体，或上传自定义字体文件（TTF / OTF / WOFF2）" current={theme.free?.font?.url ? "自定义字体" : (FONT_LABEL[theme.font ?? "song"] ?? "典雅宋体")} swatch={<span className="font-serif text-[12px]">字</span>}>
+        <SettingBranch title="字体" en="FONT" desc="预设 8 款字体：剧情正文、气泡与编辑器一并跟随；也可上传自定义字体" current={theme.free?.font?.url ? "自定义字体" : (FONT_LABEL[theme.font ?? "song"] ?? "典雅宋体")} swatch={<span className="font-serif text-[12px]">字</span>}>
           <SubTitle t="预设字体（8 款可选）" />
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
             {FONTS.map((ft) => {
@@ -495,14 +500,8 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
           <CoverDiyPanel />
         </SettingBranch>
         </>)}
-        {bg("plot") && (<>
-        <BeautyGroup no="07" title="随剧情变化" en="PLOT LOOK" desc="条件满足时自动换装：深夜转暗、压力爆表变灰、成名后换上流金" />
-        <SettingBranch defaultOpen={beautyGroup !== "all"} title="剧情美化" en="CONDITIONAL" desc="按属性、关系、地点、时段、规则变量等条件临时切换外观" current={activeLooks.length ? `生效 ${activeLooks.length}` : `${theme.lookRules?.length ?? 0} 条`} swatch={<span className="h-3 w-6 rounded-full bg-gradient-to-r from-jade via-ink-soft to-gold" />}>
-          <PlotLookPanel />
-        </SettingBranch>
-        </>)}
         {bg("assets") && (<>
-        <BeautyGroup no="08" title="素材与代码" en="ASSETS" desc="所有图片位共用素材库；CSS 优先级最高，可覆盖以上一切" />
+        <BeautyGroup no="07" title="素材与代码" en="ASSETS" desc="所有图片位共用素材库；CSS 优先级最高，可覆盖以上一切" />
         <SettingBranch title="素材库与图床" en="ASSETS" desc="批量上传图片、配置图床；任意图片位都能直接选用" current={`${loadAssets().length} 张`} swatch={<span className="h-3 w-5 rounded-[3px] border border-dashed border-jade/70" />}>
           <AssetLibrary />
         </SettingBranch>
@@ -514,7 +513,7 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
 
         {/* 游戏字体：常规设置页也能直接切换 8 款预设字体或上传字体文件 */}
         {!beauty && (
-        <SettingBranch title="游戏字体" en="GAME FONT" desc="切换全站剧情、对话与界面的字体风格，或上传本地字体文件" current={theme.free?.font?.url ? "自定义字体" : (FONT_LABEL[theme.font ?? "song"] ?? "典雅宋体")} swatch={<span className="font-serif text-[12px]">字</span>}>
+        <SettingBranch title="剧情字体" current={theme.free?.font?.url ? "自定义字体" : (FONT_LABEL[theme.font ?? "song"] ?? "典雅宋体")} swatch={<span className="font-serif text-[12px]">字</span>}>
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
             {FONTS.map((ft) => {
               const cur = (theme.font ?? "song") === ft.id && !theme.free?.font?.url;
@@ -527,7 +526,6 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
                 >
                   <span className="text-[18px] leading-snug" style={{ fontFamily: ft.family }}>{ft.sample ?? "星"}</span>
                   <span className="text-[12px] font-semibold">{ft.label}</span>
-                  <span className={`text-[10px] ${cur ? "text-white/80" : "opacity-70"}`}>{ft.desc}</span>
                 </button>
               );
             })}
@@ -539,10 +537,8 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
 
         {/* 功能注释：叙事段落浅色底透明度；叠图旁白与小说内容卡共用，字色固定近黑 */}
         {!beauty && (
-        <div>
-          <span className="text-[14px] font-bold leading-tight tracking-[0.06em] text-ink">叙事底透明度</span>
-          <span className="mb-2 mt-0.5 block text-[11px] text-ink-soft">剧情正文底下的半透明底 · 调高更易读 · 普通段落保持黑色</span>
-          <div className="flex items-center gap-2 rounded-xl border border-line bg-paper px-3 py-2.5">
+        <SettingBranch title="叙事底透明度" current={`${theme.storyBgAlpha ?? 88}%`}>
+          <div className="flex items-center gap-2">
             <input
               type="range"
               min={40}
@@ -556,31 +552,30 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
             <span className="w-10 shrink-0 text-right text-[12px] tabular-nums text-ink-soft">{theme.storyBgAlpha ?? 88}%</span>
           </div>
           <p
-            className="story-prose story-narration-panel mt-2 rounded-xl px-3 py-2 text-[13px] leading-relaxed"
+            className="story-prose story-narration-panel mt-2 rounded-xl px-3 py-2 text-[12.5px] leading-relaxed"
             style={{ ["--story-panel-a" as string]: String((theme.storyBgAlpha ?? 88) / 100) }}
           >
-            预览：永和九年，岁在癸丑。天色将晚，街灯初上。
+            预览：天色将晚，街灯初上。
           </p>
-        </div>
+        </SettingBranch>
         )}
 
         {/* 背景音乐：上传 / 点播 */}
         {!beauty && (
-        <SettingBranch title="背景音乐" en="MUSIC" desc="上传本地音乐，点歌单即可播放；切换页面不中断" current="歌单" swatch={<IconMusic size={16} />}>
+        <SettingBranch title="背景音乐" current="歌单" swatch={<IconMusic size={16} />}>
           <BgmPanel />
         </SettingBranch>
         )}
 
-        {/* 功能注释：横竖屏暂不支持选择（固定竖屏），屏幕方向入口已移除 */}
+        {/* 功能注释：屏幕方向切换暂时隐藏，固定竖屏 */}
         {/* 本局游玩偏好：开局时按世界观默认 / 建角所选，之后随时可改，下一回合起生效 */}
         {!beauty && game && (
-        <div>
-          <span className="flex items-baseline gap-1.5">
-            <span className="text-[14px] font-bold leading-tight tracking-[0.06em] text-ink">游玩偏好</span>
-          </span>
-          <span className="mb-2 block text-[11px] text-ink-soft">只影响本局，下一回合起生效</span>
+        <SettingBranch
+          title="游玩偏好"
+          current={`${playPrefsOf(game).mode === "novel" ? "剧情模式" : "游戏模式"}${playPrefsOf(game).pov ? ` · ${POV_LABEL[playPrefsOf(game).pov!]}` : ""}`}
+        >
           <PlayPrefsPicker value={playPrefsOf(game)} onChange={(playPrefs) => patchGame((g) => ({ ...g, playPrefs }))} />
-        </div>
+        </SettingBranch>
         )}
       </div>
     </div>
@@ -639,30 +634,20 @@ function MenuRow({
 // 合并「养成/人物」后，本文件不再引用 CharacterTab（触发一次全量重转译，清除旧 HMR 残留）。
 export default function GameShell() {
   useEffect(() => { hookWorldBgm(); }, []);
-  const { game, cfg, theme, look, saveNow, loadState, endManually, popup, setPopup, retryPopup, busy, autosaveOn, setAutosaveOn, commitGame } = useGame();
+  const { game, theme, look, saveNow, loadState, endManually, popup, setPopup, retryPopup, busy, autosaveOn, setAutosaveOn, commitGame } = useGame();
   // 进入设了 BGM 的地点（含任意一层子地点）自动切歌；没设的地点不打断当前音乐
   const curRoom = game?.sim.room;
   // 地点 / RP 房间 BGM：进入自动播放；离开到没设 BGM 的地方，停止由场景开的那首
   useEffect(() => { enterScene(curRoom ? roomBgmOf(curRoom) : undefined); }, [curRoom]);
-  // 音频库：作者音频与作品音量同步给播放器（MOD 注入的随 MOD 启用自动合并）
+  // 音频库：作者音频同步给播放器（MOD 注入的随 MOD 启用自动合并）
   useEffect(() => { setAuthorAudio(game?.audio); }, [game?.audio]);
-  useEffect(() => { setWorkVolume(game?.audioVolume ?? 1); }, [game?.audioVolume]);
+  // 跨周目记录：任意一局触发过的事件并入本机进度，供人物线路解锁判定
+  useEffect(() => { recordFiredEvents(game?.sim.eventsFired); }, [game?.sim.eventsFired]);
   // 皮肤联动 BGM
   const skinBgm = look.skin ? game?.skinBgm?.[look.skin] : undefined;
   useEffect(() => { if (skinBgm) void switchBgm(skinBgm); }, [skinBgm]);
   const [tab, setTab] = useState<Tab>("home");
-  // 剧情输出期间统一锁定：不能切去其他功能 / 手机聊天，看完这一段再行动
-  const busyRef = useRef(busy);
-  busyRef.current = busy;
-  const [lockTip, setLockTip] = useState(false);
-  const lockTimer = useRef<number | undefined>(undefined);
-  const flashLock = useCallback(() => {
-    setLockTip(true);
-    window.clearTimeout(lockTimer.current);
-    lockTimer.current = window.setTimeout(() => setLockTip(false), 1800);
-  }, []);
-  // 剧情开始书写时，若停在其他页签则收回剧情页，保证玩家看到正在发生的故事
-  useEffect(() => { if (busy) { setTab((t) => (t === "home" ? t : "home")); setPanelOpen(false); } }, [busy]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 功能注释：剧情生成中仍可切世界/人脉/手机/设置；只锁「行动输入 / 推进时间」，避免等模型时整页卡住
   const [setOpen, setSetOpen] = useState(false); // 设置弹窗
   const [cgOpen, setCgOpen] = useState(false); // 玩家 CG 图鉴
   const [cgEditOpen, setCgEditOpen] = useState(false); // 编辑器 · CG 编排
@@ -704,7 +689,6 @@ export default function GameShell() {
   useEffect(() => {
     const onNav = (e: Event) => {
       const dest = (e as CustomEvent<Tab>).detail;
-      if (busyRef.current && dest !== "home") { flashLock(); return; }
       // 「人物」以档案弹窗呈现；其余功能切到对应整屏界面（横屏则展开侧栏浮层）
       if (dest === "sim") { setSimOpen(true); return; }
       // 功能注释：顶栏状态行 / 主线条 → 任务主线弹窗，不整页切到剧情志
@@ -730,7 +714,6 @@ export default function GameShell() {
   }, [landscape]);
   const [saveMsg, setSaveMsg] = useState<"ok" | "fail" | null>(null);
   const [endOpen, setEndOpen] = useState(false);
-  const [cfgOpen, setCfgOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [finOpen, setFinOpen] = useState(false);
   const [worksOpen, setWorksOpen] = useState(false);
@@ -770,20 +753,20 @@ export default function GameShell() {
     if (hubReturn && !hubChildOpen && !editorOpen && !modsOpen) { setHubReturn(false); setEditorOpen(true); }
   }, [hubReturn, hubChildOpen, editorOpen, modsOpen]);
   const [savesOpen, setSavesOpen] = useState(false); // 存档管理
-  const [saves, setSaves] = useState<SaveSlot[]>([]); // 六个手动槽的当前内容
-  const [autoSlot, setAutoSlot] = useState<SaveSlot | null>(null); // 自动存档
+  const [saves, setSaves] = useState<SaveSlot[]>([]); // 当前作品手动槽
+  const [autoSlot, setAutoSlot] = useState<SaveSlot | null>(null); // 自动存档（不占配额）
   const [editId, setEditId] = useState<string | null>(null); // 正在重命名的槽 id
   const [editName, setEditName] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null); // 正在写入的槽（禁用按钮）
+  const [cloudQuota, setCloudQuota] = useState<CloudQuota | null>(() => getCloudQuota());
+  const [quotaGate, setQuotaGate] = useState<string | null>(null); // 满额说明弹层
   const [schedOpen, setSchedOpen] = useState(false); // 本周日程板（全局弹窗，可从任意页直接唤出）
   const [simOpen, setSimOpen] = useState(false); // 人物档案（点左上角头像唤出的弹窗）
   // 「世界」页场景里的「本周日程」入口直接派发事件唤出，无需先跳到人物页；关养成时忽略，避免仍弹出日程板
   useEffect(() => {
     const onSched = () => { if (worldGrowEnabled()) setSchedOpen(true); };
     window.addEventListener("star:navschedule", onSched);
-    const onAi = () => setCfgOpen(true);
-    window.addEventListener("star:openaicfg", onAi);
-    return () => { window.removeEventListener("star:navschedule", onSched); window.removeEventListener("star:openaicfg", onAi); };
+    return () => { window.removeEventListener("star:navschedule", onSched); };
   }, []);
   if (!game) return null;
 
@@ -792,10 +775,11 @@ export default function GameShell() {
   // 功能注释：小说模式固定三行顶栏；Studio 预览也要开，否则产品验收对不上稿
   const novelLayout = playPrefsOf(game).mode === "novel";
   const mainQuest = game.sim
-    ? homeMainQuest(game.sim, getWorldStorylines(), dayDateLabel(game.sim.day ?? 0))
+    ? homeMainQuest(game.sim, getWorldStorylines(), dayDateLabel(game.sim.day ?? 0), getWorldEventDates())
     : null;
   const topbarData = {
     ...topbarDataOf(game, modWorld.chain[0].name),
+    note: game.world.note,
     ...(mainQuest
       ? {
           questStep: mainQuest.waitLabel ? `${mainQuest.stepName} · ${mainQuest.waitLabel}` : mainQuest.stepName,
@@ -809,40 +793,73 @@ export default function GameShell() {
       : {}),
   };
 
+  useEffect(() => onCloudQuota(setCloudQuota), []);
+
   const refreshSaves = async (pull = false) => {
-    // 功能注释：打开面板时先拉云端（换设备继续玩），存/删后只刷本机列表
-    if (pull) await syncCloudSaves();
+    // 功能注释：打开面板时先拉云端（换设备继续玩）并刷新账号级配额
+    const gameId = currentSaveGameId();
+    if (pull) {
+      await syncCloudSaves();
+      if (!cloudOffReason(gameId, isAuthorPreview())) await refreshCloudQuota(gameId).catch(() => undefined);
+    }
     const [manual, auto] = await Promise.all([listManualSaves(), getSlot(AUTO_SLOT_ID)]);
     setSaves(manual);
     setAutoSlot(auto);
+    setCloudQuota(getCloudQuota());
   };
-  const openSaves = () => { void refreshSaves().then(() => refreshSaves(true)); setEditId(null); setSavesOpen(true); };
-  // 立即存档：把当前进度刷入自动存档槽
+  const openSaves = () => { void refreshSaves().then(() => refreshSaves(true)); setEditId(null); setQuotaGate(null); setSavesOpen(true); };
+  // 立即存档：把当前进度刷入自动存档槽（不占 10/20）
   const quickSave = async () => {
+    if (cloudOffReason(currentSaveGameId(), isAuthorPreview())?.reason === "not-logged-in") {
+      setQuotaGate("请先登录后使用云存档");
+      return;
+    }
     const ok = await saveNow();
     setSaveMsg(ok ? "ok" : "fail");
     setTimeout(() => setSaveMsg(null), 1800);
     if (ok) void refreshSaves();
   };
-  // 存入 / 覆盖某个手动槽
+  // 存入 / 覆盖某个手动槽；新建受账号级 quota 预检，后端仍强校验
   const saveIntoSlot = async (id: string) => {
+    const off = cloudOffReason(currentSaveGameId(), isAuthorPreview());
+    if (off?.reason === "not-logged-in") {
+      setQuotaGate("请先登录后使用云存档");
+      return;
+    }
+    const overwrite = saves.some((s) => s.id === id);
+    const q = cloudQuota ?? getCloudQuota();
+    if (!canCreateManualCloudSave(q, overwrite)) {
+      const qq = q ?? defaultCloudQuota();
+      if (!qq.isMember && qq.used >= qq.freeLimit) {
+        setQuotaGate(`云存档已满（${qq.used}/${qq.limit}）。可覆盖已有槽，或开通会员扩容至 ${qq.memberLimit} 个。`);
+      } else if (qq.isMember) {
+        setQuotaGate(`云存档已满（${qq.used}/${qq.limit}），请删除或覆盖后再存。`);
+      } else if (qq.used > qq.freeLimit) {
+        setQuotaGate(`会员已到期，云存档上限恢复为 ${qq.freeLimit}；请删除多余存档或续费后再新建。`);
+      } else {
+        setQuotaGate(`云存档已满（${qq.used}/${qq.limit}），请删除或覆盖后再存。`);
+      }
+      return;
+    }
     setSavingId(id);
     const ok = await saveToSlot(id, game);
     setSavingId(null);
     setSaveMsg(ok ? "ok" : "fail");
     setTimeout(() => setSaveMsg(null), 1800);
-    if (ok) void refreshSaves();
+    if (ok) void refreshSaves(true);
   };
   const removeSlot = async (id: string) => {
     await deleteSlot(id);
-    void refreshSaves();
+    void refreshSaves(true);
   };
   const commitRename = async () => {
     if (editId) { await renameSlot(editId, editName); void refreshSaves(); }
     setEditId(null);
   };
-  // 六个固定槽位（顺序稳定），空槽显示为「可存入」
-  const SLOT_IDS = Array.from({ length: MAX_SLOTS }, (_, i) => `slot-${i + 1}`);
+  // 功能注释：展示位数量 = 当前云配额 limit（10/20）；无配额时按普通 10 展示
+  const quotaView = cloudQuota ?? defaultCloudQuota({ limit: CLOUD_FREE_LIMIT });
+  const SLOT_IDS = Array.from({ length: quotaView.limit }, (_, i) => `slot-${i + 1}`);
+  const memberHint = nearLimitMemberHint(quotaView);
 
   const tabNode = (t: Tab): ReactNode =>
     t === "home" ? <HomeTab /> : t === "sim" ? <SimTab /> : t === "image" ? (feature("imageCrisis") ? <ImageTab /> : null)
@@ -853,7 +870,6 @@ export default function GameShell() {
   /* 统一功能入口：世界 / 手机为常驻底页，其余（人物 / 形象 / 人脉 / 娱乐圈）一律封装为浮层弹窗。
    * 横屏沿用右侧侧栏浮层，竖屏改以居中弹窗呈现，菜单 / 底栏 / 跨页跳转皆走此分发。 */
   const openFeature = (t: Tab) => {
-    if (busy && t !== "home") { flashLock(); return; }
     if (t === "sim") { setSimOpen(true); return; }
     setTab(t);
     setSeen((p) => (p.has(t) ? p : new Set(p).add(t)));
@@ -926,14 +942,15 @@ export default function GameShell() {
         onMenu={() => setMenuOpen((v) => !v)}
         onEnd={() => setEndOpen(true)}
       >
-        {(game.attrDefs ?? []).some((d) => d.pin) && (
+        {/* 功能注释：小说布局已把 pin 主属性收进名牌副行，此处只留给非小说模式的可编辑状态条 */}
+        {!novelLayout && (game.attrDefs ?? []).some((d) => d.pin) && (
           <div className="flex gap-1.5 overflow-x-auto px-4 pb-1.5 [scrollbar-width:none]">
             {game.attrDefs!.filter((d) => d.pin).map((d) => {
               const v = game.player.attrs.find((a) => a.key === d.id)?.value ?? d.init;
               const t = (d.display ?? "both") !== "num" ? tierOf(v, d.tiers) : undefined;
               return (
                 <span key={d.id} className="flex shrink-0 items-center gap-1 rounded-full border border-line bg-paper/90 px-2.5 py-0.5 text-[11px] text-ink shadow-sm">
-                  {d.icon && <span>{d.icon}</span>}<span className="text-ink-soft">{d.label}</span>
+                  <span className="text-ink-soft">{d.label}</span>
                   {t && <b style={{ color: toneColor(d.color ?? "coral") }}>{t}</b>}
                   {(!t || d.display === "both" || !d.display) && <AttrValueEdit def={d} className="text-[11px]" />}
                 </span>
@@ -946,15 +963,11 @@ export default function GameShell() {
       </TopbarView>
       )}
 
-      {lockTip && (
-        <div role="status" className="pointer-events-none fixed left-1/2 top-16 z-[90] -translate-x-1/2 animate-pop rounded-full bg-ink/90 px-4 py-2 text-[12.5px] font-medium text-paper shadow-lg">
-          剧情正在上演，看完这一段再行动
-        </div>
-      )}
-      {/* 线下剧情触发的来电：不在手机页时，顶部弹出提醒，点按去接听 */}
+      {/* 线下剧情触发的来电：不在手机页时，顶部弹出提醒，点按去接听（生成中也可进手机） */}
       {game.phone?.ringing && tab !== "phone" && (
         <button
-          onClick={() => { if (busy) { flashLock(); return; } setTab("phone"); setSeen((p) => (p.has("phone") ? p : new Set(p).add("phone"))); if (landscape) setPanelOpen(true); }}
+          type="button"
+          onClick={() => { setTab("phone"); setSeen((p) => (p.has("phone") ? p : new Set(p).add("phone"))); if (landscape) setPanelOpen(true); }}
           className="fixed left-1/2 top-3 z-[45] flex w-[min(22rem,calc(100vw-1.5rem))] -translate-x-1/2 animate-pop items-center gap-3 rounded-[22px] bg-[#1c2430]/92 px-3.5 py-2.5 text-left text-white shadow-[0_16px_40px_-12px_rgba(0,0,0,0.55)] ring-1 ring-white/10 backdrop-blur-xl"
         >
           <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#34c759]">
@@ -1059,11 +1072,6 @@ export default function GameShell() {
               </div>
               <div className="grid grid-cols-1 gap-1.5">
                 <MenuRow
-                  icon={IconSettings} label="AI 配置" romaji="MODEL" hint="接入模型 · API Key · 叙事引擎设置"
-                  onClick={() => { setCfgOpen(true); setMenuOpen(false); }}
-                  badge={cfg?.apiKey ? "已接入" : "未配置"} badgeTone={cfg?.apiKey ? "jade" : "muted"}
-                />
-                <MenuRow
                   icon={IconSparkle} label="游戏设置" romaji="OPTIONS" hint="暗色模式 · 界面皮肤 · 背景音乐 · 字体风格 · 屏幕方向"
                   onClick={() => { setSetOpen(true); setMenuOpen(false); }}
                 />
@@ -1093,8 +1101,9 @@ export default function GameShell() {
       </main>
 
       {/* 底部时辰盘 · 石牌导航 */}
-      <MudChrome tab={tab} setTab={openFeature} />
+      <MudChrome tab={tab} setTab={openFeature} seamlessTop={tab === "home"} />
       {!landscape && <GameTour active={tab === "home"} />}
+      <PhoneTour active={tab === "phone"} />
 
       {/* 支线剧场：点事件进入扣行程点，支线内行动不再扣 */}
       <BranchSheet />
@@ -1331,26 +1340,57 @@ export default function GameShell() {
         </Modal>
       )}
 
-      {/* AI 配置 */}
-      {cfgOpen && (
-        <Modal title="AI 配置" onClose={() => setCfgOpen(false)}>
-          <AIConfigPanel />
-        </Modal>
-      )}
-
-      {/* 存档管理：6 个手动存档位 + 自动存档 + 立即存档 */}
+      {/* 存档管理：云端正式档 · 账号级 10/20 手动位 · 自动档不占配额 */}
       {savesOpen && (
-        <Modal panelClassName="ui-dialog-game" title="存档管理" onClose={() => setSavesOpen(false)}>
-          {/* 当前进度 + 立即存档（写入自动存档槽） */}
+        <Modal panelClassName="ui-dialog-game" title="存档管理" onClose={() => { setSavesOpen(false); setQuotaGate(null); }}>
+          {/* 功能注释：标题区 — 身份角标 + 已用/上限 + 同步状态 */}
+          <div className="mb-3 rounded-2xl border border-line bg-paper-2/50 px-3.5 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[14px] font-bold text-ink">
+                云存档{" "}
+                <span className="tabular-nums text-ink-soft">
+                  已用 {quotaView.used} / {quotaView.limit}
+                </span>
+              </p>
+              <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ring-1 ${quotaView.isMember ? "bg-jade/12 text-jade-deep ring-jade/25" : "bg-ink-soft/10 text-ink-soft ring-line"}`}>
+                {quotaView.isMember ? "会员" : "普通"}
+              </span>
+              {!quotaView.isMember && (
+                <button type="button" className="ml-auto text-[11px] font-semibold text-jade hover:underline" onClick={() => openCloudMembership()}>
+                  扩容至 {CLOUD_MEMBER_LIMIT}
+                </button>
+              )}
+            </div>
+            <p className="mt-1 text-[11.5px] text-ink-soft">进度保存在云端，换设备可继续玩</p>
+            <CloudSaveStatus />
+            {memberHint ? <p className="mt-1 text-[11px] text-coral">{memberHint}</p> : null}
+          </div>
+
+          {quotaGate && (
+            <div className="mb-3 rounded-2xl border border-coral/40 bg-coral/[0.06] px-3.5 py-3" role="status">
+              <p className="text-[12.5px] leading-relaxed text-ink">{quotaGate}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {/登录/.test(quotaGate) ? (
+                  <button type="button" className="rounded-lg bg-jade px-3 py-1.5 text-xs font-bold text-white" onClick={() => openCloudLogin()}>去登录</button>
+                ) : null}
+                {/会员|扩容|续费|到期/.test(quotaGate) ? (
+                  <button type="button" className="rounded-lg bg-coral px-3 py-1.5 text-xs font-bold text-white" onClick={() => openCloudMembership()}>开通会员</button>
+                ) : null}
+                <button type="button" className="rounded-lg border border-line px-3 py-1.5 text-xs text-ink-soft" onClick={() => setQuotaGate(null)}>知道了</button>
+              </div>
+            </div>
+          )}
+
+          {/* 当前进度 → 写入自动存档（系统位） */}
           <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-dashed border-jade/50 bg-jade/[0.05] p-3.5">
             <div className="min-w-0">
               <p className="text-[13.5px] font-bold text-ink">当前进度</p>
               <p className="truncate text-[11.5px] text-ink-soft">{game.world.time} · {game.world.location} · 第 {game.turnCount} 回合</p>
-              {saveMsg === "ok" && <p className="mt-0.5 text-[11px] text-jade">已写入本地大容量存档</p>}
-              {saveMsg === "fail" && <p className="mt-0.5 text-[11px] text-danger">存档失败：本地存储不可用</p>}
-              <CloudSaveStatus />
+              {saveMsg === "ok" && <p className="mt-0.5 text-[11px] text-jade">已写入自动存档（不占配额）</p>}
+              {saveMsg === "fail" && <p className="mt-0.5 text-[11px] text-danger">存档失败</p>}
             </div>
             <button
+              type="button"
               onClick={() => void quickSave()}
               className="flex shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] px-4 py-2 text-[13px] font-semibold text-white shadow-[0_8px_20px_-8px_rgba(150,110,220,0.7)] transition hover:brightness-110"
             >
@@ -1358,21 +1398,22 @@ export default function GameShell() {
             </button>
           </div>
 
-          {/* 自动存档开关 + 读取自动存档 */}
+          {/* 自动存档：系统位 · 不占配额 */}
+          <p className="mb-2 px-0.5 text-[11px] font-bold tracking-[0.14em] text-ink-soft">自动存档（系统位 · 不占配额）</p>
           <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-line bg-paper p-3.5">
             <div className="min-w-0">
-              <p className="text-[13px] font-bold text-ink">自动存档</p>
               <p className="truncate text-[11px] text-ink-soft">
-                {autoSlot ? `${autoSlot.state.world.time} · 第 ${autoSlot.state.turnCount} 回合 · ${new Date(autoSlot.updatedAt).toLocaleString("zh-CN")}` : "每次行动后自动保存（防抖写入，不卡顿）"}
+                {autoSlot ? `${autoSlot.state.world.time} · 第 ${autoSlot.state.turnCount} 回合 · ${new Date(autoSlot.updatedAt).toLocaleString("zh-CN")}` : "每次行动后自动保存"}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               {autoSlot && (
-                <button onClick={() => { loadState(autoSlot.state); setSavesOpen(false); }} className="rounded-lg bg-jade px-3 py-1.5 text-xs font-medium text-paper-2 transition hover:brightness-110">
+                <button type="button" onClick={() => { loadState(autoSlot.state); setSavesOpen(false); }} className="rounded-lg bg-jade px-3 py-1.5 text-xs font-medium text-paper-2 transition hover:brightness-110">
                   读取
                 </button>
               )}
               <button
+                type="button"
                 onClick={() => setAutosaveOn(!autosaveOn)}
                 aria-pressed={autosaveOn}
                 className={`relative h-6 w-11 shrink-0 rounded-full transition ${autosaveOn ? "bg-jade" : "bg-line"}`}
@@ -1382,9 +1423,11 @@ export default function GameShell() {
             </div>
           </div>
 
-          {/* 6 个手动存档位 */}
-          <p className="mb-2 px-0.5 text-[11px] font-bold tracking-[0.18em] text-ink-soft">手动存档位 · 共 {MAX_SLOTS} 位</p>
-          <div className="space-y-2">
+          <p className="mb-2 px-0.5 text-[11px] font-bold tracking-[0.14em] text-ink-soft">
+            手动云存档 · 共 {quotaView.limit} 位
+            <span className="ml-1 font-medium tracking-normal text-ink-soft/70">（全账号共用，含其他作品）</span>
+          </p>
+          <div className="max-h-[42vh] space-y-2 overflow-y-auto pr-0.5">
             {SLOT_IDS.map((id, i) => {
               const sv = saves.find((s) => s.id === id);
               const cur = !!sv && sv.state.id === game.id;
@@ -1419,6 +1462,7 @@ export default function GameShell() {
                   </div>
                   <div className="mt-2.5 flex flex-wrap justify-end gap-1.5">
                     <button
+                      type="button"
                       disabled={busySlot}
                       onClick={() => void saveIntoSlot(id)}
                       className="rounded-lg bg-gradient-to-br from-[var(--jade)] to-[var(--coral)] px-3 py-1.5 text-xs font-medium text-white transition hover:brightness-110 disabled:opacity-50"
@@ -1427,13 +1471,13 @@ export default function GameShell() {
                     </button>
                     {sv && (
                       <>
-                        <button onClick={() => { loadState(sv.state); setSavesOpen(false); }} className="rounded-lg bg-jade px-3 py-1.5 text-xs font-medium text-paper-2 transition hover:brightness-110">
+                        <button type="button" onClick={() => { loadState(sv.state); setSavesOpen(false); }} className="rounded-lg bg-jade px-3 py-1.5 text-xs font-medium text-paper-2 transition hover:brightness-110">
                           读取存档
                         </button>
-                        <button onClick={() => { setEditId(id); setEditName(sv.name); }} className="rounded-lg border border-line px-2.5 py-1.5 text-xs text-ink-soft transition hover:border-jade hover:text-jade-deep">
+                        <button type="button" onClick={() => { setEditId(id); setEditName(sv.name); }} className="rounded-lg border border-line px-2.5 py-1.5 text-xs text-ink-soft transition hover:border-jade hover:text-jade-deep">
                           重命名
                         </button>
-                        <button onClick={() => void removeSlot(id)} className="rounded-lg border border-line px-2.5 py-1.5 text-xs text-ink-soft transition hover:border-danger hover:text-danger">
+                        <button type="button" onClick={() => void removeSlot(id)} className="rounded-lg border border-line px-2.5 py-1.5 text-xs text-ink-soft transition hover:border-danger hover:text-danger">
                           删除
                         </button>
                       </>

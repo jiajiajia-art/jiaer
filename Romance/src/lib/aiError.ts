@@ -19,23 +19,29 @@ export function friendlyAIError(e: unknown): { title: string; text: string } {
     detail = (err?.body || "").slice(0, 120);
   }
   const blob = `${code} ${detail}`.toLowerCase();
-  const tail = detail ? `\n（接口原话：${detail.slice(0, 120)}）` : "";
-  if (status === 408) return { title: "AI 响应超时", text: err?.body || "接口长时间没有响应。" };
-  if (status === 204) return { title: "AI 没有返回正文", text: err?.body || "接口返回了空内容。" };
+  // 功能注释：玩家侧只给可读说明，不拼「接口原话 / 404」等技术细节
+  if (status === 408) return { title: "AI 响应超时", text: "等太久了，请点重新生成再试一次。" };
+  if (status === 204) return { title: "AI 没有返回正文", text: "这次没有写出内容，请重新生成。" };
   if (!status && (err?.name === "TypeError" || /fetch|network|failed/i.test(err?.message || "")))
-    return { title: "网络连接失败", text: "连不上 AI 接口，请检查网络或接口地址是否填写正确。" };
+    return { title: "网络连接失败", text: "连不上服务，请检查网络后再试。" };
   if (status === 401 || /invalid.*key|api key|unauthorized|incorrect|not_logged_in|请先登录/.test(blob))
-    return { title: "密钥无效", text: "API Key 不正确或已失效；若在平台内游玩/预览，请确认已登录账号（使用后台文案配置）。" + tail };
-  if (status === 400 && /insufficient_points|积分不足/.test(blob))
-    return { title: "织梦豆不足", text: detail || "织梦豆不足，请充值后再演绎。" };
+    return { title: "需要重新登录", text: "登录状态失效了，请重新登录后再继续演绎。" };
+  if (status === 400 && /insufficient_points|积分不足/.test(blob)) {
+    // 功能注释：保留「需要/当前」数字，界面据此画差额条；无详情时给可读引导
+    const keep = /需要\s*\d+/.test(detail) ? detail : "";
+    return {
+      title: "织梦豆不足",
+      text: keep || "织梦豆不够这次演绎了。先去充值，再点「充值后重试」。",
+    };
+  }
   if (status === 402 || /quota|balance|insufficient|credit/.test(blob))
-    return { title: "额度不足", text: "账户余额或额度不足，请充值或更换接口。" + tail };
-  if (status === 403) return { title: "没有权限", text: "该密钥无权使用这个模型或接口。" + tail };
+    return { title: "额度不足", text: "额度不够了，请先充值再继续。" };
+  if (status === 403) return { title: "没有权限", text: "当前账号暂时不能使用这个能力。" };
   if (status === 404 || /model.*(not|does not)|not.*found|no such model/.test(blob))
-    return { title: "模型不可用", text: "当前模型不存在或暂不可用，请在设置里换一个模型。" + tail };
-  if (status === 429 || /rate|too many/.test(blob)) return { title: "请求太频繁", text: "接口限流了，稍等片刻再试。" + tail };
-  if (status === 400 && /context|token|length/.test(blob)) return { title: "内容超长", text: "这次上下文太长，模型吃不下。可以稍后重试或换个上下文更大的模型。" + tail };
-  if (status >= 500) return { title: "服务暂时异常", text: "AI 服务端出错了，稍后重试即可。" + tail };
-  if (status) return { title: "AI 请求失败", text: `接口返回错误（${status}）。` + tail };
-  return { title: "AI 请求失败", text: err?.message || "网络或配置异常，请检查 AI 配置。" };
+    return { title: "模型不可用", text: "当前模型暂时不可用，请在设置里换一个后再试。" };
+  if (status === 429 || /rate|too many/.test(blob)) return { title: "请求太频繁", text: "有点忙，稍等片刻再试。" };
+  if (status === 400 && /context|token|length/.test(blob)) return { title: "内容超长", text: "这次内容有点长，请缩短后再试，或换一个模型。" };
+  if (status >= 500) return { title: "服务暂时异常", text: "服务开小差了，稍后重试即可。" };
+  if (status) return { title: "AI 请求失败", text: "这次没能完成，请点重新生成再试。" };
+  return { title: "AI 请求失败", text: "网络或配置异常，请稍后重试。" };
 }

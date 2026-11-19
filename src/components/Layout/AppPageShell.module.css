@@ -12,15 +12,14 @@
 }
 
 .main {
-  /* 功能注释：主内容纵向堆叠，FooterArea 落在滚动区底部而非右侧栏；仍可滚，但隐藏滚动条外观（黑底白条刺眼） */
+  /* 功能注释：外壳只负责滚动与顶/底避让；不要在本层做 flex+margin-top:auto，否则版权下方会多出一截可滚空白 */
   /* 功能注释：position 必须钉死 absolute——页面 mainClassName 若带 relative 会把高度撑成内容高度，壳层 overflow:hidden 后整页无法滚动并误触发无限加载 */
   position: absolute !important;
   top: var(--app-navbar-offset);
   bottom: var(--app-bottom-nav-offset);
   left: 0;
   right: 0;
-  display: flex;
-  flex-direction: column;
+  display: block;
   overflow-x: hidden;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;
@@ -28,6 +27,21 @@
   box-sizing: border-box;
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+
+/* 功能注释：内层 min-height:100% 才把页脚沉底；短页贴底栏上方，长页随内容增高，不再在版权下留空洞 */
+.mainInner {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  width: 100%;
+}
+
+.mainInner > :global(footer[data-site-footer]) {
+  /* 功能注释：移动端页脚紧跟内容，不用 margin-top:auto，避免列表短时中间再空一大截 */
+  flex: 0 0 auto;
+  margin-top: 0;
 }
 
 .main::-webkit-scrollbar {

@@ -56,7 +56,7 @@ test('ModEditorPanel_开场只留外观工作室_禁止开场白表单', () => {
   assert.match(panel, /\.\.\.\(c\.opening \?\? \{\}\),\s*page/);
   // 功能注释：底部不再挂「首次/开局可触发事件」脚注
   const openingAt = panel.indexOf('title="开场剧情"');
-  const lookAt = panel.indexOf('title="剧情美化"', openingAt);
+  const lookAt = panel.indexOf('title="底栏页签"', openingAt);
   assert.doesNotMatch(panel.slice(openingAt, lookAt), /首次\s*\/\s*开局可触发事件|④ 剧情 → 固定事件/);
   // ModOpeningEditor 文件可留作 Cover 导出，但面板不得再挂整套输入
   const ed = readFileSync(join(romance, 'components/ModOpeningEditor.tsx'), 'utf8');

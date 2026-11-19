@@ -22,7 +22,7 @@ import {
 } from '../utils/constants';
 import { consumeShelfResumeOnce, readGameDetailPreview, readShelfResume } from '../utils/gameDetailNavigation';
 import { recordBrowsingHistory } from '../utils/browsingHistory';
-import { MdContentCopy, MdOutlineHistory } from 'react-icons/md';
+import { MdContentCopy, MdOutlineAutoStories, MdOutlineHistory } from 'react-icons/md';
 import AuthModal from '../components/AuthModal';
 import LoadSaveListModal from '../components/CreateGame/LoadSaveListModal';
 import SavePreviewModal from '../components/CreateGame/SavePreviewModal';
@@ -38,15 +38,18 @@ import { getOrCreatePromoAnonId } from '../utils/promoAnonId';
 import { copyTextToClipboard } from '../utils/clipboard';
 import GameRating from '../components/GameRating/GameRating';
 import { resolveRatingDisplay } from '../utils/ratingDisplay';
+import { ratingStatsEqual } from '../utils/ratingStatsSync';
 import {
     GameIssueFeedbackModal,
     GameRatingModal,
     GameUpdateLogModal,
 } from '../components/GameDetail/GameDetailExtraModals';
 import gameDetailExtrasApi, { type GameUpdateLogItem } from '../api/gameDetailExtrasApi';
+import GameDetailCharacterCards from '../components/GameDetail/GameDetailCharacterCards';
 import { useDailyTaskStore } from '../store/dailyTaskStore';
 import { useTranslation } from 'react-i18next';
 import { getGameTypeLabelFromMeta } from '../utils/gameTypeLabel';
+import { translateThemeLabel } from '../utils/themeTags';
 import { buildNovelReadPath, buildSourceGameDetailPath } from '../utils/novelGame';
 import { prefetchGalgameDocument } from '../lib/galgame/galgameDocumentCache';
 
@@ -64,7 +67,6 @@ import { resolvePublicListingState } from '../utils/gameListingAccess';
 /** 功能注释：详情页操作图标；返回改用分类页同款描边箭头，浅色封面上更清晰 */
 const HOME_ICON_BASE = `${import.meta.env.BASE_URL}data/assetsv2/home`;
 const ICON_GAMEPAD = `${HOME_ICON_BASE}/icon_gamepad.webp`;
-const ICON_FILMSTRIP = `${HOME_ICON_BASE}/icon_filmstrip.webp`;
 import {
     looksLikeHtml,
     descriptionToPlainText,
@@ -289,7 +291,7 @@ const GameDetail: React.FC = () => {
     const [isPlayStatusLoading, setIsPlayStatusLoading] = useState(false);
     /** 功能注释：读档进行中；只做轻提示 + 防重复，不再用 isLoading 把整页换成转圈 */
     const [isSaveLoading, setIsSaveLoading] = useState(false);
-    const [playStatus, setPlayStatus] = useState(DEFAULT_PLAY_STATUS);
+    const [playStatus, setPlayStatus] = useState({ hasContinueState: false, hasSave: false });
     // 功能注释：已有云端进度时，「开始游戏」先确认会覆盖自动存档
     const [isRestartConfirmOpen, setIsRestartConfirmOpen] = useState(false);
     const [derivedNovels, setDerivedNovels] = useState<DerivedNovelSummary[]>([]);
@@ -301,7 +303,7 @@ const GameDetail: React.FC = () => {
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
     const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
     const [isUpdateLogModalOpen, setIsUpdateLogModalOpen] = useState(false);
-    const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+    const [detailSideTab, setDetailSideTab] = useState<'comments' | 'updates' | 'issue'>('comments');
     const [updateLogs, setUpdateLogs] = useState<GameUpdateLogItem[]>([]);
     const [latestUpdateLog, setLatestUpdateLog] = useState<GameUpdateLogItem | null>(null);
     const [myRatingValue, setMyRatingValue] = useState<number | null>(null);
@@ -361,9 +363,17 @@ const GameDetail: React.FC = () => {
     );
     const startButtonText = useMemo(() => {
         if (isNovel) return t('gameDetail.startReading');
+        // 自定义、酒馆、恋爱只有一个入口，不走存档，按钮就写「开始游戏」
+        if (
+            normalizedGameMode === 'customif'
+            || normalizedGameMode === 'st'
+            || normalizedGameMode === 'ROMANCE'
+        ) {
+            return t('gameDetail.startGame');
+        }
         const fallbackLabel = playStatus.hasContinueState
             ? t('gameDetail.continueExperience')
-            : t('gameDetail.startExperience');
+            : t('gameDetail.startGame');
         if (!isInteractiveVideo) return fallbackLabel;
         return getInteractiveVideoStartButtonLabel({
             config: interactiveVideoAccessInfo?.config,
@@ -376,6 +386,7 @@ const GameDetail: React.FC = () => {
         isInteractiveVideo,
         isInteractiveVideoOwner,
         isNovel,
+        normalizedGameMode,
         playStatus.hasContinueState,
         t,
     ]);
@@ -397,11 +408,12 @@ const GameDetail: React.FC = () => {
     );
     const heroTags = useMemo(() => {
         if (!game) return [] as string[];
-        const tags = resolveGameDetailTags(game);
+        const language = i18n.resolvedLanguage || i18n.language;
+        const tags = resolveGameDetailTags(game).map((tag) => translateThemeLabel(tag, t, language));
         if (tags.length > 0) return tags;
         if (gameTypeLabel) return [gameTypeLabel];
         return [] as string[];
-    }, [game, gameTypeLabel]);
+    }, [game, gameTypeLabel, i18n.language, i18n.resolvedLanguage, t]);
     /** 功能注释：效果图作者行只显示昵称；头像与列表卡片同源 */
     const heroAuthor = useMemo(() => {
         if (!game) {
@@ -1371,6 +1383,15 @@ const GameDetail: React.FC = () => {
         setMyRatingEditCount(0);
     }, []);
 
+    // 功能注释：评论区汇总回写详情评分；值未变则不 setState，避免请求死循环
+    const applyRatingSummaryFromComments = useCallback((summary: {
+        average?: number | null;
+        total?: number;
+    }) => {
+        const next = { average: summary.average ?? null, count: Number(summary.total) || 0 };
+        setRatingStats((prev) => (ratingStatsEqual(prev, next) ? prev : next));
+    }, []);
+
     const loadUpdateLogs = useCallback(async (targetFileId: string) => {
         try {
             const res = await gameDetailExtrasApi.listUpdateLogs(targetFileId);
@@ -1446,13 +1467,6 @@ const GameDetail: React.FC = () => {
             cancelled = true;
         };
     }, [game]);
-
-    const heroStyle = useMemo(() => {
-        if (!heroCoverAbs) return {};
-        return {
-            backgroundImage: `url(${heroCoverAbs})`,
-        };
-    }, [heroCoverAbs]);
 
     const normalizeNewlines = useCallback((text: string) => {
         return (text ?? '').replaceAll('\\n', '\n').replaceAll('/n', '\n');
@@ -1715,10 +1729,25 @@ const GameDetail: React.FC = () => {
                 </div>
             </div>
 
-            {/* 封面大图 + 类型角标（如 AI文游） */}
-            <div className={`${styles.heroSection} ${styles.heroSectionCoverOnly}`} style={heroStyle}>
+            {/* 封面大图按容器铺满 + 右上玩法类型角标（不被顶栏挡住） */}
+            <div className={`${styles.heroSection} ${styles.heroSectionCoverOnly}`}>
+                {heroCoverAbs ? (
+                    <img
+                        className={styles.heroCoverImg}
+                        src={heroCoverAbs}
+                        alt=""
+                        decoding="async"
+                    />
+                ) : null}
                 {gameTypeLabel ? (
                     <span className={styles.coverTypeBadge}>{gameTypeLabel}</span>
+                ) : null}
+                {themeTags.length > 0 ? (
+                    <div className={styles.heroTagsOnCover}>
+                        {themeTags.map((tag) => (
+                            <span key={tag} className={styles.heroTag}>{tag}</span>
+                        ))}
+                    </div>
                 ) : null}
             </div>
 
@@ -1748,55 +1777,52 @@ const GameDetail: React.FC = () => {
                             )}
                         </div>
                         {heroAuthorName ? (
-                            <div className={styles.heroMetaActions}>
-                                <button
-                                    type="button"
-                                    className={`${styles.heroMetaRow} ${styles.heroMetaRowClickable}`}
-                                    onClick={handleOpenCreatorHomepage}
-                                    aria-label={t('gameDetail.openCreatorHomepage')}
-                                >
-                                    <img
-                                        className={styles.heroAuthorAvatar}
-                                        src={heroAuthorAvatarSrc}
-                                        alt=""
-                                        loading="lazy"
-                                        decoding="async"
-                                    />
-                                    <p className={styles.heroMeta}>{heroAuthorName}</p>
-                                </button>
-                                {canShowCreatorFollowSlot ? (
-                                    showCreatorFollowBtn ? (
+                            <div className={styles.heroMetaBand}>
+                                {heroAuthorName ? (
+                                    <div className={styles.heroMetaActions}>
                                         <button
                                             type="button"
-                                            className={`${styles.followBtn} ${
-                                                isCreatorBlocked || isCreatorBlockedBy
-                                                    ? styles.followBtnMuted
-                                                    : isFollowingCreator
-                                                        ? styles.followBtnActive
-                                                        : styles.followBtnIdle
-                                            }`}
-                                            disabled={followBusy || !creatorFollowActionable}
-                                            onClick={() => void handleToggleCreatorFollow()}
+                                            className={`${styles.heroMetaRow} ${styles.heroMetaRowClickable}`}
+                                            onClick={handleOpenCreatorHomepage}
+                                            aria-label={t('gameDetail.openCreatorHomepage')}
                                         >
-                                            {isCreatorBlocked
-                                                ? t('create.socialBlockedBtn')
-                                                : isCreatorBlockedBy
-                                                    ? t('create.socialCannotFollowBtn')
-                                                    : isFollowingCreator
-                                                        ? t('create.socialFollowingBtn')
-                                                        : t('create.socialFollowBtn')}
+                                            <img
+                                                className={styles.heroAuthorAvatar}
+                                                src={heroAuthorAvatarSrc}
+                                                alt=""
+                                                loading="lazy"
+                                                decoding="async"
+                                            />
+                                            <p className={styles.heroMeta}>{heroAuthorName}</p>
                                         </button>
-                                    ) : (
-                                        <span className={styles.followBtnPlaceholder} aria-hidden="true" />
-                                    )
+                                        {canShowCreatorFollowSlot ? (
+                                            showCreatorFollowBtn ? (
+                                                <button
+                                                    type="button"
+                                                    className={`${styles.followBtn} ${
+                                                        isCreatorBlocked || isCreatorBlockedBy
+                                                            ? styles.followBtnMuted
+                                                            : isFollowingCreator
+                                                                ? styles.followBtnActive
+                                                                : styles.followBtnIdle
+                                                    }`}
+                                                    disabled={followBusy || !creatorFollowActionable}
+                                                    onClick={() => void handleToggleCreatorFollow()}
+                                                >
+                                                    {isCreatorBlocked
+                                                        ? t('create.socialBlockedBtn')
+                                                        : isCreatorBlockedBy
+                                                            ? t('create.socialCannotFollowBtn')
+                                                            : isFollowingCreator
+                                                                ? t('create.socialFollowingBtn')
+                                                                : t('create.socialFollowBtn')}
+                                                </button>
+                                            ) : (
+                                                <span className={styles.followBtnPlaceholder} aria-hidden="true" />
+                                            )
+                                        ) : null}
+                                    </div>
                                 ) : null}
-                            </div>
-                        ) : null}
-                        {themeTags.length > 0 ? (
-                            <div className={styles.heroTags}>
-                                {themeTags.map((tag) => (
-                                    <span key={tag} className={styles.heroTag}>{tag}</span>
-                                ))}
                             </div>
                         ) : null}
                     </div>
@@ -1880,6 +1906,8 @@ const GameDetail: React.FC = () => {
                         ) : null}
                     </section>
 
+                    {fileId ? <GameDetailCharacterCards fileId={String(fileId)} /> : null}
+
                     {isNovel && sourceFileId && sourceAuthorName ? (
                         <button
                             type="button"
@@ -1945,77 +1973,126 @@ const GameDetail: React.FC = () => {
                                 className={styles.replayButton}
                                 onClick={openDerivedNovelDrawer}
                             >
-                                <img src={ICON_FILMSTRIP} alt="" className={styles.replayButtonIcon} />
+                                <MdOutlineAutoStories className={styles.replayButtonIcon} aria-hidden="true" />
                                 <span>{t('gameDetail.storyReplay')}</span>
                             </button>
                         ) : null}
                     </div>
 
-                    {/* 更新日志：最近卡片 + 查看全部 */}
-                    <section className={styles.sectionBlock} aria-label={t('gameDetail.updateLog')}>
-                        <div className={styles.synopsisHeader}>
-                            <h3 className={styles.synopsisTitle}>{t('gameDetail.updateLog')}</h3>
-                        </div>
-                        <div className={styles.updateLogCard}>
-                            <div className={styles.updateLogCardHeader}>
-                                <div className={styles.updateLogCardMeta}>
-                                    <span className={styles.updateLogRecentBadge}>
-                                        {t('gameDetail.updateLogRecent')}
-                                    </span>
-                                    {latestNoteDateLabel ? (
-                                        <time className={styles.updateLogTime} dateTime={latestNoteAt || undefined}>
-                                            {latestNoteDateLabel}
-                                        </time>
-                                    ) : null}
-                                </div>
-                                {(updateLogs.length > 0 || latestNote) ? (
-                                    <button
-                                        type="button"
-                                        className={styles.updateLogViewAll}
-                                        onClick={() => setIsUpdateLogModalOpen(true)}
-                                    >
-                                        {t('gameDetail.updateLogViewAll')}
-                                    </button>
-                                ) : null}
-                            </div>
-                            {latestNote ? (
-                                <p className={styles.updateLogBody}>{normalizeNewlines(latestNote)}</p>
-                            ) : (
-                                <p className={styles.updateLogEmpty}>{t('gameDetail.updateLogEmpty')}</p>
-                            )}
-                        </div>
-
-                        <div className={styles.feedbackEntryRow}>
+                    {/* 评论区和更新日志共用一组标签，点哪个看哪一块 */}
+                    <section className={`${styles.sectionBlock} ${styles.detailTabsPanel}`}>
+                        <div className={`${styles.detailTabs} ${detailSideTab === 'comments' ? styles.detailTabsWithSort : ''}`} role="tablist">
                             <button
                                 type="button"
-                                className={styles.feedbackEntry}
+                                role="tab"
+                                id="game-detail-tab-comments"
+                                className={`${styles.detailTab} ${detailSideTab === 'comments' ? styles.detailTabActive : ''}`}
+                                aria-selected={detailSideTab === 'comments'}
+                                aria-controls="game-detail-panel-comments"
+                                onClick={() => setDetailSideTab('comments')}
+                            >
+                                {t('gameRating.commentsSection')}
+                            </button>
+                            <button
+                                type="button"
+                                role="tab"
+                                id="game-detail-tab-updates"
+                                className={`${styles.detailTab} ${detailSideTab === 'updates' ? styles.detailTabActive : ''}`}
+                                aria-selected={detailSideTab === 'updates'}
+                                aria-controls="game-detail-panel-updates"
+                                onClick={() => setDetailSideTab('updates')}
+                            >
+                                {t('gameDetail.updateLog')}
+                            </button>
+                            <button
+                                type="button"
+                                role="tab"
+                                id="game-detail-tab-issue"
+                                className={`${styles.detailTab} ${detailSideTab === 'issue' ? styles.detailTabActive : ''}`}
+                                aria-selected={detailSideTab === 'issue'}
+                                aria-controls="game-detail-panel-issue"
                                 onClick={() => {
-                                    if (!checkAuth()) {
-                                        return;
-                                    }
-                                    setIsIssueModalOpen(true);
+                                    if (!checkAuth()) return;
+                                    setDetailSideTab('issue');
                                 }}
                             >
                                 {t('gameDetail.issueFeedbackEntry')}
                             </button>
                         </div>
-                    </section>
 
-                    {/* 评论区常驻：真实接口数据，样式对齐效果图 */}
-                    {fileId ? (
-                        <section className={styles.sectionBlock} aria-label={t('gameRating.commentsSection')}>
-                            <GameRating
-                                key={`${fileId}-${commentsRefreshKey}`}
-                                fileId={fileId}
-                                mode="comments"
-                                onRatingChange={(summary) => {
-                                    // 功能注释：以评论区实时汇总为准（含新提交的评分）
-                                    setRatingStats({ average: summary.average, count: summary.total });
-                                }}
-                                onUserRatingChange={applyUserRatingFromComments}
+                        <div
+                            role="tabpanel"
+                            id="game-detail-panel-comments"
+                            aria-labelledby="game-detail-tab-comments"
+                            className={styles.detailTabPane}
+                            hidden={detailSideTab !== 'comments'}
+                        >
+                            {fileId ? (
+                                <GameRating
+                                    key={`${fileId}-${commentsRefreshKey}`}
+                                    fileId={fileId}
+                                    mode="comments"
+                                    hideSectionTitle
+                                    onRatingChange={applyRatingSummaryFromComments}
+                                    onUserRatingChange={applyUserRatingFromComments}
+                                />
+                            ) : null}
+                        </div>
+
+                        <div
+                            role="tabpanel"
+                            id="game-detail-panel-updates"
+                            aria-labelledby="game-detail-tab-updates"
+                            className={styles.detailTabPane}
+                            hidden={detailSideTab !== 'updates'}
+                        >
+                            <div className={styles.updateLogCard}>
+                                <div className={styles.updateLogCardHeader}>
+                                    <div className={styles.updateLogCardMeta}>
+                                        {latestNote ? (
+                                            <span className={styles.updateLogRecentBadge}>
+                                                {t('gameDetail.updateLogRecent')}
+                                            </span>
+                                        ) : null}
+                                        {latestNote && latestNoteDateLabel ? (
+                                            <time className={styles.updateLogTime} dateTime={latestNoteAt || undefined}>
+                                                {latestNoteDateLabel}
+                                            </time>
+                                        ) : null}
+                                    </div>
+                                    {(updateLogs.length > 0 || latestNote) ? (
+                                        <button
+                                            type="button"
+                                            className={styles.updateLogViewAll}
+                                            onClick={() => setIsUpdateLogModalOpen(true)}
+                                        >
+                                            {t('gameDetail.updateLogViewAll')}
+                                        </button>
+                                    ) : null}
+                                </div>
+                                {latestNote ? (
+                                    <p className={styles.updateLogBody}>{normalizeNewlines(latestNote)}</p>
+                                ) : (
+                                    <p className={styles.updateLogEmpty}>{t('gameDetail.updateLogEmpty')}</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div
+                            role="tabpanel"
+                            id="game-detail-panel-issue"
+                            aria-labelledby="game-detail-tab-issue"
+                            className={styles.detailTabPane}
+                            hidden={detailSideTab !== 'issue'}
+                        >
+                            <GameIssueFeedbackModal
+                                embedded
+                                isOpen
+                                fileId={String(fileId || '')}
+                                gameTitle={game.title || ''}
                             />
-                        </section>
-                    ) : null}
+                        </div>
+                    </section>
                 </div>
             </div>
 
@@ -2051,12 +2128,7 @@ const GameDetail: React.FC = () => {
                             : []
                 }
             />
-            <GameIssueFeedbackModal
-                isOpen={isIssueModalOpen}
-                onClose={() => setIsIssueModalOpen(false)}
-                fileId={String(fileId || '')}
-                gameTitle={game.title || ''}
-            />
+            {/* 故障反馈已改到更新日志右侧标签，不再弹窗 */}
 
             {/* 模态框 */}
             <ConfirmModal

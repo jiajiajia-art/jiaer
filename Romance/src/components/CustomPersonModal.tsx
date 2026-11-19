@@ -34,7 +34,7 @@ export default function CustomPersonModal({ onClose, onCreated }: { onClose: () 
   const label = "mb-1 block text-[12px] font-bold text-ink-soft";
 
   return (
-    <Modal title="自定义人物" onClose={onClose}>
+    <Modal panelClassName="npc-tab" title="自定义人物" onClose={onClose}>
       <div className="space-y-3">
         <div className="flex items-center gap-3">
           <Avatar src={f.avatar} name={f.name || "新"} size={64} square editable onPick={(d) => set("avatar", d)} />

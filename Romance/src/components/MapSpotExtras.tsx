@@ -124,7 +124,7 @@ export default function MapSpotExtras({ e, name, isStart, patch, setStart }: {
       {/* 乙游场景图：仅 9:16 / 1080×1920 竖图 */}
       <div>
         <label className={lab}>乙游场景图</label>
-        <p className="mb-1.5 text-[10.5px] leading-relaxed text-ink-soft">剧情写到「{name}」时铺这张图。{SCENE_PORTRAIT_HINT}。不设则用所在底图。</p>
+        <p className="mb-1.5 text-[10.5px] leading-relaxed text-ink-soft">剧情写到「{name}」时显示这张图。{SCENE_PORTRAIT_HINT}。不设则沿用所在地图底图。</p>
         <div className="flex gap-2">
           <button type="button" onClick={() => { setBgErr(""); pickBg(); }} className="flex-1 rounded-lg border border-jade/50 bg-jade/10 py-1.5 text-[12px] font-bold text-jade-deep hover:bg-jade/20">上传场景图</button>
           {e.background && <button type="button" onClick={() => { setBgErr(""); patch({ background: undefined }); }} className="rounded-lg border border-line px-3 text-[12px] text-ink-soft hover:text-danger">清除</button>}

@@ -1,0 +1,7 @@
+{
+  "promotion": {
+    "activityNotStarted": "活动未开始",
+    "formSeparator": "，",
+    "endTimePattern": "{{month}}月{{day}}日{{hour}}:{{minute}}"
+  }
+}

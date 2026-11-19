@@ -8,6 +8,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { auth } from '../../api/account/authApi';
 import { useDailyTaskStore } from '../../store/dailyTaskStore';
 import {
+    DAILY_TASK_ORDER,
     isDynamicDailyTask,
     isDynamicDurationDailyTask,
     isDynamicPromotionDailyTask,
@@ -105,6 +106,11 @@ const DailyTasksModal: React.FC<DailyTasksModalProps> = ({ isOpen, onClose }) =>
         isClaimingMakeupCard: state.isClaimingMakeupCard,
         getDisplayTotalSeconds: state.getDisplayTotalSeconds,
     })));
+
+    useEffect(() => {
+        if (!isOpen) return;
+        void refreshDailyTasks({ silent: true });
+    }, [isOpen, refreshDailyTasks]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -215,10 +221,14 @@ const DailyTasksModal: React.FC<DailyTasksModalProps> = ({ isOpen, onClose }) =>
     const tenMinuteTask = durationTaskMap.get('online_10m');
     const thirtyMinuteTask = durationTaskMap.get('online_30m');
     const hasDurationTaskFallback = !tenMinuteTask || !thirtyMinuteTask;
-    const claimableTaskCount = dailyTasks.filter(
+    const fixedDailyTasks = dailyTasks.filter((task) => (
+        !task.isDynamic && DAILY_TASK_ORDER.includes(task.code as typeof DAILY_TASK_ORDER[number])
+    ));
+    const summaryTasks = fixedDailyTasks.length > 0 ? fixedDailyTasks : dailyTasks;
+    const claimableTaskCount = summaryTasks.filter(
         (task) => Boolean(task.claimRequest) && task.claimable && !task.claimed,
     ).length;
-    const completedTaskCount = dailyTasks.filter((task) => task.completed || task.claimed).length;
+    const claimedTaskCount = summaryTasks.filter((task) => task.claimed).length;
 
     return (
         <div className={styles.dailyTaskModalOverlay} onClick={onClose}>
@@ -242,12 +252,12 @@ const DailyTasksModal: React.FC<DailyTasksModalProps> = ({ isOpen, onClose }) =>
                 </button>
                 <div className={styles.dailyTaskModalHeader}>
                     <div id="daily-task-dialog-title" className={styles.dailyTaskModalTitle}>{t('profile.tasksTitle')}</div>
-                    {isTaskLoadedOnce && dailyTasks.length > 0 && (
+                    {isTaskLoadedOnce && summaryTasks.length > 0 && (
                         <p className={styles.dailyTaskSummary}>
                             {t('profile.tasksSummary', {
                                 claimable: claimableTaskCount,
-                                completed: completedTaskCount,
-                                total: dailyTasks.length,
+                                claimed: claimedTaskCount,
+                                total: summaryTasks.length,
                             })}
                         </p>
                     )}
@@ -282,7 +292,8 @@ const DailyTasksModal: React.FC<DailyTasksModalProps> = ({ isOpen, onClose }) =>
                             : isDynamicDurationTask
                                 ? `${formatDuration(Math.min(effectiveProgress, task.target))} / ${formatDuration(task.target)}`
                                 : `${Math.min(effectiveProgress, task.target)}/${task.target}`;
-                        const showProgressBar = progressRatio > 0 && !task.claimed;
+                        // 已完成待领取时不画满进度条，避免和「领取奖励」抢视线
+                        const showProgressBar = progressRatio > 0 && progressRatio < 1 && !task.claimed;
 
                         const itemClassName = [
                             styles.dailyTaskItem,
@@ -367,12 +378,17 @@ const DailyTasksModal: React.FC<DailyTasksModalProps> = ({ isOpen, onClose }) =>
                                                     type="button"
                                                     className={styles.dailyTaskSecondaryBtn}
                                                     onClick={() => {
+                                                        // 功能注释：P-02——「玩 3 款」去作品库挑作品（原先回首页像没反应）；
+                                                        // 指定作品只在拿到确定 fileId 时进详情页，猜不出 id 就按作品名搜索，避免详情页加载失败被踢回首页
                                                         if (task.code === 'play_3_unique' || task.code === 'play_three_games') {
-                                                            navigate('/');
+                                                            navigate('/library');
                                                             return;
                                                         }
-                                                        const targetGameFileId = task.gameFileId || task.key.replace(/^(play_specific_game_\d+_|config_\d+_)/, '');
-                                                        navigate(`/game/${targetGameFileId}?source=history`);
+                                                        const keyMatch = /^(?:play_specific_game_\d+_|config_\d+_)(.+)$/.exec(task.key);
+                                                        const targetGameFileId = task.gameFileId || keyMatch?.[1];
+                                                        if (targetGameFileId) navigate(`/game/${encodeURIComponent(targetGameFileId)}?source=history`);
+                                                        else if (task.gameTitle) navigate(`/search?q=${encodeURIComponent(task.gameTitle)}`);
+                                                        else navigate('/library');
                                                     }}
                                                 >
                                                     {getTaskActionText(task, t)}
@@ -388,7 +404,7 @@ const DailyTasksModal: React.FC<DailyTasksModalProps> = ({ isOpen, onClose }) =>
                     })}
                 </div>
                 <section
-                    className={`${styles.makeupCardReward} ${makeupCardReward.claimable ? styles.makeupCardRewardReady : ''}`}
+                    className={`${styles.makeupCardReward} ${makeupCardReward.claimable || makeupCardReward.completed ? styles.makeupCardRewardReady : ''}`}
                     aria-label={t('profile.makeupCardRewardTitle')}
                 >
                     <div className={styles.makeupCardRewardHeader}>

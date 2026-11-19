@@ -189,12 +189,12 @@ function PlayScreens() {
 
 function Root() {
   const { screen, theme, setTheme, look, lookCss, game, saveEpoch } = useGame();
-  /** 功能注释：?createWorld=1 或未完成向导会话 → 打开向导；刷新须留在编辑器，不得掉进游戏 */
-  const [worldGenOpen, setWorldGenOpen] = useState(
-    () => shouldOpenWorldGenWizard() || shouldResumeWorldGenSession(),
-  );
   /** 功能注释：?createPlayMod=1 → 玩法 Mod 对话工坊（创作游戏二级入口） */
   const [playModCreateOpen, setPlayModCreateOpen] = useState(() => shouldOpenPlayModCreate());
+  /** 功能注释：?createWorld=1 或未完成向导会话 → 打开向导；玩法对话页不叠创建世界 */
+  const [worldGenOpen, setWorldGenOpen] = useState(
+    () => !shouldOpenPlayModCreate() && (shouldOpenWorldGenWizard() || shouldResumeWorldGenSession()),
+  );
   /** 功能注释：详情/审核进局：play=1 读发布镜像；reviewPreview=1 读待审快照 */
   const [playerPlayBoot] = useState(() => readPlayerPlayBoot());
   const previewSession = useSyncExternalStore(subscribeAuthorPreview, getAuthorPreviewSession, () => null);
@@ -209,6 +209,8 @@ function Root() {
   useEffect(() => {
     if (!playModCreateOpen) return;
     ensurePlayModCreateQuery();
+    // 功能注释：玩法页只留对话；清掉 URL 上的 createWorld，避免刷新后又把创建世界表单垫在下面。会话本身保留，从「游戏世界」入口仍能续编。
+    clearWorldGenQuery();
   }, [playModCreateOpen]);
 
   const closeWorldGen = (keepMounted = false) => {
@@ -263,7 +265,7 @@ function Root() {
           "font-song", "font-hei", "font-round", "font-elegant", "font-brush", "font-hand", "font-cursive", "font-pixel",
           "nav-icon-c", "nav-label-c", "nav-has-img", "ico-c", "ico-sw",
         );
-        root.classList.add("font-hei");
+        // 功能注释：创作壳/平台弹窗一律走主站 --font-ui；游戏字体只在局内剧情区生效，禁止带到平台
         delete root.dataset.bubble;
         delete root.dataset.avatar;
         delete root.dataset.aframe;
@@ -371,7 +373,7 @@ function Root() {
           />
         </div>
       ) : null}
-      {worldGenOpen ? (
+      {worldGenOpen && !playModCreateOpen ? (
         <div
           /* 功能注释：预览时向导壳保活但 hidden；去掉 data-platform-ui，避免 Modal 误挂进不可见树 */
           className={previewing ? "hidden" : "romance-platform min-h-screen"}

@@ -17,7 +17,8 @@ test('选中页签数量_深字白底且不走bg-white', () => {
   assert.match(panel, /on \? "is-on"/);
   assert.doesNotMatch(panel, /bg-white\/25 text-white/);
   assert.match(css, /\.world-gen-editor button\[aria-pressed="true"\] \.wg-tab-count\.is-on/);
-  assert.match(css, /background-color: #ffffff !important;/);
+  // 功能注释：编辑器纸面改为跟随主站皮肤（--wg-sheet，缺省白），深色模式下也不刺眼
+  assert.match(css, /wg-tab-count\.is-on \{\s*background-color: var\(--wg-sheet\) !important;/);
   assert.match(css, /color: #6e1228 !important;/);
   assert.match(css, /bg-white"\]:not\(\.wg-tab-count\)/);
 });
