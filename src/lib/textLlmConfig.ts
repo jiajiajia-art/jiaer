@@ -38,7 +38,7 @@ export const DEFAULT_TEXT_LLM_MODEL: TextLlmPresetModel = 'doubao-seed-2-1-lite-
 
 export const DEFAULT_TEXT_LLM_GATEWAY_PRESETS: readonly TextLlmGatewayPreset[] = [
   { id: 'deepseek', label: 'DeepSeek 官方', baseUrl: 'https://api.deepseek.com' },
-  { id: 'epone', label: 'epone 代理', baseUrl: 'https://epone.ggb.today' },
+  { id: 'epone', label: 'GGB（默认）', baseUrl: 'https://epone.ggb.today' },
   // 功能注释：TokenHub 文档 baseURL 为 …/v1；此处存根地址，保存时会剥掉 /v1
   { id: 'tokenhub', label: 'TokenHub', baseUrl: 'https://tokenhub.tencentmaas.com' },
   { id: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com' },

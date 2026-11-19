@@ -69,7 +69,7 @@ test('ModelConfigHub_同页双轨配置且模型只能拉取导入', () => {
   const zh = readFileSync(join(root, 'src/i18n/locales/zh.json'), 'utf8');
   assert.match(hub, /aiModelCenter\.configHub\.textMastTitle/);
   assert.match(zh, /"textMastTitle":\s*"全平台统一生文模型"/);
-  assert.match(hub, /onActivate=\{pane === 'text'/);
+  assert.match(hub, /onActivate=\{pane === 'text' \? \(model\) => setConfirmAction/);
   assert.match(hub, /deactivateModel/);
   assert.match(hub, /aiModelCenter\.configHub\.mastDesc/);
   assert.match(zh, /模型 ID 不允许手填/);
@@ -83,7 +83,9 @@ test('ModelConfigHub_同页双轨配置且模型只能拉取导入', () => {
   assert.match(hub, /type=\{apiKeyVisible\[pane\] \? 'text' : 'password'\}/);
   assert.match(hub, /autoComplete="new-password"/);
   assert.match(hub, /apiKeyVisible, setApiKeyVisible\] = useState<Record<Pane, boolean>>\(\{ text: false, image: false \}\)/);
-  assert.doesNotMatch(hub, /gatewayKeys|selectPresetTextModel|role="radiogroup"/);
+  // 功能注释：禁止旧「预置模型单选」回流；多网关改为书签 Tab（见 modelConfigGatewayTabs.check）
+  assert.doesNotMatch(hub, /selectPresetTextModel|role="radiogroup"/);
+  assert.match(hub, /gatewayTabBar/);
   assert.match(hub, /role="tablist"/);
   assert.match(hub, /ModelConfigHub\.module\.css/);
 
@@ -91,7 +93,12 @@ test('ModelConfigHub_同页双轨配置且模型只能拉取导入', () => {
   assert.match(css, /--mc-coral/);
   assert.match(css, /Noto Serif SC/);
   assert.match(css, /\.presetChip/);
+  assert.match(css, /\.gatewayTabBar/);
   assert.match(css, /\.fetchBtn/);
+  // 功能注释：轨序 [生文|生图]，text 高亮靠左、image 靠右，防止再写反
+  assert.match(css, /\.railThumbText\s*\{\s*left:\s*4px;/);
+  assert.match(css, /\.railThumbImage\s*\{\s*left:\s*calc\(50%/);
+  assert.match(hub, /pane === 'image' \? styles\.railThumbImage : styles\.railThumbText/);
 
   const api = readFileSync(join(root, 'src/api/admin/textLlmConfigApi.ts'), 'utf8');
   assert.match(api, /text-llm-config\/models/);
