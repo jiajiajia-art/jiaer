@@ -1,6 +1,8 @@
 /* 管理/运营「公共头像」：对齐 AdminPanel 暖色浅底，避免暗色胶囊碎片感 */
 
-.root {
+.root,
+.uploadOverlay,
+.configOverlay {
   --av-ink: var(--color-highlight);
   --av-muted: var(--color-text-muted);
   --av-line: color-mix(in srgb, var(--color-highlight) 22%, transparent);
@@ -14,7 +16,9 @@
   --av-danger-soft: color-mix(in srgb, var(--color-primary) 10%, transparent);
   --av-warn: var(--color-highlight);
   --av-warn-soft: color-mix(in srgb, var(--color-highlight) 12%, transparent);
+}
 
+.root {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -487,8 +491,19 @@
 }
 
 .segActive {
-  background: var(--av-accent-soft);
-  color: var(--av-accent-strong);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.seg:focus-visible,
+.segActive:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.uploadDrawer .seg,
+.uploadDrawer .segActive {
+  min-height: 36px;
 }
 
 .fieldLabel {

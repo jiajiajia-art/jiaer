@@ -89,7 +89,7 @@ export type ModExt = {
 
 /* AI 提示片段：引擎拼系统提示词时按需取用 */
 export type PromptFragments = {
-  /** 剧本基调（作者只改这一处，整段发给模型）。旧模组无此字段时由 gmIntro+worldIntro+narratorPersona 并入 */
+  /** 系统提示词（作者只改这一处，整段发给模型）。旧模组无此字段时由 gmIntro+worldIntro+narratorPersona 并入 */
   scriptTone?: string;
   /** @deprecated 已并入 scriptTone；读档仍兼容 */
   gmIntro?: string;
@@ -117,7 +117,7 @@ export type FeatureFlags = {
   pregnancy?: boolean;
   cars?: boolean;
   transport?: boolean; // 交通系统：出行方式 / 车费 / 耗时差异；关闭=点哪去哪，免费
-  /** 关系玩法（表白 / 婚礼 / 牵线 / 伴侣加成）；须添加 pack-relations，未声明=关 */
+  /** 旧稿残留。关系玩法已是游戏本体，运行时不再读取此开关。 */
   relationsPlay?: boolean;
   /** 阵营声望（声望数值 / 建角加入势力 / 按声望调价 / 好感外溢 / 声望条件与效果）；须添加 pack-faction-rep，未声明=关 */
   factionRep?: boolean;

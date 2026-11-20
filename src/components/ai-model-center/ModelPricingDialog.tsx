@@ -72,9 +72,15 @@ const ModelPricingDialog: React.FC<Props> = ({ model, onClose, onChanged, showGa
   const [apiKeyVisible, setApiKeyVisible] = useState(false);
   const [apiKeyLoading, setApiKeyLoading] = useState(false);
   const [apiKeyError, setApiKeyError] = useState('');
+  const active = lifecycle?.active;
+  const scheduledVersion = lifecycle?.scheduled;
+  const draft = lifecycle?.draft;
+  const draftChanged = draft && (model.capability === 'text'
+    ? JSON.stringify(textForm) !== JSON.stringify(versionToText(draft))
+    : JSON.stringify(imageForm) !== JSON.stringify(versionToImage(draft)));
 
   const load = async () => {
-    setLoading(true); setError('');
+    setLoading(true); setError(''); setLifecycle(null);
     try {
       const response = await aiModelCenterApi.getModelPricing(model.id);
       const data = response.data.data;
@@ -138,30 +144,31 @@ const ModelPricingDialog: React.FC<Props> = ({ model, onClose, onChanged, showGa
   };
 
   const publish = async () => {
-    if (!lifecycle?.draft) {
-      setError('请先保存计费草稿，再发布版本');
-      return;
-    }
+    if (!draft || draftChanged) return;
     const scheduled = effectiveAt ? new Date(effectiveAt) : null;
     if (scheduled && Number.isNaN(scheduled.getTime())) {
       setError('生效时间格式无效');
       return;
     }
-    const hasScheduled = Boolean(lifecycle.scheduled);
-    const replaceScheduled = hasScheduled && window.confirm('已有待生效版本，是否替换为当前草稿？');
-    if (hasScheduled && !replaceScheduled) return;
+    if (scheduled && scheduled.getTime() <= Date.now()) {
+      setError('请选择未来的生效时间，或清空时间以立即生效');
+      return;
+    }
+    const hasScheduled = Boolean(scheduledVersion);
     const confirmation = scheduled
       ? `确认发布，并于 ${scheduled.toLocaleString()} 生效？`
       : '确认立即发布当前计费草稿？';
-    if (!window.confirm(confirmation)) return;
+    const replacePrompt = hasScheduled ? '\n本次发布将替换已有的待生效版本。' : '';
+    if (!window.confirm(confirmation + replacePrompt)) return;
     setSaving(true); setError('');
     try {
       const payload = buildModelPublishPayload({
         effectiveAt: scheduled?.toISOString() || null,
         hasScheduledVersion: hasScheduled,
-        replaceScheduled,
+        replaceScheduled: hasScheduled,
       });
       await aiModelCenterApi.publishModelPricing(model.id, payload);
+      setEffectiveAt('');
       toast.success(scheduled ? '计费版本已定时发布' : '计费版本已发布');
       await load();
       await onChanged();
@@ -173,11 +180,11 @@ const ModelPricingDialog: React.FC<Props> = ({ model, onClose, onChanged, showGa
   const history = useMemo(() => lifecycle?.history || [], [lifecycle]);
 
   return (
-    <div className={styles.overlay} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <div className={styles.overlay} role="presentation">
       <section className={`${styles.dialog} ${model.capability === 'text' ? styles.pricingDialogWide : ''}`} role="dialog" aria-modal="true" aria-labelledby="pricing-dialog-title">
         <header className={styles.dialogHeader}>
-          <div><h3 id="pricing-dialog-title">{model.displayName} · 计费配置</h3><p>计费版本独立发布，不影响其他模型。</p></div>
-          <button type="button" className={styles.iconButton} aria-label="关闭计费配置" onClick={onClose}><FiX aria-hidden /></button>
+          <div><h3 id="pricing-dialog-title">{model.displayName} · 计费配置</h3><p>保存草稿后，可选择立即发布或定时生效。</p></div>
+          <button type="button" className={styles.iconButton} aria-label="关闭计费配置" onClick={onClose} disabled={saving}><FiX aria-hidden /></button>
         </header>
         <div className={styles.dialogBody}>
           <div className={styles.readonly}>
@@ -208,7 +215,24 @@ const ModelPricingDialog: React.FC<Props> = ({ model, onClose, onChanged, showGa
           ) : null}
           {loading ? <p>加载中…</p> : null}
           {error ? <div className={styles.error} role="alert">{error}</div> : null}
-          {!loading && model.capability === 'text' ? (
+          {!loading && !lifecycle ? (
+            <button type="button" className={styles.secondary} onClick={() => void load()}>重新加载计费配置</button>
+          ) : null}
+          {lifecycle ? <>
+          <div className={styles.readonly}>
+            <div><span>{model.capability === 'text' ? '创作引擎' : '玩家端生图线路'}</span><strong>
+              {!model.selectable ? '模型目录设为不可选' : active ? '玩家可选' : '等待计费版本生效'}
+            </strong></div>
+            <div><span>当前生效版本</span><strong>
+              {active ? `${active.versionCode} · ×${x10000ToDecimal(model.capability === 'text' ? active.rate.textMultiplierX10000 : active.rate.imageMultiplierX10000)}` : '暂无'}
+            </strong></div>
+            <div><span>待生效版本</span><strong>
+              {scheduledVersion?.effectiveAt ? `${scheduledVersion.versionCode} · ${new Date(scheduledVersion.effectiveAt).toLocaleString()}` : '暂无'}
+            </strong></div>
+            <div><span>计费草稿</span><strong>{draft?.versionCode || '暂无'}</strong></div>
+          </div>
+          <fieldset className={styles.pricingFields} disabled={saving}>
+          {model.capability === 'text' ? (
             <>
               <div className={styles.readonly}><div><span>用户统一计费标准</span><strong>0.1 KK / 1,000 Token</strong></div><div><span>计费 Token</span><strong>输入 + 输出 + 缓存命中</strong></div></div>
               <div className={styles.fieldGrid}>
@@ -222,12 +246,12 @@ const ModelPricingDialog: React.FC<Props> = ({ model, onClose, onChanged, showGa
               ) : null}
             </>
           ) : null}
-          {!loading && model.capability === 'image' ? (
+          {model.capability === 'image' ? (
             <>
               <label className={styles.field}>用户价格倍率<input value={imageForm.multiplier} inputMode="decimal" onChange={(e) => setImageForm({ ...imageForm, multiplier: e.target.value })} /><span className={styles.helper}>生图倍率独立于生文倍率。</span></label>
               <div className={styles.tierHead}><strong>比例档位</strong><button type="button" className={styles.secondary} onClick={() => setImageForm({ ...imageForm, tiers: [...imageForm.tiers, { aspectRatio: '', upstreamCost: '', userBasePrice: '' }] })}><FiPlus aria-hidden /> 添加档位</button></div>
               <div className={styles.tierList}>{imageForm.tiers.map((tier, index) => (
-                <div className={styles.tier} key={`${index}-${tier.aspectRatio}`}>
+                <div className={styles.tier} key={index}>
                   <label className={styles.field}>比例<input value={tier.aspectRatio} placeholder="1:1" onChange={(e) => setImageForm({ ...imageForm, tiers: imageForm.tiers.map((item, i) => i === index ? { ...item, aspectRatio: e.target.value } : item) })} /></label>
                   <label className={styles.field}>真实成本（元 / 张）<input value={tier.upstreamCost} inputMode="decimal" onChange={(e) => setImageForm({ ...imageForm, tiers: imageForm.tiers.map((item, i) => i === index ? { ...item, upstreamCost: e.target.value } : item) })} /></label>
                   <label className={styles.field}>用户价格（织梦豆 / 张）<input value={tier.userBasePrice} inputMode="decimal" onChange={(e) => setImageForm({ ...imageForm, tiers: imageForm.tiers.map((item, i) => i === index ? { ...item, userBasePrice: e.target.value } : item) })} /></label>
@@ -236,10 +260,11 @@ const ModelPricingDialog: React.FC<Props> = ({ model, onClose, onChanged, showGa
               ))}</div>
             </>
           ) : null}
-          <div className={styles.fieldGrid}>
-            <label className={styles.field}>未来生效时间（可选）<input type="datetime-local" value={effectiveAt} onChange={(e) => setEffectiveAt(e.target.value)} /></label>
-          </div>
-          {!loading ? (
+            <label className={styles.field}>
+              未来生效时间（可选）
+              <input type="datetime-local" value={effectiveAt} onChange={(e) => setEffectiveAt(e.target.value)} />
+              <span className={styles.helper}>按浏览器所在时区填写，留空即发布后立即生效。</span>
+            </label>
             <label className={styles.field}>
               版本备注（备注内容为发布记录留存显示文本）
               {model.capability === 'text' ? (
@@ -248,7 +273,8 @@ const ModelPricingDialog: React.FC<Props> = ({ model, onClose, onChanged, showGa
                 <textarea value={imageForm.remark} onChange={(e) => setImageForm({ ...imageForm, remark: e.target.value })} />
               )}
             </label>
-          ) : null}
+          </fieldset>
+          </> : null}
           {history.length ? (
             <details className={styles.historyDisclosure}>
               <summary className={styles.historySummary}>
@@ -258,7 +284,13 @@ const ModelPricingDialog: React.FC<Props> = ({ model, onClose, onChanged, showGa
               <ul className={styles.history}>{history.map((version) => <li key={version.id}><code>{version.versionCode}</code><span>{version.effectiveAt ? new Date(version.effectiveAt).toLocaleString() : '未设置'}</span></li>)}</ul>
             </details>
           ) : null}
-          <div className={styles.dialogActions}><button type="button" className={styles.secondary} onClick={onClose}>关闭</button><div className={styles.cardActions}><button type="button" className={styles.secondary} disabled={saving || loading} onClick={() => void saveDraft()}>{saving ? '处理中…' : '保存草稿'}</button><button type="button" className={styles.primary} disabled={saving || loading || !lifecycle?.draft} onClick={() => void publish()}>发布版本</button></div></div>
+          <div className={styles.dialogActions}>
+            <p className={styles.helper} role="status">{saving ? '正在提交…' : lifecycle && (!draft || draftChanged) ? '请先保存草稿，再发布版本。' : ''}</p>
+            <div className={styles.cardActions}>
+              <button type="button" className={styles.secondary} disabled={saving || !lifecycle} onClick={() => void saveDraft()}>保存草稿</button>
+              <button type="button" className={styles.primary} disabled={saving || !draft || Boolean(draftChanged)} onClick={() => void publish()}>{effectiveAt ? '定时发布' : '立即发布'}</button>
+            </div>
+          </div>
         </div>
       </section>
     </div>

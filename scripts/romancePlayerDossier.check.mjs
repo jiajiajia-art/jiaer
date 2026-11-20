@@ -57,7 +57,8 @@ test('dossierAttrPct_夹到0到1', () => {
 test('SimTab_属性单列_名左值右_深色字与深色条_无两列挤', () => {
   assert.match(sim, /dossierFactLine/);
   assert.match(sim, /行囊空空 · 沿途拾取的物件会收纳在此/);
-  assert.match(sim, /暂无履历 · 人生刚刚开始/);
+  // 功能注释：玩家档案 SimTab 已去掉独立「履历」空态区块
+  assert.doesNotMatch(sim, /暂无履历 · 人生刚刚开始/);
   // 功能注释：通栏约 6px 条；深色底轨 + 深色填充（禁止粉底同淡粉 coral/20）
   assert.match(sim, /h-1\.5/);
   assert.match(sim, /bg-ink\/20/);

@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import {
   makeInstallFromCatalog,
   missingPlayModDepNames,
+  officialGameplayPacksNotOnShelf,
   resolvePlayModInstallChain,
   type LocalPlayModCatalogItem,
   type PlayModInstallConfig,
@@ -40,17 +41,46 @@ type Props = {
   enabledThemeTags?: WorldThemeContext["enabledThemeTags"];
 };
 
-/** 功能注释：预览图只用接口返回的 URL */
+/** 功能注释：预览图只用接口返回的 URL；点图放大看，加载失败给出提示而不是破图 */
 function PlayModPreview({ src, alt }: { src: string; alt: string }) {
-  return <img src={src} alt={alt} className="h-36 w-full rounded-xl object-cover border border-line" />;
+  const [big, setBig] = useState(false);
+  const [broken, setBroken] = useState(false);
+  if (broken) {
+    return <div className="grid h-36 w-full place-items-center rounded-xl border border-dashed border-line text-[11.5px] text-ink-soft">预览图加载失败</div>;
+  }
+  return (
+    <>
+      <button type="button" className="block w-full" onClick={() => setBig(true)} aria-label={`放大查看：${alt}`}>
+        <img src={src} alt={alt} onError={() => setBroken(true)} className="h-36 w-full cursor-zoom-in rounded-xl border border-line object-cover" />
+      </button>
+      {big && (
+        <div className="fixed inset-0 z-[2147483000] grid place-items-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-label={alt} onClick={() => setBig(false)}>
+          <img src={src} alt={alt} className="max-h-full max-w-full rounded-xl object-contain" />
+        </div>
+      )}
+    </>
+  );
 }
 
-/** 功能注释：远程图标用 <img>；无图标时显示名称首字 */
-function PlayModIcon({ url, name, size }: { url: string | null; name: string; size: "md" | "lg" }) {
+const PAGE_SIZE = 8;
+
+/** 功能注释：远程图标用 <img>；官方切图用内联 SVG；都没有时显示名称首字 */
+function PlayModIcon({ url, svg, name, size }: { url: string | null; svg?: string; name: string; size: "md" | "lg" }) {
   const box = size === "lg" ? "h-14 w-14 text-[18px]" : "h-11 w-11 text-[15px]";
-  return url ? (
-    <img src={url} alt="" className={`${box} shrink-0 rounded-xl border border-line object-cover`} />
-  ) : (
+  const glyph = size === "lg" ? "[&>svg]:h-8 [&>svg]:w-8" : "[&>svg]:h-6 [&>svg]:w-6";
+  if (url) {
+    return <img src={url} alt="" className={`${box} shrink-0 rounded-xl border border-line object-cover`} />;
+  }
+  if (svg) {
+    return (
+      <div
+        className={`${box} ${glyph} grid shrink-0 place-items-center rounded-xl border border-line bg-paper text-jade`}
+        dangerouslySetInnerHTML={{ __html: svg }}
+        aria-hidden
+      />
+    );
+  }
+  return (
     <div className={`${box} grid shrink-0 place-items-center rounded-xl border border-line bg-paper font-bold text-jade`} aria-hidden>
       {name.slice(0, 1)}
     </div>
@@ -81,7 +111,16 @@ export default function AddPlayModModal({
     setLoading(true);
     setLoadError("");
     try {
-      setCatalog(await listPublishedPlayMods());
+      const shelf = await listPublishedPlayMods();
+      const known = new Set(shelf.flatMap((item) => [item.slug, item.id, item.romanceAddonId].filter((id): id is string => !!id)));
+      const missing = officialGameplayPacksNotOnShelf(known).map((item): PlayModStoreItem => ({
+        ...item,
+        iconUrl: null,
+        publishedAt: "",
+        recommended: true,
+        purchased: false,
+      }));
+      setCatalog([...shelf, ...missing]);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "加载玩法商店失败");
     } finally {
@@ -144,7 +183,8 @@ export default function AddPlayModModal({
 
   const list = useMemo(() => {
     // 功能注释：只展示玩法；phone_app 归应用商店，不进本列表
-    let rows = catalog.filter((x) => x.componentKind === "gameplay");
+    // 功能注释：关系玩法已进游戏本体，商店里的同名包不再列出
+    let rows = catalog.filter((x) => x.componentKind === "gameplay" && x.slug !== "pack-relations" && x.slug !== "pm-pack-relations" && x.name !== "关系玩法");
     if (tab === "免费") rows = rows.filter((x) => !x.priceKk);
     if (tab === "已安装") rows = rows.filter((x) => installed.has(x.slug));
     if (tab === "已购买") rows = rows.filter((x) => x.purchased);
@@ -159,6 +199,12 @@ export default function AddPlayModModal({
     }
     return rows;
   }, [catalog, tab, installed, recommendInfo]);
+
+  // 功能注释：列表分页，每页 8 个；切页签回到第 1 页
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [tab]);
+  const pageCount = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+  const pageRows = list.slice((Math.min(page, pageCount) - 1) * PAGE_SIZE, Math.min(page, pageCount) * PAGE_SIZE);
 
   const detail = detailSlug ? catalogBySlug(detailSlug) : null;
   // 功能注释：互斥 / 平台版本不兼容 → 不可添加（置灰 + 原因）
@@ -250,7 +296,7 @@ export default function AddPlayModModal({
         {detail ? (
           <div className="ui-dialog-body space-y-3 px-4 py-3" data-testid="play-mod-detail">
             <div className="flex items-start gap-3">
-              <PlayModIcon url={detail.iconUrl} name={detail.name} size="lg" />
+              <PlayModIcon url={detail.iconUrl} svg={detail.iconSvg} name={detail.name} size="lg" />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[15px] font-bold text-ink">{detail.name}</span>
@@ -331,7 +377,7 @@ export default function AddPlayModModal({
                   {tab === "已安装" ? "本作品还没有添加玩法" : tab === "已购买" ? "还没有购买过玩法" : "暂时还没有上架的玩法"}
                 </li>
               )}
-              {!loading && !loadError && list.map((item) => {
+              {!loading && !loadError && pageRows.map((item) => {
                 const on = installed.has(item.slug);
                 const blocked = blockOf(item);
                 const depNames = missingPlayModDepNames(item, installs, catalogBySlug);
@@ -351,7 +397,7 @@ export default function AddPlayModModal({
                     tabIndex={0}
                     aria-label={`查看「${item.name}」详情`}
                   >
-                    <PlayModIcon url={item.iconUrl} name={item.name} size="md" />
+                    <PlayModIcon url={item.iconUrl} svg={item.iconSvg} name={item.name} size="md" />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[13px] font-bold text-ink">{item.name}</span>
@@ -388,6 +434,13 @@ export default function AddPlayModModal({
                 );
               })}
             </ul>
+            {!loading && !loadError && pageCount > 1 && (
+              <div className="mt-3 flex items-center justify-center gap-3 text-[12px] text-ink-soft">
+                <button type="button" className="rounded-full border border-line px-3 py-1 disabled:opacity-40" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>上一页</button>
+                <span className="tabular-nums">{Math.min(page, pageCount)} / {pageCount}</span>
+                <button type="button" className="rounded-full border border-line px-3 py-1 disabled:opacity-40" disabled={page >= pageCount} onClick={() => setPage((p) => Math.min(pageCount, p + 1))}>下一页</button>
+              </div>
+            )}
           </>
         )}
       </div>

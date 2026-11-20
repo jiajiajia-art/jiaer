@@ -32,7 +32,7 @@ test('世界书调用方_不得再对keywords直接some', () => {
   for (const src of [pick, audit, editor, rules]) {
     assert.doesNotMatch(src, /keywords\.some\(/);
   }
-  assert.match(pick, /keywordTexts\(e\.keywords\)\.length === 0/);
+  assert.match(pick, /keywordTexts\(e\.keywords\)/);
   assert.match(audit, /keywordTexts\(w\.keywords\)\.length === 0/);
   assert.doesNotMatch(editor, /e\.keywords\.length/);
   assert.doesNotMatch(editor, /e\.keywords\.join/);

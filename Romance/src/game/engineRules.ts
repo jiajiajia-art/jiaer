@@ -11,7 +11,7 @@ export const DEFAULT_ENGINE_RULES: EngineRules = {
   flags: { life: {}, shareModes: false, clearTempOnEnd: true },
   random: { seed: 20050901, perRoom: true },
   narrative: { aiControlPlayer: false, aiForceEnding: false, tagNarration: true, oocMarks: ["//", "()", "（）"] },
-  affinity: { min: 0, max: 100, decay: true, decayRate: 1, noDecay: [], overflow: "cap" },
+  affinity: { min: -100, max: 100, decay: true, decayRate: 1, noDecay: [], overflow: "cap" },
   attrs: { numeric: true, step: 1, stressLimit: 100, stressFlag: "崩溃" },
   faction: { spread: true },
   npc: { chatCd: 0, cdOverride: {}, cdState: "reply", npcTalk: true, approach: true, writeMemory: true, roamCost: 0, roamEvery: 1, roamCrossRoot: false },

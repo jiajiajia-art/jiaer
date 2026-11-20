@@ -7,15 +7,13 @@ import { Avatar, Modal } from "./ui";
 import { CARS, TITLES, carById, resaleValue } from "../game/data";
 import { carShopId, locOf, transportOn, TRANSPORT } from "../game/mud";
 import Backpack from "./Backpack";
-import AttrValueEdit from "./AttrValueEdit";
 import { feature, term } from "../mods/registry";
-import { IconCamera, IconCheck, IconClose } from "../lib/icons";
+import { IconCamera, IconCheck } from "../lib/icons";
 import {
   dossierAttrPct,
   dossierAttrWarn,
   dossierFactLine,
 } from "../lib/playerDossier";
-import type { AttrDef } from "../lib/types";
 import { customAttrValue, wallet } from "../game/wallet";
 
 function IconCrown({ className }: { className?: string }) {
@@ -77,12 +75,10 @@ function AttrBar({ pct, warn }: { pct: number; warn: boolean }) {
   );
 }
 
-export default function SimTab({ embedded = false }: { embedded?: boolean }) {
+export default function SimTab({ embedded = false, onItemAction }: { embedded?: boolean; onItemAction?: () => void }) {
   const { game, equipTitle, setActiveCar, setPlayerAvatar, lastChanges } = useGame();
   const [openTitles, setOpenTitles] = useState(false);
   const [openImage, setOpenImage] = useState(false);
-  const [detailId, setDetailId] = useState<string | null>(null);
-  const [focusId, setFocusId] = useState<string | null>(null);
 
   const p = game?.player;
   const factLine = useMemo(
@@ -97,8 +93,6 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
 
   const bagCount = (s.bag ?? []).length + (game.contract ? 1 : 0);
   const bagEmpty = bagCount === 0;
-  const history = p.history ?? [];
-  const histEmpty = history.length === 0;
 
   const earnedTitles = TITLES.filter((t) => s.titles.includes(t.id));
   const wornTitle = earnedTitles.find((t) => t.id === s.equippedTitle) ?? null;
@@ -106,12 +100,6 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
   const cars = s.cars ?? [];
   const shop = carShopId() ? locOf(carShopId()!) : undefined;
   const shopName = shop ? (spotName(game, shop.id) ?? shop.name) : undefined;
-
-  const openDetail = (d: AttrDef) => {
-    setFocusId(d.id);
-    setDetailId(d.id);
-  };
-  const detailDef = detailId ? defs.find((d) => d.id === detailId) : undefined;
 
   return (
     <div className={embedded ? "w-full" : "w-full pb-5"}>
@@ -124,7 +112,7 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
         {/* ═══ 头卡：左头像 · 右名字 / 年龄·性别·生日·星座 ═══ */}
         <section className="ui-card px-3.5 py-3.5">
           <div className="flex items-start gap-3">
-            <Avatar src={p.avatar} name={p.name} size={64} square onPick={setPlayerAvatar} />
+            <Avatar src={p.avatar} name={p.name} size={64} square excludeAvatars={game?.npcs.map((n) => n.avatar)} onPick={setPlayerAvatar} />
             <div className="min-w-0 flex-1 pt-0.5">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="min-w-0 truncate text-[20px] font-black tracking-wide text-ink">{p.name}</h2>
@@ -163,19 +151,13 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
                 const v = customAttrValue(game, d);
                 const warn = dossierAttrWarn(d, v);
                 const pct = dossierAttrPct(v, d.max, d.min ?? 0);
-                const on = focusId === d.id;
                 const last = i === defs.length - 1;
                 return (
                   <li
                     key={d.id}
                     className={last ? undefined : "border-b border-ink/25"}
                   >
-                    <button
-                      type="button"
-                      onClick={() => openDetail(d)}
-                      className={`w-full min-w-0 rounded-xl px-1.5 py-2.5 text-left transition hover:bg-ink/[0.04] ${on ? "bg-ink/[0.05]" : ""}`}
-                      title={d.desc || `查看${d.label}`}
-                    >
+                    <div className="min-w-0 px-1.5 py-2.5">
                       <div className="flex items-baseline justify-between gap-3">
                         {/* 功能注释：名/值一律深色墨字，禁止浅粉 text-coral（可爱皮肤下与粉底糊在一起） */}
                         <span className="min-w-0 truncate text-[13.5px] font-semibold text-ink">{d.label}</span>
@@ -186,7 +168,7 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
                         </span>
                       </div>
                       <AttrBar pct={pct} warn={!!warn} />
-                    </button>
+                    </div>
                     {warn ? (
                       <p className="mt-1 px-1.5 pb-1.5 text-[11px] leading-snug text-danger">{warn}</p>
                     ) : null}
@@ -204,7 +186,7 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
               行囊空空 · 沿途拾取的物件会收纳在此
             </div>
           ) : (
-            <Backpack embedded />
+            <Backpack embedded onAction={onItemAction} />
           )}
           {showCars && (
             <div className={`${bagEmpty ? "mt-3" : "mt-3 border-t border-dashed border-line/60 pt-3"}`}>
@@ -244,71 +226,6 @@ export default function SimTab({ embedded = false }: { embedded?: boolean }) {
             </div>
           )}
         </Block>
-
-        {/* ═══ 背景履历 ═══ */}
-        <Block title="背景履历" meta={`${history.length} 条`}>
-          {histEmpty ? (
-            <div className="rounded-[var(--radius-ui)] border border-dashed border-line/80 px-3 py-3 text-center text-[12px] leading-relaxed text-ink-soft">
-              暂无履历 · 人生刚刚开始
-            </div>
-          ) : (
-            <ol className="relative space-y-3.5 pl-5">
-              <span aria-hidden className="absolute bottom-1 left-[5px] top-1 w-px bg-gradient-to-b from-coral/40 via-line to-transparent" />
-              {[...history].reverse().map((h, i) => (
-                <li key={`${h.turn}-${i}`} className="relative">
-                  <span
-                    aria-hidden
-                    className={`absolute -left-5 top-[4px] h-2.5 w-2.5 rounded-full border bg-paper ${i === 0 ? "border-coral" : "border-line"}`}
-                  />
-                  <p className="text-[10.5px] text-ink-soft">
-                    {h.time}
-                    <span className="mx-1 text-line">·</span>
-                    第 {h.turn} 回合
-                    {i === 0 && <span className="ml-1.5 rounded-full border border-coral/30 px-1.5 text-[9.5px] font-bold text-coral">最新</span>}
-                  </p>
-                  <p className="mt-0.5 text-[13px] font-bold leading-snug text-ink">{h.title}</p>
-                  {h.detail ? <p className="mt-0.5 text-[12px] leading-relaxed text-ink-soft">{h.detail}</p> : null}
-                </li>
-              ))}
-            </ol>
-          )}
-        </Block>
-
-        {/* 属性详情：当前值 · 进度条 · 说明 · 警戒提醒（不展示满值） */}
-        {detailDef && (
-          <Modal panelClassName="ui-dialog-game" title={detailDef.label} onClose={() => setDetailId(null)}>
-            <div className="space-y-3">
-              <div className="ui-card px-3 py-2.5">
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-[13px] font-semibold text-ink">{detailDef.label}</span>
-                  <AttrValueEdit def={detailDef} className="text-[16px] font-bold text-ink no-underline" flash={changedLabels.has(detailDef.label)} />
-                </div>
-                <AttrBar
-                  pct={dossierAttrPct(customAttrValue(game, detailDef), detailDef.max, detailDef.min ?? 0)}
-                  warn={!!dossierAttrWarn(detailDef, customAttrValue(game, detailDef))}
-                />
-              </div>
-              {dossierAttrWarn(detailDef, customAttrValue(game, detailDef)) && (
-                <p className="rounded-[var(--radius-ui-sm)] border border-danger/30 bg-danger/10 px-3 py-2 text-[12.5px] text-danger">
-                  {dossierAttrWarn(detailDef, customAttrValue(game, detailDef))}
-                </p>
-              )}
-              {detailDef.desc ? (
-                <p className="text-[13px] leading-relaxed text-ink/90">{detailDef.desc}</p>
-              ) : (
-                <p className="text-[12.5px] text-ink-soft">创作者未填写说明。点右侧数字可直接修改当前值。</p>
-              )}
-              <button
-                type="button"
-                onClick={() => setDetailId(null)}
-                className="flex w-full items-center justify-center gap-1 rounded-[var(--radius-ui)] border border-line py-2.5 text-[13px] font-semibold text-ink-soft"
-              >
-                <IconClose size={14} />
-                关闭
-              </button>
-            </div>
-          </Modal>
-        )}
 
         {openTitles && (
           <Modal panelClassName="ui-dialog-game" title="我的头衔" onClose={() => setOpenTitles(false)}>

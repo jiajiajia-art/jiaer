@@ -70,7 +70,7 @@ export default function ModWorldBookEditor({ value, onChange, npcs = [], rooms =
     <div className="space-y-2.5">
       {/* 功能注释：创作向导里由 CSS 隐藏冗长说明，局内编辑器仍可见 */}
       <p className="wg-field-help text-[11px] leading-relaxed text-ink-soft">
-        一条设定写一遍即可。挂上地点或人物后，玩家在场或正文提到关键词时才发给 AI；全局铁律请写进「①基础 · 剧本基调」。
+        一条设定写一遍即可。最近对话里出现关键词才发给 AI；地点和人物只用来收窄场合，人在场不会单独点亮条目。每回合都要带上的铁律请写成「每轮全局」，或写进「①基础 · 系统提示词」。
       </p>
       <div className="flex flex-wrap items-center gap-1.5">
         <button className={btn} onClick={() => { const e = blankWorldBookEntry((list[list.length - 1]?.order ?? 90) + 10); commit([...list, e]); setOpen(e.id); }}>＋ 添加条目</button>

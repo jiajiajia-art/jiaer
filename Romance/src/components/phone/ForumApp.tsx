@@ -13,6 +13,7 @@ import { logAct, logNpcNet } from "../../game/phoneLink";
 import { Empty, PullToRefresh, delay, LoadMoreButton, seenOf, NeedAI } from "./shared";
 import type { AIConfig, GameState } from "../../lib/types";
 import { IconChart, IconClose, IconEye, IconFlame, IconGlobe, IconHeart, IconMessage, IconStar } from "../../lib/icons";
+import { entertainmentPlayOn } from "../../mods/registry";
 
 const BRAND = "#6d4aff";
 const FEED = "forum.v2";
@@ -31,7 +32,21 @@ const BOARDS: { id: BoardId; name: string; desc: string; color: string }[] = [
   { id: "global", name: "海外粉", desc: "EN · JP · KR", color: "#14b8a6" },
 ];
 const BOARD_IDS = BOARDS.map((b) => b.id);
-const boardOf = (id: BoardId) => BOARDS.find((b) => b.id === id) ?? BOARDS[0];
+const LIFE_BOARD: Record<BoardId, { name: string; desc: string }> = {
+  star: { name: "日常", desc: "今天的事" },
+  gua: { name: "闲聊", desc: "附近的新鲜事" },
+  cp: { name: "关系", desc: "谁和谁" },
+  lutou: { name: "街拍", desc: "路上见到的" },
+  data: { name: "记录", desc: "数字和笔记" },
+  tucao: { name: "吐槽", desc: "有话直说" },
+  global: { name: "远方", desc: "别处的消息" },
+};
+/** 功能注释：没装演艺事业时，论坛版块不用追星名 */
+function boardsNow() {
+  if (entertainmentPlayOn()) return BOARDS;
+  return BOARDS.map((b) => ({ ...b, ...LIFE_BOARD[b.id] }));
+}
+const boardOf = (id: BoardId) => boardsNow().find((b) => b.id === id) ?? boardsNow()[0];
 
 const TAGS = ["爆", "水", "求助", "精", "讨论", "安利", "路透", "数据", "瓜", "糖", "海外", "投票"];
 const TAG_COLOR: Record<string, string> = { 爆: "#ef4444", 精: "#f59e0b", 瓜: "#16a34a", 糖: "#ec4899", 求助: "#0ea5e9", 投票: "#6d4aff" };
@@ -312,10 +327,16 @@ export default function ForumApp({ onBack }: { onBack: () => void }) {
     const g = gRef.current, c = cfgRef.current;
     if (!g || !isConfigured(c)) return "未配置 AI，无法联动剧情";
     const names = [...npcNames].slice(0, 8).join("、");
-    const p = await forumCall<{ threads?: unknown[] }>(c, g, `请根据当前剧情，为论坛生成 5 个新帖子，分布在不同版块（board 取值：star=主角超话/安利楼, gua=八卦瓜田, cp=CP楼, lutou=路透代拍, data=数据组, tucao=黑粉对线吐槽, global=海外粉）。
-主角是「${g.player.name}」。圈内人物：${names || "（无）"}；这些人物偶尔可以用本名作为认证账号回帖（u 用本名）。
+    const boardHint = entertainmentPlayOn()
+      ? "star=主角超话/安利楼, gua=八卦瓜田, cp=CP楼, lutou=路透代拍, data=数据组, tucao=黑粉对线吐槽, global=海外粉"
+      : "star=日常, gua=闲聊, cp=关系, lutou=街拍, data=记录, tucao=吐槽, global=远方。这不是追星论坛，不要写粉丝、黑粉、超话、片场、经纪公司、试镜";
+    const floorHint = entertainmentPlayOn()
+      ? "楼层里要有：楼主更新（op:true）1次、至少一条被删除的楼（del:true,c 可为空）、部分楼带楼中楼 re、黑子被反驳、海外粉原文+翻译。"
+      : "楼层里要有：楼主更新（op:true）1次、至少一条被删除的楼（del:true,c 可为空）、部分楼带楼中楼 re。写普通人的生活讨论，不要写成饭圈。";
+    const p = await forumCall<{ threads?: unknown[] }>(c, g, `请根据当前剧情，为论坛生成 5 个新帖子，分布在不同版块（board 取值：${boardHint}）。
+主角是「${g.player.name}」。相关人物：${names || "（无）"}；这些人物偶尔可以用本名作为认证账号回帖（u 用本名）。
 每个帖子：{"board":..,"tags":["爆|水|求助|精|讨论|安利|路透|数据|瓜|糖|海外"中1~2个],"title":标题(≤28字,不要带【】),"u":楼主昵称,"flair":身份,"c":主楼正文(80~200字),"hot":吃瓜指数0~100,"poll":{"q":问题,"opts":[2~4个选项]}(仅1个帖子带),"floors":[10~16 层]}
-楼层里要有：楼主更新（op:true）1次、至少一条被删除的楼（del:true,c 可为空）、部分楼带楼中楼 re、黑子被反驳、海外粉原文+翻译。
+${floorHint}
 ${FLOOR_SCHEMA}
 返回 JSON：{"threads":[...]}`);
     const list = (Array.isArray(p?.threads) ? p!.threads : []).map((x) => cleanThread(x, npcNames)).filter((t): t is Thread => !!t);
@@ -342,8 +363,11 @@ ${FLOOR_SCHEMA}
     try {
       const seen = seenOf(threads.map((t) => t.title));
       const bd = board === "all" ? "分布在不同版块" : `全部放在版块 ${board}`;
-      const p = await forumCall<{ threads?: unknown[] }>(c, g, `请根据当前剧情，再为论坛生成 4 个新帖子，${bd}（board 取值：star=主角超话/安利楼, gua=八卦瓜田, cp=CP楼, lutou=路透代拍, data=数据组, tucao=黑粉对线吐槽, global=海外粉）。
-主角是「${g.player.name}」。也可以是圈内日常与路人闲聊。不要与这些已有帖子重复：${seen}
+      const moreBoards = entertainmentPlayOn()
+        ? "star=主角超话/安利楼, gua=八卦瓜田, cp=CP楼, lutou=路透代拍, data=数据组, tucao=黑粉对线吐槽, global=海外粉"
+        : "star=日常, gua=闲聊, cp=关系, lutou=街拍, data=记录, tucao=吐槽, global=远方。不要写粉丝、黑粉、经纪公司、试镜";
+      const p = await forumCall<{ threads?: unknown[] }>(c, g, `请根据当前剧情，再为论坛生成 4 个新帖子，${bd}（board 取值：${moreBoards}）。
+主角是「${g.player.name}」。也可以是日常生活与路人闲聊。不要与这些已有帖子重复：${seen}
 每个帖子：{"board":..,"tags":["爆|水|求助|精|讨论|安利|路透|数据|瓜|糖|海外"中1~2个],"title":标题(≤28字,不要带【】),"u":楼主昵称,"flair":身份,"c":主楼正文(80~200字),"hot":吃瓜指数0~100,"floors":[6~10 层]}
 ${FLOOR_SCHEMA}
 返回 JSON：{"threads":[...]}`);
@@ -560,7 +584,7 @@ function Home(p: {
         </button>
       </div>
       <div className="flex gap-1.5 overflow-x-auto border-b border-black/5 bg-white px-3 pb-2 [scrollbar-width:none]">
-        {[{ id: "all" as const, name: "全部", color: "#111" }, ...BOARDS].map((b) => (
+        {[{ id: "all" as const, name: "全部", color: "#111" }, ...boardsNow()].map((b) => (
           <button key={b.id} onClick={() => p.onBoard(b.id)} className={`shrink-0 rounded-full px-3 py-1 text-[12px] ${p.board === b.id ? "font-semibold text-white" : "bg-gray-100 text-gray-600"}`} style={p.board === b.id ? { background: b.color } : undefined}>
             {b.name}
           </button>
@@ -816,7 +840,7 @@ function PostSheet({ defBoard, onClose, onSubmit }: { defBoard: BoardId; onClose
   return (
     <Sheet title="发新帖" onClose={onClose}>
       <div className="mb-2 flex flex-wrap gap-1.5">
-        {BOARDS.map((x) => (
+        {boardsNow().map((x) => (
           <button key={x.id} onClick={() => setB(x.id)} className={`rounded-full px-2.5 py-0.5 text-[11px] ${b === x.id ? "text-white" : "bg-gray-100 text-gray-600"}`} style={b === x.id ? { background: x.color } : undefined}>{x.name}</button>
         ))}
       </div>

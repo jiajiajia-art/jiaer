@@ -66,8 +66,9 @@ test('玩法配置区块在基础页_时间推进的行动点留在基础', () =
   assert.doesNotMatch(panel, /title="开局封面"/);
   assert.match(sectionOpen('皮肤美化'), /g="look"/);
   assert.match(sectionOpen('开场剧情'), /g="look"/);
-  // 剧情美化现归 ⑤ 美化（g=look）
-  assert.match(sectionOpen('剧情美化'), /g="look"/);
+  // 功能注释：「剧情美化」已下线（W-07/08），lookRules 仅留档
+  assert.doesNotMatch(panel, /title="剧情美化"/);
+  assert.match(panel, /「剧情美化」已下线/);
   assert.match(sectionOpen('底栏页签'), /g="look"/);
   assert.match(sectionOpen('手机应用配置'), /g="look"/);
   const baseCount = panel.slice(panel.indexOf('base: n('), panel.indexOf('role: n('));
@@ -188,7 +189,7 @@ test('线上编辑器_创建世界五页签且基础含玩法无功能开关', {
     assert.equal(await page.getByRole('button', { name: /⑤ 玩法 Mod/ }).count(), 0);
     assert.equal(await page.getByText('底栏页签', { exact: true }).count(), 0);
     await tab(/⑤ 美化/).click();
-    for (const label of ['手机应用配置', '皮肤美化', '音乐', '开场剧情', '剧情美化', '底栏页签']) {
+    for (const label of ['手机应用配置', '皮肤美化', '音乐', '开场剧情', '底栏页签']) {
       await page.getByText(label, { exact: true }).first().waitFor();
     }
     if (coverDeployed) {

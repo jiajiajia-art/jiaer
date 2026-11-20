@@ -37,9 +37,10 @@ test('ModEditorPanel_卸头衔包清titles_养成无名气分档块', () => {
   assert.doesNotMatch(panel, /title="养成规则"/);
   assert.doesNotMatch(panel, /fameTiers: c\.fameTiers/);
   const growHint = panel.slice(panel.indexOf('title="总养成开关"'), panel.indexOf('title="培训课程"'));
-  // 功能注释：养成说明保持题材通用，只指向建角定义数值，不再点名题材专用包
-  assert.match(growHint, /建角/);
-  assert.doesNotMatch(growHint, /娱乐圈/);
+  // 功能注释：养成说明保持题材通用，只指向建角定义数值，不再点名题材专用包（仅查可见 Help/文案，不看注释）
+  const growUi = growHint.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+  assert.match(growUi, /建角/);
+  assert.doesNotMatch(growUi, /娱乐圈/);
 });
 
 test('worldGen_无growRules有titles步骤', () => {

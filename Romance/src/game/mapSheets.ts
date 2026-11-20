@@ -1,4 +1,5 @@
 import type { GlobalMapConfig, MapEdits, MapSheet } from "../lib/types";
+import type { WorldMapDef } from "../lib/worldMaps";
 
 /* 多底图：未配置时只有一张「主地图」（沿用 _config.bgUrl） */
 export const MAIN_SHEET = "main";
@@ -8,15 +9,30 @@ export function mapSheets(cfg?: GlobalMapConfig): MapSheet[] {
   return list.map((s) => (s.id === MAIN_SHEET ? { ...s, bgUrl: s.bgUrl || cfg?.bgUrl } : s));
 }
 
+/** 游玩端同时读取作品地图与局内配置的底图。 */
+export function playableMapSheets(maps: WorldMapDef[], cfg?: GlobalMapConfig): MapSheet[] {
+  const legacy = mapSheets(cfg);
+  if (maps.length < 2 && cfg?.sheets?.length) return legacy;
+  if (!maps.length) return legacy;
+  const overrides = new Map(legacy.map((sheet) => [sheet.id, sheet]));
+  const sheets = maps.map((map, index) => ({
+    id: map.id,
+    name: overrides.get(map.id)?.name ?? map.name,
+    bgUrl: overrides.get(map.id)?.bgUrl || (index === 0 ? cfg?.bgUrl : undefined) || map.bg,
+  }));
+  return [...sheets, ...(cfg?.sheets?.length ? legacy.filter((sheet) => !sheets.some((map) => map.id === sheet.id)) : [])];
+}
+
 /** 地点所属底图：未指定或底图已删除 → 主地图（主地图被删则第一张） */
-export function sheetOf(edits: MapEdits | undefined, roomId: string, sheets: MapSheet[]): string {
+export function sheetOf(edits: MapEdits | undefined, roomId: string, sheets: MapSheet[], worldMapId?: string): string {
   const want = edits?.[roomId]?.sheet as string | undefined;
   if (want && sheets.some((s) => s.id === want)) return want;
+  if (worldMapId && sheets.some((s) => s.id === worldMapId)) return worldMapId;
   return (sheets.find((s) => s.id === MAIN_SHEET) ?? sheets[0]).id;
 }
 
 /** 有效的点击跳转目标（指向存在且不是自己所在的底图） */
-export function jumpOf(edits: MapEdits | undefined, roomId: string, sheets: MapSheet[]): string | undefined {
+export function jumpOf(edits: MapEdits | undefined, roomId: string, sheets: MapSheet[], worldMapId?: string): string | undefined {
   const j = edits?.[roomId]?.jumpTo as string | undefined;
-  return j && sheets.some((s) => s.id === j) && j !== sheetOf(edits, roomId, sheets) ? j : undefined;
+  return j && sheets.some((s) => s.id === j) && j !== sheetOf(edits, roomId, sheets, worldMapId) ? j : undefined;
 }

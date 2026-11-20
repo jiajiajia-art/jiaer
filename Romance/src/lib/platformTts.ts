@@ -1,10 +1,9 @@
 /**
  * 平台语音合成：已登录平台 → POST /api/romance/tts/synthesize（运营「AI 模型中心」配置的语音线路 + 积分）。
  * 线路与音色列表走 GET /api/romance/ai-routes?capability=tts（每条线路带 voices）。
- * 计费：创作（编辑器 / 作者试玩）扣织梦豆 billCurrency="points"；玩家游玩扣 KK 币 billCurrency="kk"；按所选线路倍率。
+ * 计费：创作（编辑器 / 作者试玩）扣织梦豆 billCurrency="points"；玩家游玩扣 KK 币 billCurrency="kk"。倍率由平台语音线路决定，前端不传 routeId。
  * 返回 JSON { data: { audio } }（dataURL 或 https）或直接返回音频二进制，两种都认。
  */
-import { aiRouteBody } from "./platformAiRoutes";
 import { aiTraceBody } from "./aiTrace";
 import { readFunloomAuthToken, resolveFunloomApiBase } from "./platformAvatarLibrary.ts";
 
@@ -29,7 +28,6 @@ export async function synthSpeechViaPlatform(text: string, opts: { voice?: strin
       ...(opts.voice ? { voice: opts.voice } : {}),
       ...(opts.gender ? { gender: opts.gender } : {}),
       speed: opts.speed ?? 1,
-      ...aiRouteBody("tts"),
       ...ttsBilling(opts.feature),
     }),
   });

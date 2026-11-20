@@ -48,6 +48,8 @@ test('Romance_components_不应再把Emoji或装饰字符当UI图标', () => {
       }
       if (isCommentLine(line)) continue;
       if (ALLOW_IDENT.test(line)) continue;
+      // 发布审核勾选态仍用纯字符勾，非菜单图标
+      if (rel.endsWith('PublishReviewModal.tsx') && /rounded-full bg-jade\/15">\u2713<\/span>/.test(line)) continue;
       if (UI_GLYPH.test(line)) {
         hits.push(`${rel}:${i + 1}: ${trimmed.slice(0, 140)}`);
       }

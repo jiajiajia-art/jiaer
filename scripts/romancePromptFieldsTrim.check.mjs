@@ -27,7 +27,9 @@ test('ModPromptEditor_不再作为三字段编辑入口', () => {
 
 test('ModEditorPanel_剧本基调在基础_剧情无世界观提示词三块', () => {
   const panel = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8');
-  assert.match(panel, /剧本基调/);
+  assert.match(panel, /系统提示词/);
+  assert.match(panel, /author-field-script-tone/);
+  assert.match(panel, /readScriptTone\(c\.prompt\)/);
   assert.doesNotMatch(panel, /title="世界观提示词"/);
   assert.doesNotMatch(panel, /label: "术语说明"/);
   assert.doesNotMatch(panel, /label: "开局导演指令"/);

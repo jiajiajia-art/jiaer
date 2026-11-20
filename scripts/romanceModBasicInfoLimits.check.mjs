@@ -38,24 +38,22 @@ test('ModEditorPanel_简介与基调计数标红并拦截保存', () => {
   assert.match(panel, /descOver \? "text-coral"/);
   assert.match(panel, /toneOver \? "text-coral"/);
   assert.match(panel, /max-h-\[9\.5rem\]/);
-  assert.match(panel, /剧本基调（系统提示词）/);
+  assert.match(panel, /系统提示词/);
   assert.match(panel, /rows=\{3\}/);
   assert.doesNotMatch(panel, /rows=\{8\}/);
 });
 
 test('ModEditorPanel_作者态删除作品ID与合并说明', () => {
-  const simplifyBranch = panel.slice(
-    panel.indexOf('authorSimplify ? ('),
-    panel.indexOf(') : (', panel.indexOf('authorSimplify ? (')),
-  );
+  const simplifyAt = panel.indexOf('panelExtra={authorSimplify ? (');
+  const simplifyBranch = panel.slice(simplifyAt, panel.indexOf(') : undefined}', simplifyAt));
   assert.match(simplifyBranch, /简介/);
-  assert.match(simplifyBranch, /剧本基调（系统提示词）/);
+  assert.match(simplifyBranch, /系统提示词/);
   assert.doesNotMatch(simplifyBranch, /作品 ID/);
   assert.doesNotMatch(simplifyBranch, /保存时自动生成/);
   assert.doesNotMatch(simplifyBranch, /GM 开场白/);
   assert.doesNotMatch(simplifyBranch, /世界观设定 \/ 叙事口吻/);
   assert.doesNotMatch(simplifyBranch, /由原「GM/);
   // 作者态基本信息 hint 现含作品封面与题材
-  assert.match(panel, /作品封面 · 名称 · 题材 · 简介 · 剧本基调/);
+  assert.match(panel, /作品封面 · 名称 · 题材 · 简介 · 系统提示词/);
   assert.doesNotMatch(panel, /名称 · 简介 · 作品 ID/);
 });

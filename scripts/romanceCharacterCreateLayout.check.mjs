@@ -29,16 +29,12 @@ test('CharacterCreate_人设页不渲染formIntro与作品简介', () => {
   assert.match(who, /基本信息/);
 });
 
-test('CharacterCreate_姓名风格条在Head.extra不在输入框下', () => {
+test('CharacterCreate_姓名随机无独立风格条', () => {
   const who = create.slice(create.indexOf('const stepWho'), create.indexOf('const stepAttrs'));
-  const bar = create.slice(create.indexOf('const nameStyleBar'), create.indexOf('const stepWho'));
-  assert.match(bar, /不限/);
-  assert.match(bar, /字库/);
-  assert.match(bar, /名字风格/);
-  assert.match(who, /extra=\{nameStyleBar\}/);
-  // 功能注释：姓名 input 下不得再挂风格条
-  assert.doesNotMatch(who, /input[\s\S]{0,200}名字风格/);
-  assert.doesNotMatch(who, /input[\s\S]{0,200}不限/);
+  assert.doesNotMatch(create, /nameStyleBar|名字风格/);
+  assert.match(create, /genName|randomName/);
+  assert.match(who, /姓名/);
+  assert.doesNotMatch(who, /名字风格|字库|不限/);
 });
 
 test('CharacterCreate_重掷用IconDiceDuo且属性标题可整组重掷', () => {

@@ -1,6 +1,6 @@
 /* 世界书依赖（地点 / 人物）与「详细设定 / 节日 → 世界书」合并。
  * 创作者一条设定只写进 worldBook；地点 / 人物为可选挂靠，未挂也能保存。
- * 运行时：有依赖则地点/人物在场或关键词命中才注入；无依赖则按模式/关键词走旧规则。 */
+ * 运行时：地点/人物只过滤，不单独触发；关键词命中才注入，蓝灯除外。 */
 import type { Festival, LoreChar, LoreRegion, WorldBookEntry } from "./types.ts";
 import { asTrimmedString } from "./asTrimmedString.ts";
 import { keywordTexts } from "./worldBookKeywords.ts";

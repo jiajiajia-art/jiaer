@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { splitStateRepair } from "../lib/liveStatus";
 import { rulesOf } from "../game/engineRules";
 import { useGame, useLive } from "../store/gameCtx";
 import type { Npc, Segment, Thought, Turn } from "../lib/types";
 import { Avatar } from "./ui";
-import { IconAlert, IconChevronDown, IconPencil, IconRefresh, IconSend, IconSparkle, IconThought, IconWallet } from "../lib/icons";
+import { IconAlert, IconChevronDown, IconPencil, IconRefresh, IconSend, IconSparkle, IconThought, IconUndo, IconWallet } from "../lib/icons";
+import { useConfirm } from "./EditorKit";
 import { EntityText } from "./EntityText";
-import { looksGarbled, repairSegments, proseToSegments } from "../lib/ai";
+import { looksGarbled, looksTruncatedNarrative, repairSegments, proseToSegments } from "../lib/ai";
 import { findNpc } from "../lib/npcIdentity";
 import { resolveSpeakerLabel, sameSpeakerLabel } from "../lib/speakerLabel";
 import { openPerson } from "./NpcTab";
@@ -15,18 +17,20 @@ import { openCloudRecharge } from "../lib/cloudSaves";
  * 并让它自己把滚动容器滚到底，避免整页跟着刷新。 */
 /** 功能注释：叠图旁白半透明底；小说内容卡用普通段落（plain）；对白仍走气泡 */
 export function LiveNarration({ scrollRef, overlay, plain }: { scrollRef: RefObject<HTMLDivElement | null>; overlay?: boolean; plain?: boolean }) {
-  const live = useLive();
+  const rawLive = useLive();
   const { game } = useGame();
+  // 功能注释：状态补全中只是后台处理，不属于剧情；剥离标记后在正文下方单独提示（B-03）
+  const { text: live, repairing } = splitStateRepair(rawLive);
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [live, scrollRef]);
+  }, [rawLive, scrollRef]);
   // 阶段 / 构思提示原样显示；正文一边流式输出一边解析成旁白与对话框
   const status = /^（[^）\n]*…… \d+s）/.test(live);
   const segs = useMemo(() => (live && !status ? proseToSegments(live) : []), [live, status]);
   return (
     <div className="animate-pop">
-      {segs.length && game ? (
+      {repairing && !live ? null : segs.length && game ? (
         <Segments segments={segs} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} overlay={overlay} plain={plain} />
       ) : live ? (
         <p className={overlay
@@ -43,31 +47,27 @@ export function LiveNarration({ scrollRef, overlay, plain }: { scrollRef: RefObj
           <span className="typing-dot" style={{ animationDelay: "0.4s" }}>●</span>
         </p>
       )}
+      {repairing ? (
+        <p role="status" className={`scene-story-font mt-2 flex items-center gap-1.5 text-[12px] ${overlay ? "story-narration-panel w-fit rounded-full px-3 py-1.5" : "pl-3 text-jade"}`}>
+          <span className="typing-dot">●</span>
+          <span className="typing-dot" style={{ animationDelay: "0.2s" }}>●</span>
+          <span className="typing-dot" style={{ animationDelay: "0.4s" }}>●</span>
+          <span className="ml-1">正在整理本回合的选项与状态…</span>
+        </p>
+      ) : null}
     </div>
   );
 }
 
 /* 依名字取一个稳定的柔和渐变，作头像占位底色 */
-const AVATAR_GRADS = [
-  "from-[#a68bec] to-[#e2a6d6]",
-  "from-[#8fb8f0] to-[#b6a6ec]",
-  "from-[#e2a6d6] to-[#f0b7a0]",
-  "from-[#9fd8c8] to-[#8fb8f0]",
-  "from-[#eebb8f] to-[#e79ac9]",
-];
-function gradFor(name: string) {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return AVATAR_GRADS[h % AVATAR_GRADS.length];
-}
-
 function SpeakerAvatar({ name, src }: { name: string; src?: string }) {
   /* 功能注释：对话头像默认圆角方；设置里选圆形才会被 data-avatar=circle 盖成圆 */
-  if (src)
-    return <img src={(src) || undefined} alt={name} className="dlg-avatar h-8 w-8 shrink-0 rounded-[8px] object-cover object-top ring-1 ring-line/60 shadow-sm" />;
+  const [failed, setFailed] = useState(false);
+  if (src && !failed)
+    return <img src={src} alt={name} onError={() => setFailed(true)} className="dlg-avatar h-8 w-8 shrink-0 rounded-[8px] object-cover object-top ring-1 ring-line/60 shadow-sm" />;
   return (
     <span
-      className={`dlg-avatar flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-gradient-to-br ${gradFor(name)} text-[13px] font-semibold text-white ring-1 ring-line/50 shadow-sm`}
+      className={`dlg-avatar flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-coral text-[13px] font-semibold text-white ring-1 ring-line/50 shadow-sm`}
     >
       {name.slice(0, 1)}
     </span>
@@ -324,13 +324,6 @@ export function ErrorBanner({ error }: { error: { title: string; text: string; p
           <p className="mt-0.5 line-clamp-2 text-[11.5px] leading-snug text-ink-soft">{error.text}</p>
         </div>
       </div>
-      {/* 功能注释：解析失败时已生成的正文只供查看，不算进剧情、不进提示词 */}
-      {error.preview && (
-        <details className="mt-1.5 pl-[42px]">
-          <summary className="cursor-pointer text-[11px] font-semibold text-ink-soft">查看这次生成的正文</summary>
-          <div className="mt-1 max-h-32 overflow-y-auto whitespace-pre-line rounded-lg bg-paper/80 px-2 py-1.5 text-[11.5px] leading-relaxed text-ink-soft">{error.preview}</div>
-        </details>
-      )}
       <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-[42px]">
         {beanShort ? (
           <>
@@ -367,6 +360,43 @@ export function ErrorBanner({ error }: { error: { title: string; text: string; p
   );
 }
 
+/** 功能注释：AI 回合下方的操作条——最新回合可「换一版」重新生成；更早的回合可「回溯到这里」（之后的进度丢弃）。
+ * 只对本次会话里成功落地、留有快照的回合显示。 */
+export function TurnActions({ turnId, latest }: { turnId: string; latest: boolean }) {
+  const { snapIds, rerollTurn, rewindTo, busy } = useGame();
+  const [confirm, confirmEl] = useConfirm();
+  if (busy || !snapIds.includes(turnId)) return null;
+  const btn = "inline-flex items-center gap-1 rounded-full border border-line/70 bg-paper/70 px-2.5 py-1 text-[11.5px] font-semibold text-ink-soft transition hover:border-jade/50 hover:text-jade";
+  return (
+    <div className="mt-1.5 flex flex-wrap justify-end gap-1.5">
+      {confirmEl}
+      {latest ? (
+        <button
+          type="button"
+          className={btn}
+          onClick={async () => {
+            if (await confirm("重新生成这一回合？当前这版剧情及其带来的数值、地点、记忆变化都会撤销，用同样的行动再写一版。", { danger: false })) rerollTurn(turnId);
+          }}
+        >
+          <IconRefresh width={12} height={12} aria-hidden />
+          换一版
+        </button>
+      ) : (
+        <button
+          type="button"
+          className={btn}
+          onClick={async () => {
+            if (await confirm("回溯到这一回合？之后的剧情、数值、地点、记忆和任务进度都会撤销，且无法恢复。想保留当前进度请先手动存档。")) rewindTo(turnId);
+          }}
+        >
+          <IconUndo width={12} height={12} aria-hidden />
+          回溯到这里
+        </button>
+      )}
+    </div>
+  );
+}
+
 export { SpeakerAvatar };
 /** 功能注释：连续发言按解析后的全名判断，别名与档案名算同一人 */
 const sameSpeaker = (a: Segment | undefined, b: Segment | undefined, npcs: Npc[], playerName: string) =>
@@ -378,11 +408,25 @@ export function Segments({ segments: raw, npcs, playerAvatar, playerName, overla
   // 乱码拦截：把所有文字拼起来判断，命中则整段替换为「重新生成」提示。
   const joined = segments.map((s) => s.text).join("\n");
   if (looksGarbled(joined)) return <GarbleNotice />;
+  if (looksTruncatedNarrative(joined)) return <TruncatedNotice />;
   return (
     <div className="space-y-3">
       {segments.map((s, i) => (
         <SegmentView key={i} s={s} npcs={npcs} tightTop={segments[i - 1]?.kind === "system"} cont={sameSpeaker(segments[i - 1], s, npcs, playerName)} player={{ name: playerName, avatar: playerAvatar }} overlay={overlay} plain={plain} />
       ))}
+    </div>
+  );
+}
+
+function TruncatedNotice() {
+  const { regenerate, busy } = useGame();
+  return (
+    <div className="flex flex-col items-start gap-2 rounded-2xl border border-gold/35 bg-gold/[0.08] px-3.5 py-3">
+      <p className="text-[13px] font-semibold text-gold">剧情生成可能被截断</p>
+      <p className="text-[12px] leading-relaxed text-ink-soft">这回合的正文没有完整结束，可能还没生成完选项。你可以重新生成这一回合。</p>
+      <button type="button" onClick={() => regenerate()} disabled={busy} className="rounded-lg bg-gold px-3.5 py-1.5 text-[12.5px] font-semibold text-white disabled:opacity-50">
+        {busy ? "重新生成中…" : "重新生成"}
+      </button>
     </div>
   );
 }
@@ -512,6 +556,7 @@ export default function StoryTab() {
   }, [game?.story.length, busy]);
 
   if (!game) return null;
+  const lastAiId = [...game.story].reverse().find((t) => t.role === "ai" && !t.error)?.id;
 
   const send = (text: string) => {
     if (!text.trim() || busy) return;
@@ -550,6 +595,7 @@ export default function StoryTab() {
                 <Segments segments={t.segments} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} />
                 <Thoughts thoughts={t.thoughts} npcs={game.npcs} />
                 <CastRow segments={t.segments} npcs={game.npcs} />
+                {!isSysTurn(t) && <TurnActions turnId={t.id} latest={t.id === lastAiId} />}
               </div>
             );
           })}
@@ -617,3 +663,4 @@ export default function StoryTab() {
     </div>
   );
 }
+

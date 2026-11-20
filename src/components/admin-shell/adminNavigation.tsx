@@ -118,13 +118,6 @@ const adminGroups = (badges: Record<string, number>, t: TFunction): AdminNavigat
         matches: (pathname) => pathname.startsWith('/admin/ai-model-center') || pathname.startsWith('/admin/ai-model-pricing') || pathname.startsWith('/admin/image-gen') || pathname.startsWith('/admin/text-llm'),
       },
       {
-        key: 'assetCenter',
-        label: t('adminUi.nav.items.assetCenter'),
-        path: '/admin/avatars',
-        icon: <PictureOutlined />,
-        matches: (pathname) => pathname.startsWith('/admin/avatars') || pathname.startsWith('/admin/art-styles'),
-      },
-      {
         key: 'components',
         label: t('adminUi.nav.items.components'),
         path: '/admin/components',

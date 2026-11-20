@@ -25,6 +25,7 @@ export type ChatMsg = {
   emo?: EmotionId; // 人设回复时的情绪
   bpm?: number; // 对应心跳
   os?: string; // 内心独白（UI 用 InnerOsLabel，禁止 Emoji）
+  osOn?: boolean; // 这一轮真的转成内心 OS 才为 true；缺省的旧记录不在气泡下重复贴
   from?: string; // 群聊里发言人的 personId
   img?: string; // 屏幕共享 / 相册图片（已压缩的 dataURL）
 };
@@ -390,12 +391,12 @@ export function applyChatEffects(
   if (typeof eff.relDelta === "number" && eff.relDelta !== 0) {
     const d = Math.max(-CHAT_REL_CAP, Math.min(CHAT_REL_CAP, Math.round(eff.relDelta)));
     const before = s.rel[personId] ?? npc?.affinity ?? 0; // 无引擎条目的人物从展示值起算，不把原有好感冲成 0
-    const after = Math.max(0, Math.min(cap, before + d));
+    const after = Math.max(-100, Math.min(cap, before + d));
     const real = after - before;
     if (real !== 0) {
       s.rel[personId] = after;
       if (npc) {
-        npc.affinity = Math.max(0, Math.min(100, after));
+        npc.affinity = Math.max(-100, Math.min(100, after));
         npc.affinityHistory.push({ turn: next.turnCount, delta: real, reason: memory || tag || "私聊往来" });
       }
     }

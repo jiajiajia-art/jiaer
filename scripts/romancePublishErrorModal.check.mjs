@@ -36,7 +36,7 @@ test('submitPublish_失败时弹窗展示且不写失败横幅', () => {
   assert.match(editor, /去上传封面/);
   assert.match(editor, /dismissPublishErrorToCover/);
   assert.match(editor, /isPublishCoverError\(publishError\)/);
-  // 功能注释：失败分支须关审核弹层并 setPublishError；禁止再 setPublishNote({ ok: false
-  assert.match(editor, /setPublishOpen\(false\);\s*setPublishNote\(null\);\s*setPublishError\(/);
-  assert.doesNotMatch(editor, /setPublishNote\(\{\s*ok:\s*false/);
+  // 功能注释：失败分支须关审核弹层并 setPublishError；页内 publishNote 横幅已下线
+  assert.match(editor, /setPublishOpen\(false\);\s*\n\s*setPublishError\(/);
+  assert.doesNotMatch(editor, /publishNote/);
 });

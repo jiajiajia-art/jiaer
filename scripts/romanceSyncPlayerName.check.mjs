@@ -14,9 +14,9 @@ test('CharacterCreate_改名应走setPlayerName同步描述', () => {
   const src = readFileSync(join(romance, 'components/CharacterCreate.tsx'), 'utf8');
   assert.match(src, /syncPlayerNameChange/);
   assert.match(src, /setPlayerName/);
-  assert.match(src, /onClick=\{\(\) => setPlayerName\(genName/);
-  assert.match(src, /onPick=\{\(n\) => setPlayerName\(n\)\}/);
+  assert.match(src, /case "name": setPlayerName\(genName\(form\.gender\)\)/);
   assert.match(src, /onChange=\{\(e\) => setPlayerName\(e\.target\.value\)\}/);
+  assert.match(src, /onClick=\{\(\) => rollField\(k\)\}/);
   // 禁止姓名「换一个」只改 name 不同步描述
   assert.doesNotMatch(src, /onClick=\{\(\) => upd\(\{ name: genName/);
 });

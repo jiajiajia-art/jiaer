@@ -53,7 +53,8 @@ test('页签选中色与圆角读皮肤变量', () => {
 test('PersonProfile_上下两块_资料情感_三经营卡', () => {
   assert.match(profile, /label: "资料"/);
   assert.match(profile, /label: "情感"/);
-  assert.match(profile, /title="个人能力"/);
+  assert.match(profile, /人物档案不再展示「个人能力」/);
+  assert.doesNotMatch(profile, /title="个人能力"/);
   assert.match(profile, /可攻略/);
   assert.match(profile, /BondMeterRow/);
   assert.match(profile, /私下联系/);
@@ -67,7 +68,7 @@ test('PersonProfile_上下两块_资料情感_三经营卡', () => {
 test('NpcTab_人物档案同布局_不硬编码粉金渐变卡', () => {
   assert.match(npcTab, /label: "资料"/);
   assert.match(npcTab, /label: "情感"/);
-  assert.match(npcTab, /title="个人能力"/);
+  assert.doesNotMatch(npcTab, /title="个人能力"/);
   assert.match(npcTab, /BondMeterRow/);
   assert.match(npcTab, /compact/);
   assert.match(npcTab, /title="履历"/);

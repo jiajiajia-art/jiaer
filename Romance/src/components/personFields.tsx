@@ -351,18 +351,6 @@ export function ProfileBio({ bio, story }: { bio?: string; story?: string }) {
   );
 }
 
-/* 常驻地点：粉色药丸标签（编辑器里选定的常驻地点优先，其次内容池原设定） */
-export function ProfilePlaces({ places }: { places: string[] }) {
-  return (
-    <section className="mb-4">
-      <p className="mb-1.5 text-[13px] font-bold text-coral">常驻地点</p>
-      <div className="flex flex-wrap gap-1.5">
-        {places.length ? places.map((p) => <span key={p} className="rounded-full bg-coral/12 px-3 py-1 text-[12px] font-medium text-coral">{p}</span>) : <span className="text-[12px] text-ink-soft/70">{UNKNOWN}</span>}
-      </div>
-    </section>
-  );
-}
-
 /* TA 的记忆：对你的回忆 / 记得的事实（听闻），可手动添加与删除，写回 NPC 知识库 */
 export function ProfileMemory({ pid, button }: { pid: string; button?: boolean }) {
   const { game } = useGame();

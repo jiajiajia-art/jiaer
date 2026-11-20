@@ -115,34 +115,52 @@ export function useDraft<T>(id: string, value: T, baseline: string, dirty: boole
   const cursorRef = useRef(cursor);
   cursorRef.current = cursor;
 
-  // 有改动且未在询问恢复时，800ms 防抖写入草稿；改回与已保存一致则清掉草稿
+  const pendingWrite = useRef<(() => number | null) | null>(null);
+  const flush = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    const write = pendingWrite.current;
+    pendingWrite.current = null;
+    return write?.();
+  };
+
+  // 防抖仅控制日常写盘。编辑器卸载或页面离开时，立即保存最后一次输入。
   useEffect(() => {
     if (pending) return;
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      if (dirty) {
-        const at = Date.now();
-        const cur = cursorRef.current;
-        const row: DraftRecord<T> = {
-          at,
-          base: baseline,
-          value,
-          ...(cur && (cur.group || typeof cur.scrollY === "number") ? { cursor: { ...cur } } : {}),
-        };
-        if (saveGlobal(key, row)) {
-          setSavedAt(at);
-          // 功能注释：本标签页已在填表，后续若编辑器被重挂载则软续写，勿再弹冲突窗
-          markDraftSoftContinue(id);
-        }
-      } else {
+    pendingWrite.current = () => {
+      if (!dirty) {
         removeGlobal(key);
-        setSavedAt(null);
+        return null;
       }
+      const at = Date.now();
+      const cur = cursorRef.current;
+      const row: DraftRecord<T> = {
+        at,
+        base: baseline,
+        value,
+        ...(cur && (cur.group || typeof cur.scrollY === "number") ? { cursor: { ...cur } } : {}),
+      };
+      if (!saveGlobal(key, row)) return null;
+      markDraftSoftContinue(id);
+      return at;
+    };
+    timer.current = setTimeout(() => {
+      const at = flush();
+      if (at !== undefined) setSavedAt(at);
     }, 800);
     return () => {
       if (timer.current) clearTimeout(timer.current);
+      timer.current = null;
     };
   }, [key, value, baseline, dirty, pending, cursor?.group, cursor?.scrollY, id]);
+
+  useEffect(() => {
+    window.addEventListener("pagehide", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      flush();
+    };
+  }, []);
 
   // 有未保存改动时关闭 / 刷新页面，浏览器先提醒一次
   useEffect(() => {
@@ -172,7 +190,8 @@ export function useDraft<T>(id: string, value: T, baseline: string, dirty: boole
       clearDraftSoftContinue(id);
     },
     clear: () => {
-      if (timer.current) clearTimeout(timer.current);
+      pendingWrite.current = null;
+      flush();
       removeGlobal(key);
       setSavedAt(null);
       clearDraftSoftContinue(id);

@@ -2,17 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { Modal } from "./ui";
 import {
   AVATAR_POOLS_EVENT,
+  assetIdForAvatarUrl,
   creatorPickPools,
+  enabledStylePackIds,
+  platformPoolsForSlot,
   setPlatformSystemPoolsCache,
-  systemPools,
   type AvatarSource,
 } from "../game/avatarPools";
 import {
   fetchPlatformStylePackOptions,
   fetchPlatformSystemAvatarPools,
-  getCachedPlatformAvatarItems,
-  listCachedStylePackIds,
-  regroupCachedPlatformAvatarPools,
+  listCachedStylePackIds, listCachedBackgroundIds, AVATAR_BACKGROUND_OPTIONS,
   PLATFORM_AVATAR_GROUPS,
   type PlatformStylePackOption,
 } from "../lib/platformAvatarLibrary";
@@ -20,7 +20,7 @@ import type { AvatarSlot } from "../lib/types";
 import AiImageGen, { type AiImageGenPhase } from "./AiImageGen";
 import { NPC_AVATAR_GEN_SIZE } from "../lib/editorImagePrompts";
 
-/* 游玩端头像选择：本地上传 / 创作者头像库 / 系统头像库 / AI 生图；点选后保存；系统库支持风格包/标签筛选 */
+/* 游玩端头像选择：本地上传 / 创作者头像库 / 系统头像库 / AI 生图；点头像即使用；系统库支持风格包/标签筛选 */
 type Tab = "creator" | "system" | "gen";
 
 const GENDER_FILTERS = [
@@ -53,20 +53,25 @@ function tabIsLoosePool(pool: AvatarSource): boolean {
   return pool.source === "mine" || !PLATFORM_AVATAR_GROUPS.some((g) => g.name === pool.name);
 }
 
-export default function AvatarLibraryPicker({ name, current, onPick, onUpload, onClose, slot }: {
+export default function AvatarLibraryPicker({ name, current, onPick, onUpload, onClose, slot, taken }: {
   name: string; current?: string; onPick: (url: string) => void; onUpload: () => void; onClose: () => void;
   slot?: AvatarSlot | null;
+  /** 本剧已经用过的头像键（u:地址 / id:条目）。当前这个人自己的不传进来 */
+  taken?: ReadonlySet<string>;
 }) {
-  const [, bump] = useState(0);
+  const [rev, bump] = useState(0);
   const [systemLoading, setSystemLoading] = useState(false);
   const [systemError, setSystemError] = useState("");
-  /** 功能注释：点选仅高亮，点「保存」才回写；避免误点立刻关闭 */
+  /** 功能注释：当前选中（点头像即回写 onPick）*/
   const [selected, setSelected] = useState(current || "");
   const [styleFilter, setStyleFilter] = useState("");
+  const [bgFilter, setBgFilter] = useState("");
   const [styleOptions, setStyleOptions] = useState<PlatformStylePackOption[]>([]);
   const [genderFilter, setGenderFilter] = useState("");
   const [ageFilter, setAgeFilter] = useState("");
   const [genPhase, setGenPhase] = useState<AiImageGenPhase>("edit");
+  /** 功能注释：空字符串 = 当前页全部池；否则只看玩家点中的那一个池 */
+  const [poolPick, setPoolPick] = useState("");
 
   useEffect(() => {
     const h = () => bump((n) => n + 1);
@@ -79,19 +84,17 @@ export default function AvatarLibraryPicker({ name, current, onPick, onUpload, o
     let cancelled = false;
     setSystemLoading(true);
     setSystemError("");
-    void Promise.all([
-      fetchPlatformSystemAvatarPools(),
-      fetchPlatformStylePackOptions(),
-    ])
-      .then(([pools, styles]) => {
+    void fetchPlatformStylePackOptions().then((styles) => {
+      if (!cancelled) setStyleOptions(styles);
+    });
+    void fetchPlatformSystemAvatarPools()
+      .then((pools) => {
         if (cancelled) return;
         setPlatformSystemPoolsCache(pools);
-        setStyleOptions(styles);
         if (!pools.length) setSystemError("平台头像库暂无上架头像，请到仓库「头像库」或运营「公共头像」入库。");
       })
       .catch((e) => {
         if (cancelled) return;
-        setPlatformSystemPoolsCache([]);
         setSystemError((e as Error)?.message || "加载平台头像库失败");
       })
       .finally(() => {
@@ -100,36 +103,42 @@ export default function AvatarLibraryPicker({ name, current, onPick, onUpload, o
     return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => {
-    // 功能注释：风格包切换走本地缓存重分组；首屏缓存未就绪时跳过，避免空覆盖
-    if (!getCachedPlatformAvatarItems().length) return;
-    setPlatformSystemPoolsCache(regroupCachedPlatformAvatarPools(styleFilter));
-  }, [styleFilter]);
-
   const creator = creatorPickPools(slot);
-  const system = systemPools();
+  // 功能注释：系统库按本剧勾选的官方风格库收图，再按性别年龄分桶；浏览筛选不改全局抽图缓存
+  const system = useMemo(
+    () => platformPoolsForSlot(slot, { stylePack: styleFilter, background: bgFilter }),
+    [slot, styleFilter, bgFilter, systemLoading, rev],
+  );
   const [tab, setTab] = useState<Tab>(creator.length ? "creator" : "system");
-  const pools: AvatarSource[] = tab === "creator" ? creator : tab === "system" ? system : [];
+  const tabPools: AvatarSource[] = tab === "creator" ? creator : tab === "system" ? system : [];
+  const poolNames = useMemo(() => [...new Set(tabPools.map((p) => p.name))], [tabPools]);
+  const pickedPools = poolPick && poolNames.includes(poolPick) ? tabPools.filter((p) => p.name === poolPick) : tabPools;
+  const pools: AvatarSource[] = pickedPools;
   const filteredPools = useMemo(
     () => (tab === "system" ? pools.filter((p) => poolMatchesFilters(p, genderFilter, ageFilter)) : pools),
     [tab, pools, genderFilter, ageFilter],
   );
+  // 功能注释：风格 = 运营配置的风格包 ∪ 头像数据里实际出现的风格包（后台没配名字的也能筛）
   const styleFilters = useMemo(() => {
-    const present = new Set(listCachedStylePackIds());
-    const fromApi = styleOptions.filter((o) => !present.size || present.has(o.id));
-    const list = fromApi.length ? fromApi : styleOptions;
-    return [{ id: "", label: "全部风格" }, ...list];
-  }, [styleOptions, system]);
+    const present = listCachedStylePackIds();
+    const sel = enabledStylePackIds(slot);
+    const list = [...styleOptions];
+    for (const id of present) if (!list.some((o) => o.id === id)) list.push({ id, label: id });
+    const allowed = sel.all ? list : list.filter((o) => sel.ids.has(o.id));
+    return [{ id: "", label: "全部风格" }, ...allowed];
+  }, [styleOptions, slot, systemLoading, rev]);
+  // 功能注释：时代（古代 / 现代 / 西幻）筛选——后台头像库的背景类型维度
+  const bgFilters = useMemo(() => {
+    const present = new Set(listCachedBackgroundIds());
+    const list = AVATAR_BACKGROUND_OPTIONS.filter((o) => !present.size || present.has(o.id));
+    return [{ id: "", label: "全部时代" }, ...list];
+  }, [system]);
   const tabs: { k: Tab; l: string; n?: number }[] = [
     { k: "creator", l: "创作者头像库", n: creator.reduce((a, p) => a + (p.images?.length ?? 0), 0) },
     { k: "system", l: "系统头像库", n: system.reduce((a, p) => a + (p.images?.length ?? 0), 0) },
     { k: "gen", l: "生图" },
   ];
 
-  const save = () => {
-    if (!selected) return;
-    onPick(selected);
-  };
 
   const genBusy = tab === "gen" && genPhase === "busy";
 
@@ -147,7 +156,7 @@ export default function AvatarLibraryPicker({ name, current, onPick, onUpload, o
               key={t.k}
               type="button"
               disabled={genBusy && t.k !== "gen"}
-              onClick={() => { setTab(t.k); if (t.k !== "gen") setGenPhase("edit"); }}
+              onClick={() => { setTab(t.k); setPoolPick(""); if (t.k !== "gen") setGenPhase("edit"); }}
               className={`rounded-xl px-3 py-1.5 text-[12px] font-bold transition disabled:opacity-40 ${
                 tab === t.k
                   ? "bg-white text-[color:var(--jade)] shadow-[0_1px_3px_rgba(40,20,30,0.12)] ring-1 ring-[color:var(--jade)]/25"
@@ -160,15 +169,6 @@ export default function AvatarLibraryPicker({ name, current, onPick, onUpload, o
         </div>
         {tab !== "gen" && (
           <div className="flex shrink-0 items-center gap-1.5">
-            <button
-              type="button"
-              disabled={!selected}
-              onClick={save}
-              className="rounded-full bg-[color:var(--jade)] px-3.5 py-1.5 text-[12px] font-bold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-40"
-              title={selected ? "保存当前选中的头像" : "请先点选一张头像"}
-            >
-              保存
-            </button>
             <button type="button" onClick={onUpload}
               className="rounded-full border border-line bg-white px-3 py-1.5 text-[12px] font-semibold text-ink transition hover:border-[color:var(--jade)] hover:text-[color:var(--jade)]"
               title="支持裁切与预览，非 1:1 须裁切后使用"
@@ -176,6 +176,31 @@ export default function AvatarLibraryPicker({ name, current, onPick, onUpload, o
           </div>
         )}
       </div>
+      {tab === "creator" && poolNames.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="选择头像池">
+          {poolNames.length > 1 && (
+            <button
+              type="button"
+              aria-pressed={!poolPick}
+              onClick={() => setPoolPick("")}
+              className={`rounded-full px-2.5 py-1 text-[11.5px] font-semibold ring-1 transition ${!poolPick ? "bg-ink text-paper ring-ink" : "bg-paper text-ink-soft ring-line hover:text-ink"}`}
+            >
+              全部
+            </button>
+          )}
+          {poolNames.map((n) => (
+            <button
+              key={n}
+              type="button"
+              aria-pressed={poolPick === n || (poolNames.length === 1 && !poolPick)}
+              onClick={() => setPoolPick(poolNames.length === 1 ? n : (poolPick === n ? "" : n))}
+              className={`rounded-full px-2.5 py-1 text-[11.5px] font-semibold ring-1 transition ${poolPick === n || (poolNames.length === 1 && !poolPick) ? "bg-ink text-paper ring-ink" : "bg-paper text-ink-soft ring-line hover:text-ink"}`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      )}
 
       {tab === "gen" ? (
         <div className="mt-2">
@@ -187,8 +212,6 @@ export default function AvatarLibraryPicker({ name, current, onPick, onUpload, o
             placeholder="描述头像：性别、年龄感、发型、面容、衣着、表情……"
             initialPrompt=""
             initialRefs={current ? [current] : undefined}
-            assetKind="avatar"
-            assetName={`${name || "人物"}头像`}
             autoRun={false}
             autoApply={false}
             onPhaseChange={setGenPhase}
@@ -207,6 +230,18 @@ export default function AvatarLibraryPicker({ name, current, onPick, onUpload, o
                     type="button"
                     onClick={() => setStyleFilter(f.id)}
                     className={`rounded-full px-2.5 py-1 text-[11.5px] font-semibold transition ${styleFilter === f.id ? "bg-jade/15 text-jade ring-1 ring-jade/40" : "bg-paper-2 text-ink-soft ring-1 ring-line hover:text-ink"}`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="时代筛选">
+                {bgFilters.map((f) => (
+                  <button
+                    key={f.id || "b-all"}
+                    type="button"
+                    onClick={() => setBgFilter(f.id)}
+                    className={`rounded-full px-2.5 py-1 text-[11.5px] font-semibold transition ${bgFilter === f.id ? "bg-jade/15 text-jade ring-1 ring-jade/40" : "bg-paper-2 text-ink-soft ring-1 ring-line hover:text-ink"}`}
                   >
                     {f.label}
                   </button>
@@ -239,7 +274,7 @@ export default function AvatarLibraryPicker({ name, current, onPick, onUpload, o
             </div>
           ) : null}
 
-          {tab === "system" && systemLoading ? (
+          {tab === "system" && systemLoading && !pools.length ? (
             <p className="mt-6 rounded-xl border border-dashed border-line px-4 py-8 text-center text-[12.5px] text-ink-soft">
               正在加载平台头像库…
             </p>
@@ -249,7 +284,7 @@ export default function AvatarLibraryPicker({ name, current, onPick, onUpload, o
             </p>
           ) : !pools.length ? (
             <p className="mt-6 rounded-xl border border-dashed border-line px-4 py-8 text-center text-[12.5px] leading-relaxed text-ink-soft">
-              {tab === "creator" ? "这个剧本的作者还没有开放头像池。可以去「系统头像库」挑，或用「生图」/本地上传。" : "系统头像库暂时为空。"}
+              {tab === "creator" ? "这个剧本还没有勾选玩家能用的头像池。可以去「系统头像库」挑，或用「生图」/本地上传。" : "这个剧本还没有勾选官方风格库。可以换「创作者头像库」，或用「生图」/本地上传。"}
             </p>
           ) : !filteredPools.length ? (
             <p className="mt-6 rounded-xl border border-dashed border-line px-4 py-8 text-center text-[12.5px] text-ink-soft">
@@ -258,11 +293,17 @@ export default function AvatarLibraryPicker({ name, current, onPick, onUpload, o
           ) : (
             <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
               {filteredPools.flatMap((p) =>
-                (Array.isArray(p.images) ? p.images : []).map((url, i) => (
+                (Array.isArray(p.images) ? p.images : []).filter((url) => {
+                  if (!taken?.size) return true;
+                  if (taken.has(`u:${url}`)) return false;
+                  const id = assetIdForAvatarUrl(url);
+                  return !(id && taken.has(`id:${id}`));
+                }).map((url, i) => (
                   <button
                     key={`${p.source}:${p.name}:${url}:${i}`}
                     type="button"
-                    onClick={() => setSelected(url)}
+                    // 功能注释：点头像即使用，不用再回到顶部点「保存」
+                    onClick={() => { setSelected(url); onPick(url); }}
                     aria-label={`${p.name} 第 ${i + 1} 张`}
                     aria-pressed={selected === url}
                     className={`aspect-square overflow-hidden rounded-[10px] border bg-paper-2 transition hover:-translate-y-0.5 hover:shadow-md ${selected === url ? "border-jade ring-2 ring-jade/50" : "border-line hover:border-jade"}`}

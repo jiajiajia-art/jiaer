@@ -16,7 +16,7 @@ test('theme_storyBgAlpha_与_App_注入_CSS变量', () => {
   assert.match(store, /storyBgAlpha\?: number/);
   const app = read('App.tsx');
   assert.match(app, /--story-panel-a/);
-  assert.match(app, /storyBgAlpha \?\? 88/);
+  assert.match(app, /storyBgAlpha \?\? 65/);
   assert.match(app, /--story-font-size/);
   assert.match(app, /dialogDiy\?\.fontSize/);
   const css = read('index.css');
@@ -58,8 +58,8 @@ test('StoryTab_HomeTab_旁白用浅色底类_不用白字黑底', () => {
 
 test('GameShell_设置页有叙事底透明度滑杆', () => {
   const shell = read('components/GameShell.tsx');
-  assert.match(shell, /叙事底透明度/);
-  assert.match(shell, /storyBgAlpha/);
+  assert.match(shell, /叙事底不透明度/);
+  assert.match(shell, /storyBgAlpha \?\? 65/);
   assert.match(shell, /min=\{40\}/);
   assert.match(shell, /max=\{100\}/);
 });

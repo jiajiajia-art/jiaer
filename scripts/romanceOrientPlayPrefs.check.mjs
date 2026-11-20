@@ -63,10 +63,9 @@ test('GameShell_设置里可切屏幕方向_不锁定', () => {
   assert.doesNotMatch(shell, /竖屏，还是横屏？/);
   assert.doesNotMatch(shell, /lockPick/);
   assert.doesNotMatch(shell, /orientChosen/);
-  // 设置里可切横竖屏，文案写明每局默认竖屏且不锁定
-  assert.match(shell, /id: "landscape"/);
-  assert.match(shell, /每局默认竖屏，游玩中可随时切换/);
-  assert.match(shell, /aria-label="屏幕方向"/);
+  // 功能注释：局内设置暂时隐藏屏幕方向切换，固定竖屏；PlayPrefsPicker 仍保留横屏项供后续放开
+  assert.match(shell, /屏幕方向切换暂时隐藏，固定竖屏/);
+  assert.doesNotMatch(shell, /aria-label="屏幕方向"/);
   const topbar = read('components/TopbarDiyPanel.tsx');
   assert.doesNotMatch(topbar, /aria-label="预览方向"/);
   const ctx = read('store/GameContext.tsx');

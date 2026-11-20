@@ -55,7 +55,8 @@ test('mergeScriptToneFragments_新基调与旧三框跨包合并也不丢字', (
 });
 
 test('编辑器_剧本基调在基础作品信息_剧情页不再有三块', () => {
-  assert.match(panel, /剧本基调/);
+  assert.match(panel, /系统提示词/);
+  assert.match(panel, /author-field-script-tone/);
   assert.match(panel, /readScriptTone\(c\.prompt\)/);
   assert.match(panel, /applyScriptTone/);
   assert.match(panel, /consolidateScriptTone/);

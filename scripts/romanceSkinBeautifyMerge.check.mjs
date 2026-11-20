@@ -18,9 +18,11 @@ const wizard = readFileSync(join(romance, 'lib/worldGenWizard.ts'), 'utf8');
 test('编辑器皮肤美化_无试用条无面板皮肤动画块_音乐在基础', () => {
   assert.match(panel, /title="皮肤美化"/);
   assert.match(panel, /ModThemeEditor/);
-  // 功能注释：C1.2 音乐已迁到①基础，美化组不得再挂音乐
-  assert.match(panel, /g="base" title="音乐"/);
+  // 功能注释：C1.2 音乐嵌在①基础作品信息内（ModBgmEditor），不再是独立 Section
+  assert.match(panel, /ModBgmEditor/);
+  assert.match(panel, /音乐是世界本体，落在①基础/);
   assert.doesNotMatch(panel, /g="look" title="音乐"/);
+  assert.doesNotMatch(panel, /Section g="base" title="音乐"/);
   assert.doesNotMatch(panel, /ModSkinEditor/);
   assert.doesNotMatch(panel, /<summary[^>]*>高级<\/summary>/);
   assert.doesNotMatch(panel, /title="主题外观"/);
@@ -30,8 +32,8 @@ test('编辑器皮肤美化_无试用条无面板皮肤动画块_音乐在基础
   assert.doesNotMatch(themeEditor, />立即试用</);
   assert.doesNotMatch(themeEditor, /resolveSkinTheme/);
   assert.doesNotMatch(themeEditor, /setTheme/);
-  assert.match(themeEditor, /<Row title="皮肤">/);
-  assert.match(themeEditor, /<summary[^>]*>自定义<\/summary>/);
+  assert.match(themeEditor, /font-bold tracking-\[0\.16em\] text-ink-soft">皮肤</);
+  assert.doesNotMatch(themeEditor, /ModSkinEditor/);
 });
 
 test('功能扩展不再嵌皮肤与动画DIY', () => {

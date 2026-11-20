@@ -136,15 +136,11 @@ export default function AIConfigPanel() {
         </div>
       </div>
 
-      {/* 语音模型：小手机语音消息、通话的朗读；不填模型就用浏览器自带朗读 */}
-      {/* 功能注释：语音只走平台后台配置的语音线路（可选倍率）；创作扣织梦豆、游玩扣 KK 币。不再填个人语音接口 */}
+      {/* 语音：平台默认模型，创作者不选线路、不选按量倍率。人物音色在角色卡里选 */}
       <div className="space-y-3 rounded-xl border border-line bg-paper-2/60 p-3">
         <p className="text-[13px] font-bold text-ink">语音朗读 <span className="ml-1 text-[11px] font-normal text-ink-soft">语音消息 / 通话 / 常用语朗读</span></p>
         {hasPlatformPlayAuth() ? (
-          <>
-            <AiRoutePicker capability="tts" title="语音线路" />
-            <p className="text-[11px] leading-snug text-ink-soft">创作与预览按线路倍率扣织梦豆，正式游玩扣 KK 币。</p>
-          </>
+          <p className="text-[11.5px] leading-snug text-ink-soft">使用平台默认语音模型，按用量扣费，倍率由平台设定。人物音色在角色卡里选择，留空按性别。</p>
         ) : (
           <p className="text-[11.5px] leading-snug text-ink-soft">未登录平台，将使用浏览器自带朗读（免费），人物专属音色不生效。</p>
         )}
@@ -157,10 +153,19 @@ export default function AIConfigPanel() {
             <button type="button" disabled={ttsBusy} onClick={async () => {
               setTtsMsg(""); setTtsBusy(true);
               try { const url = await synthSpeech(draft, "你好呀，今天也要好好的。"); await new Audio(url).play(); setTtsMsg("试听成功"); }
-              catch (e) { setTtsMsg(e instanceof Error ? e.message : "试听失败"); }
+              catch (e) {
+                const code = (e as { code?: string }).code;
+                if ((code === "TTS_NOT_CONFIGURED" || code === "TTS_UPSTREAM_FAILED") && window.speechSynthesis) {
+                  window.speechSynthesis.cancel();
+                  const u = new SpeechSynthesisUtterance("你好呀，今天也要好好的。");
+                  u.lang = "zh-CN";
+                  window.speechSynthesis.speak(u);
+                  setTtsMsg("平台语音暂不可用，已改用浏览器朗读");
+                } else setTtsMsg(e instanceof Error ? e.message : "试听失败");
+              }
               finally { setTtsBusy(false); }
             }} className="rounded-full border border-jade px-3 py-1 text-[12px] font-bold text-jade transition hover:bg-jade/10 disabled:opacity-40">{ttsBusy ? "合成中…" : "试听"}</button>
-            {ttsMsg && <span className={`text-[11.5px] ${ttsMsg === "试听成功" ? "text-jade" : "text-danger"}`}>{ttsMsg}</span>}
+            {ttsMsg && <span className={`text-[11.5px] ${ttsMsg === "试听成功" ? "text-jade" : ttsMsg.includes("浏览器") ? "text-ink-soft" : "text-danger"}`}>{ttsMsg}</span>}
           </div>
         )}
       </div>

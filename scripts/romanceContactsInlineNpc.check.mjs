@@ -11,18 +11,15 @@ import test from 'node:test';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(join(root, rel), 'utf8');
 
-test('人物Section_人物卡在前_ContactsPanel全作品共用单独成块在后', () => {
+test('人物Section_关系档位平台固定_编辑器不再挂ContactsPanel', () => {
   const editor = read('Romance/src/components/ModEditorPanel.tsx');
   assert.doesNotMatch(editor, /title="人脉页面配置"/);
+  assert.doesNotMatch(editor, /ContactsPanel/);
   const peopleAt = editor.indexOf('title="人物"');
   assert.ok(peopleAt >= 0);
-  // 功能注释：关系玩法已迁出②角色；人物段以总养成开关为下界
-  const endAt = editor.indexOf('title="总养成开关"', peopleAt);
-  const peopleBlock = editor.slice(peopleAt, endAt > peopleAt ? endAt : peopleAt + 8000);
-  assert.match(peopleBlock, /ContactsPanel/);
-  // 关系档位 ContactsPanel 现在排在人物卡 npcs.map 之前
-  assert.ok(peopleBlock.indexOf('<ContactsPanel') >= 0 && peopleBlock.indexOf('<ContactsPanel') < peopleBlock.indexOf('npcs.map'), '关系档位须在人物卡之前');
-  assert.match(read('Romance/src/components/ContactsPanel.tsx'), /关系档位 · 全作品共用/);
+  const peopleBlock = editor.slice(peopleAt, peopleAt + 2500);
+  assert.match(peopleBlock, /关系档位已改为平台固定|W-01/);
+  assert.match(peopleBlock, /npcs\.map/);
 });
 
 test('ContactsPanel_仅关系档位_无卡片数值与双列预览', () => {

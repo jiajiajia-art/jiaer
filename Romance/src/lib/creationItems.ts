@@ -13,6 +13,7 @@ export const CREATION_ITEM_ADD_TYPES = [
   { id: "text", label: "文本" },
   { id: "radio", label: "单选" },
   { id: "number", label: "数值" },
+  { id: "skill", label: "技能（分档）" },
   { id: "date", label: "日期" },
   { id: "currency", label: "货币" },
 ] as const;
@@ -28,9 +29,17 @@ export function creationAttrKindLabel(a: Pick<AttrDef, "label" | "desc">): "货�
   return looksLikeCurrency(a as AttrDef) ? "货币" : "数值";
 }
 
-/** 功能注释：新建数值项默认值（范围 0~100、开局 0） */
+/** 功能注释：新建数值项默认值（范围 0~100、开局随机） */
 export function newNumberAttr(id: string): AttrDef {
-  return { id, label: "新数值", init: 0, max: 100 };
+  return { id, label: "新数值", init: 0, initMode: "random", max: 100 };
+}
+
+/** 功能注释：技能 = 带档位的数值（0~100，五档），玩家与档案只显示档名 + 进度，不配颜色 */
+export function newSkillAttr(id: string): AttrDef {
+  return {
+    id, label: "新技能", init: 0, initMode: "random", max: 100, show: "both",
+    tiers: ["入门", "熟练", "精通", "大成", "登峰造极"].map((label, i) => ({ min: i * 20, label })),
+  } as AttrDef;
 }
 
 /** 功能注释：新建货币项默认值（无上限、开局 100、货币说明） */

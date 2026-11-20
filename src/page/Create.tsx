@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { MdContentCopy, MdOutlineEdit, MdOutlineTaskAlt } from 'react-icons/md';
 import CheckInModal from '../components/CheckInModal';
 import ExchangeModal from '../components/Purchase/ExchangeModal';
@@ -40,6 +40,15 @@ import type { RechargeReceipt } from '../lib/rechargeReceipt';
 import accountSocialApi from '../api/account/accountSocialApi';
 
 type CreatorStatsIncentiveType = 'none' | 'incentive' | 'game_incentive' | 'code_incentive' | 'all_incentive';
+
+/** 功能注释：个人页切图当遮罩用，颜色跟旁边的图标组件走 currentColor，不再吃 SVG 里写死的粉色。 */
+const personalIconMask = (file: string): CSSProperties => {
+    const url = `url(${import.meta.env.BASE_URL}data/assetsv2/personal/${file})`;
+    return {
+        WebkitMaskImage: url,
+        maskImage: url,
+    };
+};
 
 const Create: React.FC = () => {
     const { t } = useTranslation();
@@ -570,7 +579,7 @@ const Create: React.FC = () => {
                                     onClick={() => setIsRechargeModalOpen(true)}
                                 >
                                     <span className={styles.accountActionIcon}>
-                                        <img src={`${import.meta.env.BASE_URL}data/assetsv2/personal/pay.svg`} alt="" />
+                                        <span className={styles.accountActionGlyph} style={personalIconMask('pay.svg')} aria-hidden="true" />
                                     </span>
                                     <span className={styles.accountActionLabel}>{t('create.accountRecharge')}</span>
                                 </button>
@@ -600,7 +609,7 @@ const Create: React.FC = () => {
                                     onClick={() => navigate('/create/incentives', { state: { returnTo: location.pathname } })}
                                 >
                                     <span className={styles.accountActionIcon}>
-                                        <img src={`${import.meta.env.BASE_URL}data/assetsv2/personal/exchange.svg`} alt="" />
+                                        <span className={styles.accountActionGlyph} style={personalIconMask('exchange.svg')} aria-hidden="true" />
                                     </span>
                                     <span className={styles.accountActionLabel}>{t('create.accountCreatorIncentive')}</span>
                                 </button>

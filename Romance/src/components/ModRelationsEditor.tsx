@@ -2,11 +2,9 @@ import { term } from "../mods/registry";
 import type { PartnerPerk, PerkReq, PerkWhen, RelationsContent } from "../worlds/star2005/content";
 import type { PerkKeyOption } from "../game/perkKeys";
 import type { ReactNode } from "react";
-import type { BridgeSlot } from "../game/bridge";
 
-/* 关系玩法（商店 pack-relations）：表白门槛、婚礼费用 / 好感、NPC 牵线开关与每日次数、伴侣加成。
- * 须创作者从商店加进作品后才出现本编辑器与人物页表白/婚礼入口。
- * 不预置固定牵线方式；需要牵线时请自加触发 / 事件。只写改动的字段，其余沿用引擎默认。 */
+/* 关系玩法（游戏本体）：表白门槛、婚礼费用 / 好感、伴侣加成。
+ * 人物彼此的好感写在每个角色的「对谁的好感」里，不在这里配开关。只写改动的字段，其余沿用引擎默认。 */
 type Rel = Partial<RelationsContent>;
 const inp = "min-w-0 w-full rounded-lg border border-line bg-paper px-2 py-1 text-[12.5px] text-ink outline-none focus:border-jade";
 const lbl = "block text-[10.5px] font-bold text-ink-soft";
@@ -59,15 +57,12 @@ function RowList<T>({ rows, blank, onChange, render, addLabel }: { rows: T[]; bl
   );
 }
 
-export default function ModRelationsEditor({ value, onChange, npcs = [], keyOptions = [] }: { value?: Rel; onChange: (v?: Rel) => void; npcs?: { id: string; name: string }[]; keyOptions?: PerkKeyOption[] }) {
+export default function ModRelationsEditor({ value, onChange, npcs = [], keyOptions = [], hasWorkPlay = false }: { value?: Rel; onChange: (v?: Rel) => void; npcs?: { id: string; name: string }[]; keyOptions?: PerkKeyOption[]; hasWorkPlay?: boolean }) {
   const v = value ?? {};
   const prune = (o: Record<string, unknown>) => { Object.keys(o).forEach((k) => o[k] === undefined && delete o[k]); return Object.keys(o).length ? o : undefined; };
   const put = (p: Rel) => onChange(prune({ ...v, ...p }) as Rel | undefined);
   const confess = (v.confess ?? {}) as Partial<RelationsContent["confess"]>;
   const wed = v.wedding ?? {};
-  const br: BridgeSlot = v.bridge ?? {};
-  // 功能注释：只保留开放开关与每日次数；固定牵线方式预置与 modes 编辑已下线
-  const setBr = (p: BridgeSlot) => put({ bridge: prune({ ...br, ...p }) as BridgeSlot | undefined });
 
   const perks: PartnerPerk[] = v.partnerPerks ?? [];
   const putPerks = (l: PartnerPerk[]) => put({ partnerPerks: l });
@@ -75,7 +70,7 @@ export default function ModRelationsEditor({ value, onChange, npcs = [], keyOpti
 
   return (
     <div className="space-y-3">
-      <p className="text-[11px] leading-relaxed text-ink-soft">留空 = 用引擎默认。已添加「关系玩法」后，人物页的表白、婚礼按这里的数值判定与显示。</p>
+      <p className="text-[11px] leading-relaxed text-ink-soft">留空 = 用引擎默认。人物页的表白、婚礼按这里的数值判定与显示。</p>
 
       <div className="rounded-xl border border-line bg-paper p-2.5">
         <p className="mb-1.5 text-[12px] font-bold text-ink">表白</p>
@@ -93,20 +88,6 @@ export default function ModRelationsEditor({ value, onChange, npcs = [], keyOpti
         </div>
       </div>
 
-      <div className="rounded-xl border border-line bg-paper p-2.5">
-        <div className="mb-1.5 flex items-center justify-between">
-          <p className="text-[12px] font-bold text-ink">NPC 牵线</p>
-          <label className="flex items-center gap-1.5 text-[11.5px] text-ink-soft">
-            <input type="checkbox" checked={!br.off} onChange={() => setBr({ off: br.off ? undefined : true })} />开放
-          </label>
-        </div>
-        {!br.off && (
-          <>
-            <div className="mb-2 w-1/2"><Num label="每天次数" value={br.perDay} ph={2} onChange={(perDay) => setBr({ perDay })} /></div>
-            <p className="text-[10.5px] leading-relaxed text-ink-soft">此处不预置牵线方式。需要牵线时，请在「④ 剧情」里自行添加触发与事件。</p>
-          </>
-        )}
-      </div>
       <div className="rounded-xl border border-line bg-paper p-2.5">
         <div className="mb-1.5 flex items-center justify-between">
           <p className="text-[12px] font-bold text-ink">伴侣加成 <span className="font-normal text-ink-soft">· 与某人确认恋爱后，{term("gig", "工作")}结算或到访指定地点时获得的加成（用不到可留空）</span></p>
@@ -142,23 +123,27 @@ export default function ModRelationsEditor({ value, onChange, npcs = [], keyOpti
                 })}
               </div>
               {p.loc === undefined ? (
+                hasWorkPlay ? (
                 <div className="space-y-1">
-                  <p className={lbl}>{term("gig", "工作")}玩法规则（引擎内置的结算规则，只对有{term("gig", "工作")}玩法的世界观生效；没有就留空）</p>
+                  <p className={lbl}>{term("gig", "工作")}结算（只在本剧的工作玩法成功时生效；用不到就留空）</p>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                   <Num label="完成率 +%" value={p.rate} ph={0} onChange={(rate) => setPerk(i, { rate })} />
                   <Num label="限星级 ≥" value={p.minStar} ph={0} onChange={(minStar) => setPerk(i, { minStar })} />
                   <label className={lbl}>商业价值倍率<input type="number" step="0.01" className={`${inp} mt-0.5`} value={p.bizMult ?? ""} placeholder="如 1.1" onChange={(e) => setPerk(i, { bizMult: e.target.value === "" ? undefined : +e.target.value || undefined })} /></label>
                   <label className={lbl}>额外{term("money", "报酬")}比例<input type="number" step="0.01" className={`${inp} mt-0.5`} value={p.payBonus ?? ""} placeholder="如 0.05" onChange={(e) => setPerk(i, { payBonus: e.target.value === "" ? undefined : +e.target.value || undefined })} /></label>
-                  <label className={lbl}>限{term("gig", "工作")}类型<input className={`${inp} mt-0.5`} value={p.gigType ?? ""} placeholder="如 广告|品牌" onChange={(e) => setPerk(i, { gigType: e.target.value || undefined })} /></label>
+                  <label className={lbl}>限{term("gig", "工作")}类型<input className={`${inp} mt-0.5`} value={p.gigType ?? ""} placeholder="留空不限，多个用 | 分开" onChange={(e) => setPerk(i, { gigType: e.target.value || undefined })} /></label>
                 </div>
                 </div>
+                ) : (
+                  <p className="text-[11px] leading-relaxed text-ink-soft">本剧还没加工作玩法。星级、商业价值、广告这类结算属于事业经营包，这里不显示。下面的数值、条件和次数，也要等加上那个玩法并且工作成功时才会生效。现在就要加成，请改成「到访地点」。</p>
+                )
               ) : (
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                     <label className={`${lbl} col-span-2`}>地点 id<input className={`${inp} mt-0.5`} value={p.loc} placeholder="如 apartment|home" onChange={(e) => setPerk(i, { loc: e.target.value })} /></label>
 </div>
               )}
               <div className="space-y-1.5">
-                  <p className={lbl}>数值增减（从本世界观的属性里选{p.loc === undefined ? `；${term("gig", "工作")}成功时生效` : ""}）</p>
+                  <p className={lbl}>数值增减（从本世界观的属性里选{p.loc === undefined && hasWorkPlay ? `；${term("gig", "工作")}成功时生效` : ""}）</p>
                   <RowList
                     rows={fxOf(p)}
                     blank={{ key: keyOptions.find((o) => !o.readOnly)?.key ?? "affinity", delta: 0 }}

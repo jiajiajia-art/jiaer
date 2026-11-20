@@ -67,7 +67,8 @@ test('worldbookPick_有依赖时用地点人物关键词OR触发', () => {
   assert.match(src, /worldBookDepsMatch/);
   assert.match(src, /worldBookDepHit/);
   assert.match(src, /worldBookHasDeps/);
-  assert.match(src, /depHit && !kwHit/);
+  assert.match(src, /hasDeps && !worldBookDepsMatch/);
+  assert.match(src, /if \(!kwHit\) continue/);
   assert.match(deps, /rooms\.includes\(opts\.room\)/);
   assert.doesNotMatch(src, /live = book\.filter\(\(e\) => e\.enabled && asTrimmedString\(e\.content\) && inScope/);
 });

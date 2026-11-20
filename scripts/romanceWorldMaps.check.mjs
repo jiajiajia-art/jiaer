@@ -10,6 +10,16 @@ import test from 'node:test';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const romance = join(root, 'Romance/src');
 const mod = await import(pathToFileURL(join(romance, 'lib/worldMaps.ts')).href);
+const { playableMapSheets, sheetOf } = await import(pathToFileURL(join(romance, 'game/mapSheets.ts')).href);
+
+test('游玩地图保留作品的两张底图，按地点归属选择图层', () => {
+  const maps = [{ id: 'paris', name: '巴黎', bg: '/paris.png' }, { id: 'home', name: '故乡', bg: '/home.png' }];
+  const sheets = playableMapSheets(maps);
+  assert.deepEqual(sheets.map(({ id, bgUrl }) => [id, bgUrl]), [['paris', '/paris.png'], ['home', '/home.png']]);
+  assert.equal(sheetOf(undefined, 'academy', sheets, 'paris'), 'paris');
+  assert.equal(sheetOf(undefined, 'house', sheets, 'home'), 'home');
+  assert.equal(sheetOf({ house: { sheet: 'paris' } }, 'house', sheets, 'home'), 'paris');
+});
 
 test('ensureWorldMaps_无图时按顶层地点推断区域名并挂地点', () => {
   const { worldMaps, rooms } = mod.ensureWorldMaps(

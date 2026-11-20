@@ -30,6 +30,8 @@ import { platformAppLegacyUi } from "../lib/platformApps";
 type Props = {
   value?: PhoneAppDef[];
   wallpaper?: string;
+  /** 功能注释：创作者没设手机壁纸时，预览与局内一样用作品封面 */
+  coverUrl?: string;
   onChange: (next: PhoneAppDef[] | undefined) => void;
   onWallpaperChange: (next: string | undefined) => void;
   /** 功能注释：C0.2 当前世界题材；安装应用时与应用适用题材不一致则提示一次（不拦截） */
@@ -101,7 +103,7 @@ function BatteryGlyph() {
 }
 
 export default function PhoneAppsEditor({
-  value, wallpaper, onChange, onWallpaperChange,
+  value, wallpaper, coverUrl, onChange, onWallpaperChange,
   worldThemeTagId, worldThemeLabel, worldThemeCode, enabledThemeTags,
   commSkin, onCommSkinChange,
 }: Props) {
@@ -158,7 +160,7 @@ export default function PhoneAppsEditor({
 
   const dock = DOCK_APPS.filter((id) => id === "settings" || installedSet.has(id));
   const frame = frameById("titanium");
-  const wp = resolveEffectiveHomeWallpaper(wallpaper, { wallpaper: DEFAULT_WALLPAPER });
+  const wp = resolveEffectiveHomeWallpaper(wallpaper, { wallpaper: DEFAULT_WALLPAPER }, coverUrl);
 
   const openApp = (id: string) => {
     if (id === "appstore") {

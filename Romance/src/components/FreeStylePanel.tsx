@@ -11,7 +11,7 @@ import AssetKindTabs, { filterAssetsByKind, type AssetKindFilter } from "./Asset
  *   AssetLibrary → 素材与代码 · 素材库
  *   SlotImage    → 各部位（全局背景 / 顶栏 / 对话框 / 气泡）旁边
  *   FreeColors   → 配色
- *   FreeFont     → 字体 */
+ */
 const btn = "rounded-full border border-line bg-paper px-3 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
 const inp = "min-w-0 flex-1 rounded-xl border border-line bg-paper px-3 py-1.5 text-[12.5px] text-ink outline-none focus:border-jade";
 export const SubTitle = ({ t, d }: { t: string; d?: string }) => (
@@ -70,31 +70,6 @@ export function FreeColors() {
           </label>
         );
       })}
-    </div>
-  );
-}
-
-/* 自定义字体文件：仅本地上传（不再提供粘贴直链） */
-export function FreeFont() {
-  const { f, set } = useFree();
-  const ref = useRef<HTMLInputElement>(null);
-  const [err, setErr] = useState("");
-  return (
-    <div>
-      <div className="flex flex-wrap gap-1.5">
-        <button className={btn} onClick={() => ref.current?.click()}>上传字体文件</button>
-        {f.font?.url && <button className={btn} onClick={() => set({ font: undefined })}>移除</button>}
-        <input ref={ref} type="file" accept=".woff2,.woff,.ttf,.otf" className="hidden" onChange={(e) => {
-          const file = e.target.files?.[0]; e.target.value = "";
-          if (!file) return;
-          if (file.size > 2.5 * 1024 * 1024) return setErr("字体超过 2.5MB：中文字体建议用子集化的 woff2");
-          setErr("");
-          const r = new FileReader(); r.onload = () => set({ font: { name: file.name.replace(/\.[^.]+$/, ""), url: String(r.result) } }); r.readAsDataURL(file);
-        }} />
-      </div>
-      <p className="mt-1 text-[10.5px] text-ink-soft">支持 woff2 / woff / ttf / otf，设置后优先于上方预设字体。</p>
-      {err && <p className="mt-1 text-[11px] text-danger">{err}</p>}
-      {f.font?.url && <p className="mt-1.5 rounded-lg bg-paper-2 px-3 py-2 text-[14px]" style={{ fontFamily: `"${f.font.name}"` }}>字体预览 · 永和九年，岁在癸丑 Aa 123同在 ABC 123</p>}
     </div>
   );
 }

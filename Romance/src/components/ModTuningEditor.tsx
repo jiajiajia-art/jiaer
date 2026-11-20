@@ -143,12 +143,29 @@ export default function ModTuningEditor({
     </select>
   );
   const grades = t.lessonGrades ?? [];
-  const setGrades = (g: LessonGrade[]) => commit({ lessonGrades: g.length ? g : undefined });
-  const num = (k: keyof TuningSlot, label: string) => (
+  // 功能注释：只有被显式关掉的模块，填写时才重新打开。没写过标记时，靠字段本身生效，避免删光等级后留下一个空的 modules.course。
+  const arm = (id: "course" | "jobPay", p: Partial<TuningSlot>) => {
+    if (t.modules?.[id] === false) commit({ ...p, modules: { ...(t.modules ?? {}), [id]: true } });
+    else commit(p);
+  };
+  const setGrades = (g: LessonGrade[]) => arm("course", { lessonGrades: g.length ? g : undefined });
+  const num = (k: keyof TuningSlot, label: string, own?: "course" | "jobPay") => (
     <label className="block text-[10.5px] text-ink-soft">{label}
-      <input type="number" step={1} className={`${inp} mt-0.5`} value={(t[k] as number | undefined) ?? ""} placeholder={emptyHint} onChange={(e) => commit({ [k]: opt(e.target.value) })} />
+      <input type="number" step={1} className={`${inp} mt-0.5`} value={(t[k] as number | undefined) ?? ""} placeholder={emptyHint} onChange={(e) => (own ? arm(own, { [k]: opt(e.target.value) }) : commit({ [k]: opt(e.target.value) }))} />
     </label>
   );
+  // 功能注释：养成页不再提供第二次勾选。开了课程/打工，就直接编辑对应通用参数；评级和休息仍跟上方子项勾选走。
+  const courseForm = showCourses && (showModulePicker ? on("course") : true);
+  const jobForm = showJobs && (showModulePicker ? on("jobPay") : true);
+  // 功能注释：养成页和结局共用 tuning；这里只清本栏的评级/休息/课程/打工，不能把结局里的破产规则一起抹掉。
+  const clearOwned = () => {
+    let next: TuningSlot = { ...t };
+    if (on("dayGrade")) next = clearTuningModule(next, "dayGrade");
+    if (on("rest")) next = clearTuningModule(next, "rest");
+    if (courseForm && on("course")) next = clearTuningModule(next, "course");
+    if (jobForm && on("jobPay")) next = clearTuningModule(next, "jobPay");
+    onChange(pruneTuningSlot(next) as TuningSlot | undefined);
+  };
 
   return (
     <div className="space-y-4">
@@ -387,23 +404,27 @@ export default function ModTuningEditor({
         </div>
       )}
 
-      {showJobs && on("jobPay") && (
+      {jobForm && (
         <div className="space-y-1.5">
           <p className={head}>打工收入倍率</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-            {num("jobPayMul", "打工收入×")}
+            {num("jobPayMul", "打工收入×", "jobPay")}
           </div>
         </div>
       )}
 
-      {showCourses && on("course") && (
+      {courseForm && (
         <div className="space-y-1.5">
-          <p className={head}>课程倍率与等级 <span className="font-normal text-ink-soft">· 课程没有单独设等级时使用下面的通用表</span></p>
+          <p className={head}>课程倍率与等级 <span className="font-normal text-ink-soft">· 单门课没写自己的等级时，用下面这张通用表（课程卡上的「用引擎通用等级」）</span></p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-            {num("trainGainMul", "课程收益×")}
-            {num("trainFeeMul", "学费×")}
+            {num("trainGainMul", "课程收益×", "course")}
+            {num("trainFeeMul", "学费×", "course")}
           </div>
-          {!grades.length && <p className="text-[11px] text-ink-soft">{emptyHint}</p>}
+          {!grades.length && (
+            <p className="text-[11px] text-ink-soft">
+              {showModulePicker ? emptyHint : "还没写等级。开局先用一档「标准」（学费×1、收益×1）。要分初级 / 中级，点下面添加。"}
+            </p>
+          )}
           {grades.map((g, i) => (
             <div key={g.id} className="grid grid-cols-[1fr_1fr_auto] items-end gap-1 rounded-lg bg-paper-2/60 p-1.5 sm:grid-cols-[1.4fr_repeat(4,1fr)_auto] sm:bg-transparent sm:p-0">
               <label className="block text-[10px] text-ink-soft">名称<input className={`${inp} mt-0.5`} value={g.label} placeholder={emptyHint} onChange={(e) => setGrades(grades.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} /></label>
@@ -422,7 +443,10 @@ export default function ModTuningEditor({
         </div>
       )}
 
-      {value && <button className={btn} onClick={() => onChange(undefined)}>清空全部引擎规则</button>}
+      {showModulePicker && value && <button className={btn} onClick={() => onChange(undefined)}>清空全部引擎规则</button>}
+      {!showModulePicker && (on("dayGrade") || on("rest") || on("course") || on("jobPay")) && (
+        <button className={btn} onClick={clearOwned}>清空本栏已填的数值</button>
+      )}
     </div>
   );
 }

@@ -92,7 +92,7 @@ export function normalizeWorldGenCustomAttrs(raw: unknown): AttrDef[] {
     const initMode =
       initModeRaw === "random" || initModeRaw === "dice"
         ? ("random" as const)
-        : undefined;
+        : initModeRaw === "fixed" ? ("fixed" as const) : undefined;
     const def: AttrDef = {
       id,
       label,
@@ -102,7 +102,6 @@ export function normalizeWorldGenCustomAttrs(raw: unknown): AttrDef[] {
       desc,
       ...(initMode ? { initMode } : {}),
     };
-    if (typeof r.icon === "string" && r.icon.trim()) def.icon = r.icon.trim().slice(0, 2);
     if (Array.isArray(r.tiers)) {
       const tiers = r.tiers
         .map((t) => {

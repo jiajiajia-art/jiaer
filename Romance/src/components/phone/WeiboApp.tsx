@@ -9,10 +9,12 @@ import { useWorldSync, syncJson, phoneContext, loadFeed, saveFeed } from "./worl
 import { Avatar } from "../ui";
 import { CommentSheet, PullToRefresh, LoadMoreButton, NeedAI } from "./shared";
 import { IconRepost, IconComment, IconHeart, IconSearch, IconPlus, IconFire, IconVerified } from "./icons";
-import { liveTerm as T } from "../../mods/live";
+import { entertainmentPlayOn } from "../../mods/registry";
 import { logAct, logNpcNet } from "../../game/phoneLink";
 
 const WB_ORANGE = "#ff8140";
+/** 功能注释：没装演艺事业时，热搜和博文不要写成饭圈 */
+const weiboFence = () => (entertainmentPlayOn() ? "" : "本作品没有演艺事业：不要写经纪公司、经纪人、试镜、通告、粉丝打榜、黑粉、片场、红毯。");
 
 type HotItem = { t: string; heat?: number; tag: string };
 type HotPost = { who: string; pid?: string; verified: boolean; from: string; text: string; when: string; reposts?: number; comments?: number; likes?: number };
@@ -87,7 +89,7 @@ export default function WeiboApp({ onBack }: { onBack: () => void }) {
     if (hotLoading) return "";
     setHotLoading(true);
     try {
-      const r = await syncJson<{ hot?: unknown; posts?: unknown }>(cfg, game!, "weibo", "冲浪", `生成冲浪（类微博）最新内容，返回 JSON 对象：{"hot":[{"t":"热搜词(≤15字)","tag":"爆|沸|新|热|空串"}],"posts":[{"who":"博主名(圈内人物名或网友昵称/媒体号)","verified":true或false,"text":"博文正文(≤120字)","from":"如 iPhone 客户端"}]}。hot 给 8 条，紧扣主角近况、圈内人物与最近剧情事件；posts 给 5~6 条新博文，围绕最近剧情，立场多元。`);
+      const r = await syncJson<{ hot?: unknown; posts?: unknown }>(cfg, game!, "weibo", "冲浪", `生成冲浪（类微博）最新内容，返回 JSON 对象：{"hot":[{"t":"热搜词(≤15字)","tag":"爆|沸|新|热|空串"}],"posts":[{"who":"博主名(人物名或网友昵称/媒体号)","verified":true或false,"text":"博文正文(≤120字)","from":"如 iPhone 客户端"}]}。hot 给 8 条，紧扣主角近况与最近剧情事件；posts 给 5~6 条新博文，围绕最近剧情，立场多元。${weiboFence()}`);
       if (!r) return "未配置 AI，无法联动剧情";
       const str = (v: unknown, n: number) => (typeof v === "string" ? v.trim().slice(0, n) : "");
       const num = (v: unknown, _d?: number) => { if (v == null || v === "") return undefined; const x = Number(v); return Number.isFinite(x) && x >= 0 ? Math.round(x) : undefined; };
@@ -120,7 +122,7 @@ export default function WeiboApp({ onBack }: { onBack: () => void }) {
     setMoreLoading(true);
     try {
       const seen = home.slice(-12).map((p) => p.text.slice(0, 30)).join("｜");
-      const r = await syncJson<{ posts?: unknown }>(cfg, game!, "weibo", "冲浪", `再生成一批冲浪（类微博）信息流博文，返回 JSON 对象：{"posts":[{"who":"博主名(圈内人物名或网友昵称/媒体号)","verified":true或false,"text":"博文正文(≤120字)","from":"如 iPhone 客户端"}]}。给 6 条，围绕主角近况与最近剧情，也可有圈内日常与路人吃瓜，立场多元；不要与这些已有内容重复：${seen}`);
+      const r = await syncJson<{ posts?: unknown }>(cfg, game!, "weibo", "冲浪", `再生成一批冲浪（类微博）信息流博文，返回 JSON 对象：{"posts":[{"who":"博主名(人物名或网友昵称/媒体号)","verified":true或false,"text":"博文正文(≤120字)","from":"如 iPhone 客户端"}]}。给 6 条，围绕主角近况与最近剧情，也可有日常生活与路人闲聊，立场多元；不要与这些已有内容重复：${seen}${weiboFence()}`);
       if (!r) { flash("未配置 AI，暂无更多"); return; }
       const str = (v: unknown, n: number) => (typeof v === "string" ? v.trim().slice(0, n) : "");
       const num = (v: unknown, _d?: number) => { if (v == null || v === "") return undefined; const x = Number(v); return Number.isFinite(x) && x >= 0 ? Math.round(x) : undefined; };
@@ -441,13 +443,13 @@ export default function WeiboApp({ onBack }: { onBack: () => void }) {
                 <Avatar src={game!.player.avatar} name={game!.player.name} size={56} editable={false} />
                 <div>
                   <p className="text-[18px] font-bold">{game!.player.name}</p>
-                  <p className="text-[12px] text-white/85">签名：认真演戏，好好生活</p>
+                  <p className="text-[12px] text-white/85">签名：{entertainmentPlayOn() ? "认真演戏，好好生活" : "今天也要好好过"}</p>
                 </div>
               </div>
               <div className="flex px-4 pb-3 text-center text-[13px]">
                 <div className="flex-1"><p className="text-[16px] font-bold tabular-nums">{myPosts.length}</p><p className="text-white/80">冲浪</p></div>
                 <div className="flex-1"><p className="text-[16px] font-bold tabular-nums">{Math.round(s.fame * 0.12) + followSet.size}</p><p className="text-white/80">关注</p></div>
-                <div className="flex-1"><p className="text-[16px] font-bold tabular-nums">{(s.fame * 1.2).toFixed(1)}万</p><p className="text-white/80">粉丝</p></div>
+                <div className="flex-1"><p className="text-[16px] font-bold tabular-nums">{entertainmentPlayOn() ? `${(s.fame * 1.2).toFixed(1)}万` : String(Math.max(3, followSet.size + 2))}</p><p className="text-white/80">{entertainmentPlayOn() ? "粉丝" : "关注者"}</p></div>
               </div>
             </div>
             <div className="flex gap-2 bg-white px-3.5 py-3">

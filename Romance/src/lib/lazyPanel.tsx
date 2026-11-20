@@ -23,11 +23,11 @@ const Fallback = () => (
 );
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function lazyPanel<T extends ComponentType<any>>(load: () => Promise<{ default: T }>) {
+export function lazyPanel<T extends ComponentType<any>>(load: () => Promise<{ default: T }>, showLoading = true) {
   let p: Promise<{ default: T }> | null = null;
   const once = () => (p ??= load().catch((e) => { p = null; throw e; }));
   const L = lazy(once);
   queue.push(once);
   schedulePrefetch();
-  return (props: ComponentProps<T>) => <Suspense fallback={<Fallback />}><L {...props} /></Suspense>;
+  return (props: ComponentProps<T>) => <Suspense fallback={showLoading ? <Fallback /> : null}><L {...props} /></Suspense>;
 }

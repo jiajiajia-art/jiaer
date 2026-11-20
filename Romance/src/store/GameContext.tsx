@@ -1,4 +1,6 @@
 import type { ChatMsg } from "../lib/ai";
+import { clearPreviewPathProgress, recordRunCleared } from "../lib/pathProgress";
+import { STATE_REPAIR_MARK } from "../lib/liveStatus";
 import { getStranger, promoteStranger } from "../components/phone/wxFeatures";
 import { buildTheaterDirective, parseTheaterOutput, theaterFormatOf } from "../lib/theaterFormats";
 import { applyMemory } from "../lib/chronicle";
@@ -19,7 +21,7 @@ import { carShopId, allRooms } from "../game/mud";
 import { syncChildNpcs } from "../game/pregnancy";
 import { getWorldStartRoom, worldLocOf } from "../mods/registry";
 import {
-  DEFAULT_WORLD, activateWorld, saveAddons, feature, getWorldEventGroups, getOpeningDirective, getWorld, getWorldId, getWorldStorylines, term, getWorldLookRules,
+  DEFAULT_WORLD, activateWorld, saveAddons, feature, getWorldEventGroups, getOpeningDirective, getWorld, getWorldId, getWorldStorylines, getWorldSidelines, getWorldEventDates, term,
   beginAuthorPreviewMod, endAuthorPreviewMod, currentModStamp, worldItemMemo,
 } from "../mods/registry";
 import { describeModStampDiff, diffModStamp, refreshItemMemo } from "../mods/modStamp";
@@ -31,11 +33,11 @@ import { markAuthorPreviewReady, resetAuthorPreviewBoot } from "../lib/authorPre
 import { PLATFORM_PLAY_START } from "../lib/platformPlay";
 import { clearAuthorPreviewSave } from "../lib/storage";
 import { buildOpeningPlotPrompt, DEFAULT_OPENING_DIRECTIVE, pickOpeningPromptEvents } from "../lib/openingPlotPrompt";
-import { activeLookKey, resolveLook, type LookPatch } from "../lib/plotLook";
+import { resolveLook, type LookPatch } from "../lib/plotLook";
 import { pickArrival, resolveStart, startPreset } from "../game/mapStart";
 import { spotDesc, spotName } from "../game/mapedits";
 import { LIVE_LOCATIONS, getWorldSlot, setRuntimeSpots, setStartDateOverride } from "../mods/registry";
-import type { StartOpts } from "./gameCtx";
+import type { BagAction, SimLock, StartOpts } from "./gameCtx";
 import type { MapSpotEdit } from "../lib/types";
 import { tierOf } from "../game/data";
 import { defaultGradeDims, settleGrade } from "../game/grade";
@@ -45,7 +47,7 @@ import { syncWorldRules, ruleOf } from "../game/worldRules";
 import { worldRuleLabel } from "../game/data";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { tickBirthdays, tickPlayerAge } from "../lib/npcIdentity";
-import { healGameNpcsNames } from "../lib/personName";
+import { dropNarrationNamedNpcs, healGameNpcsNames, syncNpcNamesFromWorld } from "../lib/personName";
 import { canPay, shortOf } from "../game/logic";
 import {
   applyStep,
@@ -54,6 +56,7 @@ import {
   complete,
   compressMemory,
   displayText,
+  withReplyOptions,
   extractStep,
   parseStepDetailed,
   buildStepRepairMessages,
@@ -112,10 +115,10 @@ import {
 } from "../game/logic";
 import { gossipTick, kbOf, remember } from "../game/npcKnowledge";
 import { findNpc } from "../lib/npcIdentity";
-import { meetPerson, withNewcomers } from "../game/npcIntro";
-import { addAutoSpot, isArrivalBoilerplate, isFormalPlaceName } from "../lib/newLocation";
+import { cleanLegacyNpcArtifacts, meetPerson, withNewcomers } from "../game/npcIntro";
+import { addAutoSpot, isArrivalBoilerplate, isFormalPlaceName, samePlaceName } from "../lib/newLocation";
 import { preloadPlatformAvatarPools } from "../lib/avatarPreload";
-import { drawProfileAvatar } from "../game/avatarPools";
+import { assetIdForAvatarUrl, fillMissingAvatars, takenAvatarKeys } from "../game/avatarPools";
 import { getWorldNpcs } from "../mods/registry";
 import { findSceneImageForNewSpot, NEW_SPOT_NO_IMAGE_EVENT } from "../lib/newLocationAsset";
 import { commitWorldBook } from "../game/worldbookPick";
@@ -131,7 +134,7 @@ import { defaultWorldBook } from "../game/worldbook";
 import { advanceUnit, advanceCount, advanceStoryOn, advanceWords, hopEnergy, tripPoints, apPerMove, apPerAct, encountersHere, fireEncounter, insideTree, introOf, itemsOfRoom, learnIntel, locOf, mobsHere, presentHere, resolveMobs, roomDesc, tickWorld, travelPlan } from "../game/mud";
 import { activityApCost, customActsOf, customItemsOf, findCustomItem, findShopGood, findSpotEvent, firedKey, firedOf, withApNote } from "../game/mapedits";
 import { scanTriggers, queueChoiceTriggers, takeQueued } from "../game/eventTriggers";
-import { pickFixedEvent, pickRandomEvent, applyFixedEffects, settleFixedEventEffects, reserveFixedEvent, applyHiddenBranches, applyChainBreaks, eventChoiceOptions, parseChoice, applyChoice, matchCustomEnding, evalFixedCond, applyEffectList, FIXED_METRICS } from "../game/fixedEvents";
+import { pickFixedEvent, applyStorylines, applySidelines, pickRandomEvent, applyFixedEffects, settleFixedEventEffects, reserveFixedEvent, applyHiddenBranches, applyChainBreaks, eventChoiceOptions, parseChoice, applyChoice, matchCustomEnding, evalFixedCond, applyEffectList, FIXED_METRICS } from "../game/fixedEvents";
 import { normRouteFx } from "../game/routeFx";
 import { activateEvents, keepIfOngoing, keywordEventHits, settleActiveEvents } from "../game/loreContext";
 import type { FixedEffect, FixedEvent } from "../lib/types";
@@ -214,7 +217,9 @@ function buildReport(log: string[], weekFrom: number, weekTo: number, relEvents:
 /* —— 数值锁（所有世界观通用）——
  * 系统先确定性结算，再交给 AI 演绎；AI 回写时，本次已结算的字段一律恢复为结算值，
  * 保证「剧情听 AI，数值听配置」。只锁本次真正变动过的字段，AI 对其他项的合理改动不受影响。 */
-type SimLock = { keys: string[]; rel: string[]; cattrs: string[]; stats: string[] };
+
+/** 功能注释：逐回合快照上限（重新生成 / 回溯可退回的回合数） */
+const TURN_SNAP_MAX = 30;
 function lockOf(a: SimState, b: SimState): SimLock {
   const A = a as unknown as Record<string, unknown>, B = b as unknown as Record<string, unknown>;
   const keys = Object.keys(B).filter((k) => typeof B[k] === "number" && A[k] !== B[k]);
@@ -237,6 +242,20 @@ function applyLock(next: GameState, settled: GameState, lock: SimLock): GameStat
   // 人物卡上的好感同样以系统结算为准
   const npcs = lock.rel.length ? next.npcs.map((n) => { const o = settled.npcs.find((x) => x.id === n.id); return lock.rel.includes(n.id) && o ? { ...n, affinity: o.affinity } : n; }) : next.npcs;
   return { ...next, sim: out, npcs };
+}
+
+
+/** 功能注释：弹窗事件 / 支线演绎完后，把结果作为「上回合之后发生的事」交给下一主线回合，并留一句进记忆摘要 */
+function withSideOutcome(g: GameState, title: string, text: string): GameState {
+  const gist = text.replace(/[▶\s]+/g, " ").trim().slice(-160);
+  if (!gist) return g;
+  const cue = `玩家刚经历了「${title}」：${gist}`;
+  const memLine = `【${title}】${gist.slice(0, 80)}`;
+  return {
+    ...g,
+    pendingCues: [...(g.pendingCues ?? []), cue].slice(-8),
+    memory: g.memory?.includes(memLine) ? g.memory : `${g.memory ? `${g.memory}\n` : ""}${memLine}`.slice(-4000),
+  };
 }
 
 export function GameProvider({ children }: { children: ReactNode }) {
@@ -292,6 +311,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const playQuestRef = useRef<((id: string) => void) | null>(null);
   // 上一回合的输入与前置状态，供「重新生成」在 AI 输出异常时原样重跑
   const lastTurnRef = useRef<{ base: GameState; input: string; hideInput?: boolean } | null>(null);
+  // 功能注释：记忆压缩进行中标记——防止连续回合各自发起压缩、后返回的结果覆盖较新的摘要
+  const compressingRef = useRef(false);
+  // 功能注释：逐回合快照（仅本次会话内存）——每个成功落地的主线 AI 回合记下「回合前状态 + 输入」与「回合后状态」，
+  // 供「重新生成这一回合」与「回溯到这一回合」使用；最多保留最近 TURN_SNAP_MAX 回合
+  type TurnSnap = { gid: string; base: GameState; input: string; hideInput: boolean; preSettled: boolean; lock: ReturnType<typeof lockOf> | null; after: GameState };
+  const turnSnapsRef = useRef(new Map<string, TurnSnap>());
+  const [snapIds, setSnapIds] = useState<string[]>([]);
   const [canRetry, setCanRetry] = useState(false);
 
   useEffect(() => {
@@ -328,12 +354,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
   // 剧情美化：玩家设置 + 满足条件的外观规则 → 实际生效外观（不回写玩家设置）
   const [lookPreview, previewLook] = useState<LookPatch | null>(null);
-  const lookSim = game && (screen === "game" || screen === "opening") ? game.sim : null;
-  const worldLooks = game ? getWorldLookRules() : undefined;
-  const lookKey = activeLookKey(theme, lookSim, worldLooks);
+  // 功能注释：「剧情美化」已下线（W-07/08）：作者与玩家的条件外观规则都不再套用，只保留「试看」临时预览
   const lookRes = useMemo(
-    () => resolveLook(theme, lookSim, worldLooks, lookPreview),
-    [theme, lookKey, worldLooks, lookPreview], // eslint-disable-line react-hooks/exhaustive-deps
+    () => resolveLook({ ...theme, lookRules: undefined }, null, undefined, lookPreview),
+    [theme, lookPreview],
   );
 
   /** 功能注释：建角完成后先播编辑器开场白；正式 AI 开局剧情延到点「开始」入局后再生成 */
@@ -407,6 +431,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       });
     };
     const onClear = () => {
+      clearPreviewPathProgress();
       void clearAuthorPreviewSave(AUTHOR_PREVIEW_GAME_ID);
       purgeSaveData(AUTHOR_PREVIEW_GAME_ID);
       if (isAuthorPreview()) {
@@ -474,12 +499,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (memo !== s.itemMemo) s = { ...s, itemMemo: memo };
     }
     // 功能注释：读档进局同样默认竖屏；局内改横屏只在本会话生效，下次进来仍竖屏
-    const g0 = syncSimToPlayer(ensureLoveAxis(ensureSim(s)));
+    const g0 = cleanLegacyNpcArtifacts(syncSimToPlayer(ensureLoveAxis(ensureSim(s))));
     // 功能注释：旧档里职业当姓名的 NPC 读档时自愈为有姓有名
-    const healedNpcs = healGameNpcsNames(g0.npcs);
+    // 功能注释：先按作品设定对齐姓名（C-03 / B-01 恢复），再做称谓占名自愈
+    const healedNpcs = healGameNpcsNames(dropNarrationNamedNpcs(syncNpcNamesFromWorld(g0.npcs, getWorldNpcs()).npcs).npcs);
+    // 功能注释：旧档局内头像是空的时，把作品里已经设好的头像补上（聊天否则只剩首字）
+    const filledAv = fillMissingAvatars(healedNpcs.npcs, g0.player.avatar, g0.sim?.hero, g0.player.name);
     const g = {
       ...g0,
-      npcs: healedNpcs.npcs,
+      npcs: filledAv.npcs,
+      player: filledAv.playerAvatar === g0.player.avatar && !filledAv.playerAssetId ? g0.player : { ...g0.player, avatar: filledAv.playerAvatar, ...(filledAv.playerAssetId ? { avatarAssetId: filledAv.playerAssetId } : {}) },
       playPrefs: { ...g0.playPrefs, orient: "portrait" as const },
     };
     syncFactions(g);
@@ -515,8 +544,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (screenRef.current === "game") runAudioCmds(s0.id, s0.sim.audioQ);
       s0 = { ...s0, sim: { ...s0.sim, audioQ: undefined } };
     }
-    // 功能注释：职业占位名（烤红薯摊主等）自愈为有姓有名，旧称呼进 identity/aliases
+    // 功能注释：旁白串误建的人先删掉（苏晴又发来一条），再把职业占位名自愈为有姓有名
     {
+      const dropped = dropNarrationNamedNpcs(s0.npcs);
+      if (dropped.dropped) s0 = { ...s0, npcs: dropped.npcs };
       const healed = healGameNpcsNames(s0.npcs);
       if (healed.healedCount) s0 = { ...s0, npcs: healed.npcs };
     }
@@ -540,32 +571,30 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return true;
   }, []);
 
-  // 功能注释：局内一旦发现职业占位名，立刻自愈并落盘，资料卡不再显示「烤红薯摊主」当姓名
+  // 功能注释：局内一旦发现旁白串人名或职业占位名，立刻清掉 / 自愈并落盘
   useEffect(() => {
     const cur = gameRef.current;
     if (!cur?.npcs?.length) return;
-    const healed = healGameNpcsNames(cur.npcs);
-    if (healed.healedCount) persist({ ...cur, npcs: healed.npcs });
-  }, [game?.id, game?.npcs?.length, persist]);
+    const dropped = dropNarrationNamedNpcs(cur.npcs);
+    const healed = healGameNpcsNames(dropped.npcs);
+    if (dropped.dropped || healed.healedCount) persist({ ...cur, npcs: healed.npcs });
+  }, [game?.id, (game?.npcs ?? []).map((n) => n.name).join("\0"), persist]);
 
-  // 功能注释：开局预拉平台头像库；之后把 AI 新建、还没头像的人物（非作者预设）按性别年龄套用平台头像
+  // 功能注释：头像池异步到位后再补一次。作品里已设的头像写回局内；只有 AI 新建、作者没预设的人才抽平台头像
   useEffect(() => {
     const gid = game?.id;
     if (!gid) return;
     let alive = true;
-    void preloadPlatformAvatarPools().then((ok) => {
+    void preloadPlatformAvatarPools().then(() => {
       const cur = gameRef.current;
-      if (!ok || !alive || !cur || cur.id !== gid) return;
-      const authored = new Set((getWorldNpcs() ?? []).map((n) => n.id));
-      let changed = false;
-      const npcs = cur.npcs.map((n) => {
-        if (n.avatar || authored.has(n.id)) return n;
-        const av = drawProfileAvatar(n.id, { name: n.name, age: n.age, identity: n.identity, bio: n.bio });
-        if (!av.url) return n;
-        changed = true;
-        return { ...n, avatar: av.url, avatarVariant: av.variant };
+      if (!alive || !cur || cur.id !== gid) return;
+      const filled = fillMissingAvatars(cur.npcs, cur.player.avatar, cur.sim?.hero, cur.player.name);
+      if (!filled.changed) return;
+      persist({
+        ...cur,
+        npcs: filled.npcs,
+        player: filled.playerAvatar === cur.player.avatar && !filled.playerAssetId ? cur.player : { ...cur.player, avatar: filled.playerAvatar, ...(filled.playerAssetId ? { avatarAssetId: filled.playerAssetId } : {}) },
       });
-      if (changed) persist({ ...cur, npcs });
     });
     return () => { alive = false; };
   }, [game?.id, persist]);
@@ -575,9 +604,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
     async (base: GameState, input: string, asPopup: boolean, hideInput = false, journalMeta?: Omit<import("../lib/types").JournalEntry, "id" | "ts" | "text">, preSettled = false, popupTitle?: string) => {
       // 功能注释：总兜底——落地阶段（解析后结算 / 转场 / 存档）任何意外异常都不能让界面卡在「演绎中」：
       // 解除忙碌、不结算，落一条可「重新生成」的错误条（重试从回合前快照原样重跑）
-      try {
       const lock = simLockRef.current; // 只由「先结算后演绎」的入口在调用前设置
       simLockRef.current = null;
+      const itemRetryHint = lock?.item ? "\n物品操作已记录，重试仅重新生成剧情。" : "";
+      try {
       // 未配置 AI：剧情演绎需要模型，绝不凭空编造旁白/台词或偷偷改动好感数值。
       // 地图移动、通告、养成等确定性玩法无需 AI，仍照常运行。
       if (!isConfigured(cfg)) {
@@ -634,7 +664,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       showStage();
       let msgs: ChatMsg[] = [];
       try {
-        msgs = buildMessages(working, input, wbPick);
+        msgs = buildMessages(working, input, wbPick, { model: cfg.model, focusMainStory: true });
         // 底层规则 · Token 上限告警：估算本回合提示长度，超线时在本回合末尾提示
         promptTokens = estTokens(msgs.map((m) => m.content).join(""));
         full = await streamChat({ ...cfg, stream: true }, msgs, (_d, f) => {
@@ -663,7 +693,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           const errTurn: Turn = { id: uid(), role: "ai", room: working.sim?.room, segments: [], error: fe, ts: Date.now() };
           setGame({ ...working, story: [...working.story, errTurn] });
           setCanRetry(true);
-        } else setPopup({ title: fe.title, segments: [{ kind: "system", text: fe.text }], changes: [], retry: { input, hideInput, journalMeta, preSettled } });
+        } else setPopup({ title: fe.title, segments: [{ kind: "system", text: fe.text + itemRetryHint }], changes: [], retry: { input, hideInput, journalMeta, preSettled, lock, popupTitle } });
         return;
       }
       clearInterval(ticker);
@@ -674,13 +704,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
       let parsed = parseStepDetailed(full);
       if (!parsed.step && !oocTurn) {
         setBusy(true);
-        setLive(`${displayText(full)}\n\n（状态没写完整，正在补全……）`);
+        setLive(`${displayText(full)}${STATE_REPAIR_MARK}`);
         try {
           const fixed = parseStepDetailed(await complete(cfg, buildStepRepairMessages(msgs, full, parsed.reason ?? "no-json"), 40_000));
           if (fixed.step) parsed = fixed;
         } catch { /* 补全失败，按解析失败处理 */ }
       }
-      const step = parsed.step;
+      const step = parsed.step && withReplyOptions(parsed.step, full);
       const prose = displayText(full) || (step?.narration ?? "");
       if (!step && !oocTurn) {
         setBusy(false);
@@ -688,9 +718,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         const why = parsed.reason === "truncated" ? "输出在状态块写到一半时中断了（多见于长篇剧情）"
           : parsed.reason === "invalid" ? "状态块格式有误，无法读取"
           : "这次没有输出状态块";
-        const fe = { title: "状态没解析成功", text: `${why}，选项、人物、地点都没有更新，本回合也没有结算任何数值。点「重新生成」再来一次。`, preview: prose.slice(0, 1600) };
+        const fe = { title: "状态没解析成功", text: lock?.item ? `${why}。点「重试」再生成一次。` : `${why}，选项、人物、地点都没有更新，本回合也没有结算任何数值。点「重新生成」再来一次。`, preview: prose.slice(0, 1600) };
         if (asPopup || preSettled) {
-          setPopup({ title: fe.title, segments: [...(prose ? proseToSegments(prose) : []), { kind: "system", text: fe.text }], changes: [], retry: { input, hideInput, journalMeta, preSettled } });
+          setPopup({ title: fe.title, segments: [...(prose ? proseToSegments(prose) : []), { kind: "system", text: fe.text + itemRetryHint }], changes: [], retry: { input, hideInput, journalMeta, preSettled, lock, popupTitle } });
         } else {
           const errTurn: Turn = { id: uid(), role: "ai", room: working.sim?.room, segments: [], error: fe, ts: Date.now() };
           setGame({ ...working, story: [...working.story, errTurn] });
@@ -733,7 +763,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
       // 底层规则 · OOC 场外话：只回答、不推进——不结算数值 / 时间 / 地点 / 世界书消耗，沿用原有选项
       const isOoc = oocTurn;
       // 功能注释：能走到这里时 step 一定已解析成功（OOC 除外），不再用「空状态」冒充成功回合
-      const effectiveStep = isOoc ? { options: working.options } : step!;
+      let effectiveStep = isOoc ? { options: working.options } : step!;
+      const item = lock?.item;
+      const additions = effectiveStep.player_changes?.items_add;
+      if (item && Array.isArray(additions)) {
+        effectiveStep = {
+          ...effectiveStep,
+          player_changes: {
+            ...effectiveStep.player_changes,
+            items_add: additions.filter((entry) => {
+              const id = typeof entry?.id === "string" ? entry.id.trim() : "";
+              const name = typeof entry?.name === "string" ? entry.name.trim() : "";
+              return id !== item.id && name !== item.name;
+            }),
+          },
+        };
+      }
       const applied = isOoc ? { next: working, changes: [] as string[] } : applyStep(working, effectiveStep);
       const changes = applied.changes;
       // working 是回合开始时的快照；AI 生成期间玩家可能在小手机里聊了天，落地时沿用最新的手机数据，避免把聊天记录覆盖回旧版
@@ -769,6 +814,27 @@ export function GameProvider({ children }: { children: ReactNode }) {
         }
         if (rid && rid !== next.sim.room) {
           const firstVisit = !(next.sim.visited ?? []).includes(rid);
+          // 功能注释：applyStep 结算记忆时主角还在旧房间——本回合新写的事件线 / 场景记忆描述的是目的地，改记到新房间，
+          // 否则新地点的陈设会被记到旧地点，回到旧地点时 AI 读到错位的「此地现状」
+          const fromRoom = next.sim.room;
+          if (fromRoom) {
+            const oldIds = new Set((working.chronicle ?? []).map((e) => e.id));
+            if (next.chronicle?.some((e) => !oldIds.has(e.id) && e.room === fromRoom)) {
+              next = { ...next, chronicle: next.chronicle.map((e) => (!oldIds.has(e.id) && e.room === fromRoom ? { ...e, room: rid } : e)) };
+            }
+            const before = working.sceneMem?.[fromRoom];
+            const after = next.sceneMem?.[fromRoom];
+            if (after && after !== before) {
+              const fresh = after.facts.filter((f) => !(before?.facts ?? []).includes(f));
+              const sm = { ...(next.sceneMem ?? {}) };
+              if (before) sm[fromRoom] = before; else delete sm[fromRoom];
+              if (fresh.length) {
+                const dest = sm[rid]?.facts ?? [];
+                sm[rid] = { facts: [...fresh, ...dest.filter((o) => !fresh.includes(o))].slice(0, Math.max(after.facts.length, 8)), turn: after.turn };
+              }
+              next = { ...next, sceneMem: sm };
+            }
+          }
           next = {
             ...next,
             sim: {
@@ -812,7 +878,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         if (journalMeta) {
           const text = segments.map((sg) => (sg.kind === "dialogue" ? `${sg.speaker}：${sg.text}` : sg.text)).join("\n");
           const entry: import("../lib/types").JournalEntry = { ...journalMeta, id: uid(), ts: Date.now(), text };
-          landed = { ...next, journal: [entry, ...(next.journal ?? [])] };
+          landed = withSideOutcome({ ...next, journal: [entry, ...(next.journal ?? [])] }, journalMeta.title, text);
           // 点位事件 / 支线：持久记入 eventsFired，删剧情志也不会复活
           if ((journalMeta.kind === "spot" || journalMeta.kind === "quest") && journalMeta.srcId) {
             const key = firedKey(journalMeta.kind, journalMeta.srcId);
@@ -837,8 +903,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
         const mobs = { ...beat.mobs };
         const stayNames: string[] = [];
         const here = next.sim.room;
+        // 功能注释：本回合剧情换了场景，同场说话 / 互动的人随主角一起过去，不被丢在旧地点（下一回合才对得上在场名单）
+        const sceneMoved = !!movedTo && !!here && here !== working.sim.room;
         for (const id of onStage) {
-          if (prevMobs[id]) {
+          if (sceneMoved && here) {
+            mobs[id] = here;
+            stayNames.push(next.npcs.find((n) => n.id === id)?.name ?? "");
+          } else if (prevMobs[id]) {
             // 本回合在说话 / 有互动：留在原位，避免正聊着人就被漫游带走
             mobs[id] = prevMobs[id];
             stayNames.push(next.npcs.find((n) => n.id === id)?.name ?? "");
@@ -859,6 +930,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const aiTurn: Turn = { id: uid(), role: "ai", room: next.sim?.room, ...(movedTo ? { scene: movedTo } : {}), segments, raw: full, ts: Date.now(), ...(thoughts.length ? { thoughts } : {}), ...newcomers };
       const withStory = { ...next, story: [...next.story, aiTurn] };
       persist(withStory);
+      {
+        const snaps = turnSnapsRef.current;
+        snaps.set(aiTurn.id, { gid: withStory.id, base, input, hideInput, preSettled, lock, after: gameRef.current ?? withStory });
+        while (snaps.size > TURN_SNAP_MAX) snaps.delete(snaps.keys().next().value as string);
+        setSnapIds([...snaps.keys()]);
+      }
       setLastChanges(changes);
       setLive("");
       setBusy(false);
@@ -867,16 +944,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const MR = { ...rulesOf(withStory).memory, summaryModel: rulesOf(withStory).ai.summaryModel };
       const since = withStory.story.slice(-Math.max(1, withStory.turnCount - (withStory.memAt ?? 0)) * 2);
       const tokens = estTokens(since.map((t) => t.segments.map((x) => x.text).join("")).join(""));
-      if (withStory.turnCount > (withStory.memAt ?? 0) && tokens >= Math.max(200, MR.summaryTokens)) {
+      if (!compressingRef.current && withStory.turnCount > (withStory.memAt ?? 0) && tokens >= Math.max(200, MR.summaryTokens)) {
         const at = withStory.turnCount;
+        compressingRef.current = true;
         compressMemory(MR.summaryModel.trim() ? { ...cfg, model: MR.summaryModel.trim() } : cfg, withStory)
           .then((mem) => {
             const cur = gameRef.current;
-            if (!cur || cur.id !== withStory.id) return;
+            // 功能注释：期间读档 / 回退到更早回合时丢弃，避免把不属于当前进度的摘要写进来
+            if (!cur || cur.id !== withStory.id || (cur.memAt ?? 0) >= at || (cur.turnCount ?? 0) < at) return;
             // 不保留完整历史：只留最近 8 个回合原文，更早的靠摘要
             persist({ ...cur, memory: mem, memAt: at, ...(MR.keepHistory ? {} : { story: cur.story.slice(-16) }) });
           })
-          .catch(() => undefined);
+          .catch(() => undefined)
+          .finally(() => { compressingRef.current = false; });
       }
 
       if (withStory.ended) {
@@ -892,9 +972,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         console.error("[runTurn] 回合落地异常", e);
         setBusy(false);
         setLive("");
-        const fe = { title: "本回合处理出错", text: "剧情已生成，但写入游戏时出错，本回合未结算任何数值。点「重新生成」再来一次。" };
+        const fe = { title: "本回合处理出错", text: lock?.item ? "剧情写入出错，请重试。" : "剧情已生成，但写入游戏时出错，本回合未结算任何数值。点「重新生成」再来一次。" };
         if (asPopup || preSettled) {
-          setPopup({ title: fe.title, segments: [{ kind: "system", text: fe.text }], changes: [], retry: { input, hideInput, journalMeta, preSettled } });
+          setPopup({ title: fe.title, segments: [{ kind: "system", text: fe.text + itemRetryHint }], changes: [], retry: { input, hideInput, journalMeta, preSettled, lock, popupTitle } });
         } else {
           const cur = gameRef.current && gameRef.current.id === base.id ? gameRef.current : base;
           setGame({ ...cur, story: [...cur.story, { id: uid(), role: "ai", room: cur.sim?.room, segments: [], error: fe, ts: Date.now() }] });
@@ -918,6 +998,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         g = { ...g, id: AUTHOR_PREVIEW_GAME_ID, worldId: getWorldId() };
       }
       if (startDate) g.startDate = startDate;
+      // 功能注释：无限模式——玩家在建角页勾选后本局不设时限，玩到自己想结束
+      if (opts?.endless) g = { ...g, timeLimit: undefined };
       if (opts?.playPrefs) {
         // 功能注释：每局进游玩强制竖屏 9:16；横屏只在局内「游戏设置」里由玩家再改
         g.playPrefs = { ...opts.playPrefs, orient: "portrait" };
@@ -1045,6 +1127,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
           ...(g.relNet ? { relNet: { ...g.relNet, edges: edges.filter((e) => e.a !== hid && e.b !== hid) } } : {}),
         };
       }
+      // 人物线路 · 自建预设主角：不占用已有人物，只把档案写进主角
+      const heroCustom = !heroNpc ? route?.heroCustom : undefined;
+      if (heroCustom?.name?.trim()) {
+        g = {
+          ...g,
+          player: {
+            ...g.player,
+            avatar: g.player.avatar || heroCustom.avatar || g.player.avatar,
+            extra: [...g.player.extra.filter((e) => e.label !== "预设主角"), { label: "预设主角", value: heroCustom.name.trim() }],
+          },
+        };
+      }
+      if (route?.id) g = { ...g, routeId: route.id };
       const memory = route?.memory?.trim();
       if (memory) g = { ...g, player: { ...g.player, extra: [...g.player.extra, { label: "前置记忆", value: memory }] } };
       // 人物线路 · 开局数值：只结算挂到已有属性/人物的依赖行；未选中或野名不生效、不自动新建属性
@@ -1109,8 +1204,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       });
       if (autosaveOnRef.current) autosaveDebounced(g); // 新局立即覆盖自动存档，避免刷新后读回已结局的旧局
       // 功能注释：开幕页只播编辑器开场白；开局正文 = 地点 + 勾选「开局提示词」的固定事件 + 人际/主线；无父母设定时禁止爸妈来电模板
+      const openRoom = g.sim?.room ? factionRooms()[g.sim.room] : undefined;
       pendingOpeningPromptRef.current = buildOpeningPlotPrompt({
         location: g.world.location,
+        locationDesc: openRoom?.desc,
         routeEvent,
         game: g,
         storylines: getWorldStorylines(),
@@ -1287,7 +1384,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
     (dataUrl: string) => {
       const g = gameRef.current;
       if (!g) return;
-      persist({ ...g, player: { ...g.player, avatar: dataUrl } });
+      const id = assetIdForAvatarUrl(dataUrl);
+      const taken = takenAvatarKeys(g.npcs, g.player.avatar);
+      if (dataUrl && (taken.has(`u:${dataUrl.trim()}`) || (id && taken.has(`id:${id}`)))) return;
+      persist({ ...g, player: { ...g.player, avatar: dataUrl, avatarAssetId: id || undefined } });
     },
     [persist],
   );
@@ -1295,7 +1395,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     (id: string, dataUrl: string) => {
       const g = gameRef.current;
       if (!g) return;
-      persist({ ...g, npcs: g.npcs.map((n) => (n.id === id ? { ...n, avatar: dataUrl } : n)) });
+      const self = g.npcs.find((n) => n.id === id);
+      const asset = assetIdForAvatarUrl(dataUrl);
+      const taken = takenAvatarKeys([...g.npcs, g.player], self?.avatar);
+      if (dataUrl && (taken.has(`u:${dataUrl.trim()}`) || (asset && taken.has(`id:${asset}`)))) return;
+      persist({ ...g, npcs: g.npcs.map((n) => (n.id === id ? { ...n, avatar: dataUrl, avatarAssetId: asset || undefined } : n)) });
     },
     [persist],
   );
@@ -1420,6 +1524,39 @@ export function GameProvider({ children }: { children: ReactNode }) {
     void runTurn(last.base, last.input, false, last.hideInput);
   }, [busy, runTurn]);
 
+  // 功能注释：重新生成某一回合——只允许最新的成功 AI 回合；回到该回合开始前的状态，用原输入重跑（已先行结算的抵达等回合沿用原锁）
+  const rerollTurn = useCallback((turnId: string) => {
+    const snap = turnSnapsRef.current.get(turnId);
+    const cur = gameRef.current;
+    if (!snap || !cur || busy || snap.gid !== cur.id) return;
+    const lastAi = [...cur.story].reverse().find((t) => t.role === "ai" && !t.error);
+    if (lastAi?.id !== turnId) return;
+    turnSnapsRef.current.delete(turnId);
+    setSnapIds([...turnSnapsRef.current.keys()]);
+    setPopup(null);
+    setCanRetry(false);
+    simLockRef.current = snap.lock;
+    void runTurn(snap.base, snap.input, false, snap.hideInput, undefined, snap.preSettled);
+  }, [busy, runTurn]);
+
+  // 功能注释：回溯——把整局状态（剧情、数值、地点、记忆、任务进度）恢复到该回合刚落地时，之后的回合与快照一并丢弃
+  const rewindTo = useCallback((turnId: string): boolean => {
+    const snap = turnSnapsRef.current.get(turnId);
+    const cur = gameRef.current;
+    if (!snap || !cur || busy || snap.gid !== cur.id) return false;
+    const keep = new Set(snap.after.story.map((t) => t.id));
+    for (const id of [...turnSnapsRef.current.keys()]) {
+      const sn = turnSnapsRef.current.get(id)!;
+      if (sn.gid !== cur.id || (id !== turnId && !keep.has(id))) turnSnapsRef.current.delete(id);
+    }
+    setSnapIds([...turnSnapsRef.current.keys()]);
+    setPopup(null);
+    setCanRetry(false);
+    setLive("");
+    lastTurnRef.current = { base: snap.base, input: snap.input, hideInput: snap.hideInput };
+    return persist({ ...snap.after, updatedAt: Date.now() });
+  }, [busy, persist]);
+
   // 弹窗行动失败后「重新触发」：用弹窗里存下的原参数重发；已先行结算的事件剔除失败留档，避免重复
   const retryPopup = useCallback(() => {
     const r = popup?.retry;
@@ -1432,7 +1569,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const idx = j.findIndex((e) => e.title === r.journalMeta!.title && (e.text ?? "").startsWith("（AI 演绎失败"));
       if (idx >= 0) base = { ...cur, journal: j.filter((_, i) => i !== idx) };
     }
-    void runTurn(base, r.input, true, r.hideInput, r.journalMeta, r.preSettled);
+    simLockRef.current = r.lock ?? null;
+    void runTurn(base, r.input, true, r.hideInput, r.journalMeta, r.preSettled, r.popupTitle);
   }, [busy, popup, runTurn]);
 
   const setWorldRules = useCallback(
@@ -1470,12 +1608,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [persist],
   );
 
-  /* 地名 → 房间 id：先精确匹配，再取被地名包含（或包含地名）的最长房间名；查内置地点与地图编辑器自建地点 */
+  /* 地名 → 房间 id：先精确匹配，再认「同一个地方」的不同写法（曦瑶的公寓 = 巴黎第16区·曦瑶公寓），最后才用互相包含 */
   const roomByName = (g: GameState, name: string): string | undefined => {
     const ids = Array.from(new Set([...allRooms(), ...Object.keys(g.mapEdits ?? {}).filter((k) => k !== "_config")]));
     const named = ids.map((id) => ({ id, n: (spotName(g, id) || locOf(id)?.name || "").trim() })).filter((x) => x.n);
     const q = name.trim();
     return named.find((x) => x.n === q)?.id
+      ?? named.filter((x) => samePlaceName(q, x.n)).sort((a, b) => b.n.length - a.n.length)[0]?.id
       ?? named.filter((x) => q.includes(x.n) || (x.n.length >= 2 && x.n.includes(q))).sort((a, b) => b.n.length - a.n.length)[0]?.id;
   };
 
@@ -1605,6 +1744,23 @@ export function GameProvider({ children }: { children: ReactNode }) {
     // 带剧情幕的事件与条件支线进入「特殊事件」支线，玩家点开才演绎（避免一次操作后剧情自己往下冒）。
     const cues: string[] = [];
     const toasts: string[] = [];
+    // 功能注释：主线 / 支线每回合结算后也判定一次（原先只在「推进一天」时判定，事件当回合触发后主线要等到第二天才推进，
+    // 期间顶栏、任务页与给 AI 的【主线进度】都停在旧节点）。支线超时仍按天数计算，结果与按天结算一致。
+    {
+      const sr = applyStorylines(g.sim, getWorldStorylines());
+      const sd = applySidelines(sr.next, getWorldSidelines());
+      if (sd.next !== g.sim) {
+        g = commitSim(sd.next) ?? { ...g, sim: sd.next };
+        persist(g);
+      }
+      toasts.push(...sr.changes, ...sd.changes);
+      // 功能注释：主线刚在本回合完成时立即判定「达成即落幕」结局，不必等到下一回合
+      if (sd.next !== g0.sim && !g.ended && matchCustomEnding(g.customEndings, g.sim, true)) {
+        if (toasts.length) setLastChanges(toasts);
+        void endManuallyRef.current?.("finish");
+        return;
+      }
+    }
     const findEv = (id: string) => (g.fixedEvents ?? []).find((e) => e.id === id) ?? getWorldEventGroups().flatMap((gr) => gr.events).find((e) => e.id === id);
     // 到期检查：未限时的上回合条目过期（照常结算事件数值）；限时条目倒计时到 0 记失败（结算失败后果）
     {
@@ -1694,7 +1850,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const n = g?.eventNotices?.find((x) => x.id === id);
     if (!g || !n || n.status !== "open" || busy || fixedFiringRef.current) return;
     const mark = (x: GameState, status: EventNotice["status"]) => ({ ...x, eventNotices: (x.eventNotices ?? []).map((e) => (e.id === id ? { ...e, status, endedDay: x.sim.day ?? 0 } : e)) });
-    if (n.kind === "quest") { persist(mark(g, "played")); playQuestRef.current?.(n.refId); return; }
+    if (n.kind === "quest") {
+      // 功能注释：进不去支线（已有支线进行中 / 未接入 AI）时不消耗这条支线，只让 playQuest 弹出原因
+      if (!g.branch && isConfigured(cfg)) persist(mark(g, "played"));
+      playQuestRef.current?.(n.refId);
+      return;
+    }
     const ev = (g.fixedEvents ?? []).find((e) => e.id === n.refId) ?? getWorldEventGroups().flatMap((gr) => gr.events).find((e) => e.id === n.refId);
     if (!ev) { persist(mark(g, "expired")); return; }
     // 功能注释：特殊事件只能在发生地触发——人不在这里就不展开（支线列表里提供「前往」）
@@ -1719,7 +1880,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const cur = gameRef.current;
       if (opts.length && cur && cur.id === merged.id) persist({ ...cur, options: opts });
     }).finally(() => { fixedFiringRef.current = false; });
-  }, [busy, commitSim, persist, runTurn]);
+  }, [busy, cfg, commitSim, persist, runTurn]);
   // 音频信号（播放结束 / 淡入完成 / 淡出完成）到来时立即检查一次触发器
   useEffect(() => onAudioSignal(() => runFixedRef.current?.()), []);
   commitSimRef.current = commitSim;
@@ -2111,13 +2272,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
     // 功能注释：同主线兜底——解析失败先请 AI 补状态块一次；仍失败则撤回本次输入、不结算，提示重试
     let parsedB = parseStepDetailed(full);
     if (!parsedB.step) {
-      setLive(`${displayText(full)}\n\n（状态没写完整，正在补全……）`);
+      setLive(`${displayText(full)}${STATE_REPAIR_MARK}`);
       try {
         const fixed = parseStepDetailed(await complete(cfg, buildStepRepairMessages(branchMsgs, full, parsedB.reason ?? "no-json"), 40_000));
         if (fixed.step) parsedB = fixed;
       } catch { /* 按失败处理 */ }
     }
-    const step = parsedB.step;
+    const step = parsedB.step && withReplyOptions(parsedB.step, full);
     if (!step) {
       setBusy(false);
       setLive("");
@@ -2173,7 +2334,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const entry: import("../lib/types").JournalEntry = { id: uid(), ts: Date.now(), kind: b.kind, srcId: b.srcId, title: b.title, annotation: b.annotation, seed: b.seed, location: b.location, when: b.when, text };
     const key = firedKey(b.kind, b.srcId);
     const fired = g.sim.eventsFired ?? [];
-    persist({ ...g, branch: undefined, journal: b.turns.length ? [entry, ...(g.journal ?? [])] : g.journal, sim: { ...g.sim, eventsFired: fired.includes(key) ? fired : [...fired, key] } });
+    const landed: GameState = { ...g, branch: undefined, journal: b.turns.length ? [entry, ...(g.journal ?? [])] : g.journal, sim: { ...g.sim, eventsFired: fired.includes(key) ? fired : [...fired, key] } };
+    // 功能注释：支线结局交回主线——下回合提示 + 记忆摘要，主线才知道刚发生过什么，场景能接上
+    const lastAi = [...b.turns].reverse().find((t) => t.role !== "player");
+    persist(b.turns.length ? withSideOutcome(landed, b.title, lastAi ? segText(lastAi) : text) : landed);
   }, [busy, persist]);
 
   // 条件邂逅：先确定性结算数值，再把叙事种子交给 AI 演绎（落入对话框）
@@ -2452,72 +2616,73 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return "";
   }, [busy, cfg, commitSim, runTurn]);
 
-  // 背包互动：使用不消耗物品，记录到日志；若已接入 AI 则交 AI 演绎使用/端详过程；赠送会消耗物品并结算固定关系收益。
-  const simUseItem = useCallback((itemId: string): string => {
+  const simActOnItem = useCallback((action: BagAction, itemId: string, quantity: number, personId?: string): string => {
     const g = gameRef.current;
-    if (!g || busy) return "";
-    if (!(g.sim.bag ?? []).includes(itemId)) return "这件物品不在你的背包里。";
-    const it = itemById(itemId) ?? findCustomItem(g, itemId);
+    if (!g || g.ended) return "当前无法操作物品。";
+    if (busy || busyRef.current) return "正忙，稍后再试。";
+    const bag = g.sim.bag ?? [];
+    const available = bag.filter((id) => id === itemId).length;
+    if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > available) return "物品数量已变化，请重新选择。";
+    const it = itemById(itemId) ?? findCustomItem(g, itemId) ?? g.storyItems?.[itemId];
     if (!it) return "找不到这件物品。";
-    const msg = `你取出「${it.name}」细细端详。${it.desc}`;
-    const next = { ...g.sim, log: [...g.sim.log, `【第 ${g.sim.week} 周 · 行囊】使用了${it.name}。`].slice(-40) };
-    if (isConfigured(cfg)) {
-      const merged = commitSim(next) ?? { ...g, sim: next };
-      const customHint = "prompt" in it && it.prompt?.trim() ? `\n【作者物件剧情提示】${it.prompt.trim()}` : "";
-      simLockRef.current = lockOf(g.sim, merged.sim); // 已结算数值锁定，AI 不得重复改动
-      void runTurn(
-        merged,
-        `【随身物品使用】主角在「${g.world.location}」取出了随身行囊中的「${it.name}」（描述：${it.desc || "随身物品"}）并使用/细看。${customHint}\n请结合当前场景与处境，生动演绎主角使用或细看「${it.name}」的过程与带来的变化，并给出 3~4 个后续可玩的行动选项。`,
-        false,
-        true,
-        undefined,
-        true,
-      );
-      return "";
-    }
-    commitSim(next, msg);
-    return "";
-  }, [busy, cfg, commitSim, runTurn]);
+    const person = action === "gift" ? g.npcs.find((n) => n.id === personId && (g.sim.metPeople ?? []).includes(n.id)) : undefined;
+    if (action === "gift" && !person) return "要先和对方认识，才能送出礼物。";
+    if (!isConfigured(cfg)) return "请先登录平台或在设置中接入 AI，再操作物品。";
 
-  const simGiftItem = useCallback((itemId: string, personId: string): string => {
-    const g = gameRef.current;
-    if (!g || busy) return "";
-    if (!(g.sim.bag ?? []).includes(itemId)) return "这件物品不在你的背包里。";
-    if (!(g.sim.metPeople ?? []).includes(personId)) return "要先和对方认识，才能送出礼物。";
-    const it = itemById(itemId) ?? findCustomItem(g, itemId);
-    const person = g.npcs.find((n) => n.id === personId);
-    if (!it || !person) return "找不到这件物品或联系人。";
-    const cap = affinityCapOf(personId);
-    const next = {
-      ...g.sim,
-      bag: g.sim.bag.filter((id) => id !== itemId),
-      rel: { ...g.sim.rel, [personId]: Math.min(cap, (g.sim.rel?.[personId] ?? 0) + 5) },
-      log: [...g.sim.log, `【第 ${g.sim.week} 周 · 行囊】把${it.name}赠予${person.name}（关系 +5）。`].slice(-40),
-    };
-    const stamp = { turn: g.turnCount, time: g.world.time, text: `送给你一件「${it.name}」。` };
-    const history = { turn: g.turnCount, delta: 5, reason: `赠礼 · ${it.name}` };
-    const npcs = g.npcs.map((n) => n.id === personId ? {
-      ...n,
-      affinity: Math.min(100, n.affinity + 5),
-      interactions: [...n.interactions, stamp].slice(-30),
-      affinityHistory: [...n.affinityHistory, history].slice(-40),
-    } : n);
-    const msg = `你把「${it.name}」赠给了${person.name}。${person.name}收下礼物，关系 +5。`;
-    const changes = simDiff(g.sim, next);
-    if (isConfigured(cfg)) {
-      const merged = commitSim(next);
-      if (merged) {
-        const full = { ...merged, npcs };
-        persist(full);
-        setLastChanges(changes);
-        narrateSettled(g, full, { tag: "赠礼", title: `赠礼 · ${person.name}`, sysMsg: msg, changes, focus: [personId], brief: `主角把「${it.name}」送给了${person.name}${it.desc ? `（物品：${it.desc}）` : ""}。` });
-      }
-      return "";
+    const itemText = quantity + " 件「" + it.name + "」";
+    const tag = action === "use" ? "使用物品" : action === "gift" ? "赠礼" : "丢弃物品";
+    const msg = person
+      ? "你把" + itemText + "赠给了" + person.name + "。"
+      : "你" + (action === "use" ? "使用了" : "丢弃了") + itemText + "。";
+    const next = { ...g.sim, log: [...g.sim.log, "【第 " + g.sim.week + " 周 · 行囊】" + msg].slice(-40) };
+    if (action !== "use") {
+      let remaining = quantity;
+      next.bag = bag.filter((id) => {
+        if (id !== itemId || remaining === 0) return true;
+        remaining -= 1;
+        return false;
+      });
     }
-    const merged = commitSim(next, msg);
-    if (merged) persist({ ...merged, npcs });
+    let npcs = g.npcs;
+    if (person) {
+      next.rel = { ...next.rel, [person.id]: Math.min(affinityCapOf(person.id), (next.rel?.[person.id] ?? 0) + 5) };
+      const affinity = Math.min(100, person.affinity + 5);
+      const stamp = { turn: g.turnCount, time: g.world.time, text: "送给你" + itemText + "。" };
+      const history = { turn: g.turnCount, delta: affinity - person.affinity, reason: "赠礼 · " + it.name };
+      npcs = npcs.map((n) => n.id === person.id ? {
+        ...n,
+        affinity,
+        interactions: [...n.interactions, stamp].slice(-30),
+        affinityHistory: [...n.affinityHistory, history].slice(-40),
+      } : n);
+    }
+    const merged = commitSim(next);
+    if (!merged) return "物品操作未能完成，请重试。";
+    const settled = person ? { ...merged, npcs } : merged;
+    if (person) persist(settled);
+    const lock = lockOf(g.sim, settled.sim);
+    lock.item = { id: itemId, name: it.name };
+    if (person && !lock.rel.includes(person.id)) lock.rel.push(person.id);
+    simLockRef.current = lock;
+    busyRef.current = true;
+    setLastChanges(simDiff(g.sim, next));
+    const prompt = "prompt" in it && typeof it.prompt === "string" ? it.prompt.trim() : "";
+    const customHint = prompt ? "\n【作者物件剧情提示】" + prompt : "";
+    const outcome = action === "use" ? "使用后物品仍在行囊中。" : "指定数量已从行囊扣除。";
+    void runTurn(
+      settled,
+      "【随身物品 · " + tag + "】地点：" + settled.world.location + "。" + msg +
+        "物品描述：" + (it.desc || "随身物品") + "。" + customHint +
+        "\n请贴合当前场景演绎此次互动" + (person ? "与" + person.name + "的反应" : "") +
+        "。" + outcome + "物品和赠礼关系已结算，请勿重复发放或修改这些结果。",
+      true,
+      true,
+      undefined,
+      true,
+      tag,
+    );
     return "";
-  }, [busy, commitSim, persist, cfg, runTurn]);
+  }, [busy, cfg, commitSim, persist, runTurn]);
 
   // 居家/在场活动：支持内容池活动与玩家在地图编辑器新增的点位专属行动，均接入 AI 演绎。
   const simActivity = useCallback((actId: string): string => {
@@ -2892,7 +3057,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const g = gameRef.current;
     if (!g || !isConfigured(cfg)) return;
     const w = getWorld();
-    const goal = homeMainQuest(g.sim, getWorldStorylines(), dayDateLabel(g.sim.day ?? 0));
+    const goal = homeMainQuest(g.sim, getWorldStorylines(), dayDateLabel(g.sim.day ?? 0), getWorldEventDates());
     const prev = [...(g.weekDiaries ?? [])].reverse().find((e) => e.status === "done" && e.text);
     const req = buildWeekDiaryMessages({
       worldName: w.chain[0]?.name || "本作品",
@@ -3025,6 +3190,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       endingGrade: grade,
       endingKind: kind,
     });
+    recordRunCleared({ endingId: custom?.id, routeId: g.routeId, eventsFired: g.sim.eventsFired });
     setScreen("ending");
     if (!aiOn) return;
     // 后记总时限：接口卡住或续写拖太久时，保留本地后记
@@ -3078,13 +3244,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Ctx>(
     () => ({
       cfg, setCfg, theme, setTheme, look: lookRes.look, activeLooks: lookRes.active, lookCss: lookRes.css, previewLook, lookPreview, screen, go, game, busy, lastChanges, popup, setPopup,
-      startNew, loadState, submit, setPlayerAvatar, setNpcAvatar, setNpcPortrait, setRelValue, setRomanceable, setNpcDim, saveNow, regenerate, saveEpoch, canRetry, retryPopup, autosaveOn, setAutosaveOn, endManually, setWorldRules, setWorldBook, setMapEdits, setFixedEvents, setRandomGroups, previewFixedEvent,
-      directTurn, theaterTurn, removeTheater, meetStranger, branchAct, leaveBranch, setSchedule, runWeekNow, endDayNow, advanceNow, equipTitle, simVisit, simEvent, simMove, simPickup, simUseItem, simGiftItem, simActivity, simBuy, simAskIntel, simNegotiate, simAskOffers, simChooseArc, simConfirmDating,
+      startNew, loadState, submit, setPlayerAvatar, setNpcAvatar, setNpcPortrait, setRelValue, setRomanceable, setNpcDim, saveNow, regenerate, rerollTurn, rewindTo, snapIds, saveEpoch, canRetry, retryPopup, autosaveOn, setAutosaveOn, endManually, setWorldRules, setWorldBook, setMapEdits, setFixedEvents, setRandomGroups, previewFixedEvent,
+      directTurn, theaterTurn, removeTheater, meetStranger, branchAct, leaveBranch, setSchedule, runWeekNow, endDayNow, advanceNow, equipTitle, simVisit, simEvent, simMove, simPickup, simActOnItem, simActivity, simBuy, simAskIntel, simNegotiate, simAskOffers, simChooseArc, simConfirmDating,
       projApply, projSign, projNegotiate, projPromote, projWorkday, simContact, simConfess, simBridge, simWedding, simDivorce, simMeetProducer, simAskProducer,
       personaDeclare, personaAct, crisisResolve, resolveBreach, buyCar, sellCar, setActiveCar, xianyuList, xianyuDelist, xianyuSell, commitGame, patchGame, retryWeekDiary, weekDiaryLive, playEventNotice, phoneExchange, meetNewcomer,
       playSpotEvent, playQuest, toggleFav, removeJournal, exportJournal,
     }),
-    [cfg, setCfg, theme, setTheme, lookRes, lookPreview, screen, go, game, busy, lastChanges, popup, startNew, loadState, submit, directTurn, theaterTurn, removeTheater, meetStranger, setPlayerAvatar, setNpcAvatar, setNpcPortrait, setRelValue, setRomanceable, setNpcDim, saveNow, regenerate, saveEpoch, canRetry, retryPopup, autosaveOn, setAutosaveOn, endManually, setWorldRules, setWorldBook, setMapEdits, setFixedEvents, setRandomGroups, previewFixedEvent, setSchedule, runWeekNow, endDayNow, advanceNow, equipTitle, simVisit, simEvent, simMove, simPickup, simUseItem, simGiftItem, simActivity, simBuy, simAskIntel, simNegotiate, simAskOffers, simChooseArc, simConfirmDating, projApply, projSign, projNegotiate, projPromote, projWorkday, simContact, simConfess, simBridge, simWedding, simDivorce, simMeetProducer, simAskProducer, personaDeclare, personaAct, crisisResolve, resolveBreach, buyCar, sellCar, setActiveCar, xianyuList, xianyuDelist, xianyuSell, commitGame, patchGame, retryWeekDiary, weekDiaryLive, playEventNotice, phoneExchange, meetNewcomer, playSpotEvent, playQuest, toggleFav, removeJournal, exportJournal],
+    [cfg, setCfg, theme, setTheme, lookRes, lookPreview, screen, go, game, busy, lastChanges, popup, startNew, loadState, submit, directTurn, theaterTurn, removeTheater, meetStranger, setPlayerAvatar, setNpcAvatar, setNpcPortrait, setRelValue, setRomanceable, setNpcDim, saveNow, regenerate, rerollTurn, rewindTo, snapIds, saveEpoch, canRetry, retryPopup, autosaveOn, setAutosaveOn, endManually, setWorldRules, setWorldBook, setMapEdits, setFixedEvents, setRandomGroups, previewFixedEvent, setSchedule, runWeekNow, endDayNow, advanceNow, equipTitle, simVisit, simEvent, simMove, simPickup, simActOnItem, simActivity, simBuy, simAskIntel, simNegotiate, simAskOffers, simChooseArc, simConfirmDating, projApply, projSign, projNegotiate, projPromote, projWorkday, simContact, simConfess, simBridge, simWedding, simDivorce, simMeetProducer, simAskProducer, personaDeclare, personaAct, crisisResolve, resolveBreach, buyCar, sellCar, setActiveCar, xianyuList, xianyuDelist, xianyuSell, commitGame, patchGame, retryWeekDiary, weekDiaryLive, playEventNotice, phoneExchange, meetNewcomer, playSpotEvent, playQuest, toggleFav, removeJournal, exportJournal],
   );
 
   return (

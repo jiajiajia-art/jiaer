@@ -8,7 +8,7 @@ import { readFunloomAuthorLabel } from "./platformAvatarLibrary.ts";
 import type { PlayPrefs, PlaySlot } from "./types.ts";
 
 export const WORLD_TITLE_MAX = 20;
-export const WORLD_SETTING_MAX = 5000;
+export const WORLD_SETTING_MAX = 10000;
 /** 功能注释：禁止生成清单上限；可选填写，不占故事设定字数 */
 export const WORLD_FORBID_MAX = 2000;
 /** 功能注释：玩家可见简介默认摘要目标字数；可手改，上限见 modBasicInfoLimits.MOD_DESC_MAX */
@@ -135,7 +135,7 @@ export type WorldGenEditorStep = {
  * 玩法组件、手机应用、孕育、经营、通告、座驾等扩展不得进默认勾选。
  */
 export const DEFAULT_WORLD_GEN_EDITOR_STEP_IDS: readonly string[] = Object.freeze([
-  // 世界观：剧本基调 / 世界规则 / 世界书
+  // 世界观：系统提示词 / 世界规则 / 世界书
   "prompt",
   "hub:rules",
   "hub:book",
@@ -264,7 +264,7 @@ const MOD_STEPS: WorldGenEditorStep[] = [
   { id: "rooms", group: "① 基础", name: "地点", desc: "多级子地点 · 树状预览 · 准入 · 出口 · 开局地点", contentIds: ["locations"], source: "mod" },
 
   // ④ 剧情（开场页与剧情美化在⑥美化；结局插图仍随结局留在这里）
-  { id: "prompt", group: "① 基础", name: "剧本基调", desc: "写给模型的整段基调（原 GM / 世界观 / 口吻合并）", contentIds: ["world"], source: "mod" },
+  { id: "prompt", group: "① 基础", name: "系统提示词", desc: "写给模型的整段基调（原 GM / 世界观 / 口吻合并）", contentIds: ["world"], source: "mod" },
   { id: "fixedEvents", group: "④ 剧情", name: "固定事件", desc: "首次事件 · 预设剧本 · 时间 / 条件触发 · 事件链", contentIds: ["mainPlot", "sideEvents", "opening"], source: "mod" },
   { id: "storylines", group: "④ 剧情", name: "剧情线", desc: "一条主线（有序节点）· 结局与时限 · 评级；支线手建", contentIds: ["mainPlot", "sideEvents", "world"], source: "mod" },
 
@@ -282,7 +282,7 @@ const MOD_STEPS: WorldGenEditorStep[] = [
   { id: "meals", group: "① 基础", name: "每周吃什么", desc: "伙食档位 · 每周花费 · 压力 / 能力 / 气色", contentIds: ["world"], source: "mod" },
   { id: "titles", group: "① 基础", name: "头衔", desc: "须添加「头衔包」后配置 · 达标条件 · 品阶", contentIds: ["world", "mainPlot"], source: "mod" },
   { id: "pregnancy", group: "① 基础", name: "孕育", desc: "孕期 · 受孕率 · 察觉时间 · 孩子名字池", contentIds: ["characters", "world"], source: "mod" },
-  { id: "relations", group: "① 基础", name: "关系玩法", desc: "须添加「关系玩法」包后配置 · 表白门槛 · 婚礼 · 牵线 · 伴侣加成（勿预置牵线方式）", contentIds: ["characters"], source: "mod" },
+  { id: "relations", group: "① 基础", name: "关系玩法", desc: "游戏本体 · 表白门槛 · 婚礼 · 伴侣加成。人物彼此的好感写在角色的 affTo", contentIds: ["characters"], source: "mod" },
 
   // ⑤ 美化：开局封面 / 手机应用配置 / 皮肤美化不进 AI 勾选（引擎默认 + 剧本名作封面标题）
   // 功能注释：开场白默认进基础生成；自定义 HTML 开场页仍由编辑器 OpeningStyleStudio 手改，不交本步
@@ -553,7 +553,7 @@ export function draftModFromWorldGen(d: WorldGenDraft): {
     name: title,
     version: "0.1.0",
     author: readFunloomAuthorLabel(),
-    // 功能注释：简介默认是约 100 字摘要，禁止 setting.slice 原文照搬；剧本基调留给 AI 写入 scriptTone
+    // 功能注释：简介默认是约 100 字摘要，禁止 setting.slice 原文照搬；系统提示词留给 AI 写入 scriptTone
     description: summarizeWorldGenDescription(setting, title),
     kind: "world",
     dependencies: [],

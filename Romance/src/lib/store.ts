@@ -1,4 +1,5 @@
 import { loadGlobal, saveGlobal } from "./saveScope";
+import { BASE_STYLE_PRESET } from "./presets/stylePreset";
 import { randomName, type NameGender, type NameStyle } from "../game/names";
 /* ————— 本地持久化（localdb）+ 默认值 + 随机生成 ————— */
 import type { AIConfig, GameState, Npc, Player, SignedContract } from "./types";
@@ -9,7 +10,7 @@ import { romanticCapOf } from "../worlds/star2005/content";
 import { emptyPhone } from "../game/phone";
 import { STAT_ORDER, ALL_STAT_KEYS, startWeather, creationCopy } from "../game/data";
 import { allRooms, locOf } from "../game/mud";
-import { drawAvatar } from "../game/avatarPools";
+import { drawAvatar, rememberAvatarUse, takenAvatarKeys } from "../game/avatarPools";
 import { LIVE_PEOPLE as PEOPLE, currentModStamp, getWorld, getWorldEndings, getWorldFixedEvents, getWorldGradeDims, getWorldStartRoom, getWorldTimeLimit } from "../mods/registry";
 import { resolveOpeningCharacterIds } from "./openingCharacters";
 
@@ -24,8 +25,9 @@ export const defaultConfig: AIConfig = {
   apiKey: "",
   model: "",
   models: [],
-  temperature: 0.9,
-  topP: 0.95,
+  // 功能注释：采样默认值取文风基底预设推荐（0.8 / 0.9）；玩家在 AI 设置里保存过的值仍优先
+  temperature: BASE_STYLE_PRESET.config.temperature,
+  topP: BASE_STYLE_PRESET.config.topP,
 };
 
 export function loadConfig(): AIConfig {
@@ -286,7 +288,7 @@ export function newGame(player: Player, simChar?: SimChar, contract?: SignedCont
   const g: GameState = {
     id: uid(),
     player,
-    npcs: seedNpcs(),
+    npcs: seedNpcs(player.avatar),
     story: [],
     options: [],
     // 功能注释：开局地点名用 startRoom 对应名称；没有名称时显示 id，禁止回落「天光公寓」
@@ -436,11 +438,11 @@ export function syncSimToPlayer(g: GameState): GameState {
     else if (a.key in s.stats) v = s.stats[a.key as keyof typeof s.stats];
     return { ...a, value: v };
   });
-  // 好感单一真相：展示轴 npc.affinity 镜像自确定性引擎 s.rel（0~100 展示区间）。
+  // 展示轴 npc.affinity 镜像自确定性引擎 s.rel（-100~100 展示区间）。
   // 引擎侧任一动作（私下联系/表白/情感线）改动 s.rel 后，此处统一回灌，杜绝双轨漂移。
   const npcs = g.npcs.map((n) => {
     const relv = s.rel[n.id];
-    return relv === undefined ? n : { ...n, affinity: Math.max(0, Math.min(100, relv)) };
+    return relv === undefined ? n : { ...n, affinity: Math.max(-100, Math.min(100, relv)) };
   });
   return { ...g, player: { ...g.player, attrs }, npcs };
 }
@@ -449,30 +451,43 @@ export function syncSimToPlayer(g: GameState): GameState {
  * 这里只挂载「可变的关系存档」——维度/互动从 0 起步，靠玩法一步步经营出来。
  * 好感（affinity）与引擎 s.rel 同源：开局镜像内容池初值 p.init，之后一律由引擎回灌，
  * 不再另立一套 AI 好感轴。名字/身份/关系/简介/标签全部随内容池走，永不再对不上。 */
-export function seedNpcs(): Npc[] {
-  return PEOPLE.map((p) => ({
-    id: p.id,
-    name: p.name,
-    age: "",
-    identity: p.role,
-    relation: p.relation ?? "",
-    // 功能注释：固定头像（生图/上传）优先；否则按 avatarVariant 抽池；都没有则空串 → UI 首字头像
-    ...(p.avatar
-      ? { avatar: p.avatar, ...(p.avatarVariant ? { avatarVariant: p.avatarVariant } : {}) }
-      : p.avatarVariant
-        ? { avatar: drawAvatar(p.id, p.avatarVariant, true).url, avatarVariant: p.avatarVariant }
-        : { avatar: "" }),
-    bio: p.bio,
-    mood: "平静",
-    affinity: 0, // 初值由 syncSimToPlayer 从引擎 s.rel 镜像（newGame 末尾统一回灌）
-    dims: [
-      { label: "信任", value: 0 },
-      { label: "友善", value: 0 },
-      { label: "敌意", value: 0 },
-    ],
-    tags: p.tags ?? [],
-    attrs: [],
-    affinityHistory: [],
-    interactions: [],
-  }));
+export function seedNpcs(reservedAvatar?: string): Npc[] {
+  const taken = takenAvatarKeys(reservedAvatar ? [{ avatar: reservedAvatar }] : []);
+  return PEOPLE.map((p) => {
+    let avatar = "";
+    let avatarAssetId = "";
+    if (p.avatar) {
+      const reserved = takenAvatarKeys([{ avatar: p.avatar }]);
+      const blocked = [...reserved].some((k) => taken.has(k));
+      if (!blocked) avatar = p.avatar;
+    }
+    if (!avatar && p.avatarVariant) {
+      const drawn = drawAvatar(p.id, p.avatarVariant, true, undefined, taken);
+      avatar = drawn.url;
+      avatarAssetId = drawn.assetId || "";
+    }
+    if (avatar) rememberAvatarUse(taken, avatar, avatarAssetId);
+    return {
+      id: p.id,
+      name: p.name,
+      age: "",
+      identity: p.role,
+      relation: p.relation ?? "",
+      avatar,
+      ...(avatarAssetId ? { avatarAssetId } : {}),
+      ...(p.avatarVariant && avatar ? { avatarVariant: p.avatarVariant } : {}),
+      bio: p.bio,
+      mood: "平静",
+      affinity: 0,
+      dims: [
+        { label: "信任", value: 0 },
+        { label: "友善", value: 0 },
+        { label: "敌意", value: 0 },
+      ],
+      tags: p.tags ?? [],
+      attrs: [],
+      affinityHistory: [],
+      interactions: [],
+    };
+  });
 }

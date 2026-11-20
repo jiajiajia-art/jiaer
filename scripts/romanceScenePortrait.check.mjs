@@ -28,7 +28,7 @@ test('scenePortrait_规格与拦截文案', async () => {
 test('ImagePicker与地点编辑器启用scenePortrait裁切与生图', () => {
   const picker = read('components/ImagePicker.tsx');
   assert.match(picker, /scenePortrait/);
-  assert.match(picker, /fileToScenePortraitDataUrl/);
+  assert.match(picker, /saveWorkImage\(f, scenePortrait/);
   assert.match(picker, /SCENE_PORTRAIT_HINT/);
   assert.match(picker, /生图/);
   const rooms = read('components/ModRoomTreeEditor.tsx');

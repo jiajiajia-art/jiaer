@@ -11,8 +11,10 @@
  *   穿着只给在场人物注入、不在界面显示。
  */
 import type { GameState, WorldBookEntry } from "./types";
+import { decideWrite, digestPastDays, forget, isValid, promote, reinforce, retention, type LifecycleItem } from "./memory/lifecycle.ts";
+import { hybridRetrieve } from "./memory/retrieval.ts";
 
-export type ChronicleEvent = {
+export type ChronicleEvent = LifecycleItem & {
   id: string;
   day: number; // 游戏日（sim.day）
   time?: string; // 当时的游戏时间文本（仅展示 / 兜底）
@@ -21,16 +23,22 @@ export type ChronicleEvent = {
   text: string;
   imp: 1 | 2 | 3; // 1 日常 2 重要 3 关键（关键事件同步进世界书）
   keys?: string[]; // 额外召回关键词
+  // 生命周期字段（见 memory/lifecycle）：tier 中/长期、recalls 被召回次数、lastRecall 最近召回日、
+  // invalidAt / supersededBy 双时态失效（被新事实推翻，保留可追溯但不再注入）、kind=digest 每日归并
 };
 export type SceneMem = { facts: string[]; turn: number };
 
-export type MemoryUpdate = { scope?: "main" | "npc"; npc?: string; text: string; imp?: number; who?: string[]; keys?: string[] };
+/** op/replaces：AI 指明本条是推翻（update）或撤销（delete）哪条旧记忆；缺省由本地决策层判断 */
+export type MemoryUpdate = { scope?: "main" | "npc"; npc?: string; text: string; imp?: number; who?: string[]; keys?: string[]; op?: "add" | "update" | "delete"; replaces?: string };
 export type SceneUpdate = { facts?: string[]; looks?: { name?: string; outfit?: string }[] };
 
 const MAX_EVENTS = 300;
 const MAX_FACTS = 8;
-const RECENT_N = 5;
-const RECALL_N = 6;
+const RECENT_N = 5; // 中期：至少带最近几条
+const MID_DAYS = 2; // 中期：近 N 个游戏日内的事件全部按时间列出
+const MID_MAX = 10;
+const MID_BUDGET = 900;
+const RECALL_N = 6; // 长期：混合检索召回条数
 const RECALL_BUDGET = 900;
 
 const uid = () => `ev_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -69,33 +77,61 @@ function toWorldBook(g: GameState, ev: ChronicleEvent, roomName: (id?: string) =
   } as WorldBookEntry;
 }
 
+/* 每日归并：几条日常合成一条「当日经过」 */
+function makeDigest(day: number, parts: ChronicleEvent[]): ChronicleEvent {
+  const text = `当日经过：${parts.map((p) => p.text.replace(/[。.]$/, "")).join("；")}`.slice(0, 200);
+  return {
+    id: uid(), day, time: parts[0].time, room: parts[0].room, text, imp: 1, kind: "digest",
+    who: [...new Set(parts.flatMap((p) => p.who))],
+    keys: [...new Set(parts.flatMap((p) => p.keys ?? []))].slice(0, 8),
+  };
+}
+
 /* 落地：main 记忆 → 事件线（关键事件同步世界书）；场景变化 → 场景记忆 / 穿着 */
 export function applyMemory(
   g: GameState,
   updates: MemoryUpdate[],
   scene: SceneUpdate | undefined,
-  ctx: { roomName: (id?: string) => string; defaultBook: () => WorldBookEntry[] },
+  ctx: { roomName: (id?: string) => string; defaultBook: () => WorldBookEntry[]; recalled?: string[] },
 ): GameState {
   let next = g;
   const day = g.sim?.day ?? 0;
   const room = g.sim?.room;
-  const events = [...(g.chronicle ?? [])];
+  let events = [...(g.chronicle ?? [])];
   const addBook: WorldBookEntry[] = [];
+  const offBook = new Set<string>();
   for (const mu of updates) {
     const text = String(mu.text ?? "").trim().slice(0, 200);
     if (!text || mu.scope === "npc") continue;
-    if (events.slice(-40).some((e) => e.text === text)) continue; // 近期同句去重
     const whoByName = (mu.who ?? []).flatMap((nm) => namedIds(g, String(nm)));
+    const who = [...new Set([...whoByName, ...namedIds(g, text)])];
+    // 决策写入：ADD / UPDATE / DELETE / NOOP（UPDATE、DELETE 只做双时态失效，不物理删除）
+    const d = decideWrite(events.filter(isValid), { text, who, op: mu.op, replaces: typeof mu.replaces === "string" ? mu.replaces : undefined });
+    if (d.op === "NOOP") {
+      if (d.target) events = events.map((e) => (e.id === d.target ? { ...e, imp: Math.max(e.imp, clampImp(mu.imp)) as 1 | 2 | 3 } : e));
+      continue;
+    }
     const ev: ChronicleEvent = {
-      id: uid(), day, time: g.world?.time, room, text, imp: clampImp(mu.imp),
-      who: [...new Set([...whoByName, ...namedIds(g, text)])],
+      id: uid(), day, time: g.world?.time, room, text, imp: clampImp(mu.imp), who,
       keys: (mu.keys ?? []).map((k) => String(k).trim()).filter(Boolean).slice(0, 6),
     };
+    if (d.target && (d.op === "UPDATE" || d.op === "DELETE")) {
+      events = events.map((e) => (e.id === d.target ? { ...e, invalidAt: day, supersededBy: d.op === "UPDATE" ? ev.id : undefined } : e));
+      offBook.add(`mem_${d.target}`);
+    }
+    if (d.op === "DELETE") continue;
     events.push(ev);
     if (ev.imp === 3) addBook.push(toWorldBook(g, ev, ctx.roomName));
   }
-  if (events.length !== (g.chronicle ?? []).length) next = { ...next, chronicle: events.slice(-MAX_EVENTS) };
-  if (addBook.length) next = { ...next, worldBook: [...(next.worldBook ?? ctx.defaultBook()), ...addBook] };
+  // 巩固与遗忘：本回合被注入的记忆加固 → 晋升长期 → 过往日常归并 → 清理衰减殆尽的琐事
+  const recalled = new Set(ctx.recalled ?? []);
+  const before = g.chronicle ?? [];
+  events = forget(digestPastDays(promote(reinforce(events, recalled, day), day), day, (d0, parts) => makeDigest(d0, parts)), day);
+  if (events.length !== before.length || events.some((e, i) => e !== before[i])) next = { ...next, chronicle: events.slice(-MAX_EVENTS) };
+  if (addBook.length || offBook.size) {
+    const book = (next.worldBook ?? ctx.defaultBook()).map((b) => (offBook.has(b.id) ? { ...b, enabled: false } : b));
+    next = { ...next, worldBook: [...book, ...addBook] };
+  }
 
   if (scene && room) {
     const facts = (scene.facts ?? []).map((f) => String(f ?? "").trim().slice(0, 60)).filter(Boolean);
@@ -117,37 +153,64 @@ export function applyMemory(
   return next;
 }
 
-/* 注入块：最近事件（相对时间）+ 按命中召回的更早事件 + 此地场景 / 在场者穿着 */
-export function memoryBlock(g: GameState, hay: string, presentIds: string[], roomName: (id?: string) => string): string {
+/* 分层取用：中期（近几日按时间全列）+ 长期（其余记忆走混合检索：向量 + BM25 + 实体图 → RRF → 遗忘曲线重排） */
+function memoryLayers(g: GameState, hay: string, presentIds: string[]) {
   const now = g.sim?.day ?? 0;
   const room = g.sim?.room;
-  const all = g.chronicle ?? [];
-  const line = (e: ChronicleEvent) => `· [${relDay(now, e.day)}${e.room ? ` · ${roomName(e.room)}` : ""}] ${e.text}`;
-  const recent = all.slice(-RECENT_N);
-  const recentIds = new Set(recent.map((e) => e.id));
-  const present = new Set(presentIds);
+  const all = (g.chronicle ?? []).filter(isValid);
+  const recentByCount = all.slice(-RECENT_N);
+  const mid = [...new Map([...all.filter((e) => e.day >= now - MID_DAYS), ...recentByCount].map((e) => [e.id, e])).values()]
+    .sort((a, b) => all.indexOf(a) - all.indexOf(b))
+    .slice(-MID_MAX);
+  const midIds = new Set(mid.map((e) => e.id));
   // 关键事件已进世界书，由世界书检索召回，这里不重复
-  const scored = all
-    .filter((e) => !recentIds.has(e.id) && e.imp < 3)
-    .map((e, i) => {
-      let s = 0;
-      for (const id of e.who) if (present.has(id)) s += 3;
-      for (const id of e.who) { const nm = g.npcs.find((n) => n.id === id)?.name; if (nm && hay.includes(nm)) s += 2; }
-      if (room && e.room === room) s += 2;
-      for (const k of e.keys ?? []) if (k.length >= 2 && hay.includes(k)) s += 2;
-      return { e, s: s ? s + e.imp + i / 1000 : 0 };
+  const pool = all.filter((e) => !midIds.has(e.id) && e.imp < 3);
+  const entities = [...new Set([...presentIds, ...namedIds(g, hay)])];
+  const ranked = hybridRetrieve(pool.map((e) => ({ id: e.id, text: e.text, who: e.who, room: e.room, keys: e.keys ?? [] })), { text: hay, entities, room });
+  const byId = new Map(pool.map((e) => [e.id, e]));
+  const long = ranked
+    .map((r) => {
+      const e = byId.get(r.id)!;
+      return { e, s: r.rrf * 1000 * (0.4 + 0.6 * retention(e, now)) * (1 + 0.2 * e.imp) * (e.tier === "long" ? 1.15 : 1) };
     })
-    .filter((x) => x.s > 0)
-    .sort((a, b) => b.s - a.s);
+    .sort((a, b) => b.s - a.s)
+    .map((x) => x.e);
+  return { mid, long };
+}
+
+/* 本回合实际注入的记忆 id（中期 + 被召回的长期），供写回阶段做间隔重复加固 */
+export function recalledMemoryIds(g: GameState, hay: string, presentIds: string[], roomName: (id?: string) => string): string[] {
+  return pickLayers(g, hay, presentIds, roomName).recall.map((e) => e.id);
+}
+
+function pickLayers(g: GameState, hay: string, presentIds: string[], roomName: (id?: string) => string) {
+  const now = g.sim?.day ?? 0;
+  const line = (e: ChronicleEvent) => `· [${relDay(now, e.day)}${e.room ? ` · ${roomName(e.room)}` : ""}] ${e.text}`;
+  const { mid, long } = memoryLayers(g, hay, presentIds);
+  const recent: ChronicleEvent[] = [];
+  let usedMid = 0;
+  for (const e of [...mid].reverse()) {
+    const l = line(e).length;
+    if (usedMid + l > MID_BUDGET && recent.length) break;
+    recent.unshift(e); usedMid += l;
+  }
   const recall: ChronicleEvent[] = [];
   let used = 0;
-  for (const { e } of scored) {
+  for (const e of long) {
     if (recall.length >= RECALL_N) break;
     const l = line(e).length;
     if (used + l > RECALL_BUDGET) continue;
     recall.push(e); used += l;
   }
+  const all = g.chronicle ?? [];
   recall.sort((a, b) => all.indexOf(a) - all.indexOf(b));
+  return { recent, recall, line };
+}
+
+/* 注入块：中期近况（相对时间）+ 长期相关往事（混合检索）+ 此地场景 / 在场者穿着（工作记忆） */
+export function memoryBlock(g: GameState, hay: string, presentIds: string[], roomName: (id?: string) => string): string {
+  const room = g.sim?.room;
+  const { recent, recall, line } = pickLayers(g, hay, presentIds, roomName);
   const facts = room ? g.sceneMem?.[room]?.facts ?? [] : [];
   const looks = presentIds.map((id) => { const o = g.looks?.[id]; const nm = g.npcs.find((n) => n.id === id)?.name; return o && nm ? `${nm}：${o}` : ""; }).filter(Boolean);
   const parts: string[] = [];
@@ -155,12 +218,12 @@ export function memoryBlock(g: GameState, hay: string, presentIds: string[], roo
   if (recall.length) parts.push(`〈与此刻相关的往事〉\n${recall.map(line).join("\n")}`);
   if (facts.length || looks.length) parts.push(`〈此地现状（延续上次所见，未写到的变化不得凭空出现或消失）〉\n${[...facts.map((f) => `· ${f}`), ...looks.map((l) => `· ${l}`)].join("\n")}`);
   if (!parts.length) return "";
-  return `【剧情记忆】（由系统记录的已发生事实，时间按当前游戏日换算；叙事须与之一致，可自然提起，不要逐条复述）\n${parts.join("\n")}`;
+  return `【剧情记忆】（由系统记录的已发生事实，时间按当前游戏日换算；被新事实推翻的旧说法已移除，以此为准；叙事须与之一致，可自然提起，不要逐条复述）\n${parts.join("\n")}`;
 }
 
 /* 摘要失败兜底：按事件条目保留（关键优先），而不是截取原文末尾 */
 export function chronicleFallbackSummary(g: GameState, max = 900): string {
-  const all = g.chronicle ?? [];
+  const all = (g.chronicle ?? []).filter(isValid);
   const keep = [...all.filter((e) => e.imp >= 2), ...all.slice(-8)];
   const uniq = [...new Map(keep.map((e) => [e.id, e])).values()].sort((a, b) => all.indexOf(a) - all.indexOf(b));
   let out = "";

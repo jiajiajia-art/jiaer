@@ -5,6 +5,7 @@ import { seatAtHome } from "../game/mud";
 import { Avatar, Modal } from "./ui";
 import HomeSpotSelect from "./HomeSpotSelect";
 import { homeHint } from "../game/homeSpot";
+import { assetIdForAvatarUrl } from "../game/avatarPools";
 import { normAge } from "../lib/npcIdentity";
 
 /* 人脉 / 编辑器 · 新增人物：玩家自己写设定，保存后即视为已结识，走同一套人物详情；设了常驻地点就会出现在地图上 */
@@ -17,9 +18,10 @@ export default function CustomPersonModal({ onClose, onCreated }: { onClose: () 
   const save = () => {
     if (!ok || !game) return;
     const id = `cus_${Date.now().toString(36)}`;
+    const asset = assetIdForAvatarUrl(f.avatar);
     const npc: Npc = {
       id, name: f.name.trim(), age: normAge(f.age), identity: f.identity.trim(), relation: f.relation.trim() || "相识",
-      avatar: f.avatar, bio: f.bio.trim(), mood: "", affinity: 0, dims: [], tags: ["自定义"], attrs: [], affinityHistory: [], interactions: [],
+      avatar: f.avatar, ...(asset ? { avatarAssetId: asset } : {}), bio: f.bio.trim(), mood: "", affinity: 0, dims: [], tags: ["自定义"], attrs: [], affinityHistory: [], interactions: [],
       persona: { gender: f.gender, text: f.text.trim() || undefined, voice: f.voice.trim() || undefined },
       ...(f.home ? { home: f.home } : {}),
     };
@@ -37,7 +39,7 @@ export default function CustomPersonModal({ onClose, onCreated }: { onClose: () 
     <Modal panelClassName="npc-tab" title="自定义人物" onClose={onClose}>
       <div className="space-y-3">
         <div className="flex items-center gap-3">
-          <Avatar src={f.avatar} name={f.name || "新"} size={64} square editable onPick={(d) => set("avatar", d)} />
+          <Avatar src={f.avatar} name={f.name || "新"} size={64} square editable excludeAvatars={[...game.npcs.map((n) => n.avatar), game.player.avatar]} onPick={(d) => set("avatar", d)} />
           <div className="min-w-0 flex-1">
             <label className={label}>姓名 *</label>
             <input className={input} value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="如：沈知夏" maxLength={12} />

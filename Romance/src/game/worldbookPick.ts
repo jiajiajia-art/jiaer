@@ -1,10 +1,10 @@
-/* ————— 世界书检索（对标 SillyTavern Lore，规则更规整）—————
- * 1. 注入模式：keyword 检索命中（默认）· constant 每轮全局 · once 一次性（注入后标记消耗，不再触发）
- * 2. 有效期：触发后持续 N 轮，到期自动失效（轮 = 已完成的 AI 回合数）
- * 3. 依赖（新）：挂本作品地点 / 人物；玩家在该地点、人物在场、或关键词命中 → 注入（OR）
- * 4. 旧绑定：无 bindRooms/bindNpcs 时仍按 scope 全局 / 单角色 / 单房间 + 模式
- * 5. 互斥组：同组只注入一条——已在有效期内的优先，其次得分最高
- * 6. 检索权重：得分 = 命中的最长关键词长度 × 权重；短词若只出现在更长的已命中关键词内部不算命中
+/* ————— 世界书检索（酒馆 World Info）—————
+ * 1. 绿灯 keyword：只扫描最近对话和本回合输入，出现关键词才注入。人在场、站在某地，本身不算命中。
+ * 2. 蓝灯 constant：每回合注入。挂了地点或人物时，只在那个场合注入。
+ * 3. once：和绿灯一样要先命中关键词，注入一次后不再触发。没填关键词不会自动注入。
+ * 4. 地点 / 人物是过滤（AND），不是触发（OR）。
+ * 5. 有效期：命中后持续 N 轮，到期失效。
+ * 6. 互斥组只留一条；得分 = 命中的最长关键词长度 × 权重。
  * 纯函数：本文件只「选」，不改存档；主剧情回合成功后由 commitWorldBook 记账。 */
 import type { GameState, WorldBookEntry, WorldBookMem, WorldBookMode } from "../lib/types";
 import { asTrimmedString } from "../lib/asTrimmedString";
@@ -16,8 +16,9 @@ import { pathOf } from "./roomTree";
 export type WorldBookCtx = { npcIds?: string[] };
 export type WorldBookPick = { entries: WorldBookEntry[]; fired: string[]; round: number };
 
+/** 功能注释：只有蓝灯或显式 constant 才常驻。关键词为空不再当成每回合命中。 */
 export const modeOf = (e: WorldBookEntry): WorldBookMode =>
-  e.mode ?? (e.constant || keywordTexts(e.keywords).length === 0 ? "constant" : "keyword");
+  e.mode ?? (e.constant ? "constant" : "keyword");
 
 /* 当前轮次：已成功落地的 AI 回合数 */
 export const wbRound = (g: GameState) => g.story.filter((t) => t.role === "ai" && !t.error).length;
@@ -86,23 +87,11 @@ export function pickWorldBook(g: GameState, book: WorldBookEntry[], hayRaw: stri
     const hasDeps = worldBookHasDeps(e);
     const score = scoreOf(e);
     const kwHit = score > 0;
-    const onceEmpty = m === "once" && keywordTexts(e.keywords).length === 0;
-
-    if (hasDeps) {
-      // 新规则：地点 / 人物在场 / 关键词（任一）
-      const depHit = worldBookDepsMatch(e, g, ctx);
-      if (!depHit && !kwHit && !onceEmpty) continue;
-      const prob = e.probability ?? 100;
-      if (prob < 100 && rnd() * 100 >= prob) continue;
-      cands.push({ e, score: depHit && !kwHit ? 1e5 : score || 1, active: false, fresh: true });
-      continue;
-    }
-
-    // 旧条目：先过 scope，再按 constant / keyword / once
-    if (!legacyInScope(e, g, ctx)) continue;
+    // 功能注释：挂靠是酒馆的角色/地点过滤，通过才允许注入，不能单独把条目点亮
+    if (hasDeps && !worldBookDepsMatch(e, g, ctx)) continue;
+    if (!hasDeps && !legacyInScope(e, g, ctx)) continue;
     if (m === "constant") { cands.push({ e, score: 1e6, active: false, fresh: true }); continue; }
-    const hit = kwHit || onceEmpty;
-    if (!hit) continue;
+    if (!kwHit) continue;
     const prob = e.probability ?? 100;
     if (prob < 100 && rnd() * 100 >= prob) continue;
     cands.push({ e, score: score || 1, active: false, fresh: true });

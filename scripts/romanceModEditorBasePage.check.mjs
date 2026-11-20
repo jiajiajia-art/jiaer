@@ -83,7 +83,7 @@ test('剧本基调_生成须写scriptTone并校验字数_简介可从manifest写
         completeFn: async () => JSON.stringify({ content: { prompt: { scriptTone: '太短' } } }),
         cfg: { baseUrl: 'https://example.test/v1', apiKey: 'k', model: 'm' },
       }),
-    /剧本基调过短/,
+    /系统提示词过短/,
   );
 
   const over = `${'字'.repeat(lim.SCRIPT_TONE_MAX + 10)}`;

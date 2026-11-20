@@ -8,6 +8,7 @@
 import { SCENE_PORTRAIT_GEN_SIZE } from "./scenePortrait.ts";
 
 export type EditorImagePromptParts = {
+  allowImageText?: boolean;
   /** 作品画风（整部统一）；可空 */
   style: string;
   /** 这一张的主体描述（不含构图收尾句；构图由 framing 静默拼接） */
@@ -39,8 +40,10 @@ export const WORK_COVER_GEN_SIZE = SCENE_PORTRAIT_GEN_SIZE;
 /** 功能注释：各类图的构图收尾句；与上面的请求尺寸一一对应；仅请求时拼入，不给玩家编辑框看 */
 export const FRAMING_AVATAR = "方形 1:1 构图，半身或胸像，面部清晰";
 export const FRAMING_SCENE = "竖屏 9:16 构图，场景背景插画";
-export const FRAMING_MAP = "竖屏 9:16 竖向区域图，地点可辨";
+export const FRAMING_MAP = "竖屏 9:16，一张连续的俯瞰地图，从高处垂直往下看整片区域，地点以小建筑和地标分布在同一张图上，不要拆成上下几幅街景或立面，画面中不出现任何文字、地名标注或标签";
 export const FRAMING_COVER = "竖屏 9:16 构图，游戏封面插画，有氛围与主体";
+
+/** 功能注释：封面没写简介、也没写主角外观时，主体框预填这句，玩家可改，不必从空白手打 */
 
 const IMAGE_FRAMING_SUFFIXES = Object.freeze([
   FRAMING_AVATAR,
@@ -68,8 +71,8 @@ export function splitFramingFromSubject(raw: string): { subject: string; framing
 
 /** 功能注释：各类图固有的负面基线（原先写在正向里的「不要文字/水印/UI」挪到这里） */
 const BASE_NEGATIVE_AVATAR = "文字，水印，UI 边框，多余肢体，畸形手指";
-const BASE_NEGATIVE_SCENE = "文字，水印，UI，人物特写";
-const BASE_NEGATIVE_MAP = "文字，水印，UI，人物特写";
+const BASE_NEGATIVE_SCENE = "文字，水印，UI，人物，角色，人物特写，人物肖像，人影，剪影，行人，人群，路人，人体，雕像， mannequin，空 mannequin";
+const BASE_NEGATIVE_MAP = "文字，地名，标签，标注，牌匾文字，横幅文字，汉字，字母，图例，水印，UI，人物特写，平视街景，建筑立面近景，分镜，拼贴，多格，三联画，上下拼接";
 const BASE_NEGATIVE_COVER = "标题文字，任何文字，水印，UI";
 
 function clip(s: unknown, max = 280): string {
@@ -216,7 +219,7 @@ export function buildLocationScenePromptParts(
   return makeParts(settings, subject, BASE_NEGATIVE_SCENE, subject ? FRAMING_SCENE : "");
 }
 
-/** 功能注释：大地图三层——区域名 + 地点列表 + 竖向区域图；地点空时写「按设定补分区」 */
+/** 功能注释：大地图三层——区域名 + 地点列表 + 一张俯瞰图；地点空时写「按设定补分区」 */
 export function buildWorldMapPromptParts(
   m: { name?: string; places?: string[]; desc?: string },
   settings: WorkImageStyleSettings = {},
@@ -226,8 +229,8 @@ export function buildWorldMapPromptParts(
   const places = (m.places ?? []).map((p) => clip(p, 20)).filter(Boolean).slice(0, 12);
   const desc = clip(m.desc, 160);
   const body = joinParts([
-    name ? `区域「${name}」` : "区域图",
-    places.length ? `包含地点：${places.join("、")}` : "按设定补分区",
+    name ? `俯瞰区域「${name}」` : "俯瞰区域图",
+    places.length ? `同一张俯视图里分布这些地点的小建筑/地标（只画景物，不写地名，不要每个地点单独画成一幅）：${places.join("、")}` : "按设定在同一张俯视图里补分区",
     desc,
   ]);
   const subject = body.replace(/[。.\s]+$/g, "");
@@ -250,10 +253,27 @@ export function buildWorkCoverPromptParts(
 ): EditorImagePromptParts {
   const vibe = clip(w.summary, 280);
   const hero = clip(w.protagonistAppearance, 200);
-  // 功能注释：有氛围但没填主角外观时，留一个「主角外观：」空槽给创作者补；不补则组装时自动剔除
-  const body = joinParts([vibe ? `氛围：${vibe}` : "", hero ? `主角外观：${hero}` : vibe ? "主角外观：" : ""]);
-  const subject = body ? body.replace(/[。.\s]+$/g, "") : "";
-  return makeParts(settings, subject, BASE_NEGATIVE_COVER, subject ? FRAMING_COVER : "");
+  const subject = joinParts([vibe ? `氛围：${vibe}` : "", hero ? `主角外观：${hero}` : ""]).replace(/[。.\s]+$/g, "");
+  return { ...makeParts(settings, subject, BASE_NEGATIVE_COVER, FRAMING_COVER), allowImageText: true };
+}
+
+export function applyCoverImageText(
+  prompt: string,
+  negative: string,
+  imageText: string,
+  framing: string,
+): { prompt: string; negative: string } {
+  const text = imageText.trim();
+  if (!text) return { prompt, negative };
+
+  const textBans = /^(?:(?:不要|禁止|无)\s*)?(?:文字|任何文字|标题文字|文字标题|中文文字|英文文字|汉字|字母|字幕|标题|text|any text|words|letters|typography|title text|captions|subtitles)$|^no (?:text|words|letters|typography|captions|subtitles)$/i;
+  return {
+    prompt: joinParts([
+      prompt || framing,
+      `封面必须逐字呈现以下文字，保留原有字形与标点：${JSON.stringify(text)}。文字清晰可读，排版贴合画面，只显示指定文字，参考图里其他文字不保留`,
+    ], "。"),
+    negative: mergeNegativePrompt(negative).split("，").filter((term) => !textBans.test(term)).join("，"),
+  };
 }
 
 /** 功能注释：去掉脚手架里创作者没填的「标签：」空段，避免把「发型发色：」原样发给模型 */
@@ -271,6 +291,7 @@ export function composePositivePrompt(
 ): string {
   const split = splitFramingFromSubject(parts.subject);
   const subject = stripEmptyLabels(split.subject);
+  if (!subject) return "";
   const framing = String(parts.framing || split.framing || "").trim();
   const body = joinParts([subject, framing], "。");
   if (!body) return "";

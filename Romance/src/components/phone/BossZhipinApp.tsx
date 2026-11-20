@@ -1,8 +1,10 @@
 /* 老板直聘 —— 仿真招聘 App。进入先选身份：我要找工作（求职者）/ 我要招人（企业）。
  * 视觉自绘、内容全部虚构。求职端职位来自游戏内 8 家经纪公司（签约艺人 + 幕后/运营真实岗位）；
  * 企业端你以「工作室」身份发布职位、翻牌候选艺人。薪资/门槛按公司声望确定性推导，不结算真实数值。 */
-import { loadData, saveData, removeData } from "../../lib/saveScope";
-import { useEffect, useMemo, useState } from "react";
+import { complete } from "../../lib/ai";
+import { loadConfig } from "../../lib/store";
+import { loadData, saveData, removeData, SAVE_SWITCH_EVENT } from "../../lib/saveScope";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useWorldSync, syncJson, loadFeed, saveFeed } from "./worldSync";
 import { LoadMoreButton, seenOf } from "./shared";
 import { useGame } from "../../store/gameCtx";
@@ -28,7 +30,7 @@ type Job = {
   boss: Boss;
   title: string;
   salary: string;
-  area: string;
+  workLocation?: string;
   exp: string;
   edu: string;
   tags: string[];
@@ -37,8 +39,6 @@ type Job = {
   reqs: string[];
 };
 
-const AREA_NAMES = ["云台区", "滨江新区", "老城厢", "影视基地", "文创园"];
-const areaAt = (i: number) => `${T("city")}·${AREA_NAMES[i % AREA_NAMES.length]}`;
 const fallbackBoss: Boss = { name: "招聘负责人", title: "HR", age: 38, style: "务实", quote: "先聊聊，看合不合适。", bio: "" };
 
 function artistTitle(prestige: number): string {
@@ -46,7 +46,7 @@ function artistTitle(prestige: number): string {
     : prestige >= 56 ? "签约艺人 · 重点资源位"
     : prestige >= 42 ? "签约新人 · 重点培养" : "签约练习生 / 新人艺人";
 }
-function makeArtistJob(companyId: string, prestige: number, i: number): Job {
+function makeArtistJob(companyId: string, prestige: number): Job {
   const meta = companyMeta(companyId);
   const boss = meta.boss ?? fallbackBoss;
   const low = Math.max(1, Math.round(prestige * 0.4));
@@ -58,7 +58,6 @@ function makeArtistJob(companyId: string, prestige: number, i: number): Job {
     companyId, company: meta.name, boss,
     title: artistTitle(prestige),
     salary: prestige >= 56 ? `保底 ${low}万/月 · 项目分成` : `保底 ${low}-${high}千/月 · ${T("gig")}分成`,
-    area: areaAt(i),
     exp: "新人可投", edu: "形象气质佳",
     tags: [prestige >= 60 ? "重点捧" : "长线培养", "艺人经纪", `声望${prestige}`],
     fameReq,
@@ -66,69 +65,95 @@ function makeArtistJob(companyId: string, prestige: number, i: number): Job {
     reqs: [`名气达到 ${fameReq} 以上者优先`, "肯吃苦、可塑性强、无不良记录", "认同公司培养方向与合约条款"],
   };
 }
-/* ───────────────── 老板回复（求职端）───────────────── */
-const GREETS = ["您好，我对这个职位很感兴趣～", "我的条件符合要求吗？", "方便介绍下具体工作/培养吗？"];
-function bossReply(job: Job, greet: string, fame: number): string {
-  const s = job.boss.style;
-  if (greet === GREETS[0]) {
-    if (job.kind === "crew") return `你好，${job.company}这个「${job.title}」正缺人。方便发下简历/作品，我们约个时间面聊。`;
-    if (s.includes("铁腕") || s.includes("挑剔") || s.includes("严")) return `${job.boss.quote}\n进${job.company}规矩不能破，你有底子的话，我们不缺资源。`;
-    if (s.includes("商") || s.includes("激进") || s.includes("弄潮")) return `好眼光。${job.company}最会把人推上风口，就看你敢不敢接住这波流量。`;
-    return `${job.boss.quote}\n${job.company}不玩虚的，来了我把你当自家人带。`;
-  }
-  if (greet === GREETS[1]) {
-    if (job.kind === "crew") return `${job.exp}、${job.edu}起。有相关经验和作品就好谈，薪资 ${job.salary}，具体看能力定。`;
-    if (fame >= job.fameReq) return `你现在名气 ${fame}，够了。这个位子（门槛 ${job.fameReq}）给你留着，什么时候方便过来签？`;
-    return `实话说门槛 ${job.fameReq}，你现在 ${fame}，还差 ${job.fameReq - fame}。再攒攒名气，我这门随时开着。`;
-  }
-  if (job.kind === "crew") return `主要负责：${job.duties[0]}。做得好有项目奖金，团队年轻、上手快，来了不会亏待你。`;
-  if (s.includes("教") || s.includes("学院") || s.includes("儒雅")) return "不急着捧。先打磨基本功，慢工出细活，十年磨一戏。";
-  if (s.includes("偶像") || s.includes("团")) return "进训练室系统培养，练不出来不上台——练出来了，出道那天你会哭。";
-  return `资源主攻影视线，${job.salary}。前期我亲自跟，帮你把第一个代表作立起来。`;
-}
-
-/* ───────────────── 候选人回复（企业端）───────────────── */
-const EMP_GREETS = ["你好，看了你的资料，很合适～", "有兴趣加入我的工作室吗？", "期望的资源/待遇是？"];
-function candidateReply(fame: number, personality: string, greet: string, studio: string, myFame: number): string {
-  const bigshot = fame > myFame * 1.4 + 60;
-  if (greet === EMP_GREETS[0]) {
-    if (bigshot) return "谢谢抬爱。不过我这边档期排得比较满，得看看具体是什么资源。";
-    return `${personality.includes("高冷") ? "嗯，" : "谢谢！"}我确实在看新机会，${studio}是做什么方向的呀？`;
-  }
-  if (greet === EMP_GREETS[1]) {
-    if (bigshot) return `${studio}我有耳闻。诚意够的话可以谈，但合约细节我得让团队把关。`;
-    return "有兴趣的！只要资源靠谱、待人真诚，我不怕从头拼。";
-  }
-  if (bigshot) return "资源要能进主流项目，分成也得对得起我现在的咖位，其余好说。";
-  return "待遇能保底、有作品机会就行，我更看重能不能被好好培养。";
-}
-
 /* ───────────────── 通用聊天视图 ───────────────── */
 type Msg = { from: "peer" | "me"; text: string };
-/* 会话记录按对象缓存：返回列表再进入时延续之前的聊天，而不是重新开场 */
-const CHAT_CACHE = new Map<string, { msgs: Msg[]; used: string[]; done: boolean }>();
-function ChatView({ cacheKey, peerName, peerSub, peerAvatarName, meName, meAvatar, opener, greets, reply, actionLabel, onAction, onBack }: {
+type RecruitmentChat = { msgs: Msg[]; done: boolean };
+
+function recallEarlierMessages(msgs: Msg[], draft: string): string {
+  const terms = draft.toLowerCase().match(/[a-z0-9]+|[\u4e00-\u9fff]{2}/g) ?? [];
+  const earlier = msgs.slice(0, -12).map((msg, index) => ({
+    msg,
+    index,
+    score: terms.filter((term) => msg.text.toLowerCase().includes(term)).length,
+  }));
+  return earlier.sort((a, b) => b.score - a.score || b.index - a.index)
+    .slice(0, 16)
+    .sort((a, b) => a.index - b.index)
+    .map(({ msg }) => `${msg.from === "me" ? "玩家" : "对方"}：${msg.text.slice(0, 500)}`)
+    .join("\n");
+}
+
+function ChatView({ cacheKey, peerName, peerSub, peerAvatarName, meName, meAvatar, opener, context, actionLabel, onAction, onBack }: {
   cacheKey: string; peerName: string; peerSub: string; peerAvatarName: string; meName: string; meAvatar: string;
-  opener: string; greets: string[]; reply: (g: string) => string; actionLabel: string; onAction: () => string; onBack: () => void;
+  opener: string; context: string; actionLabel: string; onAction: () => string; onBack: () => void;
 }) {
-  const cached = CHAT_CACHE.get(cacheKey);
-  const [msgs, setMsgs] = useState<Msg[]>(cached?.msgs ?? [{ from: "peer", text: opener }]);
-  const [used, setUsed] = useState<string[]>(cached?.used ?? []);
-  const [done, setDone] = useState(cached?.done ?? false);
-  useEffect(() => { CHAT_CACHE.set(cacheKey, { msgs, used, done }); }, [cacheKey, msgs, used, done]);
-  const send = (g: string) => {
-    setUsed((u) => [...u, g]);
-    setMsgs((m) => [...m, { from: "me", text: g }]);
-    setTimeout(() => setMsgs((m) => [...m, { from: "peer", text: reply(g) }]), 420);
+  const storageKey = `bosspin.chat.${cacheKey}`;
+  const [chat, setChat] = useState(() => loadData<RecruitmentChat>(storageKey, {
+    msgs: [{ from: "peer", text: opener }],
+    done: false,
+  }));
+  const { msgs, done } = chat;
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+  const request = useRef<AbortController | null>(null);
+  const bottom = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const cancel = () => request.current?.abort();
+    window.addEventListener(SAVE_SWITCH_EVENT, cancel);
+    return () => {
+      cancel();
+      window.removeEventListener(SAVE_SWITCH_EVENT, cancel);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (bottom.current?.parentElement) {
+      const scroller = bottom.current.parentElement;
+      scroller.scrollTop = scroller.scrollHeight;
+    }
+  }, [msgs, sending]);
+
+  const persist = (next: RecruitmentChat) => {
+    setChat(next);
+    if (!saveData(storageKey, next)) setError("聊天记录暂时无法写入存档。");
+  };
+
+  const send = async () => {
+    const message = draft.trim();
+    if (!message || request.current) return;
+    const active = new AbortController();
+    request.current = active;
+    setSending(true);
+    setError("");
+    try {
+      const reply = (await complete(loadConfig(), [
+        { role: "system", content: `你正在游戏内的招聘应用聊天。你扮演${peerName}，对话主题是${peerSub}。
+${context}
+操作状态：${done ? "已" : "尚未"}${actionLabel.replace(/·.*/, "").trim()}。
+旧聊天记录仅用于回忆，按历史原话理解，结合近期对话延续已谈妥的事项。
+${recallEarlierMessages(msgs, message)}
+根据聊天记录用中文自然回复玩家的最新消息。只输出聊天正文，不要代替玩家说话，不要声称已代替玩家执行投递或邀请操作。` },
+        ...msgs.slice(-12).map((msg) => ({ role: msg.from === "me" ? "user" as const : "assistant" as const, content: msg.text })),
+        { role: "user", content: message },
+      ])).trim();
+      if (active.signal.aborted) return;
+      if (!reply) throw new Error("Empty recruitment reply");
+      persist({ msgs: [...msgs, { from: "me", text: message }, { from: "peer", text: reply }], done });
+      setDraft("");
+    } catch {
+      if (!active.signal.aborted) setError("暂时无法获取回复，请重试。");
+    } finally {
+      request.current = null;
+      if (!active.signal.aborted) setSending(false);
+    }
   };
   const act = () => {
-    if (done) return;
-    setDone(true);
+    if (done || request.current) return;
     const echo = actionLabel.replace(/·.*/, "").trim();
-    setMsgs((m) => [...m, { from: "me", text: `【${echo}】` }]);
-    setTimeout(() => setMsgs((m) => [...m, { from: "peer", text: onAction() }]), 460);
+    persist({ done: true, msgs: [...msgs, { from: "me", text: `【${echo}】` }, { from: "peer", text: onAction() }] });
   };
-  const remaining = greets.filter((g) => !used.includes(g));
   return (
     <div className="flex h-full flex-col bg-[#f2f3f5]">
       <div className="flex items-center border-b border-black/5 bg-white px-3 py-2.5">
@@ -143,18 +168,25 @@ function ChatView({ cacheKey, peerName, peerSub, peerAvatarName, meName, meAvata
         {msgs.map((m, i) => (
           <div key={i} className={`flex gap-2 ${m.from === "me" ? "flex-row-reverse" : ""}`}>
             <Avatar src={m.from === "me" ? meAvatar : ""} name={m.from === "me" ? meName : peerAvatarName} size={32} editable={false} />
-            <div className={`max-w-[74%] whitespace-pre-line rounded-2xl px-3 py-2 text-[13.5px] leading-snug ${m.from === "me" ? "text-white" : "bg-white text-ink ring-1 ring-black/5"}`} style={m.from === "me" ? { background: ACCENT } : undefined}>
+            <div className={`max-w-[74%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-2xl px-3 py-2 text-[13.5px] leading-snug ${m.from === "me" ? "text-white" : "bg-white text-ink ring-1 ring-black/5"}`} style={m.from === "me" ? { background: ACCENT } : undefined}>
               {m.text}
             </div>
           </div>
         ))}
+        {sending && <p role="status" className="text-[12px] text-ink-soft">对方正在回复…</p>}
+        <div ref={bottom} />
       </div>
       <div className="border-t border-black/5 bg-white px-3 py-2.5">
-        <div className="flex flex-wrap gap-2">
-          {remaining.map((g) => (
-            <button key={g} onClick={() => send(g)} className="rounded-full bg-black/[0.05] px-3 py-1.5 text-[12.5px] text-ink">{g}</button>
-          ))}
-          <button onClick={act} disabled={done} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold text-white disabled:opacity-45" style={{ background: ACCENT }}>
+        {error && <p role="alert" className="mb-1 text-[12px] text-rose-700">{error}</p>}
+        <form className="mb-2 flex gap-2" onSubmit={(e) => { e.preventDefault(); void send(); }}>
+          <input aria-label="自定义回复" placeholder="输入自定义回复…" value={draft} maxLength={500} disabled={sending}
+            onChange={(e) => setDraft(e.target.value)} className="min-w-0 flex-1 rounded-full bg-black/[0.05] px-3 py-2 text-[13px] text-ink" />
+          <button type="submit" disabled={sending || !draft.trim()} className="shrink-0 rounded-full px-3.5 text-[12.5px] font-semibold text-white disabled:opacity-45" style={{ background: ACCENT }}>
+            {sending ? "等待回复…" : "发送"}
+          </button>
+        </form>
+        <div className="flex justify-end">
+          <button onClick={act} disabled={done || sending} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold text-white disabled:opacity-45" style={{ background: ACCENT }}>
             {done ? "已发送" : actionLabel}
           </button>
         </div>
@@ -197,7 +229,7 @@ function JobCard({ job, fame, onOpen }: { job: Job; fame: number; onOpen: () => 
         <p className="min-w-0 text-[15.5px] font-semibold text-ink">{job.title}</p>
         <span className="shrink-0 text-[13.5px] font-bold" style={{ color: ACCENT }}>{job.salary.split(" · ")[0]}</span>
       </div>
-      <p className="mt-1 text-[11.5px] text-ink-soft">{job.area} · {job.exp} · {job.edu}</p>
+      <p className="mt-1 text-[11.5px] text-ink-soft">{[job.workLocation, job.exp, job.edu].filter(Boolean).join(" · ")}</p>
       <div className="mt-1.5 flex flex-wrap gap-1.5">
         {job.tags.map((t) => <span key={t} className="rounded-md bg-black/[0.05] px-1.5 py-0.5 text-[11px] text-ink-soft">{t}</span>)}
         {job.kind === "artist" && (
@@ -228,7 +260,7 @@ function JobDetail({ job, fame, onChat, onBack }: { job: Job; fame: number; onCh
             <p className="min-w-0 text-[18px] font-bold text-ink">{job.title}</p>
             <span className="shrink-0 text-[16px] font-bold" style={{ color: ACCENT }}>{job.salary.split(" · ")[0]}</span>
           </div>
-          <p className="mt-1 text-[12px] text-ink-soft">{job.area} · {job.exp} · {job.edu}</p>
+          <p className="mt-1 text-[12px] text-ink-soft">{[job.workLocation, job.exp, job.edu].filter(Boolean).join(" · ")}</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {job.tags.map((t) => <span key={t} className="rounded-md bg-black/[0.05] px-2 py-0.5 text-[11.5px] text-ink-soft">{t}</span>)}
           </div>
@@ -275,11 +307,11 @@ function SeekerApp({ jobs, fame, playerName, playerAvatar, desc, stats, moreLoad
   const job = (id: string | null) => jobs.find((j) => j.id === id);
   if (chat) {
     const j = job(chat);
-    if (j) return <ChatView cacheKey={`seek_${j.id}`}
+    if (j) return <ChatView key={j.id} cacheKey={`seek_${j.id}`}
       peerName={j.boss.name} peerSub={`${j.company} · ${j.title}`} peerAvatarName={j.boss.name}
       meName={playerName} meAvatar={playerAvatar}
       opener={`我是${j.company}的${j.boss.name}。${j.kind === "artist" ? j.boss.quote : `「${j.title}」还在招，你的情况方便说说吗？`}`}
-      greets={GREETS} reply={(g) => bossReply(j, g, fame)}
+      context={`招聘方风格：${j.boss.style}。薪资：${j.salary}。职责：${j.duties.join("、")}。要求：${j.reqs.join("、")}。玩家当前名气：${fame}。`}
       actionLabel="投递简历 · 申请"
       onAction={() => (j.kind === "artist" ? (fame >= j.fameReq ? `简历收到，条件不错。我让助理拟合同，改天约你到${j.company}详谈。` : `简历先留下了，等你名气到 ${j.fameReq}，我第一个签你。`) : `简历收到，${j.title}这边我们尽快安排面试，保持手机畅通。`)}
       onBack={() => setChat(null)} />;
@@ -396,11 +428,11 @@ function EmployerApp({ candidates, studio, myFame, playerName, playerAvatar, com
 
   if (chat) {
     const c = candidates.find((x) => x.id === chat);
-    if (c) return <ChatView cacheKey={`emp_${c.id}`}
+    if (c) return <ChatView key={c.id} cacheKey={`emp_${c.id}`}
       peerName={c.name} peerSub={`名气 ${c.fame} · 擅长${c.topStat}`} peerAvatarName={c.name}
       meName={playerName} meAvatar={playerAvatar}
       opener={`你好，我是${studio}的负责人。冒昧打扰——留意你挺久了。`}
-      greets={EMP_GREETS} reply={(g) => candidateReply(c.fame, c.personality, g, studio, myFame)}
+      context={`你是候选人，性格：${c.personality}，名气：${c.fame}。对方来自${studio}，名气：${myFame}。`}
       actionLabel="发送 offer · 邀约"
       onAction={() => (c.fame > myFame * 1.4 + 60 ? "谢谢诚意，我先和团队商量一下，回头给你答复。" : "好呀！那我们找个时间正式聊聊合约细节？")}
       onBack={() => setChat(null)} />;
@@ -533,7 +565,7 @@ export default function BossZhipinApp({ onBack }: { onBack: () => void }) {
       return {
         id: `${pfx}_${now}_${i}`, kind, cat, companyId: "", company: str(x.company, `${T("city")}某剧组`, 20),
         boss: { ...fallbackBoss, name: bossName, title: str(x.bossTitle, "HR", 12), quote: str(x.quote, fallbackBoss.quote, 50) },
-        title: str(x.title, "", 24), salary: str(x.salary, "面议", 20), area: areaAt(now + i),
+        title: str(x.title, "", 24), salary: str(x.salary, "面议", 20), workLocation: str(x.workLocation, "", 40) || undefined,
         exp: str(x.exp, "经验不限", 12), edu: "不限", tags: ["剧情新岗", ...list(x.tags, 3)],
         fameReq: kind === "artist" && Number.isFinite(fr) ? Math.max(0, Math.min(100, Math.round(fr))) : 0,
         duties: list(x.duties, 4).length ? list(x.duties, 4) : ["按项目安排开展工作"], reqs: list(x.reqs, 4).length ? list(x.reqs, 4) : ["认真负责"],
@@ -548,7 +580,7 @@ export default function BossZhipinApp({ onBack }: { onBack: () => void }) {
     setMoreLoading(true);
     try {
       const seen = seenOf(seenTitles);
-      const r = await syncJson<{ jobs?: unknown }>(cfg, game!, "bosspin", "老板直聘", `主角当前名气 ${sim.fame ?? 0}。再生成 5 条符合主角职业阶段的招聘/试镜/选角/${T("gig")}岗位，可紧扣最近剧情，也可是行业日常岗位；不要与这些已有岗位重复：${seen}。返回 {"jobs":[{"kind":"artist(艺人试镜/签约)|crew(幕后运营)","cat":"艺人|幕后|运营","company":"公司/剧组","bossName":"招聘人","bossTitle":"职位","quote":"招聘人一句话","title":"岗位名","salary":"薪资","exp":"经验要求","tags":["≤3个"],"fameReq":30,"duties":["2-3条"],"reqs":["2-3条"]}]}`);
+      const r = await syncJson<{ jobs?: unknown }>(cfg, game!, "bosspin", "老板直聘", `主角当前名气 ${sim.fame ?? 0}。再生成 5 条符合主角职业阶段的招聘/试镜/选角/${T("gig")}岗位，可紧扣最近剧情，也可是行业日常岗位；不要与这些已有岗位重复：${seen}。返回 {"jobs":[{"kind":"artist(艺人试镜/签约)|crew(幕后运营)","cat":"艺人|幕后|运营","company":"公司/剧组","bossName":"招聘人","bossTitle":"职位","quote":"招聘人一句话","title":"岗位名","salary":"薪资","workLocation":"明确的工作或试镜地点；未确定留空","exp":"经验要求","tags":["≤3个"],"fameReq":30,"duties":["2-3条"],"reqs":["2-3条"]}]}`);
       if (!r) return "未配置 AI，暂无更多";
       const fresh = parseJobs(r.jobs, "aim");
       if (!fresh.length) return "生成失败，请重试";
@@ -559,7 +591,7 @@ export default function BossZhipinApp({ onBack }: { onBack: () => void }) {
   };
 
   useWorldSync("bosspin", async () => {
-    const r = await syncJson<{ jobs?: unknown }>(cfg, game!, "bosspin", "老板直聘", `主角当前名气 ${sim.fame ?? 0}。生成 4 条紧扣当前世界剧情、符合主角职业阶段的新招聘/试镜/选角/${T("gig")}岗位（可来自剧情中出现的公司、剧组、导演、节目）。返回 {"jobs":[{"kind":"artist(艺人试镜/签约)|crew(幕后运营)","cat":"艺人|幕后|运营","company":"公司/剧组","bossName":"招聘人","bossTitle":"职位","quote":"招聘人一句话","title":"岗位名","salary":"薪资","exp":"经验要求","tags":["≤3个"],"fameReq":30,"duties":["2-3条"],"reqs":["2-3条"]}]}`);
+    const r = await syncJson<{ jobs?: unknown }>(cfg, game!, "bosspin", "老板直聘", `主角当前名气 ${sim.fame ?? 0}。生成 4 条紧扣当前世界剧情、符合主角职业阶段的新招聘/试镜/选角/${T("gig")}岗位（可来自剧情中出现的公司、剧组、导演、节目）。返回 {"jobs":[{"kind":"artist(艺人试镜/签约)|crew(幕后运营)","cat":"艺人|幕后|运营","company":"公司/剧组","bossName":"招聘人","bossTitle":"职位","quote":"招聘人一句话","title":"岗位名","salary":"薪资","workLocation":"明确的工作或试镜地点；未确定留空","exp":"经验要求","tags":["≤3个"],"fameReq":30,"duties":["2-3条"],"reqs":["2-3条"]}]}`);
     if (!r) return "未配置 AI，无法联动剧情";
     const fresh = parseJobs(r.jobs, "ai").slice(0, 6);
     if (!fresh.length) return "这次没有新岗位，请稍后再试";
@@ -582,7 +614,7 @@ export default function BossZhipinApp({ onBack }: { onBack: () => void }) {
   const jobs = useMemo<Job[]>(() => {
     const cos = (sim.companies ?? []).length ? sim.companies : COMPANIES.map((c, i) => ({ id: `co_${i}`, prestige: c.prestige }));
     const sorted = [...cos].sort((a, b) => b.prestige - a.prestige);
-    const artist = sorted.map((c, i) => makeArtistJob(c.id, c.prestige, i));
+    const artist = sorted.map((c) => makeArtistJob(c.id, c.prestige));
     // 艺人岗来自世界里真实的公司；幕后 / 运营岗只由 AI 按当前剧情生成，不再用模板岗位
     return [...aiJobs, ...artist, ...moreJobs];
   }, [sim.companies, aiJobs, moreJobs]);

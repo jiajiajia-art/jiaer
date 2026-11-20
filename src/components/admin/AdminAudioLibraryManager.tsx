@@ -194,8 +194,8 @@ export default function AdminAudioLibraryManager() {
           <input className={styles.input} value={form.authorKul} onChange={(e) => setForm((f) => ({ ...f, authorKul: e.target.value }))} placeholder="如：0761481355" />
         </div>
         <div className={styles.formRow}>
-          <span className={styles.label}>标签</span>
-          <input className={styles.input} value={form.tagsText} onChange={(e) => setForm((f) => ({ ...f, tagsText: e.target.value }))} placeholder="顿号 / 逗号分隔，如：悬疑、雨夜" />
+          <label className={styles.label} htmlFor="audio-library-tags">平台分类</label>
+          <input id="audio-library-tags" className={styles.input} value={form.tagsText} onChange={(e) => setForm((f) => ({ ...f, tagsText: e.target.value }))} placeholder="如：悬疑、雨夜（创作者可按分类筛选）" />
         </div>
         <div className={styles.formRow}>
           <span className={styles.label}>音频</span>

@@ -90,7 +90,7 @@ export default function AuthorPreviewChrome() {
             <div className="flex shrink-0 items-center gap-1.5">
               <ApcBtn onClick={() => requestAuthorPreviewRestart()} label="重新开局" />
               <ApcBtn onClick={() => requestAuthorPreviewClearSave()} label="清空测试存档" tone="warn" />
-              <ApcBtn onClick={() => requestAuthorPreviewEnd()} label="返回编辑器" tone="primary" />
+              <ApcBtn onClick={() => requestAuthorPreviewEnd()} label={session.onExit ? "返回审核列表" : "返回编辑器"} tone="primary" />
             </div>
           </div>
         </div>

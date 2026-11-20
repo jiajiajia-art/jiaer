@@ -48,12 +48,10 @@ test("sanitizeCreationBuiltin_只保留系统四项并丢掉旧内置键", () =>
     style: { hidden: true },
     age: { label: "年纪", locked: true, hidden: true },
   });
-  assert.deepEqual(Object.keys(cleaned).sort(), ["age", "gender", "name"]);
+  assert.deepEqual(Object.keys(cleaned).sort(), ["gender", "name"]);
   assert.equal(cleaned.name.label, "名字");
   assert.deepEqual(cleaned.gender.options, ["男", "女", "无"]);
-  assert.equal(cleaned.age.label, "年纪");
-  assert.equal(cleaned.age.locked, undefined);
-  assert.equal(cleaned.age.hidden, undefined);
+  assert.equal(cleaned.age, undefined);
   assert.equal(systemFields.sanitizeCreationBuiltin(undefined), undefined);
 });
 
@@ -96,4 +94,15 @@ test("玩家建角页_只渲染系统四项和作者字段且必填会阻止继�
   for (const label of ["出道身份", "玩家自填字段", "外形风格", "父亲职业", "母亲职业", "出身阶层"]) {
     assert.doesNotMatch(runtime, new RegExp(label));
   }
+});
+
+test("年龄和生日预设保留有效值", () => {
+  assert.deepEqual(systemFields.sanitizeCreationBuiltin({
+    age: { value: "18", label: "年纪" },
+    birthday: { value: "02-29" },
+  }), { age: { value: "18" }, birthday: { value: "2-29" } });
+  assert.deepEqual(systemFields.parseBirthdayPreset("2-29"), { birthMonth: 2, birthDay: 29 });
+  assert.equal(systemFields.sanitizeCreationBuiltin({
+    age: { value: "0" }, birthday: { value: "2-30" },
+  }), undefined);
 });

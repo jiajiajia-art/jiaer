@@ -159,11 +159,13 @@ test('runBatchWith_中止后剩余标aborted_进行中的失败也记aborted', a
 
 test('imageGenBatch_对外入口仍绑定平台生图网关', () => {
   const src = read('lib/imageGenBatch.ts');
-  assert.match(src, /runBatchWith\(generatePlatformImage/);
-  assert.match(src, /retryFailedBatchWith\(generatePlatformImage/);
+  assert.match(src, /generatePlatformImage\(\.\.\.args\)/);
+  assert.match(src, /saveWorkImage\(url, true\)/);
+  assert.match(src, /runBatchWith\(generateCloudScene/);
+  assert.match(src, /retryFailedBatchWith\(generateCloudScene/);
 });
 
-test('ModBatchImageGen_UI接线_data属性_中止重试_复用批量库与素材库', () => {
+test('ModBatchImageGen_UI接线_data属性_中止重试_复用批量队列并回填地点字段', () => {
   const ui = read('components/ModBatchImageGen.tsx');
   for (const attr of [
     'data-batch-image-gen', 'data-batch-scope', 'data-batch-start', 'data-batch-abort',
@@ -172,8 +174,7 @@ test('ModBatchImageGen_UI接线_data属性_中止重试_复用批量库与素材
   assert.match(ui, /runImageGenBatch/);
   assert.match(ui, /retryFailedImageGenBatch/);
   assert.match(ui, /fillEmptyOnly/);
-  assert.match(ui, /rememberImageAsset/);
-  assert.match(ui, /rasterToScenePortraitDataUrl/);
+  assert.match(ui, /collectBatchApplyPatch\(fresh\)/);
   assert.match(ui, /signal: ac\.signal/);
   assert.doesNotMatch(ui, /\b(?:window\.)?(?:alert|confirm|prompt)\(/);
   // 状态文案齐全
@@ -186,13 +187,16 @@ test('ModRoomTreeEditor_挂载批量生图并一次commit回写', () => {
   assert.match(src, /import ModBatchImageGen from "\.\/ModBatchImageGen"/);
   assert.match(src, /<ModBatchImageGen[^>]*imageGen=\{imageGen\}/);
   assert.match(src, /applyBatchPatch\(allRooms, maps, patch\)/);
-  assert.equal((src.match(/\{batchPanel\}/g) ?? []).length, 2, '空态与正常态都要挂');
+  // 功能注释：批量生图已移到地点区底部、跨两栏铺开，空态与正常态共用同一处
+  assert.equal((src.match(/\{batchPanel\}/g) ?? []).length, 1, '只挂一处，空态与正常态共用');
+  assert.match(src, /sm:col-span-2">\{batchPanel\}/);
 });
 
-test('ImagePicker与批量共用rememberImageAsset_不再各写一份素材库逻辑', () => {
-  const picker = read('components/ImagePicker.tsx');
-  const fs = read('lib/freeStyle.ts');
-  assert.match(fs, /export function rememberImageAsset/);
-  assert.match(picker, /rememberImageAsset/);
-  assert.doesNotMatch(picker, /saveAssets\(/);
+test('单张与批量生图上传云端后回填，跳过素材库写入', () => {
+  const gen = read('components/AiImageGen.tsx');
+  assert.match(gen, /await saveWorkImage\(url, scenePortrait\)/);
+  assert.match(gen, /onPickRef\.current\(cloudUrl\)/);
+  for (const path of ['components/AiImageGen.tsx', 'components/ImagePicker.tsx', 'components/ModBatchImageGen.tsx']) {
+    assert.doesNotMatch(read(path), /rememberImageAsset|addTempAsset|keepAsset|saveAssets|rememberArtStyleSample/);
+  }
 });

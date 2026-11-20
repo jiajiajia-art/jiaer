@@ -40,11 +40,11 @@ test('人物线路去掉页面文案和娱乐圈默认路径_路径与AI生成�
   assert.doesNotMatch(paths, />卡片显示</);
 });
 
-test('建角字段去掉娱乐圈载入_系统字段只能改名', () => {
+test('建角字段去掉娱乐圈载入_系统字段不改显示名', () => {
   assert.doesNotMatch(fields, /载入娱乐圈默认选项与联动/);
   assert.doesNotMatch(fields, /loadDefault/);
   assert.doesNotMatch(fields, /RAW_CREATION/);
-  assert.match(fields, /显示名称/);
+  assert.doesNotMatch(fields, /显示名称/);
   assert.match(fields, /系统字段/);
   // 功能注释：系统规则长说明不下页面；只留字段名与徽标
   assert.doesNotMatch(fields, /始终必填、不可隐藏或删除/);

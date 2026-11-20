@@ -6,6 +6,12 @@ import test from 'node:test';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
+test('头像上传和编辑抽屉挂载到 body 后仍有选中样式', () => {
+  const css = readFileSync(join(root, 'src/components/admin/AdminPublicAvatarManager.module.css'), 'utf8');
+  assert.match(css, /\.root,\s*\.uploadOverlay,\s*\.configOverlay\s*\{[^}]*--av-muted:/);
+  assert.match(css, /\.segActive\s*\{[^}]*background:\s*var\(--color-primary\)/);
+});
+
 test('avatarLibrary_标签与匹配文案与后端对齐', async () => {
   const mod = await import(pathToFileURL(join(root, 'src/lib/galgame/avatarLibrary.ts')).href);
   assert.deepEqual(
@@ -163,8 +169,9 @@ test('avatarLibrary_API与导航管理运营页已挂载', () => {
   assert.doesNotMatch(adminMgr, /aria-label="上传入库"/);
   // 功能注释：侧栏文案在 AdminShell 导航配置，面板只挂载管理组件
   const shellNav = readFileSync(join(root, 'src/components/admin-shell/adminNavigation.tsx'), 'utf8');
-  assert.match(shellNav, /adminUi\.nav\.items\.assetCenter|\/admin\/avatars/);
-  assert.match(admin, /AdminPublicAvatarManager/);
+  assert.match(shellNav, /adminUi\.nav\.items\.assetCenter/);
+  assert.doesNotMatch(shellNav, /\/admin\/avatars/);
+  assert.doesNotMatch(admin, /AdminPublicAvatarManager/);
   assert.match(operator, /AdminPublicAvatarManager/);
   assert.match(adminMgr, /uploadKind/);
   assert.match(adminMgr, /user-uploads/);

@@ -27,7 +27,7 @@ test('AttrDef_开局取值含fixed与random_编辑器只用固定数值勾选', 
 });
 
 test('attrUsesRandomStart与attrDiceProblem_范围随机须有最大', () => {
-  assert.equal(lib.attrUsesRandomStart({}), false);
+  assert.equal(lib.attrUsesRandomStart({}), true);
   assert.equal(lib.attrUsesRandomStart({ initMode: 'fixed' }), false);
   assert.equal(lib.attrUsesRandomStart({ initMode: 'random' }), true);
   assert.equal(lib.attrUsesRandomStart({ initMode: 'dice' }), true);
@@ -39,9 +39,11 @@ test('attrUsesRandomStart与attrDiceProblem_范围随机须有最大', () => {
 });
 
 test('attrStartValue_固定用init_随机在最小最大之间', () => {
-  assert.equal(lib.attrStartValue({ init: 12, min: 0, max: 100 }), 12);
-  assert.equal(lib.attrStartValue({ init: 999, min: 0, max: 50 }), 50);
-  assert.equal(lib.attrStartValue({ init: -5, min: 0, max: 50 }), 0);
+  assert.equal(lib.attrStartValue({ initMode: "fixed", init: 12, min: 0, max: 100 }), 12);
+  assert.equal(lib.attrStartValue({ initMode: "fixed", init: 999, min: 0, max: 50 }), 50);
+  assert.equal(lib.attrStartValue({ initMode: "fixed", init: -5, min: 0, max: 50 }), 0);
+  assert.equal(lib.attrStartValue({ init: 50, min: 10, max: 30 }, () => 0.999), 30);
+  assert.equal(lib.attrStartValue({ init: 50 }, () => 0.999), 100);
   // rand=0 → 下限；rand 接近 1 → 上限
   assert.equal(lib.attrStartValue({ init: 0, initMode: 'random', min: 1, max: 6 }, () => 0), 1);
   assert.equal(lib.attrStartValue({ init: 0, initMode: 'random', min: 1, max: 6 }, () => 0.999), 6);
@@ -60,8 +62,8 @@ test('开局写入走playerAttrsFromCreatorDefs_不把随机交给AI', () => {
 });
 
 test('开局取值四种模式_随机锁定选择自定义', async () => {
-  const mod = await import(join(root, 'Romance/src/lib/attrInit.ts'));
-  assert.equal(mod.attrStartMode({}), 'locked');
+  const mod = await import(pathToFileURL(join(root, 'Romance/src/lib/attrInit.ts')).href);
+  assert.equal(mod.attrStartMode({}), 'random');
   assert.equal(mod.attrStartMode({ initMode: 'fixed' }), 'locked');
   assert.equal(mod.attrStartMode({ initMode: 'dice' }), 'random');
   assert.equal(mod.attrStartMode({ initMode: 'custom' }), 'custom');
@@ -69,7 +71,10 @@ test('开局取值四种模式_随机锁定选择自定义', async () => {
   const choice = { init: 1, min: 0, max: 10, initMode: 'choice', options: [{ label: '书香门第', value: 7 }, { label: '', value: 3 }] };
   assert.equal(mod.attrStartMode(choice), 'choice');
   assert.equal(mod.attrChoiceOptions(choice).length, 1);
-  assert.equal(mod.attrStartValue(choice), 7);
+  assert.equal(mod.attrStartValue(choice, () => 0.99), 7);
+  const choices = { ...choice, options: [...choice.options, { label: '商贾世家', value: 4 }] };
+  assert.equal(mod.attrStartValue(choices, () => 0), 7);
+  assert.equal(mod.attrStartValue(choices, () => 0.99), 4);
   assert.equal(mod.attrStartValue({ init: 4, min: 0, max: 10, initMode: 'custom' }), 4);
   const cc = readFileSync(join(root, 'Romance/src/components/CharacterCreate.tsx'), 'utf8');
   assert.match(cc, /data-attr-mode=\{mode\}/);

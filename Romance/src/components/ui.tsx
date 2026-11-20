@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { IconCamera, IconClose, IconSpark } from "../lib/icons";
 import { romancePortalRoot } from "../lib/romancePortalRoot";
 import AvatarLibraryPicker from "./AvatarLibraryPicker";
+import { takenAvatarKeys } from "../game/avatarPools";
 import LocalAvatarCropFlow from "./LocalAvatarCropFlow";
 
 /* —— 终端平铺分节标题：▌CODE 中文 ······ —— */
@@ -95,9 +96,11 @@ export function Modal({ title, onClose, children, footer, panelClassName, heavyB
 }
 
 /* —— 头像（点击打开头像选择：本地上传 / 创作者头像库 / 系统头像库） —— */
-export function Avatar({ src, name, size = 48, onPick, editable = true, square = true, avatarSlot }: { src?: string; name: string; size?: number; onPick?: (dataUrl: string) => void; editable?: boolean; square?: boolean; avatarSlot?: import("../lib/types").AvatarSlot | null }) {
+export function Avatar({ src, name, size = 48, onPick, editable = true, square = true, avatarSlot, excludeAvatars }: { src?: string; name: string; size?: number; onPick?: (dataUrl: string) => void; editable?: boolean; square?: boolean; avatarSlot?: import("../lib/types").AvatarSlot | null; excludeAvatars?: readonly string[] }) {
   const ref = useRef<HTMLInputElement>(null);
   const [lib, setLib] = useState(false);
+  const [broken, setBroken] = useState(false);
+  useEffect(() => { setBroken(false); }, [src]);
   /** 功能注释：本地上传先进裁切+预览，确认后再写入 onPick */
   const [localFile, setLocalFile] = useState<File | null>(null);
   const pick = (f?: File) => {
@@ -115,8 +118,8 @@ export function Avatar({ src, name, size = 48, onPick, editable = true, square =
       style={{ width: size, height: size, ...(square ? { borderRadius: Math.max(6, Math.round(size * 0.18)) } : {}) }}
       aria-label={editable ? `更换${name}的头像` : name}
     >
-      {src ? (
-        <img src={(src) || undefined} alt={name} className={`h-full w-full object-cover ${square ? "object-center" : ""}`} />
+      {src && !broken ? (
+        <img src={(src) || undefined} alt="" className={`h-full w-full object-cover ${square ? "object-center" : ""}`} onError={() => setBroken(true)} />
       ) : (
         <span className="flex h-full w-full items-center justify-center font-serif font-bold text-jade" style={{ fontSize: size * 0.42 }}>
           {initial}
@@ -145,6 +148,7 @@ export function Avatar({ src, name, size = 48, onPick, editable = true, square =
     {lib && onPick && (
       <span className="contents" onClick={(e) => e.stopPropagation()}>
         <AvatarLibraryPicker name={name} current={src} slot={avatarSlot}
+          taken={takenAvatarKeys((excludeAvatars ?? []).map((avatar) => ({ avatar })), src)}
           onPick={(url) => { onPick(url); setLib(false); }}
           onUpload={() => { setLib(false); ref.current?.click(); }}
           onClose={() => setLib(false)} />

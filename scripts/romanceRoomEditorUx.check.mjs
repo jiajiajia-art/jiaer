@@ -58,8 +58,8 @@ test('ensureRoomSceneDescs_空描述按地名补全', async () => {
 
 test('ImagePicker_场景图上传裁切且链接改生图', async () => {
   const picker = read('components/ImagePicker.tsx');
-  assert.match(picker, /fileToScenePortraitDataUrl/);
-  assert.match(picker, /rasterToScenePortraitDataUrl/);
+  assert.match(picker, /saveWorkImage/);
+  assert.match(picker, /scenePortrait/);
   assert.match(picker, /showLink = !scenePortrait/);
   assert.match(picker, /initialPrompt/);
   const portrait = read('lib/scenePortrait.ts');

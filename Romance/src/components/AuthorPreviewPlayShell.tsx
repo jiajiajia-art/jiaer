@@ -62,7 +62,7 @@ function PreviewStatusCard({
             onClick={onBack}
             className="rounded-xl border border-line px-5 py-2.5 text-sm font-semibold text-ink transition hover:border-jade hover:text-jade"
           >
-            返回编辑器
+            {getAuthorPreviewSession()?.onExit ? "返回审核列表" : "返回编辑器"}
           </button>
         ) : null}
       </div>
@@ -112,7 +112,7 @@ function MissingBanner({ labels }: { labels: string[] }) {
     >
       <b>以下内容仍缺失，预览可能不完整：</b>
       <span className="ml-1">{labels.join("、")}</span>
-      <span className="ml-1 text-ink-soft">（可返回编辑器补生成或手填）</span>
+      {!getAuthorPreviewSession()?.onExit && <span className="ml-1 text-ink-soft">（可返回编辑器补生成或手填）</span>}
     </div>
   );
 }
@@ -154,7 +154,7 @@ export default function AuthorPreviewPlayShell({ children }: { children: ReactNo
     body = (
       <PreviewStatusCard
         title="无法启动预览"
-        detail="模组草稿未能挂到游戏引擎。请查看原因后重试，或返回编辑器修改。"
+        detail={session?.onExit ? "待审快照加载失败。请查看原因后重试，或返回审核列表。" : "模组草稿未能挂到游戏引擎。请查看原因后重试，或返回编辑器修改。"}
         errors={boot.errors}
         onRetry={retry}
         onBack={back}

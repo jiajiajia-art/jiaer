@@ -4,7 +4,7 @@
  * 玩法 Mod = 创作者给某一剧本加的可选玩法（孕育 / 出行 / 座驾 / 通告事业等），用「添加玩法」启用。
  * 禁止把娱乐圈骨架、校园骨架等世界观底子放进本目录；那些不是创作者要勾的玩法。
  * 头衔是可选玩法（pack-titles）：需要的剧本才添加，未添加不显示配置区。
- * 关系玩法（pack-relations）：表白 / 婚礼 / 牵线 / 伴侣加成；未添加不显示配置与人物页表白婚礼入口。
+ * 关系玩法（表白 / 婚礼 / 牵线 / 伴侣加成）是游戏本体，在编辑器①基础直接配置，不进本目录。
  * 存档结构、登录、档案、人脉、设置 = 游戏本体功能，不进本目录；基础设定、建角、地点、人物、事件也在编辑器其它页直接配。
  * 本目录不是游戏本体；本体功能不进本目录。
  * 编辑器按「已安装组件」动态显示配置，不再硬编码通告/孕育/座驾等入口。
@@ -153,7 +153,7 @@ export const LOCAL_PLAY_MOD_CATALOG: LocalPlayModCatalogItem[] = [
     {
       downloads: 3100,
       detail:
-        "声誉舆情包提供公众形象经营与声誉危机事件：流言、对立者与公关抉择，关注者、口碑等叫法跟随「玩法叫法」。作者可改触发与字段结算，可选挂「形象」底栏。",
+        "声誉舆情包提供公众形象经营与声誉危机事件：流言、对立者与公关抉择。作者可改触发与字段结算，可选挂「形象」底栏。",
     },
   ),
   withStoreDetail(
@@ -283,27 +283,6 @@ export const LOCAL_PLAY_MOD_CATALOG: LocalPlayModCatalogItem[] = [
   ),
   withStoreDetail(
     {
-      id: "pm-pack-relations",
-      slug: "pack-relations",
-      name: "关系玩法",
-      description: "表白门槛、婚礼费用与好感、NPC 牵线、伴侣加成",
-      priceKk: 0,
-      version: "1.0.0",
-      defaultNavLabel: "",
-      needsNavEntry: false,
-      editorPanels: ["relations"],
-      iconSvg: ICON('<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/>'),
-      romanceAddonId: "pack-relations",
-      componentKind: "gameplay",
-    },
-    {
-      downloads: 2560,
-      detail:
-        "关系玩法为可选恋爱向组件：表白门槛、婚礼费用与好感、NPC 牵线开关、伴侣加成。从商店加进作品后才出现配置区，人物页才显示表白与婚礼入口；未添加的剧本不出现整块关系玩法。",
-    },
-  ),
-  withStoreDetail(
-    {
       id: "pm-pack-faction-rep",
       slug: "pack-faction-rep",
       name: "阵营声望",
@@ -324,6 +303,20 @@ export const LOCAL_PLAY_MOD_CATALOG: LocalPlayModCatalogItem[] = [
     },
   ),
 ];
+
+/**
+ * 功能注释：货架没返回的官方玩法仍应出现在「添加玩法」里。
+ * 关系玩法已进游戏本体，不补进商店。
+ */
+export function officialGameplayPacksNotOnShelf(known: ReadonlySet<string>): LocalPlayModCatalogItem[] {
+  return LOCAL_PLAY_MOD_CATALOG.filter((item) => {
+    if (item.componentKind !== "gameplay") return false;
+    if (item.slug === "pack-relations" || item.id === "pm-pack-relations") return false;
+    if (known.has(item.slug) || known.has(item.id)) return false;
+    return !(item.romanceAddonId && known.has(item.romanceAddonId));
+  });
+}
+
 /**
  * 功能注释：玩家菜单「玩法 Mod」入口（支票/账单）是否展示。
  * 仅当作品装了演艺事业（通告支票）或生活开销（账单槽）等对应玩法时出现；都没选则菜单里也不出现。
@@ -365,23 +358,18 @@ export function recommendPlayModsFromSetting(
     if (!hits.some((h) => h.id === item.id)) hits.push(item);
   };
 
-  if (/娱乐|明星|经纪人|通告|影视|综艺|偶像|演艺|出道|片场|经纪/.test(text)) {
-    add("pack-career");
-    add("pack-image");
-    add("pack-paper");
-  }
-  if (/怀孕|孕育|结婚|生育|孩子|孕期/.test(text)) add("pack-pregnancy");
-  if (/交通|出行|公交|地铁|打车|车费|怎么去/.test(text)) add("pack-transport");
-  if (/座驾|购车|开车|跑车|豪车/.test(text)) {
-    add("pack-transport");
-    add("pack-cars");
-  }
-  if (/吃饭|伙食|生活开销|房租|账单|租房/.test(text)) add("pack-living");
-  if (/头衔|称号|成就称号|佩戴头衔/.test(text)) add("pack-titles");
-  if (/表白|婚礼|恋爱|结婚|伴侣|牵线|好感门槛|关系玩法/.test(text)) add("pack-relations");
-  if (/帮派|门派|宗门|阵营|派系|宫斗|站队|声望|势力/.test(text)) add("pack-faction-rep");
+  // 功能注释：一词只推荐对应的那一个包。明星/结婚/吃饭/开车/站队/声望这类常见词不再成套带出。
+  if (/通告|经纪人|经纪公司|演艺|出道|片场|接戏|试镜|影视项目/.test(text)) add("pack-career");
+  if (/舆情|黑粉|热搜|公关危机|人设危机/.test(text)) add("pack-image");
+  if (/娱乐周报|八卦小报|周报头条/.test(text)) add("pack-paper");
+  if (/怀孕|孕育|孕期|分娩|生孩子/.test(text)) add("pack-pregnancy");
+  if (/公交|地铁|打车|车费|交通费|出行方式/.test(text)) add("pack-transport");
+  if (/购车|座驾|跑车|豪车|买车/.test(text)) add("pack-cars");
+  if (/伙食|生活开销|每周账单|住行账单/.test(text)) add("pack-living");
+  if (/头衔|佩戴头衔|成就称号/.test(text)) add("pack-titles");
+  if (/门派|宗门|帮派|阵营|派系|宫斗/.test(text)) add("pack-faction-rep");
 
-  return hits.slice(0, 6);
+  return hits.slice(0, 4);
 }
 
 export function catalogBySlug(slug: string) {
@@ -416,7 +404,6 @@ export const PLAY_MOD_FEATURE_BY_SLUG = Object.freeze({
   "pack-pregnancy": Object.freeze(["pregnancy"] as const),
   "pack-transport": Object.freeze(["transport"] as const),
   "pack-cars": Object.freeze(["cars"] as const),
-  "pack-relations": Object.freeze(["relationsPlay"] as const),
   "pack-faction-rep": Object.freeze(["factionRep"] as const),
 });
 

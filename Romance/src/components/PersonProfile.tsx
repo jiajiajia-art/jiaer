@@ -5,7 +5,7 @@ import { canRomance, romanceFixedOff, isFamilyNpc, hasPartner } from "../game/lo
 import { romanticCapOf } from "../worlds/star2005/content";
 import { ageLabel, moodLine, ownField } from "@/lib/npcIdentity";
 import { useGame } from "../store/gameCtx";
-import { Chip, Modal } from "./ui";
+import { Avatar, Chip, Modal } from "./ui";
 import { feature, LIVE_PERSON_BY_ID as PERSON_BY_ID, worldPersonById as profileOf } from "../mods/registry";
 import { IconHeart, IconScroll, IconSend, IconVolume } from "../lib/icons";
 import { speakOut, voiceOf } from "./phone/screenShare";
@@ -15,7 +15,6 @@ import {
   ProfileGroup,
   ProfileRelations,
   ProfileTabs,
-  StatBars,
   affiliationOf,
   relationRefsOf,
 } from "./personFields";
@@ -24,7 +23,7 @@ import {
  * 功能注释：人物档案弹窗主体——上下两块，色/描边/圆角一律读皮肤变量。
  * 上：头像 + 名 + 可攻略 + 身份标签 + 爱慕/好感；下：资料 / 情感 页签。
  */
-export default function PersonProfile({ pid, name, known = true }: { pid: string; name?: string; known?: boolean }) {
+export default function PersonProfile({ pid, name, known = true, showEncounterName = false, showEncounterAvatar = false }: { pid: string; name?: string; known?: boolean; showEncounterName?: boolean; showEncounterAvatar?: boolean }) {
   const { game, commitGame, setRomanceable, setRelValue, simContact, simConfess, busy } = useGame();
   const [resumeHint, setResumeHint] = useState(false);
   if (!game) return null;
@@ -51,9 +50,8 @@ export default function PersonProfile({ pid, name, known = true }: { pid: string
   const family = isFamilyNpc(pid);
   const bound = hasPartner(s, pid) || !!s.spouses?.includes(pid);
   const rels = relationRefsOf(game, pid);
-  const stats = (profile?.stats ?? (n as { stats?: Record<string, number> } | undefined)?.stats) as Record<string, number> | undefined;
   const confess = canConfess(s, pid);
-  // 功能注释：未添加「关系玩法」包时不展示表白入口
+  // 功能注释：表白入口属于游戏本体的关系玩法
   const relationsPlayOn = feature("relationsPlay");
 
   const toggleRomance = () => {
@@ -66,17 +64,21 @@ export default function PersonProfile({ pid, name, known = true }: { pid: string
       <div className="flex flex-col gap-3 pt-1">
         <section className="rounded-[var(--radius-ui-lg)] border border-line bg-paper p-3.5 shadow-[var(--shadow-ui)]">
           <div className="flex items-start gap-3.5">
-            <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-ui)] border border-dashed border-line bg-paper-2">
-              <p className="font-serif text-[28px] font-black text-ink-soft/60">？</p>
-            </div>
+            {showEncounterAvatar && n?.avatar ? (
+              <Avatar src={n.avatar} name={showEncounterName ? nm : "？"} size={72} editable={false} />
+            ) : (
+              <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-ui)] border border-dashed border-line bg-paper-2">
+                <p className="font-serif text-[28px] font-black text-ink-soft/60">？</p>
+              </div>
+            )}
             <div className="min-w-0 flex-1">
-              <p className="font-serif text-[22px] font-black tracking-[0.18em] text-ink">？？？</p>
+              <p className="font-serif text-[22px] font-black text-ink">{showEncounterName && nm ? nm : "？？？"}</p>
               <Chip tone="gold">尚未结识</Chip>
             </div>
           </div>
         </section>
         <p className="rounded-[var(--radius-ui)] border border-line bg-paper/70 px-3.5 py-2.5 text-[13px] leading-[22px] text-ink/85">
-          创作者已经写过这个人，但你还没结识——姓名与面目都用？？？遮住。去世界里走走、当面搭话，结识后才会揭开档案与叙述。
+          {showEncounterName ? "这位人物已经在剧情中登场。点击「结识」后可查看人物档案。" : "你还没结识这位人物。见面并结识后可查看人物档案。"}
         </p>
       </div>
     );
@@ -167,7 +169,7 @@ export default function PersonProfile({ pid, name, known = true }: { pid: string
             )}
             <div className="mt-2.5 space-y-0.5 border-t border-line/70 pt-2">
               <BondMeterRow
-                label="好感"
+                label="友好"
                 value={aff}
                 pct={((aff + 100) / 200) * 100}
                 min={-100}
@@ -205,14 +207,7 @@ export default function PersonProfile({ pid, name, known = true }: { pid: string
               body: (
                 <div>
                   {bio ? <p className="mb-3 text-[13px] leading-relaxed text-ink/85">{bio}</p> : null}
-                  {/* 只有带能力数值的人物（艺人等）才展示个人能力；普通 NPC 没有这套数值，不显示一排空条 */}
-                  {stats && Object.values(stats).some((v) => typeof v === "number") ? (
-                    <ProfileGroup title="个人能力">
-                      <div className="py-2">
-                        <StatBars stats={stats} />
-                      </div>
-                    </ProfileGroup>
-                  ) : null}
+                  {/* 功能注释：人物档案不再展示「个人能力」栏 */}
                 </div>
               ),
             },

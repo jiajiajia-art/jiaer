@@ -25,6 +25,9 @@ test('romance_系统头像库_对接平台API与分组', async () => {
   // 未加载时 systemPools 必须返回空数组，禁止假数据兜底
   assert.match(pools, /if \(!platformSystemPoolsLoaded\) return \[\]/);
   assert.doesNotMatch(editor, /c\.images\.slice/);
+  assert.match(editor, /官方风格库/);
+  assert.match(editor, /stylePacks/);
+  assert.doesNotMatch(editor, /PUBLIC_AVATAR_CATS/);
   assert.match(editor, /图源平台入库/);
 
   const items = [
@@ -62,6 +65,10 @@ test('romance_系统头像库_对接平台API与分组', async () => {
   const animeOnly = lib.groupPlatformAvatars(items, { stylePack: 'anime' });
   assert.ok(animeOnly.some((g) => g.name === '青年女性' && g.images.length === 1));
   assert.equal(animeOnly.some((g) => g.name === '青年男性'), false);
+  const both = lib.groupPlatformAvatars(items, { stylePacks: ['anime', 'realistic'] });
+  assert.equal(both.filter((g) => g.name === '青年女性' || g.name === '青年男性').length, 2);
+  const none = lib.groupPlatformAvatars(items, { stylePacks: [] });
+  assert.equal(none.length, 0);
   assert.equal(lib.PLATFORM_AVATAR_GROUPS.length >= 4, true);
   assert.equal(typeof lib.fetchPlatformStylePackOptions, 'function');
   assert.equal(typeof lib.regroupCachedPlatformAvatarPools, 'function');

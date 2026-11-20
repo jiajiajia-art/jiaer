@@ -97,7 +97,9 @@ test('index_css_letter皮肤_纸笺背景_不改modern', () => {
   assert.match(css, /\[data-comms-skin="letter"\]/);
   assert.match(css, /\[data-wx-chat-bg="default"\]/);
   // 所有传讯规则都必须挂在 letter 选择器下，避免污染 modern
-  const block = css.slice(css.indexOf('P4.1 传讯'));
+  const blockStart = css.indexOf('P4.1 传讯');
+  const blockEnd = css.indexOf('/* ═══ 通讯 App 古风皮肤', blockStart);
+  const block = blockEnd > blockStart ? css.slice(blockStart, blockEnd) : css.slice(blockStart);
   for (const line of block.split('\n').filter((l) => /\{\s*$|^\[/.test(l) && l.includes('[data-'))) {
     assert.match(line, /data-comms-skin="letter"/);
   }

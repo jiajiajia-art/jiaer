@@ -18,7 +18,7 @@ test('人物资料页_不出现专属立绘模块', () => {
   assert.doesNotMatch(npcTab, /PortraitUpload/);
   assert.doesNotMatch(npcTab, /setNpcPortrait/);
   assert.doesNotMatch(npcTab, /还没有立绘/);
-  assert.match(npcTab, /title="个人能力"/);
+  assert.doesNotMatch(npcTab, /title="个人能力"/);
 });
 
 test('其它入口_仍可上传立绘', () => {

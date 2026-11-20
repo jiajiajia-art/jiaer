@@ -13,6 +13,7 @@ import { playModStoreApi } from '../../api/playMod/playModApi';
 import { platformAppsApi, type PlatformApp } from '../../api/platform/platformAppsApi';
 import { getImageUrl } from '../../utils/constants';
 import toast from 'react-hot-toast';
+import { PLAY_MOD_CREATE_LOCKED, PLAY_MOD_CREATE_LOCKED_HINT } from '../../../Romance/src/lib/playModCreate';
 import {
   KIND_STORAGE_KEY,
   PHONE_APP_CREATE_PATH,
@@ -176,6 +177,10 @@ const ShelfMyMods: React.FC<Props> = ({ token, keyword, kind, onKindChange, onBe
   const noun = kind === 'play' ? t('bookshelfUi.myMods.playModNoun') : t('bookshelfUi.myMods.appNoun');
 
   const go = (path: string) => {
+    if (kind === 'play' && PLAY_MOD_CREATE_LOCKED && path.includes('createPlayMod')) {
+      toast(PLAY_MOD_CREATE_LOCKED_HINT);
+      return;
+    }
     onBeforeLeave?.();
     navigate(path);
   };

@@ -2,7 +2,7 @@ import { wallet } from "../game/wallet";
 import { THEATER_FORMATS, type TheaterFormatId } from "../lib/theaterFormats";
 import { THEATER_ICON } from "./theaterIcons";
 import TheaterStage from "./TheaterStage";
-import { useConfirm } from "./EditorKit";
+import { FrameOverlay } from "./FrameDiy";
 import { turnsInCurrentScene } from "../lib/sceneTurns";
 import IntelAsk from "./IntelAsk";
 import { npcFactionOf, shopPrice } from "../game/factions";
@@ -16,9 +16,8 @@ import { STAT_LABELS } from "../game/data";
 import { limitDays } from "../lib/types";
 import { resolveStart, spotUnlocked } from "../game/mapStart";
 import { autoPos, roomPin } from "../game/mapPos";
-import { MAIN_SHEET, jumpOf, mapSheets, sheetOf } from "../game/mapSheets";
-import { homePlaceOf } from "../game/homeSpot";
-import { ProfileRelations, ProfileHero, RelTag, ProfileBasics, ProfileBio, ProfilePlaces, ProfileMemory, PLAYER_REF, relationRefsOf } from "./personFields";
+import { jumpOf, playableMapSheets, sheetOf } from "../game/mapSheets";
+import { ProfileRelations, ProfileHero, RelTag, ProfileBasics, ProfileBio, ProfileMemory, PLAYER_REF, relationRefsOf } from "./personFields";
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { isAuthorPreview } from "../lib/authorPreview";
 import { playPrefsOf } from "../lib/ai";
@@ -26,13 +25,13 @@ import { useGame } from "../store/gameCtx";
 import TalkPanel from "./TalkPanel";
 import { pregWeeks } from "../game/pregnancy";
 import { wxResolve } from "../game/phone";
-import { Segments, LiveNarration, Thoughts, ErrorBanner, sameTurnError } from "./StoryTab";
+import { Segments, LiveNarration, Thoughts, ErrorBanner, sameTurnError, TurnActions } from "./StoryTab";
 import { introState } from "../game/npcIntro";
 import ProducerParley from "./ProducerParley";
 import GigBoard from "./GigBoard";
 import { HeartMeter, Modal, Chip, Avatar } from "./ui";
 import PersonProfile from "./PersonProfile";
-import { IconCalendar, IconCheck, IconChevronRight, IconExternal, IconEye, IconHeart, IconMessage, IconPin, IconScroll, IconSpark, IconSparkle, IconWand, IconDrama, IconForward, IconHourglass, IconFlag, StarRating } from "../lib/icons";
+import { IconCalendar, IconCheck, IconChevronRight, IconExternal, IconEye, IconHeart, IconMessage, IconPin, IconScroll, IconSpark, IconSparkle, IconWand, IconDrama, IconForward, IconHourglass, StarRating } from "../lib/icons";
 import {
   roomDesc,
   directionHint,
@@ -61,7 +60,7 @@ import {
 } from "../game/mud";
 import { CARS, carById, resaleValue, attrLabelOf } from "../game/data";
 import { BRANCH_POINTS } from "../store/GameContext";
-import { tripPoints, apPerMove } from "../game/mud";
+import { tripPoints, apPerMove, roomHiddenFrom } from "../game/mud";
 import { customActsOf, customItemsOf, firedOf, spotBackground, spotDesc, spotEventsOf, spotName, activityApCost } from "../game/mapedits";
 import { isArrivalBoilerplate } from "../lib/newLocation";
 import type { FamilyRef } from "../worlds/star2005/content";
@@ -71,7 +70,7 @@ import { categoryLabel, roleLabel } from "../game/projects";
 import { dayDateLabel, dowOf, pendingTodos, startDateLabel, type GameState as SimState } from "../game/logic";
 import { homeMainQuest } from "../lib/homeMainQuest";
 import { buildActionIdeas, eventOptionIndexes } from "../lib/actionIdeas";
-import { getWorldStorylines } from "../mods/registry";
+import { getWorldStorylines, getWorldEventDates } from "../mods/registry";
 import { liveTerm as T } from "../mods/live";
 
 
@@ -275,6 +274,8 @@ function MapNode({
             className="pointer-events-none absolute left-1/2 top-[92%] h-3 w-7 -translate-x-1/2 rounded-[100%] bg-coral/35 blur-[3px]"
           />
         )}
+        {edits?.icon ? (
+          <>
         <svg width={current ? 28 : 22} height={current ? 36 : 28} viewBox="0 0 28 35" aria-hidden className="drop-shadow-[0_3px_5px_rgba(0,0,0,0.38)]">
           <path d="M14 1C6.8 1 1 6.6 1 13.6 1 23 14 34 14 34s13-11 13-20.4C27 6.6 21.2 1 14 1z"
             fill={current ? "var(--coral)" : "var(--jade)"} stroke="white" strokeWidth="1.6" />
@@ -283,7 +284,14 @@ function MapNode({
         {edits?.icon && (/^(data:|https?:|\/)/.test(edits.icon)
           ? <img src={(edits.icon) || undefined} alt="" className="pointer-events-none absolute left-1/2 top-[38%] h-[13px] w-[13px] -translate-x-1/2 -translate-y-1/2 rounded-full object-cover" />
           : <span className="pointer-events-none absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2 text-[10px] leading-none">{edits.icon}</span>)}
-        {current && <span className="pointer-events-none absolute left-1/2 top-[34%] h-8 w-8 -translate-x-1/2 -translate-y-1/2 animate-ping rounded-full bg-coral/30" />}
+          </>
+        ) : (
+          <svg width={current ? 28 : 24} height={current ? 34 : 29} viewBox="0 0 28 34" aria-hidden className="drop-shadow-[0_3px_4px_rgba(0,0,0,0.25)]">
+            <path d="M14 32S2 21 2 14a12 12 0 0 1 24 0c0 7-12 18-12 18Z" fill={current ? "var(--coral)" : "var(--jade-deep)"} stroke="white" strokeWidth="1.6" />
+            {current ? <path d="m8 14 6-5 6 5m-10-1v6h8v-6" fill="none" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /> : <circle cx="14" cy="14" r="4" fill="white" />}
+          </svg>
+        )}
+        {current && edits?.icon && <span className="pointer-events-none absolute left-1/2 top-[34%] h-8 w-8 -translate-x-1/2 -translate-y-1/2 animate-ping rounded-full bg-coral/30" />}
         {alert && <span className="pointer-events-none absolute -right-2 -top-1 h-[14px] w-[14px] animate-ping rounded-full bg-red-500/60" />}
         {alert && (
           <span className="absolute -right-2 -top-1 flex h-[14px] w-[14px] items-center justify-center rounded-full bg-red-600 text-[10px] font-black leading-none text-white shadow ring-2 ring-white">
@@ -358,26 +366,25 @@ function CityMap({ s, onPick }: { s: SimState; onPick: (id: string) => void; wid
 
   const worldMap = getWorldMap();
   // 多底图：箭头切换；开图时停在玩家所在地点的底图
-  const sheets = mapSheets(config);
-  const [sheetId, setSheetId] = useState(() => sheetOf(mapEdits, cur, sheets));
+  const contentMaps = getWorldMaps();
+  const rooms = getWorldRooms();
+  const sheets = playableMapSheets(contentMaps, config);
+  const roomMapId = (id: string) => rooms[id]?.mapId ?? rooms[roomParent(id) ?? ""]?.mapId;
+  const [sheetId, setSheetId] = useState(() => sheetOf(mapEdits, cur, sheets, roomMapId(cur)));
   const sheetIdx = Math.max(0, sheets.findIndex((x) => x.id === sheetId));
   const sheet = sheets[sheetIdx];
   const stepSheet = (d: number) => setSheetId(sheets[(sheetIdx + d + sheets.length) % sheets.length].id);
   // 功能注释：优先手绘底图 → 大地图层 worldMaps.bg（生图/上传）→ 旧 MapVisuals.background
-  const contentMaps = getWorldMaps();
-  const contentMapBg =
-    contentMaps.find((m) => m.id === sheet.id)?.bg
-    || (sheet.id === MAIN_SHEET ? contentMaps[0]?.bg : undefined);
-  const mapBg = sheet.bgUrl || contentMapBg || (sheet.id === MAIN_SHEET ? worldMap.background : undefined);
-  const mapAlt = worldMap.backgroundAlt ?? contentMaps.find((m) => m.id === sheet.id)?.name ?? contentMaps[0]?.name ?? "地图";
+  const mapBg = sheet.bgUrl || (sheetIdx === 0 ? worldMap.background : undefined);
+  const mapAlt = sheet.name;
   // 娱乐圈沿用手绘点位；其它世界观铺出全部房间（自动排布）
   // 点位跟随模组：当前世界的全部房间都上图；有手绘坐标的用手绘，没有的自动排布（叠加包新增地点也会出现）
   // 舆图只放顶层地点；子地点（正殿、禅房……）在所属地点里逐层进入
-  const roomIds = Object.keys(getWorldRooms()).filter((id) => !roomParent(id));
+  const roomIds = Object.keys(rooms).filter((id) => !roomParent(id));
   const hotspotIds = Object.keys(getWorldMap().hotspots?.panorama ?? {}).filter((id) => roomIds.includes(id));
-  const displayNodes = [...hotspotIds, ...roomIds.filter((id) => !hotspotIds.includes(id))].filter((id) => (sheets.length < 2 || sheetOf(mapEdits, id, sheets) === sheet.id) && (id === homeRoomOf(game) || spotUnlocked(mapEdits, id, s))); // 家永远在地图上
+  const displayNodes = [...hotspotIds, ...roomIds.filter((id) => !hotspotIds.includes(id))].filter((id) => sheetOf(mapEdits, id, sheets, roomMapId(id)) === sheet.id && (id === homeRoomOf(game) || (spotUnlocked(mapEdits, id, s) && !roomHiddenFrom(s, id)))); // 家永远在地图上；「先藏起来」的地点未到访/未解锁前不上图（B-05）
   const jumpFor = (id: string) => {
-    const to = jumpOf(mapEdits, id, sheets);
+    const to = jumpOf(mapEdits, id, sheets, roomMapId(id));
     const t = to ? sheets.find((x) => x.id === to) : undefined;
     return t ? { name: t.name, go: () => { setSheetId(t.id); scrollRef.current?.scrollTo({ left: 0 }); } } : undefined;
   };
@@ -390,10 +397,6 @@ function CityMap({ s, onPick }: { s: SimState; onPick: (id: string) => void; wid
       behavior: "smooth",
     });
   };
-
-  const legendText = displayNodes.length <= 1
-    ? "你在此处 · 探索后会点亮更多地点"
-    : `已点亮 ${displayNodes.length} 处 · 点图钉前往`;
 
   return (
     <div className="city-map-stage relative flex min-h-0 w-full flex-1 flex-col overflow-hidden border-b border-line">
@@ -454,12 +457,6 @@ function CityMap({ s, onPick }: { s: SimState; onPick: (id: string) => void; wid
           {displayNodes.map((id) => (
             <MapNode key={id} s={s} id={id} current={id === cur} onPick={onPick} mode="single" mapEdits={mapEdits} jump={jumpFor(id)} />
           ))}
-          {sheets.length < 2 ? (
-            <div className="city-map-legend" aria-hidden>
-              <span className="city-map-legend__dot" />
-              <span className="truncate">{legendText}</span>
-            </div>
-          ) : null}
         </div>
       )}
     </div>
@@ -532,11 +529,12 @@ export function SceneSpot({ spot, active, index }: { spot: Spot; active: boolean
   );
 }
 
-/* 功能注释：在场只露方头像，不套外框、不挂名标；初遇只标「初」 */
-function PersonCard({ name, known: met, named, active, onClick, avatar, firstMeet }: { name: string; role?: string; known: boolean; named?: boolean; active: boolean; onClick: () => void; avatar?: string; firstMeet?: boolean }) {
+/* 在场头像下显示玩家当前知道的称呼。 */
+function PersonCard({ name, known: met, named, encounterLabel, active, onClick, avatar, firstMeet }: { name: string; known: boolean; named?: boolean; encounterLabel?: string; active: boolean; onClick: () => void; avatar?: string; firstMeet?: boolean }) {
   const known = met || !!named;
+  const label = met ? name : encounterLabel || "陌生人";
   return (
-    <button onClick={onClick} aria-pressed={active} aria-label={firstMeet ? `初遇 ${name}` : known ? name : "陌生人"} className="relative shrink-0">
+    <button onClick={onClick} aria-pressed={active} aria-label={firstMeet ? `初遇 ${label}` : label} className="relative flex min-w-10 max-w-24 shrink-0 flex-col items-center gap-1">
       <span className={`grid h-10 w-10 place-items-center overflow-hidden rounded-[10px] border text-[14px] font-bold transition ${
         active
           ? "border-jade bg-jade text-paper-2 ring-2 ring-jade/30 scale-105"
@@ -544,10 +542,11 @@ function PersonCard({ name, known: met, named, active, onClick, avatar, firstMee
             ? "border-line/70 bg-paper text-jade"
             : "border-line/70 bg-paper-2 text-ink-soft"
       }`}>
-        {known && avatar ? <img src={(avatar) || undefined} alt="" className="h-full w-full object-cover" /> : known ? name.slice(0, 1) : (
+        {known && avatar ? <img src={(avatar) || undefined} alt="" className="h-full w-full object-cover" /> : met ? name.slice(0, 1) : (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-ink-soft/80" aria-hidden><circle cx="12" cy="8.2" r="4" /><path d="M4.5 20.5c.8-4 3.9-6.3 7.5-6.3s6.7 2.3 7.5 6.3z" /></svg>
         )}
       </span>
+      <span className="w-full break-words text-center text-[11px] leading-tight text-ink">{label}</span>
       {firstMeet && (
         <span className="absolute -right-0.5 -top-0.5 rounded-[5px] bg-jade px-1 py-px text-[9px] font-bold leading-none text-white">初</span>
       )}
@@ -693,9 +692,7 @@ function SubMapView({ map, kids, onGo }: { map: string; kids: ChildEntry[]; onGo
             <button key={k.id} type="button" disabled={!k.ok} onClick={() => k.ok && onGo(k.id)} title={k.ok ? k.desc.slice(0, 60) : k.note}
               className="group absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 disabled:cursor-not-allowed"
               style={{ left: `${p.x}%`, top: `${p.y}%` }}>
-              <span className={`grid h-4 w-4 place-items-center rounded-full border-2 border-white shadow ${k.ok ? (k.visited ? "bg-gold" : "bg-jade") : "bg-ink-soft/70"}`}>
-                <span className="h-1.5 w-1.5 rounded-full bg-white" />
-              </span>
+              <span className="glow-pin" data-tone={k.ok ? (k.visited ? "visited" : undefined) : "off"} />
               <span className={`whitespace-nowrap rounded-md px-1.5 py-px text-[11px] font-bold shadow ${k.ok ? "bg-white/90 text-ink group-hover:bg-white" : "bg-black/55 text-white/70"}`}>{k.name}</span>
             </button>
           );
@@ -756,20 +753,21 @@ function LocationHero({ s, spots, activeKey, onOpenMap, onGo, fill, novelCard, b
         <path d="M9 4 3 6.5V20l6-2.5 6 2.5 6-2.5V4l-6 2.5L9 4z" />
         <path d="M9 4v13.5M15 6.5V20" />
       </svg>
-      <span>外出</span>
+      <span className="scene-story-font">外出</span>
     </button>
   );
   const bgLayer = (
     <>
-      {src ? (
+      <div className="absolute inset-0 bg-gradient-to-b from-jade-deep/40 to-ink/30" aria-hidden />
+      {src && (
         <img
+          key={src}
           src={src}
-          alt={title ?? "所在地"}
+          alt=""
+          onError={(event) => { event.currentTarget.hidden = true; }}
           loading="lazy"
           className="scene-img absolute inset-0 h-full w-full object-cover object-center"
         />
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-b from-jade-deep/40 to-ink/30" aria-hidden />
       )}
       <div className="pointer-events-none absolute inset-0 scene-dim bg-gradient-to-t from-black/75 via-black/25 to-black/5" aria-hidden />
     </>
@@ -788,53 +786,71 @@ function LocationHero({ s, spots, activeKey, onOpenMap, onGo, fill, novelCard, b
   );
   // 功能注释：小说模式 → 场景铺满 + 内容卡；游戏 fill（作者预览）→ 正文仍直接叠图
   if (fill && novelCard) {
+    // 功能注释：画面边框（含藤蔓）挂在阅读卡外圈；卡内 overflow 剪裁正文，外层留白让卷须探出
+    const cardFrame = theme.gameFrame;
+    const vinePad = cardFrame?.style === "vine" ? "px-3 pb-3 pt-4" : "px-4 pb-2 pt-3";
     return (
       <div data-scene-layout="fill" data-novel-card="1" className="relative h-full min-h-0 w-full overflow-hidden bg-ink/20">
         <div className="absolute inset-0 overflow-hidden">{bgLayer}</div>
         {/* 功能注释：阅读卡铺满场景区；顶边多留一点露出场景，底边留给下方输入坞 */}
-        <div className="absolute inset-0 z-[15] flex min-h-0 flex-col items-stretch gap-1 px-4 pb-2 pt-3">
-          <div
-            data-tour="story"
-            data-dstyle={theme.dialogStyle ?? "soft"}
-            className="novel-read-card relative flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[var(--radius-ui-lg)] border border-line text-ink shadow-[var(--shadow-ui-lift)] backdrop-blur-[2px]"
-          >
-            <div className="flex shrink-0 flex-col gap-1.5 border-b border-line/70 px-3 py-2.5">
-              {/* 功能注释：子地点标签与外出同一行，塞进标题与外出之间的空位 */}
-              <div className="flex items-center gap-2">
-                {/* 功能注释：地点/天气用同一 14px 图标列网格左对齐，文案起笔在同一竖线 */}
-                <div className="grid min-w-0 shrink grid-cols-[14px_minmax(0,1fr)] items-center gap-x-1.5 gap-y-0.5">
-                  <IconPin width={14} height={14} className="shrink-0 text-jade" aria-hidden />
-                  <p className="truncate text-[13.5px] font-bold text-ink">{title || "所在地"}</p>
-                  {weather ? (
-                    <>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 text-gold" aria-hidden>
-                        <circle cx="12" cy="12" r="4" />
-                        <path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8l1.8-1.8M18 6l1.8-1.8" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" />
-                      </svg>
-                      <p className="truncate text-[11.5px] text-ink-soft">{weather}</p>
-                    </>
-                  ) : null}
-                </div>
-                {onGo && (
-                  <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5">
-                    <TreeNav s={s} onGo={onGo} tone="card" mode="actions" />
+        <div className={`absolute inset-0 z-[15] flex min-h-0 flex-col items-stretch gap-1 ${vinePad}`}>
+          <div className="relative flex min-h-0 w-full flex-1 flex-col">
+            <div
+              data-circ="story"
+              data-dstyle={theme.dialogStyle ?? "soft"}
+              className="novel-read-card relative flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[var(--radius-ui-lg)] border border-line text-ink shadow-[var(--shadow-ui-lift)] backdrop-blur-[2px]"
+            >
+              <div className="scene-story-font flex shrink-0 flex-col gap-1.5 border-b border-line/70 px-3 py-2.5">
+                {/* 功能注释：子地点标签与外出同一行，塞进标题与外出之间的空位 */}
+                <div className="flex items-center gap-2">
+                  {/* 功能注释：地点/天气用同一 14px 图标列网格左对齐，文案起笔在同一竖线 */}
+                  <div className="grid min-w-0 shrink grid-cols-[14px_minmax(0,1fr)] items-center gap-x-1.5 gap-y-0.5">
+                    <IconPin width={14} height={14} className="shrink-0 text-jade" aria-hidden />
+                    <p className="truncate text-[13.5px] font-bold text-ink">{title || "所在地"}</p>
+                    {weather ? (
+                      <>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 text-gold" aria-hidden>
+                          <circle cx="12" cy="12" r="4" />
+                          <path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8l1.8-1.8M18 6l1.8-1.8" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+                        </svg>
+                        <p className="truncate text-[11.5px] text-ink-soft">{weather}</p>
+                      </>
+                    ) : null}
                   </div>
-                )}
-                {mapBtn}
+                  {onGo && (
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5">
+                      <TreeNav s={s} onGo={onGo} tone="card" mode="actions" />
+                    </div>
+                  )}
+                  {mapBtn}
+                </div>
+                {onGo && <TreeNav s={s} onGo={onGo} tone="card" mode="trail" />}
               </div>
-              {onGo && <TreeNav s={s} onGo={onGo} tone="card" mode="trail" />}
+              {prose != null && (
+                <div
+                  ref={proseRef}
+                  data-circ="scene-prose"
+                  className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3.5 py-3 [scrollbar-width:thin]"
+                >
+                  {prose}
+                </div>
+              )}
+              {footer != null && (
+                <div className="shrink-0 border-t border-line/70 px-2.5 py-2">{footer}</div>
+              )}
             </div>
-            {prose != null && (
-              <div
-                ref={proseRef}
-                data-tour="scene-prose"
-                className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3.5 py-3 [scrollbar-width:thin]"
-              >
-                {prose}
-              </div>
-            )}
-            {footer != null && (
-              <div className="shrink-0 border-t border-line/70 px-2.5 py-2">{footer}</div>
+            {/* 功能注释：美化·画面边框围住阅读卡（藤蔓等款式沿卡边生长） */}
+            {cardFrame && (
+              <FrameOverlay
+                f={{
+                  ...cardFrame,
+                  // 功能注释：藤蔓默认贴卡边（gap=0）；其它框略内缩
+                  gap: cardFrame.style === "vine" ? (cardFrame.gap ?? 0) : (cardFrame.gap ?? 6),
+                  radius: cardFrame.radius ?? 16,
+                  width: cardFrame.style === "vine" ? (cardFrame.width ?? 2.5) : cardFrame.width,
+                  cornerSize: cardFrame.style === "vine" ? (cardFrame.cornerSize ?? 56) : cardFrame.cornerSize,
+                }}
+              />
             )}
           </div>
         </div>
@@ -889,7 +905,6 @@ function PersonDossier({ pid, onClose, onJump }: { pid: string; onClose: () => v
   const name = npc?.name ?? p?.name ?? pid;
   // 基础资料：编辑器里改过的存档值优先，其次内容池原设定；自定义人物没有原设定，直接用存档值
   const age = ageLabel(ownField(npc, "age", p?.age ? String(p.age) : undefined));
-  const home = game ? homePlaceOf(game, npc, p) : undefined;
   const refNode = (refs?: FamilyRef[] | FamilyRef | null) => {
     const arr = Array.isArray(refs) ? refs : refs ? [refs] : [];
     if (!arr.length) return undefined;
@@ -908,7 +923,6 @@ function PersonDossier({ pid, onClose, onJump }: { pid: string; onClose: () => v
     <Modal panelClassName="ui-dialog-game" title={`${name} · 人物资料`} onClose={onClose}>
       <ProfileHero name={name} avatarSrc={npc?.avatar || undefined} facts={{ 性别: npc?.persona?.gender ?? p?.gender, 年龄: age, 所属势力: npcFactionOf(pid, p?.factionId)?.name }} /* 功能注释：只显示作者设置的所属势力，不再从身份文字拆「所属」冒充 */ />
       <ProfileBio bio={ownField(npc, "bio", p?.bio)} />
-      {home && <ProfilePlaces places={[home]} />}
       {(npc?.id ?? p?.id) && <ProfileMemory pid={(npc?.id ?? p?.id) as string} />}
       <ProfileRelations values={{ 现任: refNode(rels.现任), 前任: refNode(rels.前任), 父母: refNode(rels.父母), 子女: refNode(rels.子女), 其他: refNode(rels.其他) }} noParents={rels.noParents} />
     </Modal>
@@ -920,7 +934,7 @@ function PersonDossier({ pid, onClose, onJump }: { pid: string; onClose: () => v
 // 功能注释：无剧情选项时的行动灵感改由 lib/actionIdeas.buildActionIdeas 按当前地点 / 在场人物 / 主线生成，禁止写死他作品人名
 
 export default function HomeTab() {
-  const { game, busy, look: theme, commitGame, submit, directTurn, theaterTurn, endManually, simMove, simVisit, simEvent, simChooseArc, simConfirmDating, simPickup, simActivity, simBuy, simAskIntel, playSpotEvent, playEventNotice, meetNewcomer } = useGame();
+  const { game, busy, look: theme, commitGame, submit, directTurn, theaterTurn, simMove, simVisit, simEvent, simChooseArc, simConfirmDating, simPickup, simActivity, simBuy, simAskIntel, playSpotEvent, playEventNotice, meetNewcomer } = useGame();
   const landscape = theme.orient === "landscape";
   const [input, setInput] = useState("");
   const [ideasOpen, setIdeasOpen] = useState(false);
@@ -931,7 +945,6 @@ export default function HomeTab() {
   const [theaterTopic, setTheaterTopic] = useState("");
   const [theaterFormat, setTheaterFormat] = useState<TheaterFormatId>("moments");
   const [theaterView, setTheaterView] = useState<string | null>(null); // 小剧场舞台：单场 id 或 "shelf" 合集
-  const [confirmWand, confirmWandEl] = useConfirm();
   const inputRef = useRef<HTMLInputElement>(null);
   const [custom, setCustom] = useState(false);
   // 选项面板展开时按 1~9 直接选择（输入框里打字时不拦截）
@@ -1071,20 +1084,21 @@ export default function HomeTab() {
   // 当前被点选的人物（点石牌弹出行动条：交谈/洽谈/打听/端详）
   // 前缀须覆盖行动条里所有子面板（含接洽通告 gigs / 档案 dossier / 情感线 arc），否则点开即被当成关闭
   const activePid = openId && /^(menu|bio|intel|parley|gigs|dossier|arc):/.test(openId) ? openId.slice(openId.indexOf(":") + 1) : null;
-  /* 在场人物：剧情下方只排头像，不套卡片外框、不写「在场」标题 */
+  /* 在场人物：在剧情下方展示头像和当前称呼。 */
   const peopleUnderStory = people.length > 0 ? (
     <div className="mt-2.5 flex gap-2 overflow-x-auto [scrollbar-width:none]" aria-label="在场人物">
       {people.map((p) => {
         const active = activePid === p.id;
         const met = (s.metPeople ?? []).includes(p.id);
+        const npc = game.npcs.find((n) => n.id === p.id);
         return (
           <PersonCard
             key={`p:${p.id}`}
             name={p.name}
-            role=""
             known={met}
-            named={!!game?.npcs.some((n) => n.id === p.id)}
-            avatar={game?.npcs.find((n) => n.id === p.id)?.avatar || undefined}
+            named={!!npc}
+            encounterLabel={npc?.encounterLabel}
+            avatar={npc?.avatar}
             firstMeet={!met && introState(game, p.id) === "pending"}
             active={active}
             onClick={() => setOpenId(active ? null : `menu:${p.id}`)}
@@ -1151,7 +1165,7 @@ export default function HomeTab() {
   const ideaTexts = buildActionIdeas({
     locationName: nameOverride ?? loc?.name,
     presentNames: people.map((p) => p.name),
-    mainQuestLabel: homeMainQuest(s, getWorldStorylines(), dayDateLabel(s.day ?? 0))?.stepName,
+    mainQuestLabel: homeMainQuest(s, getWorldStorylines(), dayDateLabel(s.day ?? 0), getWorldEventDates())?.stepName,
   });
   // 功能注释：进行中事件 → 提示回复里对应项标色（3.6）；无事件时集合为空，不乱标
   const shownOpts = (game.options ?? []).slice(0, 3);
@@ -1234,7 +1248,7 @@ export default function HomeTab() {
                       {/* 功能注释：序号也跟游戏字体，避免 option 正文宋体、数字黑体两套字；字重与选项正文统一 */}
                       {hasOpts ? <kbd>{i + 1}</kbd> : <IconSparkle width={11} height={11} />}
                     </span>
-                    <span className="min-w-0 flex-1 font-normal leading-snug">{o.label}</span>
+                    <span className={`min-w-0 flex-1 font-normal leading-snug${hasOpts ? " text-[0.875em]" : ""}`}>{o.label}</span>
                     {eventIdx.has(i) && <span className="shrink-0 rounded-full bg-coral px-1.5 py-px text-[10px] font-bold leading-snug text-white">事件</span>}
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0 -translate-x-1 text-jade opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100" aria-hidden>
                       <path d="m9 18 6-6-6-6" />
@@ -1244,7 +1258,6 @@ export default function HomeTab() {
               </div>
             </div>
           )}
-          {confirmWandEl}
           {wandOpen && (
             <div id="action-wand" className="mb-2 animate-pop overflow-hidden rounded-[var(--radius-ui-lg)] border border-coral/25 bg-paper/90 p-2.5 shadow-[var(--shadow-ui-lift)] backdrop-blur-md"
               style={{ backgroundImage: "radial-gradient(110% 80% at 0% 0%, color-mix(in srgb, var(--coral) 12%, transparent), transparent 60%), radial-gradient(90% 70% at 100% 100%, color-mix(in srgb, var(--jade) 10%, transparent), transparent 60%)" }}>
@@ -1258,17 +1271,15 @@ export default function HomeTab() {
                   </button>
                 )}
               </div>
-              <div className="grid grid-cols-5 gap-1.5">
+              <div className="grid grid-cols-4 gap-1.5">
                 {([
                   { k: "advance", label: "推进", sub: "让剧情走一段", Icon: IconForward },
                   { k: "pov", label: "换视角", sub: "从 TA 眼中看", Icon: IconEye },
                   { k: "after", label: "后日谈", sub: "之后的日子", Icon: IconHourglass },
                   { k: "theater", label: "小剧场", sub: "番外短剧", Icon: IconDrama },
-                  { k: "end", label: "完结", sub: "进入结局", Icon: IconFlag },
                 ] as const).map((b) => {
                   const off = busy || (b.k === "pov" && people.length === 0);
                   const on = (b.k === "pov" && povPick) || (b.k === "theater" && theaterPick);
-                  const end = b.k === "end";
                   return (
                     <button
                       key={b.k}
@@ -1276,25 +1287,21 @@ export default function HomeTab() {
                       disabled={off}
                       aria-pressed={b.k === "pov" || b.k === "theater" ? on : undefined}
                       title={b.k === "pov" && people.length === 0 ? "此地没有其他人物，无法切换视角" : b.sub}
-                      onClick={async () => {
+                      onClick={() => {
                         if (b.k === "pov") { setPovPick((v) => !v); setTheaterPick(false); return; }
                         if (b.k === "theater") { setTheaterPick((v) => !v); setPovPick(false); return; }
-                        if (b.k === "end") {
-                          if (await confirmWand("现在就让故事完结，进入结局与后记？完结后不能继续游玩。")) { setWandOpen(false); void endManually("manual"); }
-                          return;
-                        }
                         setWandOpen(false); setPovPick(false); directTurn(b.k);
                       }}
                       className={`group flex min-w-0 flex-col items-center gap-1 rounded-[var(--radius-ui)] border px-1 py-2 text-center transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 ${
-                        on ? "border-coral bg-coral/12" : end ? "border-ink/15 bg-ink/[0.04] hover:border-ink/30" : "border-transparent hover:border-coral/30 hover:bg-coral/[0.06]"
+                        on ? "border-coral bg-coral/12" : "border-transparent hover:border-coral/30 hover:bg-coral/[0.06]"
                       }`}
                     >
                       <span className={`grid h-9 w-9 place-items-center rounded-full transition ${
-                        end ? "bg-ink/75 text-paper" : on ? "bg-coral text-white shadow-[0_6px_14px_-6px_var(--coral)]" : "bg-gradient-to-br from-coral/18 to-jade/15 text-coral group-hover:from-coral/28"
+                        on ? "bg-coral text-white shadow-[0_6px_14px_-6px_var(--coral)]" : "bg-gradient-to-br from-coral/18 to-jade/15 text-coral group-hover:from-coral/28"
                       }`}>
                         <b.Icon width={17} height={17} aria-hidden />
                       </span>
-                      <span className={`text-[12px] font-bold leading-tight ${end ? "text-ink" : "text-ink"}`}>{b.label}</span>
+                      <span className="text-[12px] font-bold leading-tight text-ink">{b.label}</span>
                       <span className="w-full truncate text-[9.5px] leading-tight text-ink-soft/80">{b.sub}</span>
                     </button>
                   );
@@ -1438,7 +1445,7 @@ export default function HomeTab() {
   );
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" data-novel-play={isNovel ? "1" : undefined}>
       {/* 上半：场景 + 星城舆图（占据剩余空间，独立滚动） */}
       {/* 看场景时上半只占内容高度，余下空间留给对话框；看地图时地图占满 */}
       <div className={`story-scene-scroll flex min-h-0 flex-1 flex-col ${novelFill && !showMap ? "overflow-hidden" : "overflow-y-auto"}`}>
@@ -1453,7 +1460,7 @@ export default function HomeTab() {
             <div className={novelFill && !showMap ? "pointer-events-none absolute inset-x-0 top-0 z-30 px-3 pt-2" : undefined}>
             {/* 功能注释：小说模式主线已进顶栏可展开行，这里不再重复 */}
             {!showMap && !isNovel && !isAuthorPreview() && (() => {
-              const q = homeMainQuest(s, getWorldStorylines(), dayDateLabel(s.day ?? 0));
+              const q = homeMainQuest(s, getWorldStorylines(), dayDateLabel(s.day ?? 0), getWorldEventDates());
               if (!q) return null;
               return (
                 <button
@@ -1502,30 +1509,24 @@ export default function HomeTab() {
             <div className={novelFill && !showMap ? "relative min-h-0 flex-1" : landscape && !showMap ? "flex min-h-0 flex-1 flex-col" : showMap ? "-mx-4 -mt-3 -mb-3 flex min-h-0 flex-1 flex-col sm:-mx-6" : "flex min-h-0 flex-col"}>
               {showMap ? (
                 <div data-tour="map" className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-t-[18px] shadow-[0_-8px_28px_-18px_rgba(40,20,30,0.35)]">
-                  <div className="city-map-toolbar flex shrink-0 items-center justify-between gap-3 px-4 py-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-serif text-[17px] font-black leading-tight tracking-[0.02em] text-ink">{T("city")}舆图</p>
-                      <p className="mt-1 truncate text-[11.5px] leading-snug text-ink-soft">点地点即可前往 · 换地点会扣行动点</p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      {homeRoomOf(game) !== room && (
-                        <button type="button" disabled={busy} onClick={() => setPending(homeRoomOf(game))}
-                          className="flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border border-coral/40 bg-paper px-3.5 text-[13px] font-bold text-coral shadow-md transition hover:bg-coral/10 active:scale-95 disabled:opacity-50">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 11 12 4l9 7" /><path d="M5 10v10h14V10" /><path d="M10 20v-5h4v5" /></svg>
-                          <span>回家</span>
-                        </button>
-                      )}
+                  <div className="pointer-events-none absolute inset-x-3 top-2 z-30 flex items-center justify-between gap-2">
                       <button
                         type="button"
+                        aria-label="返回此地"
                         onClick={() => setShowMap(false)}
-                        className="flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-br from-[var(--jade)] to-[var(--jade-deep)] px-4 text-[13.5px] font-bold text-paper-2 shadow-[0_8px_18px_-10px_color-mix(in_srgb,var(--jade)_70%,transparent)] transition hover:brightness-110 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-jade"
+                        className="pointer-events-auto flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-br from-[var(--jade)] to-[var(--jade-deep)] px-4 text-[13.5px] font-bold text-paper-2 shadow-[0_8px_18px_-10px_color-mix(in_srgb,var(--jade)_70%,transparent)] transition hover:brightness-110 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-jade"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                           <path d="m15 18-6-6 6-6" />
                         </svg>
-                        <span>返回此地</span>
+                        <span>返回</span>
                       </button>
-                    </div>
+                      {homeRoomOf(game) !== room && (
+                        <button type="button" disabled={busy} onClick={() => setPending(homeRoomOf(game))}
+                          className="pointer-events-auto ml-auto flex min-h-10 shrink-0 items-center rounded-full border border-coral/40 bg-paper px-3 text-[13px] font-bold text-coral transition hover:bg-coral/10 active:scale-95 disabled:opacity-50">
+                          回家
+                        </button>
+                      )}
                   </div>
                   <CityMap s={s} wide={landscape} onPick={(id) => (id === room ? setShowMap(false) : setPending(id))} />
                 </div>
@@ -1580,6 +1581,7 @@ export default function HomeTab() {
                                   <Segments segments={t.segments} npcs={game.npcs} playerAvatar={game.player.avatar} playerName={game.player.name} overlay={!isNovel} plain={isNovel} />
                                   {/* 功能注释：小说内容卡不展示「心事」块，避免打断正文；游戏模式仍保留 */}
                                   {!isNovel && <Thoughts thoughts={t.thoughts} npcs={game.npcs} />}
+                                  <TurnActions turnId={t.id} latest={t.id === [...game.story].reverse().find((x) => x.role === "ai" && !x.error)?.id} />
                                 </div>
                               );
                             });
@@ -1699,12 +1701,18 @@ export default function HomeTab() {
               return (
                 <Modal panelClassName="ui-dialog-game" key={p.id} title="线下见面" onClose={() => setOpenId(null)}>
                 <div className="relative">
-                  <PersonProfile pid={p.id} name={p.name} known={known} />
+                  <PersonProfile
+                    pid={p.id}
+                    name={p.name}
+                    known={known}
+                    showEncounterAvatar
+                    showEncounterName={!known && game.story.some((turn) => turn.newcomers?.includes(p.id))}
+                  />
                   {/* 互动区 */}
                   <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4">
                     <p className="font-serif text-[14px] font-semibold text-ink">互动</p>
                     <div className="grid grid-cols-2 gap-2">
-                      {!known && introState(game, p.id) === "pending" && (
+                      {!known && (
                         <MeetOption
                           icon={IconSpark}
                           label="结识"
@@ -1782,7 +1790,8 @@ export default function HomeTab() {
               );
             })}
 
-        {actionInput}
+        {/* 功能注释：大地图打开时只看地图选地点，不显示自定义输入与剧情选项 */}
+        {!showMap && actionInput}
       </div>
 
       {/* ═══ 移动确认 ═══ */}

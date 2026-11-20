@@ -1,12 +1,12 @@
 import AiRoutePicker from "./AiRoutePicker";
-import { addTempAsset, keepAsset, isAssetKept, type AssetKind } from "../lib/freeStyle";
 import { useEffect, useRef, useState } from "react";
+import { saveWorkImage } from "../lib/saveWorkImage";
 import { compressImage } from "../lib/freeStyle";
 import { generatePlatformImage, platformImageConfigured } from "../lib/platformImageGen";
 import {
+  applyCoverImageText,
   composePositivePrompt,
   mergeNegativePrompt,
-  rememberArtStyleSample,
   splitFramingFromSubject,
   type EditorImagePromptParts,
 } from "../lib/editorImagePrompts";
@@ -51,8 +51,7 @@ export default function AiImageGen({
   autoRun = false,
   autoApply = false,
   onPhaseChange,
-  assetKind,
-  assetName = "AI 生图",
+  scenePortrait = false,
 }: {
   onPick: (src: string) => void;
   placeholder?: string;
@@ -67,9 +66,7 @@ export default function AiImageGen({
   autoApply?: boolean;
   /** 功能注释：供外层 Modal 改标题（生成结果）或锁定关闭 */
   onPhaseChange?: (phase: AiImageGenPhase) => void;
-  /** 功能注释：存进素材库时的分类与名称（如人物头像 = avatar + 人物名） */
-  assetKind?: AssetKind;
-  assetName?: string;
+  scenePortrait?: boolean;
 }) {
   const { cfg } = useGame();
   const { current: imageRoute } = useAiRoutes("image");
@@ -83,6 +80,7 @@ export default function AiImageGen({
   const [subject, setSubject] = useState(initialSplit.subject);
   const [framing] = useState(String(initialParts?.framing || initialSplit.framing || "").trim());
   const [negative, setNegative] = useState(initialParts?.negative ?? "");
+  const [imageText, setImageText] = useState("");
   // 功能注释：重绘时默认把当前图作为参考图（最多 MAX_REFS 张），创作者可点「移除」
   const [refs, setRefs] = useState<string[]>(() => (initialRefs ?? []).filter(Boolean).slice(0, MAX_REFS));
   // 功能注释：参考图 / 选画风两 Tab；画风正向词由后台配置，创作者只点选、不手改
@@ -94,6 +92,13 @@ export default function AiImageGen({
   const [phase, setPhase] = useState<AiImageGenPhase>("edit");
   const [err, setErr] = useState("");
   const [img, setImg] = useState("");
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
   const [elapsed, setElapsed] = useState(0);
   const ok = platformImageConfigured(cfg);
   const busyRef = useRef(false);
@@ -116,9 +121,15 @@ export default function AiImageGen({
 
   // 功能注释：有三层时，正向 = 画风 + 主体 + framing（静默）；没有则沿用单段 prompt
   // 功能注释：单段模式也可选画风；选了就拼在提示词前
-  const positive = layered
+  const basePositive = layered
     ? composePositivePrompt({ style, subject, framing })
     : (style.trim() ? composePositivePrompt({ style, subject: prompt }) : prompt.trim());
+  const { prompt: positive, negative: requestNegative } = applyCoverImageText(
+    basePositive,
+    negative.trim(),
+    initialParts?.allowImageText ? imageText : "",
+    [style.trim(), framing].filter(Boolean).join("。"),
+  );
 
   // 功能注释：生成中显示已用秒数，驱动进度条缓升（不到 100%，完成后再满）
   useEffect(() => {
@@ -152,23 +163,14 @@ export default function AiImageGen({
     try {
       const url = await generatePlatformImage(cfg, p, size, {
         referenceImages: refs,
-        negativePrompt: negative.trim() || undefined,
+        negativePrompt: requestNegative || undefined,
         signal: ac.signal,
         feature: "image:ai-image-gen",
       });
       if (ac.signal.aborted) return;
       setImg(url);
-      if (!addTempAsset(url, assetName, assetKind)) setErr("本地存储空间不足，这张图没能存进素材库；可删掉一些本地图片或配置图床");
-      rememberArtStyleSample(style, url);
-      setKept(false);
-      // 功能注释：仅显式 autoApply 时跳过结果页（旧调用兼容）；默认要玩家点「使用这张图」
-      if (autoApply) {
-        keepAsset(url, assetName, assetKind);
-        onPickRef.current(url);
-        goPhase("done");
-      } else {
-        goPhase("done");
-      }
+      goPhase("done");
+      if (autoApply) await applyImage(url);
     } catch (e) {
       if (ac.signal.aborted || (e as Error)?.name === "AbortError") {
         goPhase("edit");
@@ -179,6 +181,22 @@ export default function AiImageGen({
     } finally {
       if (abortRef.current === ac) abortRef.current = null;
       busyRef.current = false;
+    }
+  };
+
+  const applyImage = async (url: string) => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    setErr("");
+    try {
+      const cloudUrl = await saveWorkImage(url, scenePortrait);
+      if (mountedRef.current) onPickRef.current(cloudUrl);
+    } catch (e) {
+      setErr(`保存到云端失败：${(e as Error).message}`);
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   };
 
@@ -205,7 +223,6 @@ export default function AiImageGen({
     }
   };
 
-  const [kept, setKept] = useState(false);
   const locked = phase === "busy";
   const showResult = phase === "done" && !!img;
 
@@ -233,43 +250,25 @@ export default function AiImageGen({
               {sizeBadge(size)}
             </span>
           </div>
-          {autoApply && (
-            <p className="text-[11.5px] text-[color:var(--jade)]">已写入预览。可关掉弹窗，或点「重新生成」换一张。</p>
-          )}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => { void run(); }}
-              disabled={!ok || !positive}
+              disabled={saving || !ok || !positive}
               className="rounded-2xl border border-line bg-white py-2.5 text-[13px] font-bold text-ink transition hover:border-[color:var(--jade)]/40 disabled:opacity-40"
             >
               重新生成
             </button>
             <button
               type="button"
-              onClick={() => {
-                keepAsset(img, assetName, assetKind);
-                setKept(true);
-                onPick(img);
-              }}
+              disabled={saving}
+              onClick={() => { void applyImage(img); }}
               className="rounded-2xl bg-[color:var(--jade)] py-2.5 text-[13px] font-bold text-white shadow-[0_8px_18px_-10px_rgba(180,40,60,0.55)] transition"
             >
-              使用这张图
+              {saving ? "正在保存到云端…" : "使用这张图"}
             </button>
           </div>
-          <div className="flex items-center justify-between gap-2 rounded-2xl border border-line/70 bg-[#f7f3f1] px-3 py-2">
-            <p className="min-w-0 text-[11px] leading-snug text-ink-soft">
-              {kept || isAssetKept(img) ? "已收藏到素材库，长期保留。" : "已暂存到素材库，7 天内没用到会自动清除。"}
-            </p>
-            <button
-              type="button"
-              disabled={kept || isAssetKept(img)}
-              onClick={() => { keepAsset(img, assetName, assetKind); setKept(true); }}
-              className="shrink-0 rounded-full border border-line bg-white px-3 py-1 text-[11.5px] font-bold text-ink transition disabled:opacity-50"
-            >
-              {kept || isAssetKept(img) ? "已收藏" : "收藏"}
-            </button>
-          </div>
+
         </div>
       ) : (
         <>
@@ -370,6 +369,22 @@ export default function AiImageGen({
               )}
             </div>
           </div>
+
+          {initialParts?.allowImageText && (
+            <label className="block">
+              <span className="mb-1 block text-[10.5px] font-semibold tracking-wide text-ink-soft">
+                图片文字（选填）
+              </span>
+              <input
+                type="text"
+                value={imageText}
+                readOnly={locked}
+                onChange={(e) => setImageText(e.target.value)}
+                placeholder="输入要画在封面上的文字，如作品名"
+                className={fieldCls}
+              />
+            </label>
+          )}
 
           {layered ? (
             <div>

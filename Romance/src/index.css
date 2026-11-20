@@ -119,7 +119,7 @@ html[data-romance] .romance-host {
   /*
    * 功能注释：字体只两套，禁止再加第三套例外。
    * --font-ui / --font-sans = 平台 UI（主站圆角黑体）：弹窗、设置、创作壳、编辑器、局内顶栏底栏、小说顶栏/内容卡
-   * --font-serif = 局内游戏模式剧情（设置·剧情字体）：旁白/气泡/选项等；小说阅读卡改走 --font-ui 与设置一致
+   * --font-serif = 局内游戏模式剧情（设置·剧情字体）：旁白/气泡/选项等
    */
   --font-ui: 'Sarasa Gothic Rounded', 'Source Han Rounded SC', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
   --font-sans: var(--font-ui);
@@ -140,6 +140,15 @@ html[data-romance].font-song {
   --font-serif: 'Source Han Serif SC', 'Songti SC', 'Noto Serif SC', serif;
   --font-sans: 'Source Han Serif SC', 'Songti SC', 'Noto Serif SC', serif;
 }
+/* 系统未安装预设字体时仍保留可见差异，避免所有选项回落成同一套无衬线字。 */
+html[data-romance].font-song .mud-shell { letter-spacing: 0.02em; }
+html[data-romance].font-hei .mud-shell { letter-spacing: 0; }
+html[data-romance].font-round .mud-shell { letter-spacing: 0.06em; }
+html[data-romance].font-elegant .mud-shell { letter-spacing: 0.04em; font-weight: 300; }
+html[data-romance].font-brush .mud-shell { letter-spacing: 0.08em; }
+html[data-romance].font-hand .mud-shell { letter-spacing: 0.07em; }
+html[data-romance].font-cursive .mud-shell { letter-spacing: 0.09em; }
+html[data-romance].font-pixel .mud-shell { letter-spacing: 0.03em; }
 html[data-romance].font-hei {
   --font-serif: var(--font-ui);
   --font-sans: var(--font-ui);
@@ -205,6 +214,17 @@ html[data-romance] .app-topbar :where(.font-serif) {
   font-family: var(--font-ui) !important;
 }
 
+/* 游戏内所有可见文字统一跟随「剧情字体」设置。编辑器和平台页面仍使用平台字体。 */
+html[data-romance] .mud-shell,
+html[data-romance] .mud-shell *,
+html[data-romance] .app-topbar,
+html[data-romance] .app-topbar *,
+html[data-romance] .ui-overlay,
+html[data-romance] .ui-overlay * {
+  font-family: var(--font-serif) !important;
+  font-synthesis: none;
+}
+
 /* 星光2005 · 年代美术：奶油纸白 / 旧报深褐 / 酒红 / 唱片墨绿 */
 html[data-romance] {
   --paper: #f3e9d6;
@@ -216,6 +236,8 @@ html[data-romance] {
   --coral: #8f3c4a;
   --gold: #b98a46;
   --danger: #9a3540;
+  /* 功能注释：在覆写 --color-danger 之前先抄一份，避免平台壳里 --fl-danger 和 --color-danger 互相引用算成空 */
+  --fl-host-danger: var(--color-danger, #d93636);
   --line: #dfcfb4;
   --char: #4a4a8f; /* 人物实体 · 靛色 */
   --story-ink: #1a1a1a; /* 功能注释：叙事正文字色（浅色近黑） */
@@ -346,10 +368,10 @@ input[type="range"]::-moz-range-thumb {
 /* 剧情文本换行与排版 */
 .story-prose {
   /* 剧情正文统一跟随「设置 · 游戏字体」——用 --font-serif（宋/圆/雅/毛笔/手写/自定义皆随之切换）；
-     字号跟 --story-font-size（对话框 DIY「字号」写入）；中文禁止斜体；字重与选项同为 500。 */
+     字号跟 --story-font-size（对话框 DIY「字号」写入）；中文禁止斜体；字重与选项同为 400（常规，不加粗）。 */
   font-family: var(--font-serif);
   font-style: normal;
-  font-weight: 500;
+  font-weight: 400;
   font-size: var(--story-font-size, 15px);
   white-space: pre-wrap;
   line-height: 1.95;
@@ -499,62 +521,9 @@ input[type="range"]::-moz-range-thumb {
   from { opacity: 0; transform: scale(0.86) rotate(-12deg); }
   to { opacity: 0.72; transform: none; }
 }
-.city-map-toolbar {
-  position: relative;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--paper-2) 92%, var(--jade) 8%), var(--paper-2));
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 80%, var(--jade) 20%);
-  box-shadow: 0 8px 20px -16px color-mix(in srgb, var(--ink) 40%, transparent);
-}
-.city-map-toolbar::after {
-  content: "";
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  bottom: 0;
-  height: 2px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--jade) 55%, transparent), color-mix(in srgb, var(--coral) 45%, transparent), transparent);
-  opacity: 0.85;
-}
-.city-map-legend {
-  pointer-events: none;
-  position: absolute;
-  left: 12px;
-  bottom: 14px;
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  max-width: min(70%, 16rem);
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--line) 70%, white 30%);
-  background: color-mix(in srgb, var(--paper) 88%, transparent);
-  color: var(--ink-soft);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  box-shadow: 0 6px 18px -10px color-mix(in srgb, var(--ink) 40%, transparent);
-  backdrop-filter: blur(8px);
-  animation: city-map-legend-in 0.55s ease-out 0.12s both;
-}
-@keyframes city-map-legend-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: none; }
-}
-.city-map-legend__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--coral);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--coral) 28%, transparent);
-  flex-shrink: 0;
-}
 @media (prefers-reduced-motion: reduce) {
   .city-map-atlas__mist,
-  .city-map-compass,
-  .city-map-legend {
+  .city-map-compass {
     animation: none !important;
   }
 }
@@ -1642,7 +1611,7 @@ html[data-romance][class] .phone-os :is(*, input, textarea, button, select) {
 .story-speech {
   color: var(--story-ink);
   font-style: normal;
-  font-weight: 500;
+  font-weight: 400;
   font-family: var(--font-serif);
 }
 /* 功能注释：正文里偶发 b/strong（统计芯片等）也不抬字重，全局粗细跟旁白一致 */
@@ -1652,7 +1621,7 @@ html[data-romance][class] .phone-os :is(*, input, textarea, button, select) {
 .story-narration-panel strong,
 .novel-read-card .story-prose b,
 .novel-read-card .story-prose strong {
-  font-weight: 500 !important;
+  font-weight: 400 !important;
 }
 
 /* 功能注释：叠图旁白 / 地点说明的浅色半透明底；透明度由 --story-panel-a（设置可调）驱动 */
@@ -1661,7 +1630,7 @@ html[data-romance][class] .phone-os :is(*, input, textarea, button, select) {
   font-style: normal;
   font-size: var(--story-font-size, 15px);
   color: var(--story-ink);
-  background: rgba(var(--story-panel-bg), var(--story-panel-a, 0.88));
+  background: rgba(var(--story-panel-bg), var(--story-panel-a, 0.65));
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   text-shadow: none;
@@ -1669,7 +1638,7 @@ html[data-romance][class] .phone-os :is(*, input, textarea, button, select) {
 
 /* 功能注释：小说内容卡底板同样跟设置透明度；文字保持近黑 + 预设字号，不斜体 */
 .novel-read-card {
-  background: color-mix(in srgb, var(--paper) calc(var(--story-panel-a, 0.88) * 100%), transparent) !important;
+  background: color-mix(in srgb, var(--paper) calc(var(--story-panel-a, 0.65) * 100%), transparent) !important;
   color: var(--story-ink);
 }
 .novel-read-card .story-prose {
@@ -1677,30 +1646,11 @@ html[data-romance][class] .phone-os :is(*, input, textarea, button, select) {
   font-size: var(--story-font-size, 15px);
   color: var(--story-ink);
 }
-/* 功能注释：小说顶栏 + 内容卡正文跟设置/底栏同一套平台字（--font-ui），勿再套剧情宋体造成两套字 */
-.novel-topbar,
-.novel-topbar :where(*):not(.font-mono, [class*="font-mono"]),
-.novel-read-card .story-prose,
-.novel-read-card .story-prose *,
-.novel-read-card .story-action,
-.novel-read-card .story-speech,
-.novel-read-card .story-narration-panel,
-.novel-read-card .story-narration-panel *,
-.novel-read-card .dlg-bubble,
-.novel-read-card .dlg-bubble *,
-.novel-read-card .dlg-bubble-me,
-.novel-read-card .dlg-bubble-me *,
-.novel-read-card .story-thought,
-.novel-read-card .story-thought *,
-.novel-read-card .option-btn,
-.novel-read-card .option-btn *,
-.novel-read-card .story-input,
-.novel-read-card .action-capsule input,
-.novel-read-card .action-capsule textarea {
-  font-family: var(--font-ui) !important;
-  font-style: normal;
-  font-weight: 500 !important;
-  letter-spacing: normal;
+/* 局内顶栏与底栏使用当前剧情字体，和场景内容保持一致。 */
+html[data-romance] :is(.app-root, .landscape-world) :is(.app-topbar, .mud-chrome),
+html[data-romance] :is(.app-root, .landscape-world) :is(.app-topbar, .mud-chrome) :where(*):not(.font-mono, [class*="font-mono"]) {
+  font-family: var(--font-serif) !important;
+  font-synthesis: none;
 }
 
 /* 功能注释：仅局内剧情区走游戏字体；平台弹窗/设置/创作壳已统一 --font-ui，勿再往外扩。
@@ -1712,7 +1662,11 @@ html[data-romance][class] .phone-os :is(*, input, textarea, button, select) {
 #action-ideas, #action-ideas :where(*) {
   font-family: var(--font-serif) !important;
   font-style: normal;
-  font-weight: 500 !important;
+  font-weight: 400 !important;
+  font-synthesis: none;
+}
+.scene-story-font, .scene-story-font :where(p, button, span) {
+  font-family: var(--font-serif) !important;
   font-synthesis: none;
 }
 /* 功能注释：行动输入跟剧情正文字体；人脉页是局内面板但属 UI 壳，跟平台字，不进游戏字体 */
@@ -1720,12 +1674,12 @@ html[data-romance][class] .phone-os :is(*, input, textarea, button, select) {
 .action-capsule textarea,
 .story-input {
   font-family: var(--font-serif) !important;
-  font-weight: 500;
+  font-weight: 400;
   font-style: normal;
 }
 .option-btn {
   font-size: var(--story-font-size, 15px);
-  font-weight: 500;
+  font-weight: 400;
 }
 
 /* 功能注释：暗色可读（3.2）——底栏未选中字、在场人物名标不被浅底吞掉 */
@@ -1859,7 +1813,10 @@ html.nav-label-c .nav-txt-on { color: var(--nav-label) !important; }
     max-height: 85vh;
     max-height: 85dvh;
   }
-  .ui-dialog.ui-dialog-create > .ui-dialog-body { flex: 0 1 auto; }
+  .ui-dialog.ui-dialog-create > .ui-dialog-body {
+    flex: 0 1 auto;
+    overflow-anchor: none;
+  }
   /* 功能注释：游戏尺寸——玩家游玩时的弹窗（场景、人物资料、背包、存档、确认等）：比工具弹窗窄，四周露出游戏画面，过高时内部滚动 */
   .ui-dialog.ui-dialog-game {
     width: min(520px, calc(100vw - 40px));
@@ -2155,6 +2112,10 @@ html[data-romance].skin-dream.dark, html[data-romance].skin-bloody.dark, html[da
   min-height: 100%;
   /* 功能注释：创作壳吃主站皮肤；缺省时回退到 funloom 浅色红主题 */
   --fl-bg: var(--color-bg, #faf6f5);
+  /* 功能注释：宿主皮肤的实心纸面，供 .world-gen-editor 读取（子级重定义 --fl-* 会循环，故另起名） */
+  --fl-host-surface: var(--color-surface, #ffffff);
+  --fl-host-raised: var(--color-surface-2, #f7f4f2);
+  --fl-host-input: var(--color-bg, #faf6f5);
   --fl-surface: var(--color-surface, #ffffff);
   --fl-raised: var(--color-surface-2, #f6eceb);
   --fl-sheet: var(--color-surface, #ffffff);
@@ -2167,7 +2128,7 @@ html[data-romance].skin-dream.dark, html[data-romance].skin-bloody.dark, html[da
   --fl-wine-deep: var(--color-primary-bold, var(--color-primary, #b01c1f));
   --fl-rose: var(--color-primary-fg, #b01c1f);
   --fl-gold: var(--color-warning, #c9a227);
-  --fl-danger: var(--color-danger, #e11d48);
+  --fl-danger: var(--fl-host-danger, #e11d48);
   --fl-glow: color-mix(in srgb, var(--color-primary, #d42a2a) 32%, transparent);
   --fl-on-primary: var(--color-on-primary, #ffffff);
   color: var(--fl-ink);
@@ -2265,19 +2226,20 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
    * 禁止 --paper ↔ --wg-sheet ↔ --fl-sheet 循环引用，否则计算为空、bg-paper 变成全透明。
    * paper-2 也用实心浅灰白，禁止玫瑰半透色，否则在格子底纹上会像「透出背景」。
    */
-  --paper: #ffffff;
-  --paper-2: #f7f4f2;
-  --fl-input: #faf6f5;
-  --fl-surface: #ffffff;
-  --fl-raised: #f7f4f2;
-  --fl-sheet: #ffffff;
-  --wg-sheet: #ffffff;
-  --wg-sheet-2: #f7f4f2;
+  --paper: var(--wg-sheet);
+  --paper-2: var(--wg-sheet-2);
+  --fl-input: var(--wg-input);
+  --fl-surface: var(--wg-sheet);
+  --fl-raised: var(--wg-sheet-2);
+  --fl-sheet: var(--wg-sheet);
+  --wg-sheet: var(--fl-host-surface, #ffffff);
+  --wg-sheet-2: var(--fl-host-raised, #f7f4f2);
+  --wg-input: var(--fl-host-input, #faf6f5);
   --line: color-mix(in srgb, var(--color-text, #17171a) 10%, transparent);
-  --color-paper: #ffffff;
-  --color-paper-2: #f7f4f2;
-  --color-surface: #ffffff;
-  --color-surface-2: #f7f4f2;
+  --color-paper: var(--wg-sheet);
+  --color-paper-2: var(--wg-sheet-2);
+  --color-surface: var(--wg-sheet);
+  --color-surface-2: var(--wg-sheet-2);
   --color-line: var(--line);
   /*
    * 功能注释：编辑器强调色固定为编辑器酒红，禁止吃主站 --color-primary / .romance-platform 的平台红。
@@ -2303,20 +2265,152 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
   --color-coral: #c45a6a;
 }
 
+/* 功能注释：宿主深色皮肤下，创作向导 + 编辑器用实色纸面（避免与 --color-surface↔--wg-sheet 循环），并抬高描边对比 */
+html[data-mode="dark"] .world-gen-shell,
+html[data-mode="dark"] .world-gen-editor {
+  --wg-wine: #e0566b;
+  --wg-wine-deep: #f07b8c;
+  --wg-rose: #f29aa6;
+  --wg-faint: color-mix(in srgb, #f7f1f8 26%, transparent);
+  --wg-muted: #c9bccf;
+  --wg-ink: #f7f1f8;
+  --wg-bg: #0d0911;
+  --wg-sheet: #1a1322;
+  --wg-sheet-2: #261e30;
+  --wg-panel: #1a1322;
+  --fl-wine: #e0566b;
+  --fl-wine-deep: #f07b8c;
+  --fl-rose: #f29aa6;
+  --fl-input: #120c18;
+  --color-surface: #1a1322;
+  --color-surface-2: #261e30;
+  --color-bg: #0d0911;
+  --jade: #e0566b;
+  --jade-deep: #f07b8c;
+  --coral: #f29aa6;
+  --color-jade: #e0566b;
+  --color-jade-deep: #f07b8c;
+  --color-coral: #f29aa6;
+}
+
+/* 功能注释：深色创作向导——顶栏/输入/选项/模块勾选的对比度专项 */
+html[data-mode="dark"] .world-gen-shell .world-gen-topbar {
+  background: color-mix(in srgb, var(--wg-sheet) 96%, #000);
+  border-bottom-color: color-mix(in srgb, #f7f1f8 14%, transparent);
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-topbar .world-gen-back {
+  /* 功能注释：浅色规则把返回键混进 #fff，深色必须整段盖掉，否则会发白刺眼 */
+  background: color-mix(in srgb, var(--wg-wine) 28%, #2a1a24);
+  color: #ffe8ec;
+  border: 1px solid color-mix(in srgb, var(--wg-wine) 48%, transparent);
+  box-shadow: none;
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-topbar .world-gen-back:hover {
+  background: color-mix(in srgb, var(--wg-wine) 40%, #2a1a24);
+  color: #fff;
+  border-color: color-mix(in srgb, var(--wg-wine) 62%, transparent);
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-card {
+  border-color: color-mix(in srgb, #f7f1f8 16%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #f7f1f8 4%, transparent),
+    0 10px 28px color-mix(in srgb, #000 45%, transparent);
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-input,
+html[data-mode="dark"] .world-gen-shell .world-gen-textarea {
+  border-color: color-mix(in srgb, #f7f1f8 20%, transparent);
+  background: var(--fl-input, #1a1320);
+  color: var(--wg-ink);
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-input::placeholder,
+html[data-mode="dark"] .world-gen-shell .world-gen-textarea::placeholder {
+  color: color-mix(in srgb, #f7f1f8 55%, transparent);
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-input:focus,
+html[data-mode="dark"] .world-gen-shell .world-gen-textarea:focus {
+  border-color: var(--wg-wine);
+  background: color-mix(in srgb, var(--wg-sheet) 80%, #2a1c28);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wg-wine) 28%, transparent);
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-polish {
+  border-color: color-mix(in srgb, var(--wg-wine) 38%, transparent);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--wg-wine) 18%, transparent),
+      color-mix(in srgb, #f7f1f8 4%, transparent)
+    );
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-polish.is-on {
+  border-color: color-mix(in srgb, var(--wg-wine) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wg-wine) 18%, transparent);
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-polish-mark {
+  border-color: color-mix(in srgb, #f7f1f8 42%, transparent);
+  background: color-mix(in srgb, var(--wg-sheet-2) 80%, transparent);
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-choice {
+  border-color: color-mix(in srgb, #f7f1f8 18%, transparent);
+  background: color-mix(in srgb, #f7f1f8 4%, transparent);
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-choice:hover {
+  border-color: color-mix(in srgb, var(--wg-wine) 55%, transparent);
+  background: color-mix(in srgb, var(--wg-wine) 10%, transparent);
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-choice-mark,
+html[data-mode="dark"] .world-gen-shell .world-gen-choice-check {
+  border-color: color-mix(in srgb, #f7f1f8 48%, transparent);
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-route-rate {
+  border-color: color-mix(in srgb, #f7f1f8 28%, transparent);
+  background: color-mix(in srgb, #f7f1f8 8%, transparent);
+  color: #e8dcec;
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-mod-pick {
+  border-color: color-mix(in srgb, #f7f1f8 18%, transparent);
+  background: color-mix(in srgb, #f7f1f8 4%, transparent);
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-mod-pick:hover {
+  border-color: color-mix(in srgb, var(--wg-wine) 50%, transparent);
+  background: color-mix(in srgb, var(--wg-wine) 12%, transparent);
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-mod-pick.is-on {
+  border-color: color-mix(in srgb, var(--wg-wine) 72%, transparent);
+  background: color-mix(in srgb, var(--wg-wine) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wg-wine) 24%, transparent);
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-mod-pick-check {
+  border-color: color-mix(in srgb, #f7f1f8 42%, transparent);
+  background: color-mix(in srgb, var(--wg-sheet-2) 90%, transparent);
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-chip {
+  border-color: color-mix(in srgb, #f7f1f8 18%, transparent);
+  background: var(--wg-sheet-2);
+  color: var(--wg-ink);
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-dock {
+  border-top-color: color-mix(in srgb, #f7f1f8 14%, transparent);
+  background: color-mix(in srgb, var(--wg-panel) 94%, #000);
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-field-count {
+  color: #b9adbf;
+}
+html[data-mode="dark"] .world-gen-shell .world-gen-polish-desc {
+  color: #cbbfd0;
+}
+
 /* 功能注释：作品展示封面——整卡左右结构（预览 | 设置），禁止再上下拆两块 */
 .cover-bg-only {
-  display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: nowrap !important;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 0;
   min-width: 0;
   overflow: hidden;
   border-radius: 1rem;
   border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
   /* 功能注释：实心底，禁止渐变末端 transparent 透出壳层底纹 */
-  background: #ffffff;
-  background-color: #ffffff;
+  background: var(--wg-sheet);
+  background-color: var(--wg-sheet);
   box-shadow: 0 10px 24px -20px color-mix(in srgb, var(--ink) 50%, transparent);
 }
 .cover-bg-only-panel button[aria-pressed="true"] {
@@ -2327,13 +2421,10 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
 }
 .cover-bg-only-stage {
   display: flex;
-  flex: 0 0 auto;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 0.35rem;
-  width: 8.1rem;
-  min-width: 8.1rem;
   padding: 0.65rem 0.55rem;
   border-right: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
   background: color-mix(in srgb, var(--ink) 3.5%, transparent);
@@ -2352,16 +2443,20 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
   color: var(--ink-soft);
 }
 .cover-bg-only-panel {
-  flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  padding: 0.7rem 0.8rem 0.75rem;
+  gap: 0.35rem;
+  padding: 0.55rem 0.65rem;
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+}
+.cover-bg-only-extra {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: 0.5rem 0.65rem 0.65rem;
 }
 .cover-bg-only-panel-head {
   display: flex;
@@ -2387,15 +2482,14 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
 .cover-bg-only-panel-head .cover-bg-only-clear {
   margin-left: auto;
 }
-.cover-bg-only-label {
-  margin: 0.45rem 0 0.3rem;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--ink);
-}
 .cover-bg-only-body {
   display: grid;
   gap: 0.35rem;
+}
+.world-basic-textarea {
+  display: block;
+  field-sizing: content;
+  resize: vertical;
 }
 .cover-bg-only-body > p.mb-1\.5 {
   margin-top: 0.55rem;
@@ -2425,11 +2519,9 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
 }
 @media (max-width: 420px) {
   .cover-bg-only {
-    flex-direction: column !important;
+    grid-template-columns: minmax(0, 1fr);
   }
   .cover-bg-only-stage {
-    width: 100%;
-    min-width: 0;
     border-right: 0;
     border-bottom: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
     padding-bottom: 0.55rem;
@@ -2440,8 +2532,8 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
   border-radius: 0.95rem;
   border: 1px solid var(--wg-faint, color-mix(in srgb, var(--color-text, #17171a) 10%, transparent)) !important;
   /* 功能注释：与设定页 .world-gen-card 同款实心白底 + 同阴影，禁止磨砂/半透 */
-  background: #ffffff !important;
-  background-color: #ffffff !important;
+  background: var(--wg-sheet) !important;
+  background-color: var(--wg-sheet) !important;
   background-image: none !important;
   box-shadow: 0 8px 20px color-mix(in srgb, var(--color-shadow, #000) 7%, transparent);
   opacity: 1 !important;
@@ -2453,13 +2545,13 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
 .world-gen-editor details.world-gen-card > summary {
   padding-top: 0.65rem !important;
   padding-bottom: 0.65rem !important;
-  background: #ffffff !important;
-  background-color: #ffffff !important;
+  background: var(--wg-sheet) !important;
+  background-color: var(--wg-sheet) !important;
 }
 .world-gen-editor details.group > div,
 .world-gen-editor details.world-gen-card > div {
-  background: #ffffff !important;
-  background-color: #ffffff !important;
+  background: var(--wg-sheet) !important;
+  background-color: var(--wg-sheet) !important;
   padding-top: 0.7rem !important;
   padding-bottom: 0.75rem !important;
 }
@@ -2497,8 +2589,8 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
   padding-top: calc(0.4rem + env(safe-area-inset-top, 0px)) !important;
   padding-left: 0.75rem !important;
   padding-right: 0.75rem !important;
-  background: #ffffff !important;
-  background-color: #ffffff !important;
+  background: var(--wg-sheet) !important;
+  background-color: var(--wg-sheet) !important;
   background-image: none !important;
   border-color: color-mix(in srgb, var(--color-text, #17171a) 10%, transparent) !important;
   box-shadow: 0 8px 20px color-mix(in srgb, var(--color-shadow, #000) 7%, transparent);
@@ -2516,7 +2608,7 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
   }
 }
 .world-gen-editor .sticky {
-  background-color: #ffffff !important;
+  background-color: var(--wg-sheet) !important;
   border-color: color-mix(in srgb, var(--color-text, #17171a) 10%, transparent) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
@@ -2547,14 +2639,14 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
   }
 }
 .world-gen-editor [class*="bg-paper-2"] {
-  background-color: #f7f4f2 !important;
+  background-color: var(--wg-sheet-2) !important;
   background-image: none !important;
   opacity: 1 !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 .world-gen-editor [class*="bg-paper"]:not([class*="bg-paper-2"]):not([class*="bg-paper/"]) {
-  background-color: #ffffff !important;
+  background-color: var(--wg-sheet) !important;
   background-image: none !important;
   opacity: 1 !important;
   backdrop-filter: none !important;
@@ -2562,7 +2654,7 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
 }
 .world-gen-editor [class*="bg-paper/"] {
   /* 功能注释：半透明 utility（/60 /80）一律实心白，与设定页卡片不透明度一致 */
-  background-color: #ffffff !important;
+  background-color: var(--wg-sheet) !important;
   background-image: none !important;
   opacity: 1 !important;
   backdrop-filter: none !important;
@@ -2581,19 +2673,19 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
 }
 /* 功能注释：题材等 pill 未选中态加暖底，避免一排惨白空胶囊 */
 .world-gen-editor button.rounded-full[class*="border-line"]:not([class*="bg-jade"]) {
-  background-color: color-mix(in srgb, var(--paper-2) 82%, #f8eee8) !important;
+  background-color: color-mix(in srgb, var(--wg-sheet-2) 92%, var(--wg-wine)) !important;
 }
 .world-gen-editor .cover-bg-only {
   /* 功能注释：封面块也用实心白，对齐设定页卡片；去掉粉渐变以免像透底 */
   border-color: var(--wg-faint, color-mix(in srgb, var(--color-text, #17171a) 10%, transparent)) !important;
-  background: #ffffff !important;
-  background-color: #ffffff !important;
+  background: var(--wg-sheet) !important;
+  background-color: var(--wg-sheet) !important;
   background-image: none !important;
   box-shadow: 0 8px 20px color-mix(in srgb, var(--color-shadow, #000) 7%, transparent);
   opacity: 1 !important;
 }
 .world-gen-editor .cover-bg-only-stage {
-  background: #f7f4f2 !important;
+  background: var(--wg-sheet-2) !important;
   border-right-color: var(--wg-faint, color-mix(in srgb, var(--color-text, #17171a) 10%, transparent)) !important;
 }
 /* 功能注释：页底「上一步 / 下一步」托底条实心白，与设定页卡片同不透明度 */
@@ -2602,8 +2694,8 @@ html:has([data-platform-ui="1"]) .funloom-toast-loading {
   padding: 0.55rem;
   border-radius: 1rem;
   border: 1px solid var(--wg-faint, color-mix(in srgb, var(--color-text, #17171a) 10%, transparent));
-  background: #ffffff !important;
-  background-color: #ffffff !important;
+  background: var(--wg-sheet) !important;
+  background-color: var(--wg-sheet) !important;
   background-image: none !important;
   box-shadow: 0 8px 20px color-mix(in srgb, var(--color-shadow, #000) 7%, transparent);
   opacity: 1 !important;
@@ -2651,12 +2743,12 @@ html[data-romance] button.wg-ai-action {
 /* 功能注释：剧情页空态轻量化——去掉厚粉底与粗虚线框 */
 .world-gen-editor .wg-story-empty {
   border: 1px dashed color-mix(in srgb, var(--line) 70%, transparent);
-  background: #f7f4f2 !important;
+  background: var(--wg-sheet-2) !important;
   opacity: 1 !important;
 }
 /* 功能注释：开局日期下拉必须浅底深字；禁止被暗色回退写死成黑底看不清 */
 .world-gen-editor .start-date-panel {
-  background: var(--paper, #fff) !important;
+  background: var(--wg-sheet) !important;
   color: var(--ink) !important;
 }
 .world-gen-editor .start-date-opt {
@@ -2696,7 +2788,7 @@ html[data-romance] button.wg-ai-action {
 }
 /* 功能注释：选中页签的已填数量须深字白底；开关滑块规则会把带 bg-white 的圆角 span 刷成白底，数字若仍是白色就看不见。 */
 .world-gen-editor button[aria-pressed="true"] .wg-tab-count.is-on {
-  background-color: #ffffff !important;
+  background-color: var(--wg-sheet) !important;
   color: #6e1228 !important;
 }
 
@@ -2758,17 +2850,17 @@ html[data-romance] button.wg-ai-action {
   padding-bottom: max(0.4rem, env(safe-area-inset-bottom));
   border-radius: 1.35rem;
   background:
-    linear-gradient(180deg, color-mix(in srgb, #fff 82%, transparent), color-mix(in srgb, #fff4ef 94%, transparent));
-  border: 1px solid color-mix(in srgb, var(--wg-wine, #a8283c) 24%, #fff);
+    linear-gradient(180deg, color-mix(in srgb, var(--wg-sheet) 88%, transparent), color-mix(in srgb, var(--wg-sheet) 92%, var(--wg-wine)));
+  border: 1px solid color-mix(in srgb, var(--wg-wine, #a8283c) 24%, var(--wg-sheet));
   box-shadow:
     0 18px 40px -26px rgba(110, 28, 42, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(16px);
 }
 .world-gen-editor .wg-play-dock > div:first-child {
-  border-color: color-mix(in srgb, var(--wg-wine, #a8283c) 16%, #fff) !important;
-  background: color-mix(in srgb, #fff 62%, #fff1ec) !important;
-  background-color: color-mix(in srgb, #fff 62%, #fff1ec) !important;
+  border-color: color-mix(in srgb, var(--wg-wine, #a8283c) 16%, var(--wg-sheet)) !important;
+  background: color-mix(in srgb, var(--wg-sheet) 90%, var(--wg-wine)) !important;
+  background-color: color-mix(in srgb, var(--wg-sheet) 90%, var(--wg-wine)) !important;
   background-image: none !important;
   box-shadow: none !important;
 }
@@ -2781,7 +2873,7 @@ html[data-romance] button.wg-ai-action {
   height: 2rem;
   padding: 0 0.75rem 0 0.5rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--wg-wine, #a8283c) 12%, #fff);
+  background: color-mix(in srgb, var(--wg-wine, #a8283c) 12%, var(--wg-sheet));
   color: var(--wg-wine-deep, #8e2135);
 }
 .world-gen-editor .codex-ui .wg-play-dock .codex-composer-send {
@@ -2958,8 +3050,8 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   isolation: isolate;
   min-height: 100vh;
   color: var(--wg-ink);
-  /* 功能注释：壳层只用暖浅纯色，不再铺格子底图（设定页 / 完整编辑器同壳） */
-  background-color: #faf6f4;
+  /* 功能注释：壳层跟宿主纸面色（深色模式走 --wg-bg），不再写死浅奶油；不再铺格子底图 */
+  background-color: var(--wg-bg);
   background-image: none;
   font-family: var(--font-ui);
 }
@@ -2971,6 +3063,18 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
 .world-gen-shell > * {
   position: relative;
   z-index: 1;
+}
+/*
+ * 功能注释：壳和编辑器写在同一节点时，壳层后写的 --wg-sheet: var(--fl-sheet)
+ * 会和编辑器的 --fl-sheet: var(--wg-sheet) 成环，纸面算出来是空的。
+ * bg-paper 被强制成这个空值后全透明，添加玩法弹层会透出底下的地点区，字叠在一起。
+ * 用宿主实心纸面拆环；--fl-host-* 在父级已算成颜色，不再指回 --wg-sheet。
+ */
+.world-gen-shell.world-gen-editor {
+  --wg-sheet: var(--fl-host-surface, #ffffff);
+  --wg-sheet-2: var(--fl-host-raised, #f7f4f2);
+  --wg-panel: var(--fl-host-surface, #ffffff);
+  --wg-input: var(--fl-host-input, #faf6f5);
 }
 
 /* 功能注释：设定页左右留白只给表单卡；顶栏自己贴上沿和左右边 */
@@ -2988,7 +3092,7 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
     padding-inline: 1.25rem;
   }
 }
-/* 功能注释：顶栏铺满页宽并贴顶，四周不留底纹空隙；返回仍是左侧胶囊，标题绝对居中 */
+/* 功能注释：顶栏铺满页宽并贴顶；加高一档，让「创作游戏」标题区更舒展 */
 .world-gen-topbar {
   position: sticky;
   top: 0;
@@ -2996,9 +3100,9 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   display: flex;
   align-items: center;
   width: calc(100% + 2rem);
-  min-height: 3.15rem;
-  margin: 0 -1rem 0.7rem;
-  padding: calc(0.35rem + env(safe-area-inset-top, 0px)) 0.85rem 0.35rem;
+  min-height: 4.1rem;
+  margin: 0 -1rem 0.45rem;
+  padding: max(0.7rem, env(safe-area-inset-top, 0px)) 0.85rem 0.75rem;
   box-sizing: border-box;
   border: 0;
   border-bottom: 1px solid color-mix(in srgb, var(--wg-wine, #a8283c) 12%, #fff);
@@ -3016,13 +3120,13 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   position: relative;
   z-index: 1;
   align-self: center;
-  min-height: 2.05rem;
+  min-height: 2.35rem;
   margin: 0;
-  padding: 0 0.8rem;
+  padding: 0 0.9rem;
   border-radius: 999px;
   background: color-mix(in srgb, var(--wg-wine, #a8283c) 9%, #fff);
   color: var(--wg-ink);
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 700;
 }
 .world-gen-topbar .world-gen-back:hover {
@@ -3036,8 +3140,8 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
   margin: 0;
   max-width: calc(100% - 8.5rem);
   padding: 0;
-  font-size: 1.12rem;
-  line-height: 1.2;
+  font-size: 1.05rem;
+  line-height: 1.15;
   letter-spacing: 0.04em;
   transform: translateX(-50%);
 }
@@ -3998,7 +4102,9 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
 .world-gen-shell .text-ink { color: var(--wg-ink) !important; }
 .world-gen-shell .text-ink-soft { color: var(--wg-muted) !important; }
 .world-gen-shell .text-jade { color: var(--wg-rose) !important; }
-.world-gen-shell .text-danger { color: var(--color-danger, #e11d48) !important; }
+/* 功能注释：暗色创作壳上原深红字对比度不够（世界书等提示看不清），提亮到浅珊瑚红 */
+.world-gen-shell .text-danger { color: #ff8f99 !important; }
+.world-gen-shell .text-coral { color: #ffa08a !important; }
 .world-gen-shell [class*="border-line"] { border-color: var(--wg-faint) !important; }
 
 @keyframes world-gen-rise {
@@ -4316,3 +4422,82 @@ html:not([data-bubble]) .dialogue-panel .dlg-bubble, html[data-bubble="soft"] .d
 /* 场景弹窗：书页式排版，去掉逐段竖线 */
 .scene-sheet .story-prose { padding-left: 0; text-indent: 2em; font-size: 15.5px; line-height: 1.95; letter-spacing: 0.02em; }
 .scene-sheet .story-prose::before { display: none; }
+
+/* ═══════════ 编辑器 × 局内皮肤隔离 ═══════════
+ * 功能注释：毛玻璃/可爱/梦幻/血腥玛丽皮肤会给 bg-paper、按钮写半透明白面、模糊与白色悬停，
+ * 在编辑器里与宿主深浅冲突（深色下白底浅字）。编辑器统一回到 --wg-* 实心纸面。 */
+.world-gen-editor {
+  --cute-face: var(--wg-sheet);
+  --cute-frame: var(--line);
+  --cute-tint: color-mix(in srgb, var(--wg-wine) 12%, var(--wg-sheet));
+  --cute-glow: color-mix(in srgb, var(--wg-wine) 22%, transparent);
+  --bloody-glow: color-mix(in srgb, var(--wg-wine) 24%, transparent);
+  --glass-blur: 0px;
+}
+html[data-romance] .world-gen-editor :is([class*="bg-paper"], .ui-card, .ui-list, .ui-btn, .ui-input, .ui-inputbar, .ui-chip) {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-romance] .world-gen-editor button[class~="border"][class*="border-line"]:not([aria-pressed="true"], .rounded-full) {
+  background-color: var(--wg-sheet) !important;
+  color: var(--ink);
+  box-shadow: none !important;
+}
+html[data-romance] .world-gen-editor button[class~="border"][class*="border-line"]:not(:disabled, [aria-pressed="true"]):hover {
+  background-color: color-mix(in srgb, var(--wg-wine) 8%, var(--wg-sheet)) !important;
+  border-color: color-mix(in srgb, var(--wg-wine) 45%, var(--line)) !important;
+}
+/* 主按钮：可爱皮肤会改成淡底主色字，编辑器保持实心酒红白字 */
+html[data-romance] .world-gen-editor :is(.ui-btn-primary, button[class*="bg-jade"]:not([class*="bg-jade/"]), button[class*="from-[var(--jade)]"]) {
+  background-image: none !important;
+  background-color: var(--wg-wine) !important;
+  color: var(--wg-on-primary) !important;
+  border-color: transparent !important;
+}
+html[data-romance] .world-gen-editor :is(input, textarea, select) {
+  background-color: var(--wg-input) !important;
+  color: var(--ink) !important;
+  border-color: var(--line);
+}
+html[data-romance] .world-gen-editor :is(input, textarea)::placeholder {
+  color: color-mix(in srgb, var(--ink-soft) 75%, transparent);
+}
+.world-gen-editor .stone-tablet {
+  background: var(--wg-sheet-2) !important;
+  border-color: var(--line) !important;
+}
+
+/* 地图亮光点位：发光核心 + 柔光晕 + 呼吸外环；颜色取 --pin（默认主题色） */
+.glow-pin {
+  --pin: var(--jade);
+  position: relative;
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 50% 45%, #fff 0 28%, color-mix(in srgb, var(--pin) 55%, #fff) 42%, var(--pin) 72%);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, #fff 85%, transparent),
+    0 0 10px 3px color-mix(in srgb, var(--pin) 75%, transparent),
+    0 0 22px 8px color-mix(in srgb, var(--pin) 35%, transparent);
+}
+.glow-pin::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+  border: 2px solid color-mix(in srgb, var(--pin) 70%, #fff);
+  opacity: 0;
+  animation: glow-pin-pulse 2.2s ease-out infinite;
+}
+.glow-pin[data-tone="active"] { --pin: var(--coral); width: 18px; height: 18px; }
+.glow-pin[data-tone="visited"] { --pin: var(--gold); }
+.glow-pin[data-tone="off"] { --pin: #8a8090; box-shadow: 0 0 0 2px rgba(255,255,255,.7); }
+.glow-pin[data-tone="off"]::after { animation: none; }
+@keyframes glow-pin-pulse {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glow-pin::after { animation: none; }
+}

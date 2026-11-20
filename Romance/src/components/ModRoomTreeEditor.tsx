@@ -3,7 +3,7 @@
  * 「从地点库添加」复制运营库大地图 + 整棵地点树进本作品；打开编辑器不会自动写入库条目。 */
 import { useMemo, useState, type DragEvent, type JSX } from "react";
 import type { RoomContent, Requirement } from "../worlds/star2005/content";
-import { childrenOf, cloneBranch, pathOf, rootsOf, subtreeOf, wouldCycle } from "../game/roomTree";
+import { childrenOf, pathOf, rootsOf, subtreeOf, wouldCycle } from "../game/roomTree";
 import { EmptyState, Help, SearchBox, matches } from "./EditorKit";
 import ImagePicker from "./ImagePicker";
 import MapPlacer, { useImageRatio } from "./MapPlacer";
@@ -28,6 +28,7 @@ import {
   newWorldMapId,
   parseLibraryMapTree,
   roomsOfMap,
+  childIsInsideParent,
   type WorldMapDef,
 } from "../lib/worldMaps";
 
@@ -76,14 +77,13 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
   const mapRooms = useMemo(() => roomsOfMap(allRooms, curMapId), [allRooms, curMapId]);
   const ids = Object.keys(mapRooms);
   const [sel, setSel] = useState<string | null>(ids[0] ?? null);
-  const [tab, setTab] = useState<"base" | "kids" | "flags">("base");
+  const [tab, setTab] = useState<"base" | "flags">("base");
   const [q, setQ] = useState("");
   const [drag, setDrag] = useState<string | null>(null);
   const [libOpen, setLibOpen] = useState(false);
   // 功能注释：大地图标点——选中待摆放的顶层地点；为空时点空白处新建地点
   const [pinTarget, setPinTarget] = useState<string | null>(null);
   // 功能注释：子地点在父地点内部地图上的待摆放目标
-  const [kidPin, setKidPin] = useState<string | null>(null);
   const cur = sel && mapRooms[sel] ? sel : ids[0] ?? null;
   const r = cur ? mapRooms[cur] : undefined;
   const nm = (id: string) => allRooms[id]?.name || id;
@@ -118,7 +118,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
     if (!curMapId) return;
     const id = rid();
     const order = parent ? childrenOf(mapRooms, parent).length : undefined;
-    const name = parent ? "新子地点" : "新地点";
+    const name = parent ? "新下级地点" : "新地点";
     // 功能注释：新增地点挂在当前大地图；不自动冒充开局；描述预填一句
     commit({
       ...allRooms,
@@ -164,13 +164,6 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
     sibs.forEach((x, i) => { next[x] = { ...next[x], order: i }; });
     commit(next, startRoom);
   };
-  const copyBranch = (id: string) => {
-    const { added, rootId } = cloneBranch(mapRooms, id, () => rid());
-    const stamped: Rooms = {};
-    for (const [k, v] of Object.entries(added)) stamped[k] = { ...v, mapId: curMapId };
-    commit({ ...allRooms, ...stamped }, startRoom);
-    setSel(rootId);
-  };
   const sortedRoots = useMemo(() => rootsOf(mapRooms).map((x, i) => [x, mapRooms[x].order ?? i] as const).sort((a, b) => a[1] - b[1]).map(([x]) => x), [mapRooms]);
   const reachable = new Set(sortedRoots.flatMap((x) => subtreeOf(mapRooms, x)));
   const orphans = ids.filter((x) => !reachable.has(x));
@@ -190,12 +183,12 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
     const on = id === cur;
     return (
       <li key={id}>
-        <button type="button" {...dragProps(id, mapRooms[id].parent)} onClick={() => setSel(id)}
+        <button type="button" {...dragProps(id, mapRooms[id].parent)} aria-pressed={on} onClick={() => { setSel(id); setTab("base"); }}
           style={{ paddingLeft: 8 + depth * 14 }}
           className={`flex w-full items-center gap-1.5 rounded-full py-1 pr-2 text-left text-[12.5px] transition ${on ? "bg-jade text-paper-2" : "text-ink hover:bg-jade/10"} ${drag === id ? "opacity-40" : ""}`}>
           <span className={`shrink-0 text-[10px] ${on ? "text-paper-2/80" : "text-ink-soft"}`} aria-hidden>{kids.length ? <IconChevronDown size={10} /> : "•"}</span>
           <span className="min-w-0 flex-1 truncate">{nm(id)}</span>
-          {id === startRoom && <span className={`shrink-0 rounded-full px-1.5 text-[9.5px] ${on ? "bg-paper-2/20" : "bg-gold/15 text-gold"}`}>开局</span>}
+          {id === startRoom && <span className={`shrink-0 rounded-full border px-1.5 text-[9.5px] font-bold leading-[14px] ${on ? "border-white/60 text-white" : "border-gold/40 bg-gold/15 text-gold"}`}>开局</span>}
           {mapRooms[id].locked && <span className="shrink-0 text-[10px]" title="上锁">锁</span>}
           {mapRooms[id].hidden && <span className="shrink-0 text-[10px]" title="隐藏">隐</span>}
         </button>
@@ -215,7 +208,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
 
   const mapBar = (
     <div className="space-y-1.5 rounded-2xl border border-line bg-paper-2 p-2">
-      <p className="px-1 text-[11px] font-bold text-ink-soft">大地图：先配总览图，再在图上添加地点</p>
+      <p className="flex items-baseline justify-between gap-2 px-1 text-[11px] text-ink-soft"><b className="text-[12px] text-ink">地图 · {maps.length} 张</b><span>一个世界可放多张地图，每张各自挂地点</span></p>
       {/* 功能注释：大地图页签与「＋新大地图 / 从地点库添加」同一行 */}
       <div className="flex flex-wrap items-center gap-1.5">
         {maps.map((m) => (
@@ -226,6 +219,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
             className={`rounded-full px-3 py-1 text-[12px] font-bold transition ${m.id === curMapId ? "bg-ink text-paper-2" : "bg-paper text-ink-soft hover:text-ink"}`}
           >
             {m.name || m.id}
+            <span className="ml-1 font-normal opacity-60">{Object.keys(roomsOfMap(allRooms, m.id)).length}</span>
           </button>
         ))}
         <button type="button" className={pill} onClick={addMap}>＋ 新大地图</button>
@@ -268,7 +262,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
             const target = pinTarget && mapRooms[pinTarget] && !mapRooms[pinTarget].parent ? pinTarget : null;
             return (
               <div className="space-y-1.5" data-map-pins>
-                <span className={lbl}>在图上标地点：先点地点名，再点地图；也可直接点空白处新建</span>
+                <span className={lbl}>大地图标点：先选地点，再点图。点空白处可新建。下级地点不在这张大地图上标。</span>
                 <div className="flex flex-wrap gap-1">
                   {tops.map(([id, x]) => {
                     const placed = typeof x.mapX === "number" && typeof x.mapY === "number";
@@ -298,12 +292,14 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
                     }}
                   />
                 </div>
-                <p className="text-[10.5px] text-ink-soft">
-                  {target ? `点地图，把「${mapRooms[target]?.name || target}」放到这里` : "小提示：大地图上只显示直属地点；下级地点进了上一级后再选。"}
-                  {target && typeof mapRooms[target]?.mapX === "number" && (
-                    <button type="button" className="ml-2 text-coral underline" onClick={() => { set(target, { mapX: undefined, mapY: undefined }); setPinTarget(null); }}>移除标记</button>
-                  )}
-                </p>
+                {target && (
+                  <p className="text-[10.5px] text-ink-soft">
+                    点地图，把「{mapRooms[target]?.name || target}」放到这里
+                    {typeof mapRooms[target]?.mapX === "number" && (
+                      <button type="button" className="ml-2 text-coral underline" onClick={() => { set(target, { mapX: undefined, mapY: undefined }); setPinTarget(null); }}>移除标记</button>
+                    )}
+                  </p>
+                )}
               </div>
             );
           })() : (
@@ -318,7 +314,6 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
     return (
       <div className="space-y-2">
         {mapBar}
-        {batchPanel}
         <EmptyState>{emptyHint}</EmptyState>
         <div className="flex flex-wrap gap-1.5">
           <button data-author-field="author-field-rooms" className={pill} onClick={() => add()}>＋ 添加地点</button>
@@ -340,62 +335,79 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
   return (
     <div className="space-y-2">
       {mapBar}
-      {batchPanel}
-      {ids.length > 6 && <SearchBox value={q} onChange={setQ} placeholder="搜索地点" />}
-      <div className="grid gap-2 sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)]">
-        <div className="rounded-2xl border border-line bg-paper-2 p-1.5">
-          <p className="px-2 pb-1 text-[11px] font-bold text-ink-soft">地点列表 · {curMap?.name || "当前大地图"} · 可拖动调整顺序</p>
-          <ul className="max-h-[22rem] space-y-0.5 overflow-y-auto">
+      <div className="grid items-start gap-2 sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)]">
+        <div className="min-w-0 rounded-2xl border border-line bg-paper-2 p-1.5">
+          <p className="px-2 pb-1 text-[11px] leading-snug text-ink-soft">
+            <b className="text-ink">地点 · {curMap?.name || "当前大地图"}</b>
+            <span className="mt-0.5 block">直属地点显示在大地图上。缩进为下级地点，进入上级后才到达。可拖动调整顺序。</span>
+          </p>
+          {ids.length > 6 && <SearchBox value={q} onChange={setQ} placeholder="搜索地点" />}
+          <ul aria-label="地点列表" className="max-h-28 space-y-0.5 overflow-y-auto sm:max-h-[22rem]">
             {sortedRoots.map((x) => tree(x, 0))}
             {orphans.map((x) => tree(x, 0))}
           </ul>
           <div className="mt-1.5 grid gap-1">
-            <button className={`${pill} w-full`} onClick={() => add()}>＋ 添加地点</button>
+            <button type="button" className={`${pill} w-full`} onClick={() => add()}>＋ 添加地点</button>
           </div>
         </div>
 
         {cur && r && (
           <div className="min-w-0 space-y-2 rounded-2xl border border-line bg-paper-2 p-2">
-            <nav aria-label="层级" className="flex flex-wrap items-center gap-1 text-[11.5px]">
-              {path.map((x, i) => (
-                <span key={x} className="flex items-center gap-1">
-                  <button type="button" onClick={() => setSel(x)} className={`rounded-full border px-2.5 py-0.5 ${x === cur ? "border-jade bg-jade/10 font-bold text-jade" : "border-line bg-paper text-ink-soft hover:text-jade"}`}>{nm(x)}</button>
-                  {i < path.length - 1 && <span className="text-ink-soft" aria-hidden>›</span>}
-                </span>
-              ))}
-            </nav>
-            <div className="flex flex-wrap gap-1" role="tablist">
-              {([["base", "基本"], ["kids", `下级地点 · ${kids.length}`], ["flags", "显示与进入条件"]] as const).map(([k, t]) => (
-                <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
-                  className={`rounded-full px-3 py-1 text-[12px] font-bold transition ${tab === k ? "bg-ink text-paper-2" : "bg-paper text-ink-soft hover:text-ink"}`}>{t}</button>
+            <p className="break-words px-1 text-[12px] font-bold leading-snug text-ink">
+              当前地点 · {path.map(nm).join(" › ")}
+            </p>
+            {path.length > 1 && (
+              <button type="button" onClick={() => setSel(path[path.length - 2]!)} className="text-left text-[12px] font-bold text-jade">
+                ← 回到「{nm(path[path.length - 2]!)}」
+              </button>
+            )}
+            <div className="grid grid-cols-2 gap-1" role="tablist" aria-label="地点内容">
+              {(["base", "flags"] as const).map((k) => (
+                <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
+                  className={`flex min-h-9 min-w-0 items-center justify-center rounded-xl px-1 py-1.5 text-center text-[12px] font-bold leading-snug transition ${tab === k ? "bg-ink !text-white" : "border border-[#e4d0d4] bg-white text-ink"}`}>
+                  {k === "base" ? "地点信息" : "进入条件"}
+                </button>
               ))}
             </div>
 
             {tab === "base" && (
               <div className="space-y-1.5">
-                <div className="flex gap-1.5">
-                  <input className={inp} value={r.name ?? ""} placeholder="地点名，如：禅房" onChange={(e) => set(cur, { name: e.target.value })} />
-                  <button className={`${pill} shrink-0`} onClick={() => onDelete(cur)} aria-label="删除地点">×</button>
+                <div className="flex min-w-0 items-end gap-1.5">
+                  <label className="min-w-0 flex-1">
+                    <span className={lbl}>地点名称</span>
+                    <input className={`${inp} min-w-0`} value={r.name ?? ""} placeholder="如：禅房" onChange={(e) => set(cur, { name: e.target.value })} />
+                  </label>
+                  <button type="button" className={`${pill} mb-1 shrink-0 !border-danger/40 !text-danger hover:!bg-danger/10`} onClick={() => onDelete(cur)}>删除</button>
+                </div>
+                <div className="rounded-2xl border border-line bg-paper px-2.5 py-2">
+                  <label className="flex min-w-0 items-center gap-2">
+                    <span className="shrink-0 text-[12px] font-bold text-ink">所属</span>
+                    <select className={`${inp} min-w-0`} value={parentVal} onChange={(e) => {
+                      const p = e.target.value || undefined;
+                      if (wouldCycle(mapRooms, cur, p)) return;
+                      set(cur, { parent: p, order: p ? childrenOf(mapRooms, p).length : undefined, mapId: curMapId });
+                    }}>
+                      <option value="">大地图直属</option>
+                      {parentOpts.filter((x) => x !== cur).map((x) => <option key={x} value={x}>「{pathOf(mapRooms, x).map(nm).join(" › ")}」的下级</option>)}
+                    </select>
+                  </label>
+                  {parentVal && !childIsInsideParent(String(r.name || ""), nm(parentVal)) && (
+                    <p className="mt-1 text-[11px] leading-snug text-coral">不像「{nm(parentVal)}」的下级。街区、学校、另一栋建筑请改回「大地图直属」。</p>
+                  )}
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                    <span className="shrink-0 text-[11px] font-bold text-ink-soft">下级</span>
+                    {kids.map((k) => (
+                      <button key={k} type="button" onClick={() => { setSel(k); setTab("base"); }} className="max-w-full truncate rounded-full border border-line bg-paper-2 px-2 py-0.5 text-[11.5px] text-ink hover:border-jade hover:text-jade">{nm(k)}</button>
+                    ))}
+                    <button type="button" className={pill} onClick={() => add(cur)}>+ 下级</button>
+                  </div>
                 </div>
                 <label className="block">
-                  <span className={lbl}>属于哪里 · 不选就是大地图上的直属地点（不能选自己或自己的下级）</span>
-                  <select className={inp} value={parentVal} onChange={(e) => {
-                    const p = e.target.value || undefined;
-                    if (wouldCycle(mapRooms, cur, p)) return;
-                    set(cur, { parent: p, order: p ? childrenOf(mapRooms, p).length : undefined, mapId: curMapId });
-                  }}>
-                    <option value="">（大地图直属地点）</option>
-                    {parentOpts.filter((x) => x !== cur).map((x) => <option key={x} value={x}>{pathOf(mapRooms, x).map(nm).join(" › ")}</option>)}
-                  </select>
+                  <span className={lbl}>地点描述 *</span>
+                  <textarea className={`${area} block resize-y leading-relaxed ${String(r.desc ?? "").trim() ? "" : "!border-danger"}`} rows={5} value={String(r.desc ?? "")} placeholder="玩家走进这里时看到的描述" onChange={(e) => set(cur, { desc: e.target.value })} />
                 </label>
-                <textarea className={`${area} ${String(r.desc ?? "").trim() ? "" : "!border-danger"}`} rows={3} value={String(r.desc ?? "")} placeholder="玩家走进这里时看到的描述（必填）" onChange={(e) => set(cur, { desc: e.target.value })} />
-                {/* 功能注释：画面描述只喂场景生图；规格仍为 9:16 / 1080×1920 */}
-                <label className="block">
-                  <span className={lbl}>给 AI 画图用的画面提示（写空间、光线、陈设即可，可空）</span>
-                  <textarea className={area} rows={2} value={String(r.scenePrompt ?? "")} placeholder="如：木质回廊，午后斜阳，靠窗长桌，墙上挂着旧地图" onChange={(e) => set(cur, { scenePrompt: e.target.value || undefined })} />
-                </label>
-                <div className="grid gap-1.5 sm:grid-cols-2">
-                  <div className="block"><span className={lbl}>进入此地时显示的背景图（竖版）</span>
+                <div className="grid gap-2 rounded-2xl border border-line bg-paper px-2.5 py-2">
+                  <div className="min-w-0"><span className={lbl}>背景图（竖版）</span>
                     <ImagePicker
                       value={r.bg}
                       onChange={(bg) => set(cur, { bg })}
@@ -408,7 +420,7 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
                         size: LOCATION_SCENE_GEN_SIZE,
                         placeholder: "写这个地点的空间：布局、光线、陈设…",
                         initialParts: buildLocationScenePromptParts(
-                          { name: r.name, scenePrompt: r.scenePrompt },
+                          { name: r.name, scenePrompt: r.scenePrompt || r.desc },
                           imageGen?.settings,
                         ),
                         onPartsCommit: imageGen?.onCommit,
@@ -429,48 +441,6 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
                 <label className="flex cursor-pointer items-center gap-2 text-[12px] text-ink">
                   <input data-author-field="author-field-start-room" type="radio" className="accent-jade" checked={startRoom === cur} onChange={() => commit(allRooms, cur)} />设为开局落脚点<span className="text-ink-soft">（玩家一开局就在这里）</span>
                 </label>
-              </div>
-            )}
-
-            {tab === "kids" && (
-              <div className="space-y-1.5">
-                {!kids.length && <EmptyState>「{nm(cur)}」下还没有子地点。</EmptyState>}
-                <ul className="space-y-1">
-                  {kids.map((k) => (
-                    <li key={k} {...dragProps(k, cur)}
-                      className={`flex items-center gap-1.5 rounded-full border border-line bg-paper py-1 pl-3 pr-1 ${drag === k ? "opacity-40" : ""}`}>
-                      <span className="cursor-grab select-none text-ink-soft" aria-hidden title="拖拽排序">⋮⋮</span>
-                      <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink">{nm(k)}
-                        {!!childrenOf(mapRooms, k).length && <span className="ml-1 text-[11px] text-ink-soft">· {subtreeOf(mapRooms, k).length - 1} 个下级</span>}
-                      </span>
-                      <button className={pill} onClick={() => copyBranch(k)} title="连同全部下级复制一份">复制整枝</button>
-                      <button className={`${pill} !border-jade/40 !text-jade`} onClick={() => { setSel(k); setTab("base"); }}>编辑 ›</button>
-                    </li>
-                  ))}
-                </ul>
-                <div className="flex flex-wrap gap-1.5">
-                  <button className={pill} onClick={() => add(cur)}>＋ 新增子地点</button>
-                  <button className={pill} onClick={() => copyBranch(cur)}>复制「{nm(cur)}」整枝</button>
-                </div>
-                <InnerMapPins
-                  name={nm(cur)}
-                  innerMap={r.innerMap}
-                  kids={kids.map((k) => ({ id: k, name: nm(k), x: mapRooms[k]?.mapX, y: mapRooms[k]?.mapY }))}
-                  target={kidPin && kids.includes(kidPin) ? kidPin : null}
-                  setTarget={setKidPin}
-                  onMap={(url) => set(cur, { innerMap: url || undefined })}
-                  onPlace={(id, x, y) => set(id, { mapX: x, mapY: y })}
-                  onClear={(id) => set(id, { mapX: undefined, mapY: undefined })}
-                  onBlank={(x, y) => {
-                    const id = rid();
-                    const name = "新子地点";
-                    commit({ ...allRooms, [id]: { name, desc: sceneDescFallback(name), exits: {}, mapId: curMapId, parent: cur, order: kids.length, mapX: x, mapY: y } });
-                  }}
-                />
-                <label className="block"><span className={lbl}>返回上层的文案（留空 = 「返回{parentVal ? nm(parentVal) : "上层"}」）</span>
-                  <input className={inp} value={r.upLabel ?? ""} placeholder={`走出${nm(cur)}，回到${parentVal ? nm(parentVal) : "上层"}`} disabled={!parentVal} onChange={(e) => set(cur, { upLabel: e.target.value || undefined })} />
-                </label>
-                <Help>玩家在「{nm(cur)}」里会看到这些子地点的入口胶囊，点击逐层进入；同一棵树内走动不收路费、不扣行动点。</Help>
               </div>
             )}
 
@@ -508,67 +478,19 @@ export default function ModRoomTreeEditor({ rooms, worldMaps, startRoom, tracks,
                     {!!reqs.length && <input className={`${inp} min-w-0 flex-1`} value={r.access?.note ?? ""} placeholder="未达标时的说明，如：庵主不许外人入内" onChange={(e) => set(cur, { access: { requires: reqs, note: e.target.value } })} />}
                   </div>
                 </div>
-                <Help>条件键：fame、reputation、stats.<i>x</i>、c:<i>属性id</i>、flag:<i>规则变量</i>、at:<i>地点id</i>（正好在此）、in:<i>地点id</i>（在这一枝里）。事件、对话、结局的条件同样可以用 at: / in: 判断玩家在哪一层子地点。</Help>
+                <Help>条件键：fame、reputation、stats.<i>x</i>、c:<i>属性id</i>、flag:<i>计数器</i>、at:<i>地点id</i>（正好在此）、in:<i>地点id</i>（在这一枝里）。事件、对话、结局的条件同样可以用 at: / in: 判断玩家在哪一层子地点。</Help>
               </div>
             )}
           </div>
         )}
         {!cur && (
-          <EmptyState>这张大地图还没有地点。点左侧「＋ 添加地点」，或从地点库整图导入。</EmptyState>
+          <EmptyState>这张大地图还没有地点。点「＋ 添加地点」，或从地点库整图导入。</EmptyState>
         )}
+        {/* 功能注释：批量生图属于地点区，跨两栏铺开，展开后不挤在窄列表里 */}
+        <div className="sm:col-span-2">{batchPanel}</div>
       </div>
       {libPicker}
     </div>
   );
 }
 
-/** 功能注释：父地点的内部地图 + 子地点标点（选子地点点图放置 / 拖图钉 / 点空白新建子地点） */
-function InnerMapPins({ name, innerMap, kids, target, setTarget, onMap, onPlace, onClear, onBlank }: {
-  name: string;
-  innerMap?: string;
-  kids: { id: string; name: string; x?: number; y?: number }[];
-  target: string | null;
-  setTarget: (id: string | null) => void;
-  onMap: (url?: string) => void;
-  onPlace: (id: string, x: number, y: number) => void;
-  onClear: (id: string) => void;
-  onBlank: (x: number, y: number) => void;
-}) {
-  const ratio = useImageRatio(innerMap);
-  const placed = (k: { x?: number; y?: number }) => typeof k.x === "number" && typeof k.y === "number";
-  const t = kids.find((k) => k.id === target);
-  return (
-    <div className="space-y-1.5 rounded-2xl border border-line bg-paper-2 p-2" data-inner-map>
-      <span className={lbl}>「{name}」内部地图 · 上传俯视图 / 全景图后给子地点标点，玩家在此地可展开地图点选进入</span>
-      <ImagePicker value={innerMap} onChange={(url) => onMap(url)} label={`${name}内部地图`} max={1920} thumb="h-14 w-20" />
-      {innerMap ? (
-        <>
-          <div className="flex flex-wrap gap-1">
-            {kids.map((k) => {
-              const on = target === k.id;
-              return (
-                <button key={k.id} type="button" onClick={() => setTarget(on ? null : k.id)}
-                  className={`rounded-full border px-2.5 py-0.5 text-[11.5px] ${on ? "border-coral bg-coral text-white" : placed(k) ? "border-jade/50 bg-jade/10 text-jade" : "border-dashed border-line text-ink-soft"}`}>
-                  {k.name}{placed(k) ? "" : " · 未放"}
-                </button>
-              );
-            })}
-          </div>
-          <MapPlacer
-            bg={innerMap}
-            ratio={ratio}
-            dots={kids.filter(placed).map((k) => ({ id: k.id, x: k.x!, y: k.y!, label: k.name }))}
-            activeId={target}
-            onPick={(id) => setTarget(id)}
-            onPlace={(id, x, y) => { onPlace(id, x, y); setTarget(null); }}
-            onBlank={onBlank}
-          />
-          <p className="text-[10.5px] text-ink-soft">
-            {t ? `点地图把「${t.name}」放到该处` : "选子地点后点图放置，拖动图钉微调；不选时点空白处新建子地点。"}
-            {t && placed(t) && <button type="button" className="ml-2 text-coral underline" onClick={() => { onClear(t.id); setTarget(null); }}>移除点位</button>}
-          </p>
-        </>
-      ) : null}
-    </div>
-  );
-}

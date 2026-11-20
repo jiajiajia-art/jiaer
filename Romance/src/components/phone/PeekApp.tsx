@@ -101,7 +101,7 @@ function readReal(npc: Npc, g: GameState): Real {
   const me = g.player.name;
   const ph = g.phone;
   const priv = ph?.threads.find((t) => t.kind === "private" && t.personId === npc.id);
-  const toMsg = (m: { role: string; text: string; label: string; img?: string; os?: string; from?: string }, mine: boolean): Msg => ({ me: mine, t: m.text, recalled: false, time: m.label, img: m.img, os: m.os });
+  const toMsg = (m: { role: string; text: string; label: string; img?: string; os?: string; osOn?: boolean; from?: string }, mine: boolean): Msg => ({ me: mine, t: m.text, recalled: false, time: m.label, img: m.img, os: m.osOn ? m.os : undefined });
   const chat: Chat | null = priv && priv.msgs.some((m) => m.role !== "sys")
     ? { with: me, note: me, real: true, msgs: priv.msgs.filter((m) => m.role !== "sys").slice(-40).map((m) => toMsg(m, m.role === "npc")) }
     : null;
@@ -129,7 +129,7 @@ async function aiPeek(cfg: AIConfig, npc: Npc, game: GameState, real: Real): Pro
   const task = `「视监」：玩家偷看 ${npc.name} 的私人手机。核心玩法是「表里不一」：
 - 表：${npc.name} 平时对主角${me}说的话（下面给出真实聊天记录，不要改写）。
 - 里：日记、仅自己可见的动态、和他人的私聊、撤回的消息里流露真实想法——秘密、担忧、对${me}的真实感情（在意、嫉妒、愧疚、利用、算计、动摇，依好感与人设而定），与表面形成反差。不要直白说破，靠细节暗示。
-- 私聊对象只能从这些本局真实人物里选：${others.join("、") || "（暂无其他人物）"}；如确需家人/经纪人等未登场者，用「妈妈」「经纪人」这类身份称呼。绝不能是${me}本人。
+- 私聊对象只能从这些本局真实人物里选：${others.join("、") || "（暂无其他人物）"}；如确需未登场的家人，用「妈妈」「爸爸」这类身份称呼，不要另编经纪人。绝不能是${me}本人。
 严禁 OOC，必须紧扣下面的真实信息，并与上次视监内容衔接（延续会话、日记）。
 被视监的角色：${npc.name}，${npc.age}，${npc.identity}，与主角关系：${npc.relation}，好感 ${npc.affinity}/100，心情：${npc.mood}
 简介：${npc.bio}

@@ -10,16 +10,24 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(join(root, rel), 'utf8');
 
-test('App_应懒加载RomanceHost并挂romance路由', () => {
+test('App_进入romance路由时并行加载宿主与应用', () => {
   const app = read('src/App.tsx');
-  assert.match(app, /lazy\(\(\) => import\('\.\/page\/RomanceHost'\)\)/);
+  const route = read('src/page/RomanceRoute.tsx');
+  const create = read('src/page/CreateType.tsx');
+  assert.match(route, /Promise\.all\(\[\s*import\('\.\/RomanceHost'\),\s*import\('virtual:romance-app'\),/);
+  assert.match(route, /pending \?\?= loadRomanceRoute\(\)/);
+  assert.match(route, /Promise\.race\(\[modules, timeout\]\)/);
+  assert.match(route, /window\.location\.reload\(\)/);
+  assert.match(create, /void preloadRomanceRoute\(\)\.catch[\s\S]*?setRomanceSubOpen\(true\)/);
+  assert.match(create, /await preloadRomanceRoute\(\);[\s\S]*?navigate\(`\/romance/);
   assert.match(app, /path="\/romance\/\*"/);
-  assert.match(app, /<RomanceHost\s*\/>/);
+  assert.match(app, /<RomanceRoute\s*\/>/);
 });
 
 test('RomanceHost_应经virtual模块嵌入并清理html主题class', () => {
   const host = read('src/page/RomanceHost.tsx');
-  assert.match(host, /virtual:romance-app/);
+  assert.match(host, /<RomanceApp\s*\/>/);
+  assert.doesNotMatch(host, /<Suspense|加载 Romance/);
   assert.match(host, /virtual:romance-css/);
   assert.match(host, /clearRomanceHtmlClasses|data-romance/);
   // 功能注释：进页须剥离主站 dark，否则 Romance 浅色纸面被主站深色壳盖成深紫底

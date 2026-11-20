@@ -1,0 +1,25 @@
+.preview {
+    line-height: 1.6;
+}
+
+.preview p {
+    margin: 0 0 8px;
+}
+
+.fields {
+    margin: 16px 0 0;
+}
+
+.fields dt {
+    color: var(--color-text);
+    font-weight: 700;
+}
+
+.fields dd {
+    margin: 4px 0 0;
+    white-space: pre-wrap;
+}
+
+.fields dd + dt {
+    margin-top: 16px;
+}

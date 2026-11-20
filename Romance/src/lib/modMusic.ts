@@ -169,7 +169,7 @@ export function applyMusicRows(rows: MusicRow[]): MusicPatch {
   };
 }
 
-/** 功能注释：地点背景音乐下拉。平台曲直接出现，不必先加进音乐列表；引用名后保留「（引用）」 */
+/** 功能注释：地点下拉只列作者放进本作品的曲（上传 / 引用 / 已加入的平台曲），以及地点或事件已经选中的那一首。不把整份平台曲库和示例音效灌进每个地点。 */
 export function locationBgmOptions(content: MusicSlice, look: MusicLookups): { id: string; name: string }[] {
   const out: { id: string; name: string }[] = [];
   const seen = new Set<string>();
@@ -177,6 +177,10 @@ export function locationBgmOptions(content: MusicSlice, look: MusicLookups): { i
     if (!id || seen.has(id)) return;
     seen.add(id);
     out.push({ id, name });
+  };
+  const platName = (id: string) => {
+    const p = look.platform.find((x) => x.id === id);
+    return p ? `${p.name}（平台）` : `已失效：${id}`;
   };
   for (const raw of asList(content.bgm)) {
     if (!raw || typeof raw !== "object") continue;
@@ -193,7 +197,19 @@ export function locationBgmOptions(content: MusicSlice, look: MusicLookups): { i
     const name = look.author.find((a) => a.id === id)?.name;
     add(id, `${name ?? `已失效：${id}`}（引用）`);
   }
-  for (const p of look.platform) add(p.id, `${p.name}（平台）`);
+  for (const raw of asList(content.platformAudioRefs)) {
+    const id = asId(raw);
+    if (id) add(id, platName(id));
+  }
+  const rooms = content.rooms && typeof content.rooms === "object" ? Object.values(content.rooms) : [];
+  for (const room of rooms) {
+    const id = asId(room?.bgm);
+    if (id.startsWith("platform:")) add(id, platName(id));
+  }
+  for (const ev of [...(content.fixedEvents ?? []), ...(content.events ?? [])]) {
+    const id = asId(ev?.bgm);
+    if (id.startsWith("platform:")) add(id, platName(id));
+  }
   return out;
 }
 

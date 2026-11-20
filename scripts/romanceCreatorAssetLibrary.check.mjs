@@ -33,12 +33,15 @@ test('ImagePicker_素材库打开统一面板含我的', () => {
   assert.doesNotMatch(src, /setPlatformLibOpen\(true\)/);
 });
 
-test('ModEditorPanel_顶栏素材库入口', () => {
-  const src = read('components/ModEditorPanel.tsx');
-  assert.match(src, /setAssetLibOpen\(true\)/);
-  assert.match(src, /CreatorAssetLibrary/);
-  assert.match(src, /素材库/);
-  assert.match(src, /setAssetLibOpen\(true\)/);
+test('ModEditorPanel_挂载统一素材库弹层', () => {
+  const panel = read('components/ModEditorPanel.tsx');
+  const picker = read('components/ImagePicker.tsx');
+  assert.match(panel, /CreatorAssetLibrary/);
+  assert.match(panel, /assetLibOpen/);
+  assert.match(panel, /setAssetLibOpen\(false\)/);
+  // 功能注释：顶栏直连入口下线后，由各 ImagePicker「素材库」按钮 setAssetLibOpen(true)
+  assert.match(picker, /setAssetLibOpen\(true\)/);
+  assert.match(picker, /CreatorAssetLibrary/);
 });
 
 test('ModRoomTreeEditor_从地点库走统一整包Tab', () => {

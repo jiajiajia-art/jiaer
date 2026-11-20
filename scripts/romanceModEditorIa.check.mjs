@@ -78,13 +78,10 @@ test('ModEditorPanel_字段应按系统归入唯一入口', () => {
   assert.doesNotMatch(panel, /title="开局封面"/);
   const openingAt = panel.indexOf('title="开场剧情"');
   assert.match(panel.slice(Math.max(0, openingAt - 40), openingAt), /g="look"/);
-  const openingSec = panel.slice(openingAt, panel.indexOf('title="剧情美化"'));
+  const openingSec = panel.slice(openingAt, panel.indexOf('title="底栏页签"', openingAt));
   assert.match(openingSec, /开场页外观/);
   assert.match(openingSec, /OpeningStyleStudio/);
-  // 功能注释：下架第二套开场白表单，禁止再出现顶部小字等输入
-  assert.doesNotMatch(openingSec, /ModOpeningEditor/);
-  assert.doesNotMatch(openingSec, /ui-label border-t[\s\S]*开场白|>开场白</);
-  assert.doesNotMatch(openingSec, /顶部小字|正文段落|浮现完提示|序幕视频|按钮文案/);
+  assert.match(openingSec, /<ModOpeningEditor value=\{c\.opening\} compact/);
   assert.doesNotMatch(openingSec, /ModCoverEditor/);
   assert.match(panel, /title="固定事件"/);
   assert.match(panel, /首次事件/);
@@ -102,7 +99,7 @@ test('ModEditorPanel_应去掉全部分组与全部展开_默认基础_搜索仍
 });
 
 test('ModEditorPanel_保存入口仅在顶栏_无底栏保存条', () => {
-  assert.match(panel, /顶栏只留「保存 \/ 放弃 \/ 预览」/);
+  assert.match(panel, /顶栏固定「保存 \/ 预览」/);
   assert.doesNotMatch(panel, /["']保存并返回["']/);
   assert.doesNotMatch(panel, />\s*保存并返回\s*</);
   assert.doesNotMatch(panel, /placeholder="搜索设置项/);

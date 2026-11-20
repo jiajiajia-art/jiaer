@@ -4,7 +4,7 @@
  * 进入时剥离主站 html.dark / accent / skin / font（否则 Romance 令牌被主站深色壳劫持成图1那种深紫底）；
  * 离开时清掉 Romance 主题 class，并恢复进页前主站 class。
  */
-import { Suspense, lazy, useCallback, useEffect, useState, type ComponentType } from 'react';
+import { useCallback, useEffect, useState, type ComponentType } from 'react';
 import toast from 'react-hot-toast';
 import AuthModal from '../components/AuthModal';
 import AiRouteFab from '../components/AiRoute/AiRouteFab';
@@ -17,12 +17,6 @@ import type { PayOrderRequest } from '../api/pay/pay.type';
 import { auth } from '../api/account/authApi';
 
 import 'virtual:romance-css';
-
-const RomanceApp = lazy(() =>
-  import('virtual:romance-app').then((m) => ({
-    default: m.default as ComponentType,
-  })),
-);
 
 const ROMANCE_HTML_CLASS_PREFIXES = [
   'dark',
@@ -48,7 +42,7 @@ function clearRomanceHtmlClasses() {
   doomed.forEach((cls) => root.classList.remove(cls));
 }
 
-export default function RomanceHost() {
+export default function RomanceHost({ RomanceApp }: { RomanceApp: ComponentType }) {
   const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
   const updateUser = useAuthStore((s) => s.updateUser);
   const [rechargeOpen, setRechargeOpen] = useState(false);
@@ -139,15 +133,7 @@ export default function RomanceHost() {
         color: 'var(--ink, #342c28)',
       }}
     >
-      <Suspense
-        fallback={(
-          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
-            加载 Romance…
-          </div>
-        )}
-      >
-        <RomanceApp />
-      </Suspense>
+      <RomanceApp />
       {(isPlayerPlay || inGame) && (!isCreatorShell || inGame) && <AiRouteFab />}
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
       <RechargeModal

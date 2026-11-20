@@ -1,3 +1,4 @@
+import { saveWorkImage } from "../lib/saveWorkImage";
 import { getWorld } from "../mods/registry";
 import { useEffect, useRef, useState } from "react";
 import { useGame } from "../store/gameCtx";
@@ -156,11 +157,14 @@ export default function CoverAiChat({ d, setCover, author = false, storeKey = "p
         setBusy("img"); setStarted(Date.now());
         const t1 = Date.now();
         try {
-          const url = await generateImage(cfg, r.bgPrompt);
+          const image = await generateImage(cfg, r.bgPrompt);
+          if (ctl.signal.aborted) return;
+          const url = await saveWorkImage(image);
+          if (ctl.signal.aborted) return;
           const id2 = Date.now();
           const ch = commit({ ...dRef.current, image: url, cgMode: "fixed" }, id2, ["image", "cgMode"]);
           setSt((s) => ({ ...s, turns: [...s.turns, { id: id2, role: "assistant", ms: Date.now() - t1, text: "背景图画好了，已设为固定 CG。", changes: ch }] }));
-        } catch (e) { setErr(`背景图没画出来：${(e as Error).message}`); }
+        } catch (e) { setErr(`背景图生成或保存失败：${(e as Error).message}`); }
       }
     } catch (e) {
       setLive("");

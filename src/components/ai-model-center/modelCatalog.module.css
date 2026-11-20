@@ -28,6 +28,8 @@
 .secretButton { width: 36px; height: 36px; flex: 0 0 auto; }
 .credentialError { display: block; margin-top: 5px; color: var(--color-primary-bold); font-size: 12px; }
 .fieldGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.pricingFields { display: grid; min-width: 0; gap: 18px; margin: 0; padding: 0; border: 0; }
+.pricingFields input { min-width: 0; }
 .field { display: grid; gap: 7px; color: var(--color-text-secondary); font-size: 13px; font-weight: 600; }
 .field input, .field textarea, .searchInput { min-height: 44px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 10px; color: var(--color-text); background: var(--color-surface); font: inherit; }
 .field textarea { min-height: 80px; resize: vertical; }

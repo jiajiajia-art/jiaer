@@ -888,8 +888,10 @@ export type CreationPath = {
   lockTag?: string; // 未解锁时的角标文字（默认「未解锁」）
   /** @deprecated 仅兼容旧草稿展示；新编辑用 lockConds 生成提示 */
   lockHint?: string;
-  /** 功能注释：结构化解锁条件（属性/人物/地点/事件依赖）；未选中的不生效 */
-  lockConds?: import("../lib/types").FixedCond[];
+  /** 功能注释：跨周目解锁条件（二周目 / 结局 / 线路通关 / 事件），全部满足后玩家开局可选 */
+  lockConds?: import("../lib/pathDeps").PathLockCond[];
+  /** 功能注释：自建预设主角（不从已有人物里选时填写）；与 hero 二选一，hero 优先 */
+  heroCustom?: { name: string; age?: number; gender?: string; bio?: string; avatar?: string };
 };
 /* 人物线路的开局人际：选这条路径开局时，对指定固定人物直接设定 */
 export type PathNpc = {
@@ -941,6 +943,9 @@ export function optFx(o?: LegacyFx): OptFx | undefined {
   return Object.keys(fx).length ? fx : undefined;
 }
 export type CreationCopy = {
+  /** 功能注释：创作者备注——显示在玩家建角页顶部的一段说明 */
+  playerNote?: string;
+  fieldNotes?: Record<string, string>;
   paths?: CreationPath[]; // 人物线路（career 世界的第一步）；id 对应 identities
   /** @deprecated 开局是否弹窗改由开放路径条数决定（>1 弹窗）；旧稿字段读写忽略 */
   pathPicker?: "modal" | "off";
@@ -1058,7 +1063,7 @@ export const RAW_CREATION: CreationCopy = {
 };
 const PATH_LOCK_KEY = "star_path_locks_v1";
 /* 游戏内编辑器对线路的本地覆盖；hero / room / memory / event 存 "" 表示清空作者设定 */
-export type PathLockOverride = { open?: boolean; lockTag?: string; lockHint?: string; lockConds?: import("../lib/types").FixedCond[]; hero?: string; room?: string; memory?: string; event?: string; eventId?: string;
+export type PathLockOverride = { open?: boolean; lockTag?: string; lockHint?: string; lockConds?: import("../lib/pathDeps").PathLockCond[]; hero?: string; room?: string; memory?: string; event?: string; eventId?: string;
   name?: string; blurb?: string; perksLabel?: string; fx?: import("./routeFx").RouteFx; perks?: string; // 线路管理面板里改写的名称 / 简介 / 开局数值（结构化 JSON；perks 只是由 fx 渲染出的预览）
 };
 export function loadPathLocks(): Record<string, PathLockOverride> {
@@ -1078,8 +1083,7 @@ export function clearPathLocks() {
   window.dispatchEvent(new Event("star:path-locks"));
 }
 
-export const creationCopy = (): CreationCopy => {
-  const base = slot<CreationCopy>("creation", () => RAW_CREATION, () => ({}));
+export const creationCopy = (base: CreationCopy = slot<CreationCopy>("creation", () => RAW_CREATION, () => ({}))): CreationCopy => {
   const locks = loadPathLocks();
   // 功能注释：paths 非数组时 length/map 会炸；收成数组再往下走
   const paths = Array.isArray(base.paths) ? base.paths : [];

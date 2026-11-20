@@ -12,7 +12,7 @@ import { liveArray } from "../mods/live";
 import type { Npc } from "../lib/types";
 import type { TransportMode } from "../worlds/star2005/content";
 import { childrenOf, isWithin, parentOf, pathOf, sameTree } from "./roomTree";
-import { engineRules } from "./engineRules";
+import { engineRules, seededRandom } from "./engineRules";
 import {
   DIR_LABEL,
   ENCOUNTERS,
@@ -76,13 +76,19 @@ export const insideTree = (a: string, b: string) => sameTree(ROOMS, a, b);
 export const inRange = (range: readonly string[], roomId: string) => range.some((r) => isWithin(ROOMS, roomId, r));
 
 /* 当前地点的直接子地点入口：隐藏的（未到访且未解锁）不出现；上锁 / 门槛不足的照常显示但标明原因 */
+/* 功能注释：「先藏起来」的地点在未到访、未解锁、玩家不在此处时对玩家不可见（子地点入口与舆图共用） */
+export function roomHiddenFrom(s: SimState, roomId: string): boolean {
+  const r = ROOMS[roomId];
+  if (!r?.hidden || s.room === roomId) return false;
+  if ((s.visited ?? []).includes(roomId)) return false;
+  return (s.flags?.[`unlock:${roomId}`] ?? 0) < 1;
+}
 export type ChildEntry = { id: string; name: string; desc: string; ok: boolean; note: string; visited: boolean };
 export function childEntries(s: SimState, roomId: string): ChildEntry[] {
   const visited = new Set(s.visited ?? []);
   return childrenOf(ROOMS, roomId).flatMap((id) => {
     const r = ROOMS[id];
-    const unlocked = (s.flags?.[`unlock:${id}`] ?? 0) >= 1;
-    if (r.hidden && !visited.has(id) && !unlocked) return [];
+    if (roomHiddenFrom(s, id)) return [];
     const acc = roomAccess(s, id);
     return [{ id, name: locOf(id)?.name ?? r.name ?? id, desc: r.intro ?? r.desc ?? "", ok: acc.ok, note: acc.note, visited: visited.has(id) }];
   });
@@ -306,13 +312,6 @@ export function learnIntel(s: SimState, personId: string, intelId: string): { ne
 
 /* ═══════════════ 人物系统 · 心跳 ═══════════════ */
 
-/* 心跳伪随机：由 (id + tick) 派生，保证同一心跳下的走动可复现 */
-function hash(str: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return (h >>> 0) / 4294967296;
-}
-
 /* —— 地图人物名单 ——
  * 内容池人物（据点 / 活动范围 / 门槛 / 邂逅都来自内容池）+ 存档里设了常驻地点的其他人物（自定义 / 剧情新增）。
  * 传入存档名单（g.npcs）时：名字、身份取存档值；常驻地点（npc.home）覆盖内容池据点。
@@ -358,20 +357,20 @@ export function seatAtHome(s: SimState, id: string, home?: string): SimState {
 }
 
 /* 一拍里此人往哪走（undefined = 原地不动）。
- * 设了常驻地点：在常驻地点时约 22% 概率出门到相邻处；在外时约 60% 回来、20% 逗留、20% 就近再走一步——长期七成多时间待在常驻地点。
+ * 设了常驻地点：在常驻地点时约 45% 概率出门；在外时约 35% 回来、30% 逗留、35% 就近再走一步。
  * 内容池 roam 人物：约 42% 概率在活动范围内走一步；被带离活动范围（如同行）的人，择机回据点。 */
 function stepOf(w: Walker, from: string, tick: number): string | undefined {
-  const roll = (k: string) => hash(`${w.id}:${k}:${tick}`);
+  const roll = (k: string) => seededRandom(`npc-roam:${w.id}:${k}:${tick}`);
   const pickOf = (cand: { to: string }[]) => (cand.length ? cand[Math.floor(roll("dir") * cand.length)].to : undefined);
   // NPC 可走的相邻处：方向出口 + 上下层地点，排除「不允许 NPC 自主到访」的地点
   // 底层规则：每隔 roamEvery 拍才走动一次；默认不许走出所在地点树（回常驻地点 / 据点不受限）
   const R = engineRules().npc;
   if (R.roamEvery > 1 && tick % R.roamEvery) return undefined;
-  const near = linksOf(from).filter((e) => !ROOMS[e.to]?.noNpcVisit && (R.roamCrossRoot || insideTree(from, e.to)));
+  const near = linksOf(from).filter((e) => validRoom(e.to) && !ROOMS[e.to].noNpcVisit && (R.roamCrossRoot || insideTree(from, e.to)));
   if (w.anchored) {
-    if (from === w.home) return roll("move") > 0.22 ? undefined : pickOf(near);
+    if (from === w.home) return roll("move") > 0.45 ? undefined : pickOf(near);
     const r = roll("home");
-    return r < 0.6 ? w.home : r < 0.8 ? undefined : pickOf(near);
+    return r < 0.35 ? w.home : r < 0.65 ? undefined : pickOf(near.filter((e) => e.to !== w.home));
   }
   const m = w.m!;
   if (roll("move") > 0.42) return undefined; // 约 42% 概率移动一步

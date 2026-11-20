@@ -106,24 +106,23 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
     "AI 对话": <CoverAiChat d={d} setCover={onChange} author={author} storeKey={chatKey} cover={cover} />,
     背景: <>
       {!bgOnly && <H t="背景类型" d="都不填则用默认封面背景" />}
-      {bgOnly ? <p className="cover-bg-only-label">背景类型</p> : null}
       <Opt value={cgKind(d)} onPick={(v) => set({ cgMode: v, ...(v === "carousel" && !d.cgs?.length && d.image ? { cgs: [d.image] } : {}) })}
         opts={[["fixed", "固定 CG"], ["carousel", "轮播 CG"], ["video", "视频"]] as const} />
       {cgKind(d) === "fixed" && <>
         {!bgOnly && <H t="固定 CG" d="始终显示这一张" />}
-        {bgOnly ? <p className="cover-bg-only-label">图片</p> : null}
-        {/* 功能注释：生图走 ImagePicker 弹窗；用作品名+简介预填，不另起一套网关 */}
+        {/* 功能注释：生图走 ImagePicker 弹窗；封面主体取作品简介，创作者可按画面调整 */}
         <ImagePicker
           value={d.image}
           label="封面 CG"
           max={1920}
+          thumb={bgOnly ? "h-9 w-9" : undefined}
           onChange={(u) => set({ image: u })}
-          hint={bgOnly ? "竖屏 9:16" : "竖屏建议 9:16，横屏建议 16:9"}
+          hint="竖屏建议 9:16，横屏建议 16:9"
           aiGen={{
             size: WORK_COVER_GEN_SIZE,
-            placeholder: "只写封面氛围与主角外观，画面里不要出现作品名文字（9:16 竖版）",
+            placeholder: "描述要画的场景、人物外观和光线",
             initialParts: buildWorkCoverPromptParts(
-              { title: d.title || cv.title || workTitle, summary: d.intro || cv.intro || workSummary },
+              { title: d.title || cv.title || workTitle, summary: workSummary },
               imageGen?.settings,
             ),
             onPartsCommit: imageGen?.onCommit,
@@ -131,15 +130,15 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
         />
       </>}
       {cgKind(d) === "carousel" && (
-        <div className="mt-3">
+        <div className={bgOnly ? "mt-1" : "mt-3"}>
           <CoverCgEditor
             v={d}
             set={set}
             aiGen={{
               size: WORK_COVER_GEN_SIZE,
-              placeholder: "只写封面氛围与主角外观，画面里不要出现作品名文字（9:16 竖版）",
+              placeholder: "描述要画的场景、人物外观和光线",
               initialParts: buildWorkCoverPromptParts(
-                { title: d.title || cv.title || workTitle, summary: d.intro || cv.intro || workSummary },
+                { title: d.title || cv.title || workTitle, summary: workSummary },
                 imageGen?.settings,
               ),
               onPartsCommit: imageGen?.onCommit,
@@ -149,10 +148,10 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
       )}
       {cgKind(d) === "video" && <>
       <H t="背景视频" d="静音循环播放" />
-      <div className="flex gap-1.5">
+      <div className={bgOnly ? "flex flex-wrap items-center gap-1.5" : "flex gap-1.5"}>
         <label className={`${chip(false)} cursor-pointer`}>上传视频<input type="file" accept="video/*" hidden onChange={(e) => { pickVideo(e.target.files?.[0]); e.target.value = ""; }} /></label>
         {d.video && <button type="button" className={`${chip(false)} hover:!text-danger`} onClick={() => set({ video: undefined })}>清除</button>}
-        <input className={`${inp} font-mono text-[11.5px]`} value={d.video?.startsWith("data:") ? "" : d.video ?? ""} onChange={(e) => set({ video: e.target.value || undefined })} placeholder={d.video?.startsWith("data:") ? "已上传本地视频（可改贴直链）" : "或粘贴视频直链 https://…"} />
+        <input aria-label="视频直链" className={`${inp} font-mono text-[11.5px]`} value={d.video?.startsWith("data:") ? "" : d.video ?? ""} onChange={(e) => set({ video: e.target.value || undefined })} placeholder={d.video?.startsWith("data:") ? "已上传本地视频（可改贴直链）" : "或粘贴视频直链 https://…"} />
       </div>
       {vidMsg && <p className="mt-1 text-[11px] text-danger">{vidMsg}</p>}
       <H t="加载封面" d="视频加载出来之前显示的图（可选）" />
@@ -262,14 +261,13 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
       compact={!!bgOnly}
     />
     <p className={bgOnly ? "cover-bg-only-caption" : "mt-1 text-center text-[10.5px] text-ink-soft"}>
-      实时预览 · {look.orient === "landscape" ? "横屏" : "竖屏"}{bgOnly ? " · 仅背景" : ""}
+      实时预览
     </p>
   </>;
 
   // 对话为主：纯对话式界面，不带预览（预览在「实时预览」里看）
   if (mode === "chat") return <div className="text-ink">{confirmEl}<CoverAiChat d={d} setCover={onChange} author={author} storeKey={chatKey} cover={cover} full /></div>;
 
-  // 功能注释：作品展示封面强制左右结构（预览左、设置右），单卡紧凑，禁止再上下拆成两块
   if (bgOnly) {
     return (
       <div className="cover-bg-only text-ink">
@@ -284,8 +282,8 @@ function CoverDiyBody({ value, onChange, cvText, previewCv, previewD, author, ch
             {resetBtn}
           </div>
           <div className="cover-bg-only-body">{page["背景"]}</div>
-          {panelExtra ? <div className="cover-bg-only-extra mt-1.5 space-y-2 border-t border-line/70 pt-2">{panelExtra}</div> : null}
         </div>
+        {panelExtra ? <div className="cover-bg-only-extra space-y-1.5 border-t border-line/70">{panelExtra}</div> : null}
       </div>
     );
   }

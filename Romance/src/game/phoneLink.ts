@@ -11,6 +11,7 @@ import { ensurePhone, gameMinutes, gameTimeLabel, msgId, openThread, pushMsg, cr
 import { remember } from "./npcKnowledge";
 import { findNpc } from "../lib/npcIdentity";
 import { mobsHere } from "./mud";
+import { entertainmentPlayOn } from "../mods/registry";
 
 const ACTS_MAX = 40;
 const NET_MAX = 30;
@@ -164,7 +165,7 @@ export function phoneLinkPrompt(g: GameState): string {
   const silent = ph.contacts.filter((pid) => !canInitiate(g, pid)).map(name);
   parts.push(`〈让角色主动上线联络（剧情自然需要时才用，不必每回合）〉在 JSON 里加：
 "phone":{"messages":[{"from":"角色名","text":["一条","两条"]}],"group":{"title":"群名","from":"发起人","members":["角色名"],"text":["开场白"]},"call":{"from":"角色名","video":false,"reason":"打来想说的事"},"mails":[{"from":"角色名或机构名","subject":"","body":"","reply_to":""}],"friend_requests":[{"from":"角色名","text":"验证消息"}]}
-规则：messages / group 只能来自${commTerm("app")}好友（${friends.join("、") || "暂无"}）；不是好友的人只能 call、mails 或 friend_requests；${silent.length ? `${silent.join("、")} 被主角设为不接收主动消息：不得让 TA 发消息、来电、拉群或发好友申请；` : ""}每回合 messages ≤3 条、mails ≤2 封、call ≤1 个；${here.length ? `此刻和主角当面在一起的（${here.map((p) => p.name).join("、")}）有话直接当面说，不要发消息或来电；` : ""}平台与机构（订单、快递、平台通知、工作邀约、粉丝来信等）也能发邮件，可以紧扣主角最近的手机操作。正文里不必复述手机内容。${commPromptHint()}`);
+规则：messages / group 只能来自${commTerm("app")}好友（${friends.join("、") || "暂无"}）；不是好友的人只能 call、mails 或 friend_requests；${silent.length ? `${silent.join("、")} 被主角设为不接收主动消息：不得让 TA 发消息、来电、拉群或发好友申请；` : ""}每回合 messages ≤3 条、mails ≤2 封、call ≤1 个；${here.length ? `此刻和主角当面在一起的（${here.map((p) => p.name).join("、")}）有话直接当面说，不要发消息或来电；` : ""}平台与机构（订单、快递、平台通知${entertainmentPlayOn() ? "、工作邀约、粉丝来信" : ""}等）也能发邮件，可以紧扣主角最近的手机操作。${entertainmentPlayOn() ? "" : "本作品没有演艺事业：邮件、来电、短信不得出现经纪公司、经纪人、通告、试镜、粉丝、选角。"}正文里不必复述手机内容。${commPromptHint()}`);
   return `\n【手机 ↔ 线下】手机时间与线下同步（现在 ${gameTimeLabel(g)}）。\n${parts.join("\n")}\n`;
 }
 

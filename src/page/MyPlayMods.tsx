@@ -20,6 +20,7 @@ import {
   type MyPlayModItem,
 } from '../lib/myPlayMods';
 import styles from './CreatePlatformApp.module.css';
+import { PLAY_MOD_CREATE_LOCKED, PLAY_MOD_CREATE_LOCKED_HINT } from '../../Romance/src/lib/playModCreate';
 
 const GROUP_ORDER: MyPlayModGroupKey[] = ['draft', 'private', 'published'];
 
@@ -128,17 +129,28 @@ const MyPlayMods: React.FC = () => {
 
       <section className={styles.card} data-my-play-mods-actions="1">
         <div className={styles.row}>
-          <button type="button" className={styles.btnPrimary} onClick={() => navigate('/romance/?createPlayMod=1')}>
-            新建玩法（对话生成）
+          <button
+            type="button"
+            className={styles.btnPrimary}
+            disabled={PLAY_MOD_CREATE_LOCKED}
+            onClick={() => {
+              if (PLAY_MOD_CREATE_LOCKED) {
+                toast(PLAY_MOD_CREATE_LOCKED_HINT);
+                return;
+              }
+              navigate('/romance/?createPlayMod=1');
+            }}
+          >
+            {PLAY_MOD_CREATE_LOCKED ? '暂时测试中' : '新建玩法（对话生成）'}
           </button>
           <label className={styles.btnGhost}>
-            {uploadBusy ? '上传中…' : '上传玩法包 .kkmod'}
+            {PLAY_MOD_CREATE_LOCKED ? '上传暂不开放' : uploadBusy ? '上传中…' : '上传玩法包 .kkmod'}
             <input
               ref={fileRef}
               type="file"
               accept=".kkmod,.json,application/json"
               hidden
-              disabled={uploadBusy}
+              disabled={uploadBusy || PLAY_MOD_CREATE_LOCKED}
               onChange={(e) => void onPickPackage(e.target.files?.[0])}
             />
           </label>
@@ -171,9 +183,16 @@ const MyPlayMods: React.FC = () => {
                 <button
                   type="button"
                   className={styles.btnGhost}
-                  onClick={() => navigate(`/romance/?createPlayMod=1&editComponent=${encodeURIComponent(mod.id)}`)}
+                  disabled={PLAY_MOD_CREATE_LOCKED}
+                  onClick={() => {
+                    if (PLAY_MOD_CREATE_LOCKED) {
+                      toast(PLAY_MOD_CREATE_LOCKED_HINT);
+                      return;
+                    }
+                    navigate(`/romance/?createPlayMod=1&editComponent=${encodeURIComponent(mod.id)}`);
+                  }}
                 >
-                  继续编辑
+                  {PLAY_MOD_CREATE_LOCKED ? '测试中' : '继续编辑'}
                 </button>
                 {canSubmitPlayMod(mod.status) ? (
                   <button

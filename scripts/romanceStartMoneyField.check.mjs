@@ -62,8 +62,8 @@ test('authorRequired_资金为0或空着_均不进预览补全清单', () => {
 test('ModCreationFieldsEditor_货币名可改_必填徽标_锚点在行上', () => {
   const editor = read('components/ModCreationFieldsEditor.tsx');
   assert.match(editor, /货币名称 \*/);
-  assert.match(editor, /开局金额 \*/);
-  assert.match(editor, /Badge tone="gold">必填/);
+  assert.match(editor, /金额 \*/);
+  assert.match(editor, /Badge tone="gold">创作者必填/);
   // 功能注释：行上类型位展示货币名称，不再叠一枚「货币」徽标
   assert.doesNotMatch(editor, /Badge tone="jade">货币/);
   assert.doesNotMatch(editor, /娱乐圈未写|必须填写，可填 0/);

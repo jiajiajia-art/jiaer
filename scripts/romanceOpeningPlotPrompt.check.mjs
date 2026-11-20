@@ -4,11 +4,38 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { tmpdir } from "node:os";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import test from "node:test";
+import { build } from "esbuild";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const romance = join(root, "Romance/src");
+
+/** registry 会拉 yaml?raw；单测用桩避免 Unknown file extension ".yaml" */
+async function loadOpeningPlotPrompt() {
+  const registryStub = {
+    name: "stub-registry",
+    setup(b) {
+      b.onResolve({ filter: /\.\.\/mods\/registry$/ }, () => ({ path: "registry-stub", namespace: "stub" }));
+      b.onLoad({ filter: /.*/, namespace: "stub" }, () => ({
+        contents: "export function entertainmentPlayOn() { return false; }",
+        loader: "js",
+      }));
+    },
+  };
+  const outfile = join(tmpdir(), `openingPlotPrompt.${process.pid}.mjs`);
+  await build({
+    entryPoints: [join(romance, "lib/openingPlotPrompt.ts")],
+    bundle: true,
+    format: "esm",
+    platform: "node",
+    outfile,
+    plugins: [registryStub],
+    logLevel: "error",
+  });
+  return import(pathToFileURL(outfile).href);
+}
 
 test("GameContext_开局提示走buildOpeningPlotPrompt_不再写死父母来电", () => {
   const ctx = readFileSync(join(romance, "store/GameContext.tsx"), "utf8");
@@ -29,7 +56,7 @@ test("FixedEventsPanel_须有开局提示词勾选", () => {
 });
 
 test("openingPlotPrompt_无父母时禁止来电_有主线与人际时写入提示", async () => {
-  const mod = await import(join(romance, "lib/openingPlotPrompt.ts"));
+  const mod = await loadOpeningPlotPrompt();
   const bare = {
     player: { name: "白芊芊", extra: [] },
     npcs: [{ id: "shen", name: "沈姨", relation: "掌柜" }],

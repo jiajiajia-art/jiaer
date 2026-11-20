@@ -429,6 +429,8 @@ const AdminPublicAvatarManager: React.FC = () => {
       toast.success('标签已更新');
       setEditItem(null);
       await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '保存失败');
     } finally {
       setEditSaving(false);
     }
@@ -926,7 +928,7 @@ const AdminPublicAvatarManager: React.FC = () => {
                   <SegOptions label="年龄" value={editAge} options={ageOptions} onChange={setEditAge} />
                   <SegOptions label="背景" value={editBg} options={backgroundOptions} onChange={setEditBg} />
                   <p className={styles.editMeta}>
-                    当前：{avatarStylePackLabel(editItem.stylePack || '', tagOptions)} · {avatarGenderLabel(editItem.gender)} · {avatarAgeLabel(editItem.ageGroup, tagOptions)} · {avatarBackgroundLabel(editItem.backgroundType, tagOptions)}
+                    已选：{avatarStylePackLabel(editStyle, tagOptions)} · {avatarGenderLabel(editGender)} · {avatarAgeLabel(editAge, tagOptions)} · {avatarBackgroundLabel(editBg, tagOptions)}
                   </p>
                   <div className={styles.actionsRow}>
                     <button type="button" className={styles.primaryBtn} disabled={editSaving} onClick={() => void onSaveEdit()}>

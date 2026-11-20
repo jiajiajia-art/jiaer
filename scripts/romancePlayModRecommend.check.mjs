@@ -14,7 +14,10 @@ test('recommendPlayModsFromSetting_娱乐题材应推荐事业包且跳过已装
   const cat = await import(pathToFileURL(join(romance, 'mods/playModCatalog.ts')).href);
   const hits = cat.recommendPlayModsFromSetting('玩家成为练习生，签约经纪人接通告拍影视。');
   assert.ok(hits.some((x) => x.slug === 'pack-career'));
-  assert.ok(hits.some((x) => x.slug === 'pack-image'));
+  // 功能注释：一词一包，练习生/经纪人/通告只推事业包，不连带形象危机包
+  assert.ok(!hits.some((x) => x.slug === 'pack-image'));
+  const crisis = cat.recommendPlayModsFromSetting('舆论危机与黑粉热搜，人设遭到公关围攻。');
+  assert.ok(crisis.some((x) => x.slug === 'pack-image'));
 
   const after = cat.recommendPlayModsFromSetting('娱乐圈出道', [
     cat.makeInstallFromCatalog(cat.catalogBySlug('pack-career')),

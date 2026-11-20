@@ -26,12 +26,12 @@ test('美化页_禁止试用条与面板皮肤动画编辑控件', () => {
   assert.doesNotMatch(panel, />自定义 CSS</);
 });
 
-test('美化页_音乐区块仍在皮肤美化之后', () => {
+test('美化页_音乐落在①基础不再挂⑤美化', () => {
   const panel = read('components/ModEditorPanel.tsx');
-  const skinIdx = panel.indexOf('title="皮肤美化"');
-  const musicIdx = panel.indexOf('title="音乐"');
-  assert.ok(skinIdx > 0 && musicIdx > skinIdx, '音乐应保留且排在皮肤美化后面');
+  const lookFromSkin = panel.slice(panel.indexOf('title="皮肤美化"'));
+  assert.doesNotMatch(lookFromSkin, /ModBgmEditor/);
+  assert.match(panel, /音乐是世界本体，落在①基础/);
   assert.match(panel, /ModBgmEditor/);
-  // 音乐区 hint 现为可上传、贴链接，或从素材库 / 平台曲库选用
   assert.match(panel, /可上传、贴链接，或从素材库 \/ 平台曲库选用/);
+  assert.doesNotMatch(panel, /g="look" title="音乐"/);
 });

@@ -3,7 +3,7 @@
  * play=1：正式局（requestPlatformPlay，无 STUDIO 壳，用 fileId 正式存档）。
  * reviewPreview=1：仍走作者预览隔离运行时（不写公开档）。
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { requestAuthorPreview, reportAuthorPreviewFatal } from "../lib/authorPreview";
 import { requestPlatformPlay } from "../lib/platformPlay";
 import type { Mod } from "../mods/types";
@@ -26,12 +26,19 @@ function asMod(content: unknown): Mod | null {
   return mod;
 }
 
+function returnToPublishQueue() {
+  const base = window.location.pathname.replace(/\/romance(?:\/.*)?$/, "");
+  window.location.replace(`${base}/operator/publish-queue`);
+}
+
 export default function PlayerPlayBootstrap({
   mode,
   fileId,
+  children,
 }: {
   mode: Exclude<RomancePlayMode, null>;
   fileId: string;
+  children: ReactNode;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,7 +79,7 @@ export default function PlayerPlayBootstrap({
       }
       if (mode === "reviewPreview") {
         // 功能注释：审核预览继续隔离测试存档，不写玩家公开进度
-        requestAuthorPreview(playMod, ["审核预览 · 不写公开存档"], 0);
+        requestAuthorPreview(playMod, [], 0, returnToPublishQueue);
       } else {
         // 功能注释：过审正式游玩禁止挂 STUDIO PREVIEW；存档走 setStorageGameFileId(fileId)
         const boot = requestPlatformPlay(playMod);
@@ -96,6 +103,9 @@ export default function PlayerPlayBootstrap({
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-6 text-center" role="alert">
         <h2 className="text-lg font-bold text-ink">{mode === "reviewPreview" ? "无法打开审核预览" : "无法开始体验"}</h2>
         <p className="max-w-md text-sm text-ink-soft">{error}</p>
+        {mode === "reviewPreview" && (
+          <button type="button" className="ui-btn" onClick={returnToPublishQueue}>返回审核列表</button>
+        )}
       </div>
     );
   }
@@ -106,7 +116,7 @@ export default function PlayerPlayBootstrap({
       </div>
     );
   }
-  return null;
+  return mode === "play" ? <>{children}</> : null;
 }
 
 /** 功能注释：供 App 判断是否挂载进局引导 */

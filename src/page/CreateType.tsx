@@ -1,3 +1,5 @@
+import { preloadRomanceRoute } from './RomanceRoute';
+import { PLAY_MOD_CREATE_LOCKED, PLAY_MOD_CREATE_LOCKED_HINT } from '../../Romance/src/lib/playModCreate';
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -160,7 +162,9 @@ const CreateType: React.FC = () => {
   const [mobileTipMessage, setMobileTipMessage] = useState('');
   const [draftLimitReached, setDraftLimitReached] = useState(false);
   const [draftCapacityLabel, setDraftCapacityLabel] = useState('');
-  /** 功能注释：点「创作游戏」后先选二级：游戏世界 / 玩法 Mod / 手机应用 */
+  /** 功能注释：点「创作游戏」后先选二级：游戏世界 / 手机应用 / 玩法 Mod */
+  const creatingWorldRef = useRef(false);
+  const [creatingWorld, setCreatingWorld] = useState(false);
   const [romanceSubOpen, setRomanceSubOpen] = useState(false);
   /** 功能注释：C0.1 创作者身份；null=检测中，未激活时玩法/应用锁定 */
   const [creatorActivated, setCreatorActivated] = useState<boolean | null>(null);
@@ -203,10 +207,12 @@ const CreateType: React.FC = () => {
 
   /** 功能注释：游戏世界草稿只在入口 create 一次；门禁「去创作游戏世界」复用同一路径 */
   const startRomanceWorldDraft = async () => {
-    setRomanceSubOpen(false);
-    setCreatorGateOpen(false);
-    clearAll();
+    if (creatingWorldRef.current) return;
+    creatingWorldRef.current = true;
+    setCreatingWorld(true);
     try {
+      await preloadRomanceRoute();
+      clearAll();
       const response = await creatorDraftApi.createRomance();
       const fileId = response.data.data?.fileId;
       if (!response.data.success || !fileId) {
@@ -221,7 +227,10 @@ const CreateType: React.FC = () => {
         navigate('/romance/?createWorld=1');
         return;
       }
-      toast.error(getApiErrorMessage(error, '创建草稿失败'));
+      toast.error(getApiErrorMessage(error, '打开创作界面失败，请重试'));
+    } finally {
+      creatingWorldRef.current = false;
+      setCreatingWorld(false);
     }
   };
 
@@ -378,7 +387,7 @@ const CreateType: React.FC = () => {
               disabled={createBlocked}
               onClick={() => void handleSelectGameType('txt')}
             />
-            {/* 功能注释：创作游戏先开二级（游戏世界 / 玩法 Mod / 手机应用）；「创作应用」不再并列 */}
+            {/* 功能注释：创作游戏先开二级（游戏世界 / 手机应用 / 玩法 Mod）；「创作应用」不再并列 */}
             <TypeOptionRow
               title={t('createGame.romanceMode')}
               badge="new"
@@ -389,6 +398,7 @@ const CreateType: React.FC = () => {
               disabled={createBlocked || draftLimitReached}
               onClick={() => {
                 if (createBlocked || draftLimitReached) return;
+                void preloadRomanceRoute().catch(() => undefined);
                 setRomanceSubOpen(true);
               }}
             />
@@ -438,7 +448,7 @@ const CreateType: React.FC = () => {
       {romanceSubOpen && (
         <div
           className={styles.createTypeModalOverlay}
-          onClick={() => setRomanceSubOpen(false)}
+          onClick={() => { if (!creatingWorld) setRomanceSubOpen(false); }}
         >
           <div
             className={`${styles.createTypeModal} ${pageStyles.romanceSubModal}`}
@@ -458,7 +468,8 @@ const CreateType: React.FC = () => {
             </div>
             <div className={`${styles.createTypeOptions} ${pageStyles.romanceSubOptions}`}>
               <TypeOptionRow
-                title="游戏世界"
+                title={creatingWorld ? "正在创建…" : "游戏世界"}
+                disabled={creatingWorld}
                 hint="填写设定，AI 搭建世界，再进编辑器细调。"
                 icon={MdAutoAwesome}
                 thumbClass={styles.createTypeOptionThumbRomance}
@@ -467,27 +478,8 @@ const CreateType: React.FC = () => {
                 }}
               />
               <TypeOptionRow
-                title="玩法 Mod"
-                badge={creatorActivated === false ? 'locked' : undefined}
-                badgeText={creatorActivated === false ? '锁定' : undefined}
-                hint="对话生成玩法叠加包。可以是新地点、游戏内页面，或填进已有玩法格子的数据。可绑多个游戏世界，也可分多次安装。用平台 SDK。"
-                icon={HiOutlinePuzzle}
-                thumbClass={styles.createTypeOptionThumbCustom}
-                onClick={() => {
-                  // 功能注释：锁定仍可点，弹出过审解锁提示，禁止静默进半残页
-                  if (creatorActivated === false) {
-                    openCreatorLockedGate();
-                    return;
-                  }
-                  if (creatorActivated == null) return;
-                  setRomanceSubOpen(false);
-                  clearAll();
-                  navigate('/romance/?createPlayMod=1');
-                }}
-              />
-              {/* 功能注释：「我的玩法 Mod」与「玩法 Mod」重复，已从创作入口移除 */}
-              <TypeOptionRow
                 title="手机应用"
+                disabled={creatingWorld}
                 badge={creatorActivated === false ? 'locked' : undefined}
                 badgeText={creatorActivated === false ? '锁定' : undefined}
                 hint="对话生成应用草稿，审核通过后上架，供游戏世界里的手机安装。用平台 SDK。"
@@ -503,11 +495,34 @@ const CreateType: React.FC = () => {
                   navigate('/create/app');
                 }}
               />
+              {/* 功能注释：「我的玩法 Mod」与「玩法 Mod」重复，已从创作入口移除；玩法 Mod 排在手机应用下面 */}
+              <TypeOptionRow
+                title="玩法 Mod"
+                disabled={creatingWorld || PLAY_MOD_CREATE_LOCKED}
+                badge={PLAY_MOD_CREATE_LOCKED || creatorActivated === false ? 'locked' : undefined}
+                badgeText={PLAY_MOD_CREATE_LOCKED ? '测试中' : creatorActivated === false ? '锁定' : undefined}
+                hint={PLAY_MOD_CREATE_LOCKED
+                  ? PLAY_MOD_CREATE_LOCKED_HINT
+                  : "对话生成玩法叠加包。可以是新地点、游戏内页面，或填进已有玩法格子的数据。可绑多个游戏世界，也可分多次安装。用平台 SDK。"}
+                icon={HiOutlinePuzzle}
+                thumbClass={styles.createTypeOptionThumbCustom}
+                onClick={() => {
+                  if (PLAY_MOD_CREATE_LOCKED) return;
+                  if (creatorActivated === false) {
+                    openCreatorLockedGate();
+                    return;
+                  }
+                  if (creatorActivated == null) return;
+                  setRomanceSubOpen(false);
+                  clearAll();
+                  navigate('/romance/?createPlayMod=1');
+                }}
+              />
             </div>
             <div className={styles.createTypeModalFooter}>
               <button
                 type="button"
-                onClick={() => setRomanceSubOpen(false)}
+                onClick={() => { if (!creatingWorld) setRomanceSubOpen(false); }}
                 className={styles.createTypeCancelButton}
               >
                 {t('createGame.cancel')}
@@ -581,7 +596,7 @@ const CreateType: React.FC = () => {
       {creatorGateOpen && (
         <div
           className={styles.createTypeModalOverlay}
-          onClick={() => setCreatorGateOpen(false)}
+          onClick={() => { if (!creatingWorld) setCreatorGateOpen(false); }}
         >
           <div
             className={styles.createTypeModal}
@@ -599,7 +614,7 @@ const CreateType: React.FC = () => {
             <div className={styles.createTypeModalFooter}>
               <button
                 type="button"
-                onClick={() => setCreatorGateOpen(false)}
+                onClick={() => { if (!creatingWorld) setCreatorGateOpen(false); }}
                 className={styles.createTypeCancelButton}
               >
                 关闭
@@ -607,11 +622,12 @@ const CreateType: React.FC = () => {
               <button
                 type="button"
                 className={`${styles.createTypeCancelButton} ${styles.ivgToolDownloadAction}`}
+                disabled={creatingWorld}
                 onClick={() => {
                   void startRomanceWorldDraft();
                 }}
               >
-                去创作游戏世界
+                {creatingWorld ? "正在创建…" : "去创作游戏世界"}
               </button>
             </div>
           </div>

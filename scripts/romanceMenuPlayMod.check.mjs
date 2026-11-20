@@ -24,7 +24,7 @@ test('菜单_SETTINGS不再单独列暗色模式', () => {
   // 功能注释：暗色模式须在游戏设置面板内，禁止 SETTINGS 列表再挂 MenuRow
   const settingsBlock = shell.slice(shell.indexOf('SETTINGS'), shell.indexOf('SETTINGS') + 1200);
   assert.doesNotMatch(settingsBlock, /label="暗色模式"/);
-  assert.match(shell, /hint="暗色模式 · 界面皮肤 · 背景音乐 · 字体风格 · 屏幕方向"/);
+  assert.match(shell, /hint="界面外观 · 剧情阅读 · 游玩体验"/);
 });
 
 test('游戏设置_含暗色模式开关', () => {

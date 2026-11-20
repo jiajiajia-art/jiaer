@@ -16,10 +16,9 @@ test('officialTheme_官方包与应用都有至少1个适用语义', async () =>
 
   for (const slug of [
     'pack-career', 'pack-image', 'pack-paper', 'pack-transport', 'pack-cars',
-    'pack-pregnancy', 'pack-living', 'pack-titles', 'pack-relations',
+    'pack-pregnancy', 'pack-living', 'pack-titles', 'pack-faction-rep',
   ]) {
-    const codes = theme.OFFICIAL_PLAY_MOD_THEME_CODES[slug];
-    assert.ok(codes?.length, slug);
+    assert.ok(theme.OFFICIAL_PLAY_MOD_THEME_CODES[slug]?.length, slug);
     const item = cat.LOCAL_PLAY_MOD_CATALOG.find((x) => x.slug === slug);
     assert.ok(item, slug);
     assert.ok(item.applicableThemeCodes.length >= 1, slug);

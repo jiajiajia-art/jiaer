@@ -40,7 +40,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  width: min(100%, 420px);
+  width: min(100%, 432px);
   max-height: min(84vh, 700px);
   margin: auto;
   border-radius: 22px;
@@ -79,12 +79,12 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 20px 20px 6px;
+  padding: 24px 22px 10px;
 }
 
 .title {
   margin: 0;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 780;
   letter-spacing: 0.01em;
   line-height: 1.25;
@@ -123,10 +123,10 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 12px 20px 0;
-  padding: 12px 14px;
-  border-radius: var(--ar-radius);
-  border: 1px solid color-mix(in srgb, var(--ar-accent) 14%, var(--ar-line));
+  margin: 10px 22px 0;
+  padding: 14px 16px;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--ar-accent) 18%, var(--ar-line));
   background:
     radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--ar-accent) 16%, transparent), transparent 55%),
     linear-gradient(135deg, var(--ar-bg-soft), var(--ar-bg));
@@ -233,11 +233,16 @@
 
 /* 正在使用 */
 .current {
+  margin: 12px 22px 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--ar-good) 22%, var(--ar-line));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--ar-good) 6%, var(--ar-bg));
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 8px;
-  margin: 12px 20px 0;
+  margin: 10px 22px 0;
   padding: 9px 12px;
   border-radius: 14px;
   border: 1px solid color-mix(in srgb, var(--ar-good) 22%, var(--ar-line));
@@ -293,7 +298,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
   gap: 3px;
-  margin: 12px 20px 0;
+  margin: 10px 22px 0;
   padding: 3px;
   border-radius: 14px;
   background: var(--ar-bg-soft);
@@ -320,6 +325,7 @@
 
 /* 线路列表 */
 .list {
+  padding: 14px 22px 0;
   flex: 1;
   min-height: 0;
   margin-top: 12px;
@@ -603,6 +609,7 @@
 }
 
 .foot {
+  padding: 14px 22px 18px;
   display: flex;
   align-items: center;
   gap: 10px;

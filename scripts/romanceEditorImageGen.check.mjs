@@ -90,7 +90,7 @@ test('editorImagePrompts_地点只用画面描述_不用进入叙事desc_大地�
   assert.match(map.framing || '', /9:16/);
   assert.doesNotMatch(map.subject, /9:16/);
   // 功能注释：空输入仍给出「按设定补分区」脚手架，不再返回空串
-  assert.match(mod.buildWorldMapPromptParts({}).subject, /按设定补分区/);
+  assert.match(mod.buildWorldMapPromptParts({}).subject, /按设定.*补分区/);
 
   const cover = mod.buildWorkCoverPromptParts({
     title: '雾色旅馆',
@@ -106,7 +106,6 @@ test('editorImagePrompts_地点只用画面描述_不用进入叙事desc_大地�
   assert.match(cover.negative, /标题文字/);
   assert.equal(mod.buildWorkCoverPromptParts({}).subject, '');
   assert.equal(mod.buildWorkCoverPrompt({}), '');
-  // 有氛围但没填主角外观：空槽「主角外观：」组装时剔除
   const bare = mod.buildWorkCoverPromptParts({ summary: '雨夜旅馆' });
   assert.doesNotMatch(mod.composePositivePrompt(bare), /主角外观：/);
 });
@@ -193,8 +192,8 @@ test('类型与编辑器_人物appearancePrompt_地点scenePrompt_作品imageGen
   assert.match(panel, /n\.appearancePrompt/);
   assert.match(panel, /appearancePrompt: e\.target\.value/);
   const rooms = read('components/ModRoomTreeEditor.tsx');
-  assert.match(rooms, /scenePrompt: e\.target\.value/);
-  assert.match(rooms, /r\.scenePrompt/);
+  // 功能注释：地点编辑器不再单列「场景描述」框，生图用旧稿 scenePrompt，没有就用地点描述
+  assert.match(rooms, /scenePrompt: r\.scenePrompt \|\| r\.desc/);
 });
 
 test('AiImageGen_默认编辑页再开始生成_仍走platformImageGen', () => {
@@ -236,7 +235,7 @@ test('AiImageGen_三层可编辑_正向画风加主体_负面词单独传_重绘
   // 功能注释：负面词随画风静默合并，可不对创作者露出编辑框文案
   assert.match(gen, /负面词|negative/);
   assert.match(gen, /composePositivePrompt\(\{ style, subject, framing \}\)/);
-  assert.match(gen, /negativePrompt: negative\.trim\(\) \|\| undefined/);
+  assert.match(gen, /negativePrompt: requestNegative \|\| undefined/);
   assert.match(gen, /onPartsCommit/);
   // 功能注释：参考图初始值取 initialRefs 前 MAX_REFS 张，创作者可移除
   assert.match(gen, /useState<string\[\]>\(\(\) => \(initialRefs \?\? \[\]\)\.filter\(Boolean\)\.slice\(0, MAX_REFS\)\)/);
@@ -263,17 +262,12 @@ test('ImagePicker_打开生图默认不自动跑不自动采用', () => {
   assert.doesNotMatch(picker, /autoApply=\{genOpts\.autoApply !== false/);
 });
 
-test('人物卡_生图用外观描述三层_重绘默认带当前头像', () => {
+test('人物卡保留外观和头像选择，移除独立生图入口', () => {
   const panel = read('components/ModEditorPanel.tsx');
-  assert.match(panel, /buildNpcAvatarPromptParts/);
-  assert.match(panel, /from ["']\.\.\/lib\/editorImagePrompts["']/);
-  assert.match(panel, /<AiImageGen[\s\S]*initialParts=\{buildNpcAvatarPromptParts/);
-  assert.match(panel, /appearancePrompt: n\.appearancePrompt/);
-  // 功能注释：头像生图主体不再喂小传 / 关系
-  assert.doesNotMatch(panel, /initialParts=\{buildNpcAvatarPromptParts\([\s\S]{0,260}bio: n\.bio/);
-  assert.match(panel, /size=\{NPC_AVATAR_GEN_SIZE\}/);
-  assert.match(panel, /initialRefs=\{n\.avatar \? \[n\.avatar\] : undefined\}/);
-  assert.match(panel, /n\.avatar/);
+  assert.match(panel, /外观 · 发型\/面容\/衣着/);
+  assert.doesNotMatch(panel, /（生图用）|生成头像|avatarGenFor/);
+  assert.match(panel, /value=\{n\.appearancePrompt/);
+  assert.match(panel, /<Avatar src=\{n\.avatar\}/);
   const content = read('worlds/star2005/content.ts');
   assert.match(content, /avatar\?: string/);
   assert.match(content, /summary\?: string/);
@@ -293,8 +287,8 @@ test('大地图与地点_接同一套竖版生图', () => {
   assert.match(rooms, /scenePortrait/);
   assert.match(rooms, /initialParts: buildLocationScenePromptParts/);
   assert.match(rooms, /size: LOCATION_SCENE_GEN_SIZE/);
-  // 功能注释：场景生图用画面描述 scenePrompt，不用进入叙事 desc
-  assert.match(rooms, /\{ name: r\.name, scenePrompt: r\.scenePrompt \}/);
+  // 功能注释：场景生图优先旧稿 scenePrompt，没有就用地点描述 desc
+  assert.match(rooms, /\{ name: r\.name, scenePrompt: r\.scenePrompt \|\| r\.desc \}/);
   assert.doesNotMatch(rooms, /buildLocationScenePromptParts\(\s*\{[^}]*desc: r\.desc/);
   assert.doesNotMatch(rooms, /1792x1024/);
 });

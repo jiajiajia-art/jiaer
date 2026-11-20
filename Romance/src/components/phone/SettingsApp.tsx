@@ -3,7 +3,9 @@ import { useRef, useState, type ReactNode } from "react";
 import { useGame } from "../../store/gameCtx";
 import { gameTimeLabel } from "../../game/phone";
 import { dayDateLabel, weekdayName, clockLabel } from "../../game/logic";
-import { WALLPAPERS, wallpaperById, resolveWallpaper, customWallpaperCss, CUSTOM_WALLPAPER_ID, type WallpaperKind } from "./wallpapers";
+import { DEFAULT_WALLPAPER, resolveEffectiveHomeWallpaper, customWallpaperCss, CUSTOM_WALLPAPER_ID, type Wallpaper, type WallpaperKind } from "./wallpapers";
+import { worldCoverImageUrl } from "../Cover";
+import { worldPhoneHomeWallpaper } from "../../mods/registry";
 import { IconChevron, IconGear, IconSun, IconMusic, IconClock, IconUser } from "./icons";
 import { PHONE_FRAMES, frameById, useWide, type FrameId } from "../Phone";
 import type { ThemePref } from "../../lib/store";
@@ -94,17 +96,17 @@ const CHECK = (
   </span>
 );
 
-function WallpaperPicker({ current, customCss, onPick, onUpload, onBack }: {
-  current: string;
+function WallpaperPicker({ current, defaultWallpaper, customCss, onPick, onUpload, onBack }: {
+  current: Wallpaper;
+  defaultWallpaper: Wallpaper;
   customCss?: string;
   onPick: (id: string) => void;
   onUpload: (dataUrl: string) => void;
   onBack: () => void;
 }) {
-  const [cat, setCat] = useState<WpCat>(current === CUSTOM_WALLPAPER_ID ? "custom" : wallpaperById(current).kind);
+  const [cat, setCat] = useState<WpCat>(current.id === CUSTOM_WALLPAPER_ID ? "custom" : "photo");
   const [err, setErr] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
-  const list = cat === "custom" ? [] : WALLPAPERS.filter((w) => w.kind === cat);
 
   const pickFile = (file: File | undefined) => {
     setErr("");
@@ -128,8 +130,8 @@ function WallpaperPicker({ current, customCss, onPick, onUpload, onBack }: {
       <div className="flex-1 overflow-y-auto pb-5">
         {/* 当前墙纸预览 */}
         <div className="px-4 py-4">
-          <WallpaperPreview wp={resolveWallpaper(current, customCss)} />
-          <p className="mt-2 text-center text-[12px] text-ink-soft">当前墙纸 · {resolveWallpaper(current, customCss).label}</p>
+          <WallpaperPreview wp={current} />
+          <p className="mt-2 text-center text-[12px] text-ink-soft">当前墙纸 · {current.label}</p>
         </div>
 
         {/* 分类切换（照片 / 自定义） */}
@@ -166,7 +168,7 @@ function WallpaperPicker({ current, customCss, onPick, onUpload, onBack }: {
                 <div className="grid grid-cols-3 gap-3">
                   <button onClick={() => onPick(CUSTOM_WALLPAPER_ID)} className="text-center">
                     <span className="relative block aspect-[9/16] w-full overflow-hidden rounded-2xl ring-1 ring-black/10" style={{ background: customCss }}>
-                      {current === CUSTOM_WALLPAPER_ID && CHECK}
+                      {current.id === CUSTOM_WALLPAPER_ID && CHECK}
                     </span>
                     <span className="mt-1 block text-[11.5px] text-ink-soft">自定义</span>
                   </button>
@@ -181,14 +183,12 @@ function WallpaperPicker({ current, customCss, onPick, onUpload, onBack }: {
         ) : (
           <div className="px-3">
             <div className="grid grid-cols-3 gap-3">
-              {list.map((w) => (
-                <button key={w.id} onClick={() => onPick(w.id)} className="text-center">
-                  <span className="relative block aspect-[9/16] w-full overflow-hidden rounded-2xl ring-1 ring-black/10" style={{ background: w.css }}>
-                    {current === w.id && CHECK}
-                  </span>
-                  <span className="mt-1 block text-[11.5px] text-ink-soft">{w.label}</span>
-                </button>
-              ))}
+              <button onClick={() => onPick(DEFAULT_WALLPAPER)} className="text-center">
+                <span className="relative block aspect-[9/16] w-full overflow-hidden rounded-2xl ring-1 ring-black/10" style={{ background: defaultWallpaper.css }}>
+                  {current.id === defaultWallpaper.id && CHECK}
+                </span>
+                <span className="mt-1 block text-[11.5px] text-ink-soft">默认</span>
+              </button>
             </div>
           </div>
         )}
@@ -324,16 +324,21 @@ export default function SettingsApp({ onBack, prefs, onChange }: { onBack: () =>
   const wide = useWide();
   const { game, theme, setTheme } = useGame();
   const [page, setPage] = useState<"root" | "wallpaper" | "frame" | "general" | "theme">("root");
-  const wp = resolveWallpaper(prefs.wallpaper, prefs.customWallpaper);
+  const cover = worldCoverImageUrl();
+  const worldWallpaper = worldPhoneHomeWallpaper();
+  const defaultWallpaper = resolveEffectiveHomeWallpaper(worldWallpaper, { wallpaper: DEFAULT_WALLPAPER }, cover);
+  const effectiveWallpaper = resolveEffectiveHomeWallpaper(worldWallpaper, prefs, cover);
+  const wp = effectiveWallpaper.id === defaultWallpaper.id ? { ...effectiveWallpaper, label: "默认" } : effectiveWallpaper;
   const week = game!.sim.week ?? 1;
   const dateLabel = gameTimeLabel(game!).split(" ")[0] ?? "";
 
   if (page === "wallpaper") {
     return (
       <WallpaperPicker
-        current={prefs.wallpaper}
+        current={wp}
+        defaultWallpaper={defaultWallpaper}
         customCss={prefs.customWallpaper}
-        onPick={(id) => onChange({ wallpaper: id, wallpaperUserSet: true })}
+        onPick={(id) => onChange({ wallpaper: id, wallpaperUserSet: id !== DEFAULT_WALLPAPER })}
         onUpload={(dataUrl) => onChange({ customWallpaper: customWallpaperCss(dataUrl), wallpaper: CUSTOM_WALLPAPER_ID, wallpaperUserSet: true })}
         onBack={() => setPage("root")}
       />

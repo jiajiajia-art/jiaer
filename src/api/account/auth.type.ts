@@ -337,6 +337,7 @@ export interface GetPointsActivitiesParams {
   direction?: PointsActivityDirection;
   year?: number;
   month?: number;
+  day?: number;
   page?: number;
   pageSize?: number;
   kkFilter?: KkActivityFilter;
@@ -368,6 +369,7 @@ export interface PointsActivitiesResponse {
   diamonds: number;
   kkBalance?: KkBalance;
   items: PointsActivityItem[];
+  totals?: Partial<Record<'diamonds' | 'points', { income: number; expense: number }>>;
   page?: number;
   pageSize?: number;
   total?: number;

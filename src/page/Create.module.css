@@ -198,11 +198,20 @@
     color: var(--color-primary-fg);
 }
 
-.accountActionIcon img {
+/* 功能注释：充值 / 创作者中心切图写死了 #FF3B61，遮罩后跟账户、获取织梦豆一样吃 currentColor（--color-primary-fg） */
+.accountActionGlyph {
     width: 20px;
     height: 20px;
     display: block;
-    object-fit: contain;
+    flex-shrink: 0;
+    background-color: currentColor;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    mask-mode: alpha;
 }
 
 .accountActionIcon svg {
@@ -1586,7 +1595,7 @@
         height: 36px;
     }
 
-    .accountActionIcon img {
+    .accountActionGlyph {
         width: 18px;
         height: 18px;
     }
@@ -1989,4 +1998,48 @@
         font-size: 12px;
         border-radius: 12px;
     }
+}
+
+.worksCategoryBar {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 10px 0 12px;
+}
+
+.worksCategoryBar::-webkit-scrollbar {
+    display: none;
+}
+
+.worksCategoryChip {
+    appearance: none;
+    flex: 0 0 auto;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--creator-label);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 8px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.worksCategoryChip:hover {
+    border-color: #bd2429;
+}
+
+.worksCategoryChipActive {
+    background: #bd2429;
+    border-color: #bd2429;
+    color: #fff;
+}
+
+.worksCategoryChip:active {
+    background: #9f1d22;
+    border-color: #9f1d22;
+    color: #fff;
 }

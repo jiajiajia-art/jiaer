@@ -98,8 +98,28 @@ export function fetchAiRoutes(capability: AiCapability, force = false): Promise<
   })
     .then((r) => (r.ok ? r.json() : null))
     .then((j) => {
-      const items: unknown[] = j?.data?.items ?? j?.items ?? [];
-      return Array.isArray(items) ? items.map(normalize).filter((x): x is PlatformAiRoute => !!x) : [];
+      const root = (j?.data ?? j) as Record<string, unknown> | null;
+      const items: unknown[] = Array.isArray(root?.items) ? root.items : [];
+      const topVoices = Array.isArray(root?.voices)
+        ? root.voices.map(normalizeVoice).filter((v): v is PlatformTtsVoice => !!v)
+        : [];
+      let routes = items.map(normalize).filter((x): x is PlatformAiRoute => !!x);
+      if (capability === "tts") {
+        if (!routes.length && topVoices.length) {
+          routes = [{
+            id: "platform:tts",
+            name: "平台语音",
+            multiplier: 1,
+            isDefault: true,
+            available: true,
+            billingMode: "per_token",
+            voices: topVoices,
+          }];
+        } else if (topVoices.length) {
+          routes = routes.map((r) => (r.voices?.length ? r : { ...r, voices: topVoices }));
+        }
+      }
+      return routes;
     })
     .catch(() => []);
   cache[capability] = p;

@@ -1,5 +1,5 @@
 /**
- * 功能注释：平台本体入口门禁。玩家只看说明；作者 createWorld / 预览、后台 platformTest 或运营角色可进。
+ * 功能注释：游玩链接须指向具体作品。平台本体仅向运营角色开放。
  */
 export function shouldGateRomancePlatformShell(input: {
   search?: string;
@@ -12,9 +12,7 @@ export function shouldGateRomancePlatformShell(input: {
   if (q.get('createWorld') === '1' || q.get('createWorld') === 'true') return false;
   if (q.get('createPlayMod') === '1' || q.get('createPlayMod') === 'true') return false;
   // 功能注释：详情开始体验 / 审核预览进局，不得被创作门禁拦住
-  if (q.get('play') === '1' || q.get('play') === 'true') return false;
-  if (q.get('reviewPreview') === '1' || q.get('reviewPreview') === 'true') return false;
-  if (q.get('platformTest') === '1') return false;
+  if (q.get('fileId')?.trim() && (q.get('play') === '1' || q.get('reviewPreview') === '1')) return false;
   if (input.hasWorldGenSession) return false;
   if (input.isAuthorPreview) return false;
   if (input.isStaff) return false;

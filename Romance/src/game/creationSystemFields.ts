@@ -38,11 +38,20 @@ export function normalizeGenderOptions(options?: readonly string[] | unknown): s
   return ["男", "女", ...new Set(custom)];
 }
 
+export function parseBirthdayPreset(value?: string): { birthMonth: number; birthDay: number } | undefined {
+  const match = /^(\d{1,2})-(\d{1,2})$/.exec(String(value ?? "").trim());
+  if (!match) return undefined;
+  const birthMonth = Number(match[1]);
+  const birthDay = Number(match[2]);
+  const days = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (birthDay >= 1 && birthDay <= (days[birthMonth - 1] ?? 0)) return { birthMonth, birthDay };
+}
+
 type BuiltinCfg = { label?: string; hidden?: boolean; locked?: boolean; value?: string; options?: string[] };
 
 /**
- * 功能注释：建角 builtin 只保留四个系统字段的显示名 / 性别选项；
- * 丢掉旧稿里的 identity/description/… 以及 hidden/locked（系统项不可藏、不可改非必填）。
+ * 功能注释：建角 builtin 保留系统字段预设、姓名/性别显示名与性别选项。
+ * 年龄和生日名称固定，不存显示名。丢掉旧稿里的 identity/description/… 以及 hidden/locked。
  */
 export function sanitizeCreationBuiltin(
   builtin?: Partial<Record<string, BuiltinCfg>> | null,
@@ -53,8 +62,25 @@ export function sanitizeCreationBuiltin(
     const raw = builtin[field.key];
     if (!raw || typeof raw !== "object") continue;
     const next: BuiltinCfg = {};
-    const label = String(raw.label ?? "").trim();
-    if (label) next.label = label;
+    // 功能注释：年龄、生日不再改显示名，标题就用系统名
+    if (field.key === "name" || field.key === "gender") {
+      const label = String(raw.label ?? "").trim();
+      if (label) next.label = label;
+    }
+    // 功能注释：创作者预设值 + 锁定（玩家开局默认 / 固定为该值），仅姓名与性别
+    if (field.key === "name" || field.key === "gender") {
+      const value = String(raw.value ?? "").trim();
+      if (value) next.value = value;
+      if (value && raw.locked) next.locked = true;
+    }
+    if (field.key === "age" && /^\d+$/.test(String(raw.value ?? "").trim())) {
+      const age = Number(raw.value);
+      if (Number.isSafeInteger(age) && age >= 1) next.value = String(age);
+    }
+    if (field.key === "birthday") {
+      const birthday = parseBirthdayPreset(raw.value);
+      if (birthday) next.value = `${birthday.birthMonth}-${birthday.birthDay}`;
+    }
     if (field.key === "gender") {
       const options = normalizeGenderOptions(raw.options);
       // 功能注释：只有额外自定义性别时才写入 options，避免每个作品都冗余存 ["男","女"]

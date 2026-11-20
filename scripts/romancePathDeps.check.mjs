@@ -1,5 +1,5 @@
 /**
- * 回归：人物线路解锁条件 / 开局数值必须挂依赖（属性、人物、地点、事件）；
+ * 回归：人物线路解锁条件（通关/结局/线路/事件）与开局数值依赖；
  * 未选中的不生效；简介/处境可留纯文本。
  */
 import assert from 'node:assert/strict';
@@ -12,36 +12,35 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const romance = join(root, 'Romance/src');
 
 const pools = {
-  stats: [{ id: 'acting', label: '演技' }],
-  metrics: [{ id: 'fame', label: '名气' }, { id: 'c:qi', label: '气运' }],
-  people: [{ id: 'lin', label: '林晓' }],
-  rooms: [{ id: 'inn', label: '旅店' }],
+  endings: [{ id: 'e1', label: '结局A' }],
+  routes: [{ id: 'r1', label: '线路甲' }],
   events: [{ id: 'ev1', label: '开场风波' }],
 };
 
 test('pathDeps_解锁条件清洗与提示文案', async () => {
   const mod = await import(pathToFileURL(join(romance, 'lib/pathDeps.ts')).href);
-  assert.deepEqual(mod.PATH_LOCK_COND_KINDS, ['stat', 'metric', 'rel', 'location', 'event']);
+  assert.deepEqual(mod.PATH_LOCK_COND_KINDS, ['clear', 'ending', 'route', 'event']);
+  assert.equal(mod.PATH_LOCK_KIND_LABEL.clear, '二周目：通关过任意结局');
 
   const cleaned = mod.sanitizePathLockConds(
     [
-      { kind: 'metric', key: 'fame', op: 'gte', value: 50 },
-      { kind: 'rel', key: 'ghost', op: 'gte', value: 10 },
-      { kind: 'location', key: 'inn' },
-      { kind: 'flag', key: 'x', op: 'gte', value: 1 },
+      { kind: 'ending', key: 'e1' },
+      { kind: 'route', key: 'ghost' },
       { kind: 'event', key: 'ev1' },
+      { kind: 'clear' },
+      { kind: 'flag', key: 'x' },
       null,
     ],
     pools,
   );
   assert.deepEqual(cleaned, [
-    { kind: 'metric', key: 'fame', op: 'gte', value: 50 },
-    { kind: 'location', key: 'inn' },
+    { kind: 'ending', key: 'e1' },
     { kind: 'event', key: 'ev1' },
+    { kind: 'clear' },
   ]);
-  assert.match(mod.formatPathLockHint(cleaned, pools), /名气/);
-  assert.match(mod.formatPathLockHint(cleaned, pools), /旅店/);
+  assert.match(mod.formatPathLockHint(cleaned, pools), /结局A/);
   assert.match(mod.formatPathLockHint(cleaned, pools), /开场风波/);
+  assert.match(mod.formatPathLockHint(cleaned, pools), /二周目|通关任意结局/);
   assert.equal(mod.formatPathLockHint([], pools), '');
 });
 
@@ -102,8 +101,8 @@ test('pathDeps_可变固定只能选本作品属性', async () => {
   assert.deepEqual(mod.sanitizePathAttrNames(null, opts), []);
   const paths = readFileSync(join(romance, 'components/ModPathsEditor.tsx'), 'utf8');
   assert.match(paths, /AttrNamePick/);
-  assert.match(paths, /可变自由决定/);
-  assert.match(paths, /固定不可改/);
+  assert.match(paths, /title="锁定属性"/);
+  assert.match(paths, /选中的属性使用固定初始值/);
   assert.doesNotMatch(paths, /玩家可自由决定（每行一项/);
   assert.doesNotMatch(paths, /开局小事件旁白/);
   // 主编辑路径卡不再挂开局数值卡片罗列 / 属性能力 / 实时预览

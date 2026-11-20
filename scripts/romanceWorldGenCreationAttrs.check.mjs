@@ -151,7 +151,7 @@ test('世界生成提示与向导_要求3条有名属性且货币名', () => {
   assert.doesNotMatch(attrsEd, />投骰子</);
   assert.match(attrsEd, /type="checkbox"/);
   assert.match(attrsEd, /固定数值/);
-  assert.match(editor, /Badge tone="gold">必填/);
-  assert.match(editor, /货币名称/);
+  assert.match(editor, /Badge tone="gold">创作者必填/);
+  assert.match(editor, /货币名称 \*/);
   assert.doesNotMatch(editor, /Badge tone="jade">货币/);
 });

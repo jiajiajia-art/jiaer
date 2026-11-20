@@ -8,6 +8,7 @@ import ShelfSavePicker from '../components/Bookshelf/ShelfSavePicker';
 import ShelfSaveManager from '../components/Bookshelf/ShelfSaveManager';
 import ShelfMyMods from '../components/Bookshelf/ShelfMyMods';
 import { PHONE_APP_CREATE_PATH, PLAY_MOD_CREATE_PATH, readShelfModKind, type ShelfModKind } from '../lib/shelfMyMods';
+import { PLAY_MOD_CREATE_LOCKED, PLAY_MOD_CREATE_LOCKED_HINT } from '../../Romance/src/lib/playModCreate';
 import bookshelfApi from '../api/bookshelf/bookshelfApi';
 import { authModalStore, useAuthStore } from '../store/useAuthStore';
 import { buildShelfResumeState } from '../utils/gameDetailNavigation';
@@ -499,7 +500,14 @@ const Bookshelf: React.FC = () => {
                 )}
               </label>
               {modsView ? (
-                <button type="button" className={styles.headerButton} onClick={() => { persistView(); navigate(modKind === 'app' ? PHONE_APP_CREATE_PATH : PLAY_MOD_CREATE_PATH); }}>{modKind === 'app' ? t('pagesBookshelf.createApp') : t('pagesBookshelf.createPlayMod')}</button>
+                <button type="button" className={styles.headerButton} onClick={() => {
+                  if (modKind !== 'app' && PLAY_MOD_CREATE_LOCKED) {
+                    toast(PLAY_MOD_CREATE_LOCKED_HINT);
+                    return;
+                  }
+                  persistView();
+                  navigate(modKind === 'app' ? PHONE_APP_CREATE_PATH : PLAY_MOD_CREATE_PATH);
+                }}>{modKind === 'app' ? t('pagesBookshelf.createApp') : t('pagesBookshelf.createPlayMod')}</button>
               ) : (
               <>
               <button

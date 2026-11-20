@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { EMBED_MB, playableSrc } from "../game/audioLib";
-import { usePlatformAudio } from "../game/platformAudio";
+import { AUDIO_MAX_MB, EMBED_MB, playableSrc } from "../game/audioLib";
+import { loadPlatformAudioFromApi, usePlatformAudio } from "../game/platformAudio";
+import type { AudioKind } from "../lib/types";
 import { addBgm, localTrackBlob, localTracks } from "./BgmPanel";
 import { applyMusicRows, bgmSourceOf, musicRows, SOURCE_LABEL, type MusicRow, type MusicSlice } from "../lib/modMusic";
 import { useGame } from "../store/gameCtx";
@@ -14,6 +15,11 @@ const inp = "min-w-0 w-full rounded-lg border border-line bg-paper px-2 py-1 tex
 const btn = "rounded-full border border-line bg-paper px-2.5 py-1 text-[11.5px] font-semibold text-ink transition hover:border-jade hover:text-jade disabled:opacity-40";
 const TAB_IDS = ["local", "platform", "work"] as const;
 type UploadTab = (typeof TAB_IDS)[number];
+const AUDIO_KIND_LABEL: Record<AudioKind, string> = {
+  bgm: "背景音乐",
+  sfx: "音效",
+  amb: "环境氛围音",
+};
 const TAB_LABEL: Record<UploadTab, string> = {
   local: "本地上传",
   platform: "平台音乐素材库",
@@ -33,6 +39,8 @@ export default function ModBgmEditor({ bgm, audioRefs, platformAudioRefs, platfo
   const [trying, setTrying] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [uploadTab, setUploadTab] = useState<UploadTab>("local");
+  const [platformKind, setPlatformKind] = useState<AudioKind | "">("");
+  const [platformTag, setPlatformTag] = useState("");
   const audio = useRef<HTMLAudioElement | null>(null);
   useEffect(() => { void localTracks().then(setLib); return () => audio.current?.pause(); }, []);
 
@@ -46,6 +54,10 @@ export default function ModBgmEditor({ bgm, audioRefs, platformAudioRefs, platfo
     const notes: string[] = [];
     let next = rows;
     for (const f of Array.from(fs)) {
+      if (f.size > AUDIO_MAX_MB * 1048576) {
+        notes.push(`「${f.name}」超过 ${AUDIO_MAX_MB} MB，上传失败`);
+        continue;
+      }
       const name = f.name.replace(/\.[^.]+$/, "");
       if (f.size <= EMBED_MB * 1048576) {
         const src = await new Promise<string>((r) => { const fr = new FileReader(); fr.onload = () => r(String(fr.result)); fr.readAsDataURL(f); });
@@ -60,7 +72,7 @@ export default function ModBgmEditor({ bgm, audioRefs, platformAudioRefs, platfo
         if (nt) { next = pushBgm(name, `local:${nt.id}`, next); notes.push(`「${name}」较大，已存入本机音乐库（导出分享不带着）`); }
       }
     }
-    commit(next);
+    if (next !== rows) commit(next);
     setMsg(notes.join("；"));
     setPickerOpen(false);
   };
@@ -85,9 +97,15 @@ export default function ModBgmEditor({ bgm, audioRefs, platformAudioRefs, platfo
     a.play().then(() => setTrying(row.key)).catch(() => setMsg(`「${row.name}」无法播放，检查链接或格式`));
   };
 
-  const refChoices = author.filter((a) => !rows.some((r) => r.source === "ref" && r.id === a.id));
-  const platChoices = PLATFORM_AUDIO.filter((p) => !rows.some((r) => r.source === "platform" && r.id === p.id));
-  const localChoices = lib.filter((t) => !rows.some((r) => r.source === "local" && r.src === `local:${t.id}`));
+  // 功能注释：已加入的曲子不再隐藏，列表里标「已上传」并置灰，作者回来看也知道传过哪些
+  const refChoices = author.map((a) => ({ ...a, added: rows.some((r) => r.source === "ref" && r.id === a.id) }));
+  const platChoices = PLATFORM_AUDIO.map((p) => ({ ...p, added: rows.some((r) => r.source === "platform" && r.id === p.id) }));
+  const platformTags = [...new Set(PLATFORM_AUDIO.flatMap((track) => track.tags ?? []))].sort((a, b) => a.localeCompare(b, "zh-CN"));
+  const selectedPlatformTag = platformTags.includes(platformTag) ? platformTag : "";
+  const filteredPlatformChoices = platChoices.filter((track) =>
+    (!platformKind || track.kind === platformKind) && (!selectedPlatformTag || track.tags?.includes(selectedPlatformTag)),
+  );
+  const localChoices = lib.map((t) => ({ ...t, added: rows.some((r) => r.source === "local" && r.src === `local:${t.id}`) }));
 
   const addPlatform = (id: string) => {
     const p = PLATFORM_AUDIO.find((x) => x.id === id);
@@ -142,7 +160,7 @@ export default function ModBgmEditor({ bgm, audioRefs, platformAudioRefs, platfo
         <button type="button" className={`${btn} shrink-0`} disabled={!/^https?:\/\//.test(url.trim())} onClick={() => { const u = url.trim(); commit(pushBgm(decodeURIComponent(u.split("/").pop()?.replace(/\.[^.]+$/, "") || "新曲目"), u)); setUrl(""); }}>添加链接</button>
       </div>
       {msg && <p className="text-[11px] text-jade">{msg}</p>}
-      <p className="text-[11px] leading-relaxed text-ink-soft">内嵌：≤{EMBED_MB}MB，文件进模组，导出分享别人也能听到。本机：更大的文件只在这台电脑。链接：https 地址，不占模组体积。引用和平台只记 id，不打包文件。</p>
+      <p className="text-[11px] leading-relaxed text-ink-soft">单个音频文件最大 {AUDIO_MAX_MB} MB。</p>
 
       {pickerOpen && (
         <Modal title="添加音乐" onClose={() => setPickerOpen(false)}>
@@ -155,7 +173,10 @@ export default function ModBgmEditor({ bgm, audioRefs, platformAudioRefs, platfo
                   role="tab"
                   aria-selected={uploadTab === id}
                   className={`rounded-full px-3 py-1 text-[12px] font-semibold transition ${uploadTab === id ? "bg-jade text-white" : "border border-line bg-paper text-ink hover:border-jade hover:text-jade"}`}
-                  onClick={() => setUploadTab(id)}
+                  onClick={() => {
+                    setUploadTab(id);
+                    if (id === "platform") void loadPlatformAudioFromApi(true);
+                  }}
                 >
                   {TAB_LABEL[id]}
                 </button>
@@ -169,19 +190,17 @@ export default function ModBgmEditor({ bgm, audioRefs, platformAudioRefs, platfo
                 <button type="button" className="w-full rounded-xl border border-dashed border-line bg-paper-2 px-3 py-6 text-[13px] font-semibold text-ink transition hover:border-jade hover:text-jade" onClick={() => fileRef.current?.click()}>
                   点击选择本机音频文件（可多选）
                 </button>
-                <p className="text-[11px] leading-relaxed text-ink-soft">≤{EMBED_MB}MB 内嵌进模组；更大的存入本机音乐库（导出不带走）。</p>
+                <p className="text-[11px] leading-relaxed text-ink-soft">单个音频文件最大 {AUDIO_MAX_MB} MB。</p>
                 {lib.length > 0 && (
                   <div className="space-y-1.5">
                     <p className="text-[11.5px] font-bold text-ink">本机音乐库</p>
-                    {localChoices.length === 0 ? (
-                      <p className="text-[11.5px] text-ink-soft">本机库里的曲子都已加入</p>
-                    ) : (
+                    {localChoices.length === 0 ? null : (
                       <ul className="max-h-48 space-y-1 overflow-y-auto">
                         {localChoices.map((t) => (
                           <li key={t.id}>
-                            <button type="button" className="flex w-full items-center justify-between rounded-lg border border-line bg-paper px-2.5 py-1.5 text-left text-[12.5px] text-ink transition hover:border-jade" onClick={() => addLocal(t.id)}>
+                            <button type="button" disabled={t.added} className="flex w-full items-center justify-between rounded-lg border border-line bg-paper px-2.5 py-1.5 text-left text-[12.5px] text-ink transition hover:border-jade disabled:cursor-default disabled:opacity-60 disabled:hover:border-line" onClick={() => addLocal(t.id)}>
                               <span className="min-w-0 truncate">{t.name}</span>
-                              <span className="shrink-0 text-[11px] text-jade">加入</span>
+                              {t.added ? <span className="shrink-0 text-[11px] text-ink-soft">已上传</span> : <span className="shrink-0 text-[11px] text-jade">加入</span>}
                             </button>
                           </li>
                         ))}
@@ -196,19 +215,40 @@ export default function ModBgmEditor({ bgm, audioRefs, platformAudioRefs, platfo
               <div role="tabpanel" aria-label="平台音乐素材库" className="space-y-2">
                 {PLATFORM_AUDIO.length === 0 ? (
                   <p className="text-[12px] text-ink-soft">平台曲库暂无可用曲子</p>
-                ) : platChoices.length === 0 ? (
-                  <p className="text-[12px] text-ink-soft">平台曲库里的曲子都已加入</p>
                 ) : (
+                  <>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="min-w-0 space-y-1 text-[12px] text-ink-soft">
+                      <span>音频类型</span>
+                      <select className={inp} value={platformKind} onChange={(e) => setPlatformKind(e.target.value as AudioKind | "")}>
+                        <option value="">全部类型</option>
+                        {Object.entries(AUDIO_KIND_LABEL).map(([kind, label]) => <option key={kind} value={kind}>{label}</option>)}
+                      </select>
+                    </label>
+                    <label className="min-w-0 space-y-1 text-[12px] text-ink-soft">
+                      <span>平台分类</span>
+                      <select className={inp} value={selectedPlatformTag} onChange={(e) => setPlatformTag(e.target.value)}>
+                        <option value="">全部分类</option>
+                        {platformTags.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                  {filteredPlatformChoices.length === 0 ? <p className="text-[12px] text-ink-soft">没有符合当前分类的音频</p> : (
                   <ul className="max-h-64 space-y-1 overflow-y-auto">
-                    {platChoices.map((p) => (
+                    {filteredPlatformChoices.map((p) => (
                       <li key={p.id}>
-                        <button type="button" className="flex w-full items-center justify-between rounded-lg border border-line bg-paper px-2.5 py-1.5 text-left text-[12.5px] text-ink transition hover:border-jade" onClick={() => addPlatform(p.id)}>
-                          <span className="min-w-0 truncate">{p.name}</span>
-                          <span className="shrink-0 text-[11px] text-jade">加入</span>
+                        <button type="button" disabled={p.added} className="flex w-full items-center justify-between rounded-lg border border-line bg-paper px-2.5 py-1.5 text-left text-[12.5px] text-ink transition hover:border-jade disabled:cursor-default disabled:opacity-60 disabled:hover:border-line" onClick={() => addPlatform(p.id)}>
+                          <span className="min-w-0">
+                            <span className="block truncate">{p.name}</span>
+                            <span className="block break-words text-[11px] text-ink-soft">{[AUDIO_KIND_LABEL[p.kind], ...(p.tags ?? [])].join(" · ")}</span>
+                          </span>
+                          {p.added ? <span className="shrink-0 text-[11px] text-ink-soft">已上传</span> : <span className="shrink-0 text-[11px] text-jade">加入</span>}
                         </button>
                       </li>
                     ))}
                   </ul>
+                  )}
+                  </>
                 )}
               </div>
             )}
@@ -217,15 +257,13 @@ export default function ModBgmEditor({ bgm, audioRefs, platformAudioRefs, platfo
               <div role="tabpanel" aria-label="作品音频库" className="space-y-2">
                 {author.length === 0 ? (
                   <p className="text-[12px] text-ink-soft">作品音频库还是空的，先在音频库上传后再来引用</p>
-                ) : refChoices.length === 0 ? (
-                  <p className="text-[12px] text-ink-soft">作品音频库里的曲子都已引用</p>
                 ) : (
                   <ul className="max-h-64 space-y-1 overflow-y-auto">
                     {refChoices.map((a) => (
                       <li key={a.id}>
-                        <button type="button" className="flex w-full items-center justify-between rounded-lg border border-line bg-paper px-2.5 py-1.5 text-left text-[12.5px] text-ink transition hover:border-jade" onClick={() => addWorkRef(a.id)}>
+                        <button type="button" disabled={a.added} className="flex w-full items-center justify-between rounded-lg border border-line bg-paper px-2.5 py-1.5 text-left text-[12.5px] text-ink transition hover:border-jade disabled:cursor-default disabled:opacity-60 disabled:hover:border-line" onClick={() => addWorkRef(a.id)}>
                           <span className="min-w-0 truncate">{a.name}</span>
-                          <span className="shrink-0 text-[11px] text-jade">引用</span>
+                          {a.added ? <span className="shrink-0 text-[11px] text-ink-soft">已上传</span> : <span className="shrink-0 text-[11px] text-jade">引用</span>}
                         </button>
                       </li>
                     ))}

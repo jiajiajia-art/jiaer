@@ -77,3 +77,11 @@ test('ModEditorPanel_草稿文案与入口选定契约', async () => {
   assert.match(panel, /选完版本前不打开表单/);
   assert.match(panel, /onCommitted/);
 });
+
+test('useDraft_卸载和pagehide补写仍在防抖的草稿', async () => {
+  const { readFileSync } = await import('node:fs');
+  const source = readFileSync(join(romance, 'lib/useDraft.ts'), 'utf8');
+  assert.match(source, /window\.addEventListener\("pagehide", flush\)/);
+  assert.match(source, /window\.removeEventListener\("pagehide", flush\);\s*flush\(\);/);
+  assert.match(source, /clear: \(\) => \{\s*pendingWrite\.current = null;\s*flush\(\);\s*removeGlobal\(key\);/);
+});

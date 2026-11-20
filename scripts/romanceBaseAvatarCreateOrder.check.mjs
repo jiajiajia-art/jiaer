@@ -33,7 +33,7 @@ test('基础页_头像合并单块_建角在地点之上', () => {
   assert.match(pools, /单块/);
   assert.match(pools, /匹配优先级/);
   assert.match(pools, /我的头像池/);
-  assert.match(pools, /平台公共分类/);
+  assert.match(pools, /官方风格库/);
   assert.doesNotMatch(pools, /私库、公库与分类都在本块配置/);
   assert.doesNotMatch(pools, /池名即 avatarVariant/);
   assert.doesNotMatch(pools, /aria-label="池名（即 avatarVariant）"/);
@@ -41,5 +41,5 @@ test('基础页_头像合并单块_建角在地点之上', () => {
 
   assert.match(wizard, /id:\s*"avatars",\s*group:\s*"① 基础",\s*name:\s*"头像"/);
   assert.match(wizard, /id:\s*"creation",\s*group:\s*"① 基础"/);
-  assert.match(panel, /hint: "作品封面、名称与简介、剧本基调、时间与推进、头像、建角、人物线路、地点、音乐、已添加的玩法"/);
+  assert.match(panel, /hint: "作品封面、名称与简介、系统提示词、时间与推进、头像、建角、人物线路、地点、音乐、已添加的玩法"/);
 });

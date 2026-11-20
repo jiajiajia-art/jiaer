@@ -69,13 +69,6 @@ const tabsForPath = (pathname: string, t: TFunction, badges: Record<string, numb
     return tabs;
   }
 
-  if (starts(pathname, '/admin/avatars') || starts(pathname, '/admin/art-styles')) {
-    return [
-      { key: 'avatars', label: t('adminUi.nav.items.avatars'), path: '/admin/avatars' },
-      { key: 'artStyles', label: t('adminUi.nav.items.artStyles'), path: '/admin/art-styles' },
-    ];
-  }
-
   if (pathname === '/operator' || starts(pathname, '/operator/reports')) {
     return [
       { key: 'stats', label: t('adminUi.nav.items.stats', { defaultValue: '数据概览' }), path: '/operator' },

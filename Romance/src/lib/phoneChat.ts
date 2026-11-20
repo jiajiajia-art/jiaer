@@ -7,12 +7,11 @@ import { blockWordsOf, charCardBlock, maskWords } from "../game/charCard";
 import type { AIConfig, GameState } from "./types";
 import { EMOTIONS, isEmotion, type EmotionId, type Thread } from "../game/phone";
 import { complete, worldBookBlock } from "./ai";
-import { affinityOf, isParent, kbBlock, kbOf, recentStoryBlock, romanceBlock, toneCue } from "../game/npcKnowledge";
-import { LIVE_PERSON_BY_ID as PERSON_BY_ID } from "../mods/registry";
+import { affinityOf, isParent, kbBlock, kbOf, recentStoryBlock, romanceBlock } from "../game/npcKnowledge";
+import { getWorldPromptFragment, getWorldPromptHeader, LIVE_PERSON_BY_ID as PERSON_BY_ID } from "../mods/registry";
 import { moodTier, weekdayName } from "../game/logic";
 import { gameMinutes, gameTimeLabel, type ChatMsg } from "../game/phone";
 import { MOOD_LABELS } from "../game/data";
-import { liveTerm as T } from "../mods/live";
 import { ageLabel } from "./npcIdentity";
 import { giftInText, giftRule, groupGiftRule, parseGift, promisedGift, type Gift } from "./chatMoney";
 
@@ -27,6 +26,8 @@ export type ChatReply = {
   stress_delta?: number;
   emotion?: EmotionId;
   inner_os?: string;
+  /** 功能注释：只有这一轮真的转成内心 OS 才为 true；平时留空，气泡下不贴心声 */
+  os_on?: boolean;
   self_event?: string; // NPC 自己身上发生的事 → selfMemory
   accept_money?: boolean; // 主角给的红包 / 转账：true 收下，false 不收退回；没表态为 undefined
   gift?: Gift; // TA 这次当场发给主角的红包 / 转账（金额由 chatMoney.giftCard 校正）
@@ -74,10 +75,10 @@ function personaBlock(g: GameState, personId: string, channel: string, hay = "")
   const tags = (p?.tags ?? []).join("、");
   return `【你要扮演的人物】
 姓名：${npc?.name ?? p?.name ?? personId}
-身份：${p?.role ?? npc?.identity ?? "圈内人"}
-与主角关系：${p?.relation ?? npc?.relation ?? "相识"}（好感 ${rel}）${romance ? `\n${romance}` : ""}
+身份：${npc?.identity || p?.role || "未注明"}
+与主角关系：${npc?.relation || p?.relation || "相识"}（好感 ${rel}）${romance ? `\n${romance}` : ""}
 当前心情：${mood}
-人物小传：${p?.bio ?? npc?.bio ?? "（暂无）"}
+人物小传：${npc?.bio || p?.bio || "（暂无）"}
 标签：${tags || "无"}${(() => { const f = npcFactionOf(personId, p?.factionId); return f ? `\n所属势力：${f.name}${f.desc ? `（${f.desc.slice(0, 60)}）` : ""}（立场与说话要符合这个身份）` : ""; })()}${custom?.gender ? `\n性别（玩家设定，以此为准）：${custom.gender}` : ""}${custom?.persona?.trim() ? `\n玩家自定义人设（优先于小传，务必遵守）：${custom.persona.trim()}` : ""}${custom?.voice?.trim() ? `\n说话口吻/语气：${custom.voice.trim()}` : ""}
 ${(() => { const c = charCardBlock(npc?.name ?? p?.name ?? personId, npc?.persona, hay); return c ? `${c}\n` : ""; })()}${kbBlock(g, personId)}
 ${recentStoryBlock(g)}
@@ -85,6 +86,11 @@ ${recentStoryBlock(g)}
 ${giftRule(g, personId)}
 
 【本次渠道】${channel}`;
+}
+
+function phoneWorkContext(): string {
+  const setting = [getWorldPromptHeader(), getWorldPromptFragment()].filter(Boolean).join("\n\n").trim();
+  return setting ? `【作品系统提示词】\n${setting}\n以上用于确定题材、时代、人物与口吻。按下方手机渠道格式回复，人物只使用自己知道的事实。\n\n` : "";
 }
 
 /* 群消息上的扩展字段（贴纸、红包、撤回等，定义在 components/phone/wxFeatures 的 XMsg 里），这里只读用得到的几个 */
@@ -134,7 +140,7 @@ export function buildChatMessages(g: GameState, thread: Thread, userText: string
     ? `\n（系统：主角给你的${opts.money}你还没收。收不收由你按人设和你们的关系决定，写进 accept_money：true＝收下，false＝不收、退回去；还在客气推辞、没拿定主意就填 null，钱先放着。说出口的话必须和它一致——说了"不要""退给你""你自己留着"就不能填 true。）`
     : "";
 
-  const sys = `你是一款复古${T("industry")}养成模拟器里的角色扮演引擎。现在由你扮演一位 NPC，通过手机与主角一对一私聊，务必像真人发消息一样：口语、简短、分条发送，贴合人物身份与当下心情，严禁 OOC（脱离人设）。
+  const sys = `${phoneWorkContext()}现在由你扮演一位 NPC，通过手机与主角一对一私聊，务必像真人发消息一样：口语、简短、分条发送，贴合人物身份与当下心情，严禁 OOC（脱离人设）。
 
 ${personaBlock(g, pid, thread.kind === "group" ? "微信群聊" : "微信/短信私聊", `${userText} ${thread.msgs.slice(-6).map((m) => m.text).join(" ")}`)}
 ${recall ? `\n${recall}\n` : ""}${(() => { const recent = thread.msgs.slice(-6).map((m) => m.text).join(" "); const wb = worldBookBlock(g, `${userText} ${recent}`, { npcIds: [pid] }); return wb ? `\n【公共设定 · 世界书（所有人都知道的常识）】\n${wb}\n` : ""; })()}
@@ -145,9 +151,9 @@ ${recall ? `\n${recall}\n` : ""}${(() => { const recent = thread.msgs.slice(-6).
 姓名：${me.name}｜身份：${me.identity}｜名气 ${g.sim.fame}｜口碑 ${g.sim.reputation}｜此刻心境：${myMood}
 
 【回复要求】
-1. ${toneCue(g, pid)}。好感越高篇幅越长、越敢开玩笑；心动、暧昧、吃醋的程度看上面的【你对主角的爱慕】，它和好感冲突时以爱慕为准。
+1. 按人物卡写实际发出的消息。用角色自己的措辞、句子长短、称呼、标点和接话方式体现性格；明确填写的说话口吻和自定义人设优先。好感只调整熟悉程度和交流分寸，爱慕只决定是否有心动和暧昧。寡言的人熟了仍可以只回一句，关心也可以通过记住细节或做实事表现。没有爱慕或不可攻略时按既有关系回应，不写暧昧。
 2. 像发微信一样，用 1~5 条短消息，每条只放一句话；想说几件事就拆成几条放进 bubbles 数组，单条里不要换行、不要空行。不要长篇大论，不要旁白，不要动作描写括号。
-2.1 称呼像真人：微信里极少连名带姓喊人，更不会每次都喊；按你们的关系用昵称、名字后两个字、"你"或干脆不称呼，只有生气、严肃或很生分时才叫全名。
+2.1 优先使用人物卡或既有对话里符合关系的称呼。没有特定习惯时，可以直接接话；关系尚未到那个程度时别临时起亲昵称呼。
 2.2 对方发很短的消息（"1""嗯""ok"、表情）时，自然接话或顺势带过，不要逐字复述对方的内容来吐槽。
 3. 结合上文与往来记忆（包括群里一起聊过的），记得之前聊过的事，不要遗忘、不要前后矛盾。
 4. 允许模拟真人状态：偶尔"已读不回"或"正在忙"（用下面 JSON 的字段表达），不要每次都热情满满；但越心动越舍不得不回，「暗暗心动」以上很少已读不回。
@@ -162,7 +168,8 @@ ${recall ? `\n${recall}\n` : ""}${(() => { const recent = thread.msgs.slice(-6).
   "memory": "用一句话概括这次私聊，将写入你们的往来记忆",
   "stress_delta": 0,
   "emotion": "calm",
-  "inner_os": "必填：一句不会发出去的内心独白",
+  "os_on": false,
+  "inner_os": "",
   "self_event": "（可空）你自己最近发生的一件生活小事，会记进你的近况",
   "accept_money": null,
   "gift": null
@@ -171,7 +178,7 @@ ${recall ? `\n${recall}\n` : ""}${(() => { const recent = thread.msgs.slice(-6).
 accept_money 只在主角给你发了还没收的红包 / 转账时填 true 或 false，平时为 null；gift 是你这次当场发给主角的红包或转账（规则见上面的金钱说明），不发就是 null。
 love_delta 是这次聊天后你对主角爱慕（私下心动）的变化，取 -2~3 的整数：只有真被撩到、被打动、暧昧升温（正）或失望、受伤、被冒犯（负）时才给，普通寒暄、聊正事一律为 0；现在毫无心动的人被真正打动时也可以 +1 开始在意；你是主角的家人或不可攻略时恒为 0。
 emotion 必须从以下英文 id 中选一个，代表你此刻真实情绪：${Object.entries(EMOTIONS).map(([k, v]) => `${k}=${v.label}（${v.hint}）`).join("，")}。
-inner_os 每次都必须填写（已读不回时也要写你为什么不回），是你心里没说出口的真实想法（第一人称、一句话、可以吃醋/傲娇/暗爽/占有欲/偷乐/委屈），要和表面消息形成反差或补充。`;
+内心 OS 不是每轮标配。os_on 默认 false，inner_os 留空字符串。只有这一轮真的转成内心 OS 才把 os_on 设为 true，并用第一人称写一句 inner_os：嘴上发出来的和心里想的不是一回事（欲言又止、口是心非、吃醋傲娇却嘴硬、暗爽、占有欲、委屈没说出口）。把刚发出的几条换个说法再写一遍、补充日程、解释自己为什么这么回，都不是内心 OS，os_on 必须为 false。已读不回同样默认 false，只有沉默本身藏着另一层没说出口的意思才设 true。`;
 
   const history = thread.msgs
     .filter((m) => m.role !== "sys")
@@ -189,8 +196,20 @@ inner_os 每次都必须填写（已读不回时也要写你为什么不回）�
             { type: "image_url" as const, image_url: { url: image } },
           ],
         }
-      : { role: "user" as const, content: `${userText}${moneyAsk}${stk}\n\n（系统：请严格按上面规定的 JSON 格式回复，bubbles 每条一句、不含换行，并填写 inner_os 与 emotion）` },
+      : { role: "user" as const, content: `${userText}${moneyAsk}${stk}\n\n（系统：请严格按上面规定的 JSON 格式回复，bubbles 每条一句、不含换行，并填写 emotion。没有转成内心 OS 时 os_on 为 false、inner_os 为 ""，不要为了填字段写一句。）` },
   ];
+}
+
+function flagOn(v: unknown): boolean {
+  return v === true || v === "true" || v === 1;
+}
+
+/** 功能注释：没标明「转成内心 OS」的独白丢掉，避免模型照旧每轮填一句复述 */
+export function parseOs(flag: unknown, raw: unknown): { os_on?: true; inner_os?: string } {
+  if (!flagOn(flag) || typeof raw !== "string") return {};
+  const text = raw.trim().slice(0, 80);
+  if (!text || /必填|留空|内心独白|不会发出去|可选，一句/.test(text)) return {};
+  return { os_on: true, inner_os: text };
 }
 
 function safeParse(raw: string): ChatReply {
@@ -209,7 +228,7 @@ function safeParse(raw: string): ChatReply {
       memory: typeof o.memory === "string" ? o.memory : undefined,
       stress_delta: Number(o.stress_delta) || 0,
       emotion: isEmotion(o.emotion) ? o.emotion : undefined,
-      inner_os: typeof o.inner_os === "string" && o.inner_os.trim() ? o.inner_os.trim().slice(0, 80) : undefined,
+      ...parseOs(o.os_on, o.inner_os),
       self_event: typeof o.self_event === "string" && o.self_event.trim() ? o.self_event.trim().slice(0, 80) : undefined,
       accept_money: boolOf(o.accept_money),
       gift: parseGift(o.gift),
@@ -272,7 +291,7 @@ function cleanBubbles(r: ChatReply, name: string): ChatReply {
 
 
 /* ————— 群聊：多位人设同场，各自带着与主角的私聊记忆 ————— */
-export type GroupLine = { id: string; text: string; emotion?: EmotionId; inner_os?: string; gift?: Gift };
+export type GroupLine = { id: string; text: string; emotion?: EmotionId; inner_os?: string; os_on?: boolean; gift?: Gift };
 /* grab：这轮领了主角红包 / 收下主角转账的成员（按先后）；AI 没给这个字段时为 undefined，由说出口的话兜底 */
 export type GroupReply = { lines: GroupLine[]; memories: Record<string, string>; rel: Record<string, number>; love: Record<string, number>; grab?: string[] };
 /* narration：userText 是旁白（旁观群聊），不是主角的发言；money：主角发在群里、还没领完的红包 / 转账 */
@@ -322,9 +341,8 @@ function memberCard(g: GameState, pid: string): string {
   return `${memberCardBase(g, pid, npc, ps, pf, romance)}${mem ? `\n  TA 记得：${mem}` : ""}`;
 }
 function memberCardBase(g: GameState, pid: string, npc: GameState["npcs"][number] | undefined, ps: NonNullable<GameState["npcs"][number]["persona"]> | undefined, pf: ReturnType<typeof kbOf>["profile"], romance: string): string {
-  void npc;
   return `◆ id=${pid}｜${pf.name}｜${pf.identity ?? "相识"}${pf.job ? `｜职业 ${pf.job}` : ""}${pf.age ? `｜${ageLabel(pf.age)}` : ""}｜与主角：${pf.relation ?? "相识"}（好感 ${affinityOf(g, pid)}）${romance ? `｜${romance}` : ""}｜心情 ${npc?.mood || "平静"}
-  公开人设：${(pf.bio || "（暂无）").slice(0, 160)}${pf.personality ? `｜性格 ${pf.personality}` : ""}${ps?.gender ? `｜性别 ${ps.gender}` : ""}${ps?.voice?.trim() ? `｜口吻 ${ps.voice.trim()}` : ""}${(() => { const c = charCardBlock(pf.name, ps, "", true); return c ? `\n  ${c.replace(/\n/g, "\n  ")}` : ""; })()}`;
+  公开人设：${(pf.bio || "（暂无）").slice(0, 160)}${pf.personality ? `｜性格 ${pf.personality}` : ""}${ps?.gender ? `｜性别 ${ps.gender}` : ""}${ps?.text?.trim() ? `\n  自定义人设（决定该成员的行为与性格）：${ps.text.trim()}` : ""}${ps?.voice?.trim() ? `\n  说话口吻：${ps.voice.trim()}` : ""}${(() => { const c = charCardBlock(pf.name, ps, "", true); return c ? `\n  ${c.replace(/\n/g, "\n  ")}` : ""; })()}`;
 }
 
 /* 这轮群聊要记进某位成员记忆的一句话（不含群名前缀，落账时 applyChatEffects 会加上，并与同一场群聊并成一条）：
@@ -349,7 +367,7 @@ export async function requestGroupReply(cfg: AIConfig, g: GameState, thread: Thr
   const prev = thread.msgs.filter((m) => m.role !== "sys");
   const lastGt = prev[prev.length - 1]?.gt;
   const gap = typeof lastGt === "number" ? `；群里上一条消息是${agoLabel(gameMinutes(g) - lastGt)}发的` : "；群里还没人说过话";
-  const sys = `你是复古${T("industry")}养成模拟器里的群聊扮演引擎。主角 ${g.player.name} 建了一个微信群「${thread.title}」，群里有以下成员，你要同时扮演他们，像真实群聊一样接话。每个人严格保持自己的人设与口吻，可以互相调侃、拆台、护着主角。【知识隔离】群里每个人只知道群里说过的话和自己的公开人设，不知道别人与主角的私聊和私事，也不能替别人说出只有对方知道的事。
+  const sys = `${phoneWorkContext()}主角 ${g.player.name} 建了一个微信群「${thread.title}」。按各自的人设、关系和说话习惯扮演发言的人。【知识隔离】成员只使用群内公开信息和自己知道的事，不知道别人与主角的私聊和私事。
 
 【群成员】
 ${members.map((m) => memberCard(g, m)).join("\n")}
@@ -362,18 +380,20 @@ ${(() => { const wb = worldBookBlock(g, `${userText} ${thread.msgs.slice(-6).map
 1. 本轮 1~5 条发言，不必人人都说，也别排队一人一句：被点名（@ 或叫名字）的人一般会回，和主角好感高的人更爱接话；其他人看心情和交情——可以接别的成员的话、互相抬杠、跑题，或只回一句"哈哈哈""+1"、一个表情；同一个人可以连发两条短的；在忙、不熟或没兴趣的人可以不吭声。
 1.1 「爱慕」是成员对主角的私下心动，与好感分开：爱慕高的人会在细节里流露偏爱、在意或醋意，但群里人多，通常不直白表白；爱慕为 0 或标注不可攻略的人不对主角暧昧。心意只有本人知道，别人顶多察觉到异样，不能替别人说破。
 2. 每条像发微信：口语、短句，不要旁白、不要括号动作；别复述主角的话，别客服腔（"收到""好的呢""有需要随时说"），也别条条都以问句结尾。
+2.1 有明确口吻时，按该成员自己的用词、称呼和句式写；谁会接话、谁会沉默、谁会转移话题都由各自的性格和处境决定。好感只影响交流分寸，别让全员用同一种热情或爱起哄的口气。
 3. memories 会写进各成员自己的记忆，之后 TA 和主角私聊、见面时都会记得：本轮开口的人、被主角点名的人、跟这件事直接相关的人各写一条；主角说了跟全群有关的事（约饭、报喜、求助、发红包），每个成员都写。用该成员的第一人称、一句话写清具体的事（如"主角约大家周六吃火锅，我说我带酒"），别写"在群里聊了聊"这种空话；纯寒暄、没什么可记的就不写。
 3.1 ${groupGiftRule(g, names)}${opts.money ? `
 3.2 主角在群里发的${opts.money}还没人领。想领的成员按领取先后把 id 写进 grab，领到的人一般会道谢、起哄或喊"谢谢老板"；不好意思领、不想领的人不写，没人领就给空数组 []。说出口的要和 grab 一致：说了"抢到了""谢谢红包"的人必须在 grab 里。` : ""}
 4. 严格只输出 JSON：
 {
-  "lines": [{"id": "成员id", "text": "一句话", "emotion": "calm", "inner_os": "可选，一句没说出口的心里话", "gift": null}],
+  "lines": [{"id": "成员id", "text": "一句话", "emotion": "calm", "os_on": false, "inner_os": "", "gift": null}],
   "memories": {"成员id": "该成员第一人称的一句话：这轮群聊里和主角有关、值得记住的具体的事"},
   "rel": {"成员id": 0},
   "love": {"成员id": 0}${opts.money ? `,
   "grab": ["领了主角红包的成员id"]` : ""}
 }
-emotion 取值：${Object.entries(EMOTIONS).map(([k, v]) => `${k}=${v.label}`).join("，")}。rel 为 -3~4 的整数，只写有变化的人。love 是该成员对主角爱慕（私下心动）的变化，-2~3 的整数，只写这轮确实心动或失望的人，多数时候留空对象；主角的家人不写。`;
+emotion 取值：${Object.entries(EMOTIONS).map(([k, v]) => `${k}=${v.label}`).join("，")}。rel 为 -3~4 的整数，只写有变化的人。love 是该成员对主角爱慕（私下心动）的变化，-2~3 的整数，只写这轮确实心动或失望的人，多数时候留空对象；主角的家人不写。
+每条的 os_on 默认 false、inner_os 留空。只有这句和嘴上说的不是一回事、真转成内心 OS 时才把该条 os_on 设为 true 并写一句 inner_os；复述刚说的话、附和、解释日程都不要写。`;
 
   const history = prev.slice(-20).map((m) => ({
     role: m.role === "me" ? ("user" as const) : ("assistant" as const),
@@ -387,11 +407,14 @@ emotion 取值：${Object.entries(EMOTIONS).map(([k, v]) => `${k}=${v.label}`).j
   let o: { lines?: unknown; memories?: unknown; rel?: unknown; love?: unknown; grab?: unknown } = {};
   try {
     const a = raw.indexOf("{"), b = raw.lastIndexOf("}");
-    o = JSON.parse(raw.slice(a, b + 1));
+    const parsed = JSON.parse(raw.slice(a, b + 1));
+    if (parsed && typeof parsed === "object") o = parsed;
   } catch { /* 兜底在下面 */ }
   const byName = Object.fromEntries(Object.entries(names).map(([id, n]) => [n, id]));
-  const lines: GroupLine[] = (Array.isArray(o.lines) ? o.lines : [])
-    .map((l: { id?: string; name?: string; text?: string; emotion?: string; inner_os?: string; gift?: unknown }) => {
+  const source = Array.isArray(o.lines) ? o.lines : parseGroupTranscript(raw, names);
+  const lines: GroupLine[] = source
+    .filter((line) => line && typeof line === "object")
+    .map((l: { id?: string; name?: string; text?: string; emotion?: string; inner_os?: string; os_on?: unknown; gift?: unknown }) => {
       // 话里夹的「[红包 ¥88：恭喜]」抽成一张真的红包，旁边的字照常发；嘴上说了「给大家发个红包」却没填 gift 的，照说的发。群里只发红包
       const said = typeof l.text === "string" ? l.text.trim() : "";
       const inText = giftInText(said);
@@ -401,7 +424,7 @@ emotion 取值：${Object.entries(EMOTIONS).map(([k, v]) => `${k}=${v.label}`).j
         id: members.includes(l.id ?? "") ? l.id! : byName[l.name ?? l.id ?? ""] ?? "",
         text: maskWords(text, blockWordsOf(g.npcs.find((n) => n.id === (members.includes(l.id ?? "") ? l.id! : byName[l.name ?? l.id ?? ""] ?? ""))?.persona)),
         emotion: isEmotion(l.emotion) ? l.emotion : undefined,
-        inner_os: typeof l.inner_os === "string" && l.inner_os.trim() ? l.inner_os.trim().slice(0, 80) : undefined,
+        ...parseOs(l.os_on, l.inner_os),
         ...(gift ? { gift: { ...gift, kind: "redpacket" as const } } : {}),
       };
     })
@@ -418,8 +441,24 @@ emotion 取值：${Object.entries(EMOTIONS).map(([k, v]) => `${k}=${v.label}`).j
   for (const [k, v] of Object.entries(pickObj(o.rel))) if (members.includes(k) && Number(v)) rel[k] = Number(v);
   const love: Record<string, number> = {};
   for (const [k, v] of Object.entries(pickObj(o.love))) if (members.includes(k) && Number(v)) love[k] = Number(v);
-  if (!lines.length && members[0]) lines.push({ id: members[0], text: raw.replace(/```[\s\S]*?```/g, "").trim().slice(0, 60) || "……" });
+  if (!lines.length && !(Array.isArray(o.lines) && o.lines.length === 0)) {
+    throw new Error("群聊回复格式有误，请稍后重试");
+  }
   return { lines, memories, rel, love, ...(grab ? { grab } : {}) };
+}
+
+/** 兼容模型直接输出「成员名：消息」，只认可以确认身份的发言。 */
+export function parseGroupTranscript(raw: string, names: Record<string, string>): GroupLine[] {
+  const lines: GroupLine[] = [];
+  const text = raw.trim().replace(/^```(?:text|txt)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/i, "$1").trim();
+  for (const row of text.split(/\r?\n/)) {
+    const match = row.trim().match(/^([^：:]+)[：:]\s*(.+)$/);
+    if (!match) continue;
+    const speaker = match[1].trim();
+    const ids = Object.entries(names).filter(([id, name]) => id === speaker || name === speaker);
+    if (ids.length === 1) lines.push({ id: ids[0][0], text: match[2].trim() });
+  }
+  return lines;
 }
 
 /* 时段描述：让 AI 的问候与作息贴合游戏内时钟 */

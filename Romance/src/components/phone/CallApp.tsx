@@ -148,7 +148,7 @@ function CallSession({ target, onEnd }: { target: CallTarget; onEnd: () => void 
         setMsgs((cur) => [...cur, {
           id: msgId(), role: "npc", text: b, ts: Date.now(), gt: gameMinutes(gRef.current), label: gameTimeLabel(gRef.current),
           ...(last && reply.emotion ? { emo: reply.emotion, bpm: bpmOf(reply.emotion) } : {}),
-          ...(last && reply.inner_os ? { os: reply.inner_os } : {}),
+          ...(last && reply.os_on && reply.inner_os ? { os: reply.inner_os, osOn: true } : {}),
         }]);
       }
     } catch { setNote(img ? "对方没能看到画面：当前模型可能不支持识图" : "信号不好，对方没听清"); }
@@ -194,7 +194,7 @@ function CallSession({ target, onEnd }: { target: CallTarget; onEnd: () => void 
                   {m.text}
                 </span>
                 {m.emo && <span className="mt-1 text-[10.5px] text-white/75"><EmotionBadge id={m.emo} bpm={m.bpm} /></span>}
-                {m.os && <span className="mt-1 rounded-xl border border-dashed border-violet-300/60 bg-violet-400/15 px-2.5 py-1 text-[11.5px] text-violet-100"><InnerOsLabel text={m.os} /></span>}
+                {m.os && m.osOn && <span className="mt-1 rounded-xl border border-dashed border-violet-300/60 bg-violet-400/15 px-2.5 py-1 text-[11.5px] text-violet-100"><InnerOsLabel text={m.os} /></span>}
               </div>
             </div>
           ))}
@@ -233,7 +233,7 @@ export default function CallApp({ onBack }: { onBack: () => void }) {
     const g0 = ensurePhone(game!);
     const people = g0.phone!.contacts.map((id) => g0.npcs.find((n) => n.id === id)).filter((n): n is NonNullable<typeof n> => !!n);
     const res = await syncJson<{ calls?: unknown }>(cfg, g0, "call", "电话",
-      `生成 1~3 条刚发生的来电记录，紧扣当前剧情。来电者优先从【联系人】中选（用 pid）；也可以是陌生/机构来电（pid 留空，name 写如「经纪公司前台」「未知号码」）。outcome 为 "missed"（未接）或 "connected"（已接）；已接的给 durationSec（10~600）和 lines：2~4 句对方在电话里说的话；未接的 lines 可给 1 句对方之后留的语音留言。
+      `生成 1~3 条刚发生的来电记录，紧扣当前剧情。来电者优先从【联系人】中选（用 pid）；也可以是陌生来电（pid 留空，name 写「未知号码」或剧情里已出现的机构，不要另编经纪公司、试镜通知）。outcome 为 "missed"（未接）或 "connected"（已接）；已接的给 durationSec（10~600）和 lines：2~4 句对方在电话里说的话；未接的 lines 可给 1 句对方之后留的语音留言。
 【联系人】${people.map((n) => `${n.id}=${n.name}`).join("、") || "（无）"}
 返回 {"calls":[{"pid":"","name":"","outcome":"missed","durationSec":0,"lines":[""]}]}`);
     if (!res) return "未配置 AI，无法联动剧情";

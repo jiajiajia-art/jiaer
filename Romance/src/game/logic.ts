@@ -1263,7 +1263,7 @@ export function perkRead(s: GameState, key: string, pid: string): number {
 function perkWrite(n: GameState, key: string, pid: string, delta: number) {
   if (key.startsWith("stat:")) { const k = key.slice(5) as StatKey; if (k in n.stats) n.stats = { ...n.stats, [k]: clampStat(k, n.stats[k] + delta) }; return; }
   if (key.startsWith("attr:")) { const k = key.slice(5); n.cattrs = { ...n.cattrs, [k]: Math.max(0, (n.cattrs?.[k] ?? 0) + delta) }; return; }
-  if (key === "affinity") { n.rel = { ...n.rel, [pid]: clamp((n.rel?.[pid] ?? 0) + delta, 0, affinityCapOf(pid)) }; return; }
+  if (key === "affinity") { n.rel = { ...n.rel, [pid]: clamp((n.rel?.[pid] ?? 0) + delta, -100, affinityCapOf(pid)) }; return; }
   if (key === "looks" || key === "week") return; // 派生 / 只读
   const o = n as unknown as Record<string, unknown>;
   if (typeof o[key] !== "number") return;

@@ -18,13 +18,11 @@ test('ModEditorPanel_fluid作者态应精简基本信息并保留底层字段写
   assert.match(panel, /authorSimplify\s*=\s*!!fluid/);
   assert.match(panel, /authorSimplify \? \(/);
   // 精简态：名称 + 简介 + 剧本基调；不展示作品 ID / 版本 / 作者 / 图标 / 类型
-  const simplifyBranch = panel.slice(
-    panel.indexOf('authorSimplify ? ('),
-    panel.indexOf(') : (', panel.indexOf('authorSimplify ? (')),
-  );
-  assert.match(simplifyBranch, /名称 \*/);
+  const simplifyAt = panel.indexOf('panelExtra={authorSimplify ? (');
+  const simplifyBranch = panel.slice(simplifyAt, panel.indexOf(') : undefined}', simplifyAt));
+  assert.match(simplifyBranch, /作品名称 \*/);
   assert.match(simplifyBranch, /简介/);
-  assert.match(simplifyBranch, /剧本基调（系统提示词）/);
+  assert.match(simplifyBranch, /系统提示词/);
   assert.doesNotMatch(simplifyBranch, /作品 ID/);
   assert.doesNotMatch(simplifyBranch, /版本号/);
   assert.doesNotMatch(simplifyBranch, /作者</);

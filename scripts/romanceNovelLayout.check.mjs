@@ -92,7 +92,7 @@ test('HomeTab_小说内容卡地点天气外出与输入', () => {
   assert.match(home, /data-novel-card="1"/);
   assert.match(home, /novel-read-card/);
   // 输入坞在内容卡下方单独渲染，不再塞进 LocationHero footer
-  assert.match(home, /\{actionInput\}/);
+  assert.match(home, /\{!showMap && actionInput\}/);
   assert.match(home, /底边留给下方输入坞/);
   assert.doesNotMatch(home, /footer=\{isNovel \? actionInput/);
   assert.match(home, /rounded-\[var\(--radius-ui-lg\)\]/);

@@ -27,7 +27,7 @@ test('playerAttrsFromCreatorDefs_只按创作者列表_不预填八维', () => {
   assert.deepEqual(lib.playerAttrsFromCreatorDefs(undefined), []);
   assert.deepEqual(lib.playerAttrsFromCreatorDefs([]), []);
   const out = lib.playerAttrsFromCreatorDefs([
-    { id: 'ling', label: '灵根', init: 12, max: 100 },
+    { id: 'ling', label: '灵根', init: 12, max: 100, initMode: 'fixed' },
     { id: 'qi', label: '气势', initMode: 'dice', dice: 6, min: 1, max: 6 },
   ], () => 0);
   assert.equal(out.length, 2);
@@ -35,7 +35,8 @@ test('playerAttrsFromCreatorDefs_只按创作者列表_不预填八维', () => {
   assert.equal(out[0].label, '灵根');
   assert.equal(out[0].value, 12);
   assert.equal(out[1].key, 'qi');
-  assert.equal(out[1].value, 1); // rand=0 → 掷出 1
+  // rand=0 → 范围 [min,max] 取下界
+  assert.equal(out[1].value, 1 + Math.floor(0 * (6 - 1 + 1)));
   assert.doesNotMatch(JSON.stringify(out), /演技|歌艺|yanji|geyi/);
 });
 

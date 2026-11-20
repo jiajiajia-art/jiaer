@@ -44,7 +44,7 @@ const ModelCatalogCards: React.FC<Props> = ({
               {showRuntimeActive && item.active ? (
                 <span className={styles.activeBadge}><FiCheckCircle aria-hidden /> {t('aiModelCenter.catalog.enabled')}</span>
               ) : null}
-              {onActivate ? (
+              {onActivate && !item.active ? (
                 <button
                   type="button"
                   className={styles.iconButton}

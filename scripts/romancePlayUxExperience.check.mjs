@@ -188,7 +188,10 @@ test('Ending_index_css_end-page跟随主题变量_不再锁死固定浅色', () 
 });
 
 test('App_作者预览stage对ending放开纵向滚动', () => {
-  assert.match(app, /screen === "ending" \? "overflow-y-auto overflow-x-hidden" : "overflow-hidden"/);
+  assert.match(
+    app,
+    /screen === "ending" \|\| screen === "opening" \? "overflow-y-auto overflow-x-hidden" : "overflow-hidden"/,
+  );
 });
 
 /* ───────── 3.2 / 3.3 暗色 + 字体 ───────── */
@@ -266,6 +269,13 @@ test('pickSimilarSceneAsset_名称全等优先_互含次之_低分放弃_不配�
   assert.equal(pickSimilarSceneAsset('古董旧货', assets)?.imageUrl, 'u/shop2.png');
   assert.equal(pickSimilarSceneAsset('火星基地', assets), undefined, '完全不相关应放弃');
   assert.equal(pickSimilarSceneAsset('旧货铺', []), undefined);
+  assert.equal(pickSimilarSceneAsset('巴黎第16区·曦瑶公寓', [
+    { name: '曦瑶的公寓', imageUrl: 'u/apt.png' },
+    { name: '海边灯塔', imageUrl: 'u/l.png' },
+  ])?.imageUrl, 'u/apt.png');
+  const { samePlaceName } = await locMod();
+  assert.equal(samePlaceName('巴黎第16区·曦瑶公寓', '曦瑶的公寓'), true);
+  assert.equal(samePlaceName('曦瑶公寓', '林晓公寓'), false);
 });
 
 test('GameContext_转场对不上房间时走addAutoSpot并异步补素材图', () => {

@@ -221,9 +221,31 @@ export function parseLibraryMapTree(raw: unknown): LibraryMapTree | null {
   return out.length ? { rooms: out } : null;
 }
 
+/** 功能注释：另一处可单独走进的场所，不该挂在别人名下 */
+const PEER_SITE = /街|巷|大道|马路|河|畔|江|湖|海|公园|广场|学院|大学|学校|公司|医院|商场|车站|机场|教堂|博物馆|咖啡馆|咖啡厅|酒吧|餐厅|饭馆/;
+/** 功能注释：场所内部的房间部件，可以挂在父地点下 */
+const INTERIOR_PART = /卧室|客厅|厨房|卫生间|浴室|阳台|客房|前台|包厢|隔间|走廊|楼梯|书房|衣帽间|储藏|地下室|阁楼|套间|单间|内室|里间|厢房|偏厅|后院|前院|院子|庭院|花园|房间/;
+/** 功能注释：教室、琴房这类，只在父地点本身是学院/琴房时才算内部 */
+const ROOM_OF_INST = /琴房|琴室|教室|排练厅|练习室/;
+
+/**
+ * 功能注释：子地点是否真的在父地点里面。
+ * 名字对不上、又像另一处街区/学校/建筑时返回 false，生成纠偏会拆成同级。
+ */
+export function childIsInsideParent(childName: string, parentName: string): boolean {
+  const c = childName.trim();
+  const p = parentName.trim();
+  if (!c || !p) return false;
+  if (c.includes(p) && c.length > p.length) return true;
+  if (PEER_SITE.test(c) && !c.includes(p)) return false;
+  if (INTERIOR_PART.test(c)) return true;
+  if (ROOM_OF_INST.test(c) && /学院|大学|学校|琴|音乐/.test(p)) return true;
+  return false;
+}
+
 /**
  * 功能注释：AI 生成后纠偏大地图：剔除无效图；大地图与地点同名时改成区域名；
- * 子地点跟随父地点所在大地图；缺 mapId 的交给 ensureWorldMaps 挂到首图。
+ * 拆掉「街区挂在公寓下」这类硬从属；子地点跟随父地点所在大地图；缺 mapId 的交给 ensureWorldMaps 挂到首图。
  */
 export function healGeneratedWorldMaps(content: { rooms?: Rooms; worldMaps?: WorldMapDef[]; setting?: unknown; title?: unknown }): void {
   const rooms = content.rooms;
@@ -247,6 +269,17 @@ export function healGeneratedWorldMaps(content: { rooms?: Rooms; worldMaps?: Wor
     m.name = next;
   }
   const ids = new Set(maps.map((m) => m.id));
+  // 功能注释：没有「走进后才到」关系的 parent 拆掉，避免街区/学院挂在公寓或开局地点下
+  for (const [id, r] of Object.entries(rooms)) {
+    const parId = String(r.parent || "").trim();
+    if (!parId) continue;
+    const par = parId !== id ? rooms[parId] : undefined;
+    const childName = String(r.name || "");
+    const parentName = String(par?.name || "");
+    if (!par || !childIsInsideParent(childName, parentName)) {
+      rooms[id] = { ...r, parent: undefined };
+    }
+  }
   // 子地点归到父地点的大地图（最多迭代层数次）
   for (let pass = 0; pass < 4; pass++) {
     for (const [id, r] of Object.entries(rooms)) {

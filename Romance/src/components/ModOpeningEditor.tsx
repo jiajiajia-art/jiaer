@@ -103,7 +103,7 @@ export function ModCoverEditor({
   );
 }
 
-export default function ModOpeningEditor({ value, onChange }: { value?: OpeningCopy; onChange: (v?: OpeningCopy) => void }) {
+export default function ModOpeningEditor({ value, onChange, compact }: { value?: OpeningCopy; compact?: boolean; onChange: (v?: OpeningCopy) => void }) {
   const o = value ?? {};
   const set = (p: Partial<OpeningCopy>) => onChange(clean({ ...o, ...p }));
   const [text, setText] = useState((o.paragraphs ?? []).join("\n\n"));
@@ -114,17 +114,13 @@ export default function ModOpeningEditor({ value, onChange }: { value?: OpeningC
   }, [o.paragraphs]);
   return (
     <div className="space-y-2.5">
-      <p className="text-[11px] leading-relaxed text-ink-soft">
-        建角后、点「开始」前的开幕页：只展示下方配置的文字 / 图 / 视频 / 自定义页。系统不会追加手记、时间或地点；正式开局剧情在玩家点「开始」后于剧情区由 AI 单独生成。全部留空则跳过开幕，直接入局生成开局剧情。
-      </p>
-      <Row label="顶部小字"><input className={inp} value={o.kicker ?? ""} onChange={(e) => set({ kicker: e.target.value })} placeholder="PROLOGUE" /></Row>
       <Row label="标题"><input className={inp} value={o.title ?? ""} onChange={(e) => set({ title: e.target.value })} placeholder="开幕标题" /></Row>
-      <Row label="副标题"><input className={inp} value={o.subtitle ?? ""} onChange={(e) => set({ subtitle: e.target.value })} placeholder="可选" /></Row>
       <Row label="正文段落（空行分段，逐段浮现）">
         <textarea className={inp} rows={7} value={text}
           onChange={(e) => { setText(e.target.value); set({ paragraphs: toParas(e.target.value), mode: "fixed" }); }}
           placeholder={"可用占位：{name} 主角名 · {school} 母校 · {father}/{mother} 父母职业 · {money} 开局资金 · {parents} 父母态度段\n\n空行分隔每一段"} />
       </Row>
+      {!compact && <>
       <Row label="正文 HTML（可选，填了替代上面的段落）">
         <textarea className={`${inp} font-mono text-[12px]`} rows={6} value={o.html ?? ""}
           onChange={(e) => set({ html: e.target.value, mode: "fixed" })}
@@ -144,6 +140,7 @@ export default function ModOpeningEditor({ value, onChange }: { value?: OpeningC
           </select>
         </Row>
       )}
+      </>}
     </div>
   );
 }

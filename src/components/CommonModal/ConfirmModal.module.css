@@ -812,6 +812,32 @@
     }
 }
 
+.adminScrollable {
+    box-sizing: border-box;
+    width: min(760px, calc(100vw - 40px));
+    max-width: none;
+    max-height: calc(100vh - 40px);
+    max-height: calc(100dvh - 40px);
+    overflow-wrap: anywhere;
+}
+
+.adminScrollable .adminHeader,
+.adminScrollable .adminFooter {
+    flex-shrink: 0;
+}
+
+.adminScrollable .adminTitle {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.adminScrollable .adminBody {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
 /* ========== 统一卡片（default / dark / glass） ========== */
 .modalOverlay { padding: 20px; box-sizing: border-box; }
 .card {

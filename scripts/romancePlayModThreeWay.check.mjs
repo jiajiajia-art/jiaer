@@ -127,7 +127,7 @@ test('P3_添加玩法目录不含论坛视频直播咸鱼等手机应用', async
   }
   const slugs = cat.LOCAL_PLAY_MOD_CATALOG.map((x) => x.slug);
   const names = cat.LOCAL_PLAY_MOD_CATALOG.map((x) => x.name).join('|');
-  for (const bad of ['app-forum', 'app-video-live', 'app-xianyu']) {
+  for (const bad of ['app-forum', 'app-video-live', 'app-xianyu', 'pack-relations']) {
     assert.ok(!slugs.includes(bad), bad);
     assert.equal(cat.catalogBySlug(bad), undefined, bad);
   }
@@ -139,7 +139,7 @@ test('P3_添加玩法目录不含论坛视频直播咸鱼等手机应用', async
   assert.ok(recs.includes('pack-career'));
   assert.ok(recs.every((s) => !s.startsWith('app-')), recs.join(','));
   // 官方 9 个玩法仍在
-  for (const s of ['pack-career', 'pack-image', 'pack-paper', 'pack-transport', 'pack-cars', 'pack-pregnancy', 'pack-living', 'pack-titles', 'pack-relations']) {
+  for (const s of ['pack-career', 'pack-image', 'pack-paper', 'pack-transport', 'pack-cars', 'pack-pregnancy', 'pack-living', 'pack-titles', 'pack-faction-rep']) {
     assert.ok(slugs.includes(s), s);
   }
 });
@@ -225,6 +225,7 @@ test('P1_娱乐圈自动补包只给内置娱乐圈_创作者世界不适用', a
   // 预览 / 开局的叠加链读世界 playModInstalls，不只读 dependencies / 选择
   assert.match(reg, /resolveInstallAddonModIds\(world\.content\?\.playModInstalls/);
   assert.match(reg, /if \(s\.entSplit \|\| !shouldAutoAttachEntPacks\(s\.worldId\)\) return a;/);
-  assert.match(reg, /if \(shouldAutoAttachEntPacks\(selection\.world\)\)/);
+  assert.match(reg, /read<ModSelection>\(K_SEL, \{ world: DEFAULT_WORLD, addons: \[\] \}\)/);
+  assert.doesNotMatch(reg, /shouldAutoAttachEntPacks\(selection\.world\)/);
   assert.doesNotMatch(reg, /\(s\.worldId \?\? DEFAULT_WORLD\) !== DEFAULT_WORLD\) return a;[\s\S]{0,40}ENT_PACK_IDS/);
 });

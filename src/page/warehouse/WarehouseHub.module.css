@@ -318,7 +318,7 @@
     display: none;
   }
 
-  /* 功能注释：标题、分类、上传条随页面滚动，禁止吸顶盖住「导入 / 新建」 */
+  /* 功能注释：标题和分类随页面滚动。已有「导入 / 新建」的分区不再渲染上传条 */
   .mobileChrome {
     display: flex;
     flex-direction: column;

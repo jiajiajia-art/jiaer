@@ -314,7 +314,26 @@ const CreateGame: React.FC = () => {
         }
 
         const normalizedEngine = resolveCreatorEngine(gameDetail.engine, gameDetail.game_tags);
+        // 剧本游戏（Romance）必须回到剧本编辑器，不能落入通用 TXT 设置编辑器。
+        const rawType = String(gameDetail.engine || gameDetail.game_tags || "").toUpperCase();
+        if (rawType === "ROMANCE") {
+            const draftId = gameDetail.file_id || gameDetail.id || gameId;
+            if (draftId) {
+                navigate(`/romance/?createWorld=1&draftId=${encodeURIComponent(String(draftId))}&resume=1`);
+                return;
+            }
+        }
         if (!normalizedEngine) {
+            // 兼容历史作品或接口缺少 engine/game_tags 的情况。
+            // 这类作品仍然可以通过通用 AI 文游设定编辑器打开，不能让点击编辑静默失败。
+            const fallbackFileId = gameDetail.file_id || gameDetail.id || gameId;
+            if (fallbackFileId) {
+                setFileId(String(fallbackFileId));
+                setIsPreset(gameDetail.is_preset == 1);
+                navigate('/gameSettingsEditor');
+            } else {
+                toast.error(t('createGame.gameInfoError'));
+            }
             return;
         }
 

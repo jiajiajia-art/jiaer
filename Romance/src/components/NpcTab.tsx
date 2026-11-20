@@ -5,7 +5,7 @@ import { ProfileTabs } from "./personFields";
 import { ageLabel, birthdayLabel, ownField } from "../lib/npcIdentity";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useGame } from "../store/gameCtx";
-import { datingBlocked, divorceBlocked, weddingBlocked, weddingCost, weddingMinAffinity } from "../game/logic";
+import { divorceBlocked, weddingBlocked, weddingCost, weddingMinAffinity } from "../game/logic";
 import { wallet } from "../game/wallet";
 import { bridgeEnabled, bridgeModes, bridgePerDay, type BridgeMode } from "../game/bridge";
 import { divorceMode, maxSpouses } from "../game/worldRules";
@@ -15,14 +15,13 @@ import { IconCheck, IconExternal, IconHeart, IconScroll, IconSend, IconUsers } f
 import { ActionTile } from "./personFields";
 import { canConfess, relOf } from "../game/relations";
 import { ROMANCE_ARCS, arcView, canRomance, hasPartner, romanceFixedOff, isFamilyNpc } from "../game/logic";
-import { RELATIONS, MOVIE_TITLES, COMPANIES, companyMeta, creditsOf, resumeOf, romanticCapOf, type FamilyRef, type ResumeEvent } from "../worlds/star2005/content";
+import { MOVIE_TITLES, COMPANIES, companyMeta, creditsOf, resumeOf, romanticCapOf, type FamilyRef, type ResumeEvent } from "../worlds/star2005/content";
 import { feature, getWorldNpcs, worldPersonById as profileOf } from "../mods/registry";
 import { locOf } from "../game/mud";
-import { homePlaceOf } from "../game/homeSpot";
 import { contactsCfg, contactsTitle, groupContactsByStage, metricKey, visibleContactMetrics, type ContactIcon as ContactIconKind, type ContactSrc, type ContactStage } from "../game/contacts";
 import ContactIcon from "./ContactIcon";
 import { FAMILY_NPC_IDS } from "../game/family";
-import { CreditsList, StatBars, WorksChips, ProfileRelations, ProfileGroup, ResumeTimeline, BondMeterRow, ProfileBio, ProfilePlaces, ProfileMemory, affiliationOf, relationRefsOf } from "./personFields";
+import { CreditsList, WorksChips, ProfileRelations, ProfileGroup, ResumeTimeline, BondMeterRow, ProfileBio, ProfileMemory, affiliationOf, relationRefsOf } from "./personFields";
 import IndustryPageHeader from "./IndustryPageHeader";
 import CustomPersonModal from "./CustomPersonModal";
 import PersonProfile from "./PersonProfile";
@@ -193,36 +192,6 @@ function Wedding({ pid, name }: { pid: string; name: string }) {
 }
 
 /* 表白卡：好感与心动两条进度，达标才可表白；被世界规则拦截时说明原因 */
-function Confess({ pid, name }: { pid: string; name: string }) {
-  const { game, busy, simConfess } = useGame();
-  if (!game?.sim) return null;
-  const s = game.sim;
-  const F = RELATIONS.confess;
-  const chk = canConfess(s, pid);
-  const f = s.rel?.[pid] ?? 0, r = relOf(s, pid).romantic;
-  const blocked = chk.reason === "rule" ? datingBlocked(s, pid) : "";
-  const bar = (label: string, v: number, need: number, tone: string) => (
-    <div>
-      <div className="mb-0.5 flex justify-between text-[11px]"><span className="text-ink-soft">{label}</span><span className={`tabular-nums font-semibold ${v >= need ? "text-jade" : "text-ink"}`}>{Math.max(0, v)} / {need}</span></div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-ink/[0.06]"><div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.max(0, Math.min(100, (v / need) * 100))}%` }} /></div>
-    </div>
-  );
-  return (
-    <div className="rounded-2xl border border-line bg-paper p-3.5">
-      <p className="mb-2.5 text-[13px] font-bold text-ink">{chk.ok ? `时机成熟了，向${name}说出心意吧` : "表白之前"}</p>
-      <div className="mb-3 grid grid-cols-2 gap-3">
-        {bar("好感", f, F.friendshipMin, "bg-jade")}
-        {bar("心动", r, F.romanticMin, "bg-coral")}
-      </div>
-      {blocked && <p className="mb-2 text-[11.5px] leading-relaxed text-danger">{blocked}</p>}
-      <button onClick={() => simConfess(pid, name)} disabled={!chk.ok || busy}
-        className="w-full rounded-xl bg-gradient-to-r from-[var(--coral)] to-[var(--jade)] py-2.5 text-[13.5px] font-bold text-white shadow-md transition hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:from-transparent disabled:to-transparent disabled:bg-paper-2 disabled:text-ink-soft disabled:shadow-none">
-        {chk.ok ? F.labels.button : blocked ? "当前规则下无法表白" : "多相处，把好感与心动养起来"}
-      </button>
-    </div>
-  );
-}
-
 /* 牵线：主角促成当前人物与另一位人物之间的往来 */
 function NpcBridge({ pid, name }: { pid: string; name: string }) {
   const { game, busy, simBridge } = useGame();
@@ -230,7 +199,7 @@ function NpcBridge({ pid, name }: { pid: string; name: string }) {
   const [mode, setMode] = useState<BridgeMode>("");
   const [msg, setMsg] = useState("");
   if (!game?.sim) return null;
-  // 功能注释：未安装关系玩法包时不出现牵线入口
+  // 功能注释：牵线入口属于游戏本体的关系玩法
   if (!feature("relationsPlay")) return null;
   const s = game.sim;
   const list = game.npcs.filter((n) => n.id !== pid && profileOf(n.id)?.status !== "dead");
@@ -340,7 +309,7 @@ function RomanceSwitch({ pid, arc, compact = false }: { pid: string; arc: boolea
 }
 
 export default function NpcTab() {
-  const { game, setNpcAvatar, setRelValue, simContact, simConfess, phoneExchange, busy } = useGame();
+  const { game, setNpcAvatar, setRelValue, simContact, simConfess, busy } = useGame();
   const [sel, setSel] = useState<string | null>(() => { const p = pendingPerson; pendingPerson = null; return p; });
   useEffect(() => {
     const on = (e: Event) => { setSel((e as CustomEvent<string>).detail); pendingPerson = null; };
@@ -349,14 +318,11 @@ export default function NpcTab() {
   }, []);
   const [resumeOpen, setResumeOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const [exchange, setExchange] = useState<null | "ok" | "no">(null);
-  const [profileOpen, setProfileOpen] = useState(false);
   const [mysteryId, setMysteryId] = useState<string | null>(null);
   if (!game) return null;
   const s = game.sim;
   const metSet = new Set(s.metPeople ?? []);
   const heroId = s.hero;
-  const hasContact = (pid: string) => (game.phone?.contacts ?? []).includes(pid);
   // 艺人即 NPC：圈内艺人没有人脉条目时，就地合成一个，走同一套人物详情界面
   const starOf = (id?: string | null) => (id ? (s.npcs ?? []).find((x) => x.id === id) : undefined);
   const asNpc = (st: NonNullable<ReturnType<typeof starOf>>): Npc => ({
@@ -364,23 +330,17 @@ export default function NpcTab() {
     affinity: s.rel?.[st.id] ?? 0, dims: [], tags: [], attrs: [], affinityHistory: [], interactions: [],
   });
   const npc = game.npcs.find((n) => n.id === sel) ?? (starOf(sel) ? asNpc(starOf(sel)!) : undefined);
-  // 功能注释：未结识不能看完整档案——改走「？？？」神秘卡说明
+  // 功能注释：点开人物一律弹窗，人脉列表留在后面；未结识只出「？？？」说明
+  let detail: ReactNode = null;
   if (npc && !metSet.has(npc.id)) {
-    return (
-      <div className="npc-tab w-full pb-5">
-        <IndustryPageHeader
-          title={contactsTitle()}
-          subtitle="尚未结识"
-          action={<button type="button" onClick={() => setSel(null)} className="rounded-[8px] border border-line bg-paper/80 px-2.5 py-1.5 text-[12px] font-bold text-ink-soft">返回</button>}
-        />
-        <div className="mx-auto max-w-2xl px-4 pt-3">
-          <PersonProfile pid={npc.id} known={false} />
-        </div>
-      </div>
+    detail = (
+      <Modal panelClassName="ui-dialog-game npc-tab" title="？？？" onClose={() => setSel(null)}>
+        <PersonProfile pid={npc.id} known={false} />
+      </Modal>
     );
   }
 
-  if (npc) {
+  else if (npc) {
     const pid = npc.id;
     const profile = profileOf(pid);
     const star = starOf(pid);
@@ -391,12 +351,14 @@ export default function NpcTab() {
     const view = arc ? arcView(s, pid) : null;
     const confess = canConfess(s, pid);
     const romanceOn = canRomance(s, pid); // 可攻略开关；家人 / 子女恒为 false
-    // 功能注释：表白/婚礼/牵线入口仅在已添加「关系玩法」包时出现
+    const toward = (profile?.affTo ?? []).flatMap((r) => {
+      if (!r || !Number.isFinite(r.value)) return [];
+      const who = game.npcs.find((x) => x.id === r.id)?.name;
+      return who ? [`对${who} ${Math.round(r.value)}`] : [];
+    });
+    // 功能注释：表白/婚礼/牵线是游戏本体，人物页直接给出入口
     const relationsPlayOn = feature("relationsPlay");
     const romanceFixed = romanceFixedOff(s, pid);
-    // 常驻地点：编辑器里选定的优先，其次内容池覆盖 / 由据点推导；未知则「尚未得知」
-    const home = homePlaceOf(game, npc, profile);
-    const places = home ? [home] : [];
 
     // 性别：编辑器「人设」里明确选过的优先，其次内容池存的确定性数据；家人（无 profile）按父/母称谓落定，均无则留白
     const genderText: string | undefined =
@@ -433,7 +395,7 @@ export default function NpcTab() {
             return target ? (
               <button
                 key={i}
-                onClick={() => { setSel(target.id); setResumeOpen(false); setProfileOpen(false); }}
+                onClick={() => { setSel(target.id); setResumeOpen(false); }}
                 className="rounded-sm border border-dashed border-jade/50 px-2 py-0.5 text-[12px] text-jade transition hover:bg-jade/10"
               >
                 {label} <IconExternal size={10} />
@@ -463,7 +425,6 @@ export default function NpcTab() {
       <ProfileTabs tabs={[
         { id: "info", label: "资料", body: <div>
           <ProfileBio bio={bioText} />
-          <ProfilePlaces places={places} />
           {/* 代表作只在有作品时出现（非娱乐圈模组、素人 NPC 没有作品，不留空栏） */}
           {(() => {
             const works = profile?.works?.map((x) => x.trim()).filter(Boolean) ?? (star ? [...new Set((star.works ?? []).map((w) => MOVIE_TITLES[w % MOVIE_TITLES.length]))] : []);
@@ -483,20 +444,17 @@ export default function NpcTab() {
               </ProfileGroup>
             );
           })()}
-          <ProfileGroup title="个人能力">
-            <div className="py-2"><StatBars stats={(profile?.stats ?? star?.stats) as Record<string, number> | undefined} /></div>
-          </ProfileGroup>
           <NpcDiary pid={pid} />
           <NpcCgStrip pid={pid} />
         </div> },
         { id: "heart", label: "情感", body: <div>
           <ProfileRelations values={{ 现任: spouseRefsNode, 父母: parentsNode, 子女: childRefsNode }} noParents={rels.noParents} />
           {dead ? (
-            <ProfileGroup title="关系经营"><div className="space-y-2 py-2.5">
+            <div className="space-y-2 pt-2.5">
               <p className="text-[13px] text-ink-soft">斯人已逝，档案就此封存。你只能在回忆与履历里与 TA 重逢。</p>
-            </div></ProfileGroup>
+            </div>
           ) : (
-            <ProfileGroup title="关系经营"><div className="space-y-2.5 py-2.5">
+            <div className="space-y-2.5 pt-2.5">
               {arc && romanceOn && <p className="mb-1 text-[11.5px] font-semibold text-gold">固定角色 · 专属情感长线</p>}
               <div className={`grid grid-cols-1 gap-2 ${relationsPlayOn ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
                 <ActionTile icon={IconSend} tone="coral" title={busy ? "生成中…" : "私下联系"} sub="约 TA 单独见面聊聊" onClick={() => simContact(pid, npc.name)} disabled={busy} />
@@ -512,17 +470,6 @@ export default function NpcTab() {
                   />
                 )}
               </div>
-              {hasContact(pid)
-                ? <p className="text-[11.5px] text-ink-soft">已有联系方式 · 可在手机里找到 TA</p>
-                : (
-                  <button
-                    type="button"
-                    onClick={() => setExchange(phoneExchange(pid) ? "ok" : "no")}
-                    className="text-left text-[11.5px] font-semibold text-jade underline decoration-dotted underline-offset-2"
-                  >
-                    尝试交换联系方式
-                  </button>
-                )}
               <ProfileMemory pid={pid} button />
               {relationsPlayOn && game.npcs.some((n) => n.id === pid) && <NpcBridge pid={pid} name={npc.name} />}
               {arc && view && romanceOn && (
@@ -551,34 +498,20 @@ export default function NpcTab() {
                   <Wedding pid={pid} name={npc.name} />
                 </div>
               )}
-              {!arc && romanceOn && !isDating && !confess.ok && relationsPlayOn && (
-                <div className="mt-2">
-                  <Confess pid={pid} name={npc.name} />
-                </div>
-              )}
-            </div></ProfileGroup>
+            </div>
           )}
         </div> },
       ]} />
     );
 
-    // 功能注释：上下两块人物档案——上人物卡（头像/名/可攻略/标签/爱慕好感），下资料·情感页签；色与圆角读皮肤变量
-    const card = (
-      <div className="mx-auto max-w-2xl space-y-3 px-4 pb-8 pt-3">
-        <div className="flex items-center justify-between gap-2">
-          <button
-            onClick={() => setSel(null)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-line bg-paper px-3.5 py-1.5 text-[12.5px] font-bold text-ink shadow-[var(--shadow-ui)] transition hover:border-jade hover:text-jade"
-          >
-            <span>←</span>
-            <span>返回人脉</span>
-          </button>
-        </div>
-
+    // 功能注释：人物档案放进弹窗，关掉回到人脉列表，不再整页换成「返回人脉」
+    detail = (
+      <Modal panelClassName="ui-dialog-game npc-tab" title={npc.name} onClose={() => { setSel(null); setResumeOpen(false); }}>
+      <div className="space-y-3">
         <section className={`rounded-[var(--radius-ui-lg)] border border-line bg-paper p-3.5 shadow-[var(--shadow-ui)] ${dead ? "opacity-80" : ""}`}>
           <div className="flex items-start gap-3.5">
             <div className={`shrink-0 ${dead ? "grayscale" : ""}`}>
-              <Avatar src={npc.avatar} name={npc.name} size={72} square onPick={dead ? undefined : (d) => setNpcAvatar(npc.id, d)} editable={!dead} />
+              <Avatar src={npc.avatar} name={npc.name} size={72} square excludeAvatars={[...game.npcs.filter((x) => x.id !== npc.id).map((x) => x.avatar), game.player.avatar]} onPick={dead ? undefined : (d) => setNpcAvatar(npc.id, d)} editable={!dead} />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
@@ -605,6 +538,14 @@ export default function NpcTab() {
               )}
               {!dead && (
                 <div className="mt-2.5 space-y-0.5 border-t border-line/70 pt-2">
+                  <BondMeterRow
+                    label="友好"
+                    value={npc.affinity}
+                    pct={affinityPct}
+                    min={-100}
+                    max={100}
+                    onChange={(v) => setRelValue(pid, "friendship", v)}
+                  />
                   {romanceOn ? (
                     <BondMeterRow
                       label="爱慕"
@@ -620,14 +561,9 @@ export default function NpcTab() {
                       <span>{romanceFixed ? (isFamilyNpc(pid) ? "亲情 · 家人" : "子女亲情") : "不可攻略"}</span>
                     </div>
                   )}
-                  <BondMeterRow
-                    label="好感"
-                    value={npc.affinity}
-                    pct={affinityPct}
-                    min={-100}
-                    max={100}
-                    onChange={(v) => setRelValue(pid, "friendship", v)}
-                  />
+                  {toward.length > 0 && (
+                    <p className="pt-1 text-[12px] leading-relaxed text-ink-soft">{toward.join(" · ")}</p>
+                  )}
                 </div>
               )}
             </div>
@@ -638,26 +574,8 @@ export default function NpcTab() {
           {profileTabsNode}
         </div>
       </div>
-    );
-
-    return (
-      <div className="npc-tab">
-      {card}
         {resumeOpen && <ResumeModal name={npc.name} pid={pid} onClose={() => setResumeOpen(false)} npc={npc} extra={star ? starResume(star) : undefined} />}
-        {exchange && (
-          <Modal panelClassName="ui-dialog-game npc-tab" title="交换联系方式" onClose={() => setExchange(null)}>
-            {exchange === "ok" ? (
-              <p className="text-[14px] leading-relaxed text-ink">
-                {npc.name}把联系方式给了你。到底部「<span className="font-semibold text-jade">手机</span>」里，就能随时用微信、短信或电话找 TA 了。
-              </p>
-            ) : (
-              <p className="text-[14px] leading-relaxed text-ink-soft">
-                {npc.name}婉拒了——似乎还没到能交换联系方式的交情。多相处、把好感养起来，再试一次吧。
-              </p>
-            )}
-          </Modal>
-        )}
-      </div>
+      </Modal>
     );
   }
 
@@ -731,7 +649,7 @@ export default function NpcTab() {
       <PersonCard
         onClick={() => {
           if (e.mystery) { setMysteryId(e.id); return; }
-          setSel(e.id); setProfileOpen(false);
+          setSel(e.id);
         }}
         name={e.name} avatar={e.avatar} dead={e.dead} dating={e.dating} mystery={e.mystery}
         chip={e.mystery ? <Chip tone="gold">未结识</Chip> : e.dead ? <Chip tone="danger">已故</Chip> : stage ? <Chip tone={stage.tone}>{stage.label}</Chip> : null}
@@ -745,7 +663,7 @@ export default function NpcTab() {
     <div className="npc-tab w-full pb-5">
       <IndustryPageHeader
         title={contactsTitle()}
-        subtitle={cfg.subtitle ?? "按友好度归类 · 未结识以？？？示人"}
+        subtitle={cfg.subtitle ?? "CONTACTS"}
         action={<button onClick={() => setAddOpen(true)} aria-label="添加人物" className="flex h-8 items-center gap-1 rounded-[8px] border border-coral/40 bg-paper/80 px-2.5 text-[12px] font-bold text-coral transition hover:bg-coral/10"><span className="text-[15px] leading-none">＋</span>添加</button>}
       />
       {addOpen && <CustomPersonModal onClose={() => setAddOpen(false)} />}
@@ -754,11 +672,9 @@ export default function NpcTab() {
           <PersonProfile pid={mysteryId} known={false} />
         </Modal>
       )}
+      {detail}
 
       <div className="mx-auto max-w-2xl px-4 pt-3">
-        <p className="mb-3 rounded-[10px] border border-line/70 bg-paper/60 px-3 py-2 text-[12px] leading-relaxed text-ink-soft">
-          已结识的人按友好度分档；创作者写过、但还没登场或不认识的人，会以「？？？」出现——去世界里走走、当面搭话，结识后才会揭开真名与档案。
-        </p>
 
         {entries.length === 0 && mysteryEntries.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-line bg-paper-2/40 px-4 py-10 text-center">

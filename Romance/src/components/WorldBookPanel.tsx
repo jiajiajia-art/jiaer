@@ -11,8 +11,8 @@ import { auditGame, issuesAt } from "../game/refAudit";
 import { StatusMark } from "../lib/icons";
 import { blankWorldBookEntry, withWorldBookDeps } from "../lib/worldBookDeps";
 
-/* 世界书（与模组编辑器同一份数据约定）：名称 · 正文 · 关键词；地点/人物可选挂靠。
- * 玩家在地点 / 人物在场 / 提到关键词时注入。不回退娱乐圈地点表。 */
+/* 世界书（与模组编辑器同一份数据约定）：名称 · 正文 · 关键词；地点/人物只作过滤。
+ * 关键词出现在最近对话里才注入。不回退娱乐圈地点表。 */
 const isConstant = (e: WorldBookEntry) => modeOf(e) === "constant";
 
 export default function WorldBookPanel() {
@@ -103,9 +103,9 @@ export default function WorldBookPanel() {
       {confirmEl}
       <ScopeBanner scope="save">世界书属于当前存档：修改即时保存、下回合起生效。模组自带的世界书只在新开局时作为初始内容写入；与模组编辑器是同一份字段。</ScopeBanner>
       <p className="text-[12.5px] leading-relaxed text-ink-soft">
-        一条设定只写一遍（名称 · 正文 · 关键词）；地点与人物可选手动挂靠。
-        有挂靠时：玩家在该地点、人物在场或正文提到关键词才注入。数字越小的条目越靠前。
-        始终生效的铁律请写进剧本基调。
+        一条设定只写一遍（名称 · 正文 · 关键词）。最近对话出现关键词才注入；地点和人物只收窄场合。
+        数字越小的条目越靠前。每回合都要的内容请选「每轮全局」。
+        始终生效的铁律请写进系统提示词。
       </p>
 
       {/* 统计条 + 蓝灯护栏 */}

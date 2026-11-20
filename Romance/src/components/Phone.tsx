@@ -27,11 +27,12 @@ import IncomingCall from "./phone/IncomingCall";
 import { logAppOpen, mailUnread } from "../game/phoneLink";
 import { useGameNow, renderWidget, isWidget, DEFAULT_WIDGET_SIZE, SHAPE_RADIUS, SHAPE_LABEL, nextShape, nextSize, type WidgetSize, type WidgetShape } from "./phone/Widgets";
 import { APP_ICON } from "./phone/appIcons";
-import { phoneAppAllowed, worldPhoneAppsCfg, worldPhoneHomeWallpaper } from "../mods/registry";
+import { phoneAppAllowed, worldPhoneAppsCfg, worldPhoneHomeWallpaper, entertainmentPlayOn } from "../mods/registry";
 import { applyCommsBrandText, resolveCommsBrand, type CommsBrand } from "../lib/commsSkin";
 import { useCommsBrand } from "./phone/commsBrand";
 import { phoneAppLabel, preinstallIds } from "../lib/phoneAppsConfig";
 import { resolveEffectiveHomeWallpaper } from "./phone/wallpapers";
+import { worldCoverImageUrl } from "./Cover";
 import { liveTerm as T } from "../mods/live";
 import { usePlatformAppsCatalog } from "../lib/usePlatformAppsCatalog";
 import {
@@ -59,10 +60,10 @@ const CORE: AppMeta[] = [
 /* 应用商店可下载组件 */
 const SC = (id: string) => `https://images.unsplash.com/photo-${id}?w=680&h=440&fit=crop&auto=format&q=75`;
 const STORE: StoreItem[] = [
-  { id: "pomodoro", label: "番茄钟", tagline: "专注 25 分钟，科学休息", desc: "把拖延，切成一颗颗番茄", kicker: "本日 App", story: "开机前先定一颗番茄：25 分钟只做一件事，铃响就起身走走。片场等戏的碎片时间，也能背完一段台词。", icon: APP_ICON.pomodoro, cat: "效率", rating: 4.9, size: "3.2 MB", cover: SC("1516414447565-b14be0adf13e") },
+  { id: "pomodoro", label: "番茄钟", tagline: "专注 25 分钟，科学休息", desc: "把拖延，切成一颗颗番茄", kicker: "本日 App", get story() { return entertainmentPlayOn() ? "开机前先定一颗番茄：25 分钟只做一件事，铃响就起身走走。片场等戏的碎片时间，也能背完一段台词。" : "先定一颗番茄：25 分钟只做一件事，铃响就起身走走。"; }, icon: APP_ICON.pomodoro, cat: "效率", rating: 4.9, size: "3.2 MB", cover: SC("1516414447565-b14be0adf13e") },
   { id: "clock", label: "时钟闹钟", get tagline() { return `走时表盘 + ${T("gig")}闹钟`; }, get desc() { return `别再睡过头错过早班${T("gig")}`; }, kicker: "我们喜爱的 App", get story() { return `指针表盘走时到秒，多组闹钟随手开关。给明早六点的定妆${T("gig")}设一个，铃响时它真的会响。`; }, icon: APP_ICON.clock, cat: "实用工具", rating: 4.8, size: "2.1 MB", cover: SC("1495364141860-b0d03eccd065") },
-  { id: "notes", label: "备忘录", tagline: "台词、灵感、待办随手记", desc: "灵感来时，立刻记下", kicker: "编辑精选", story: "深夜想到的角色小传、明天要带的证件、导演随口的一句要求——打开即写，本地留存，不怕忘。", icon: APP_ICON.notes, cat: "效率", rating: 4.8, size: "1.9 MB", cover: SC("1517842645767-c639042777db") },
-  { id: "calculator", label: "计算器", tagline: "片酬分成随手算", desc: "经典键位，随手就算", kicker: "实用工具", get story() { return `经纪抽成、${T("gig")}费、打车报销……四则运算一步到位，键位手感一如熟悉的那台。`; }, icon: APP_ICON.calculator, cat: "实用工具", rating: 4.7, size: "1.4 MB", cover: SC("1554224155-6726b3ff858f") },
+  { id: "notes", label: "备忘录", get tagline() { return entertainmentPlayOn() ? "台词、灵感、待办随手记" : "灵感、待办随手记"; }, desc: "灵感来时，立刻记下", kicker: "编辑精选", get story() { return entertainmentPlayOn() ? "深夜想到的角色小传、明天要带的证件、导演随口的一句要求——打开即写，本地留存，不怕忘。" : "明天要办的事、忽然想到的一句话——打开即写，本地留存，不怕忘。"; }, icon: APP_ICON.notes, cat: "效率", rating: 4.8, size: "1.9 MB", cover: SC("1517842645767-c639042777db") },
+  { id: "calculator", label: "计算器", get tagline() { return entertainmentPlayOn() ? "片酬分成随手算" : "随手就算"; }, desc: "经典键位，随手就算", kicker: "实用工具", get story() { return entertainmentPlayOn() ? `经纪抽成、${T("gig")}费、打车报销……四则运算一步到位，键位手感一如熟悉的那台。` : "账单、报销、随手一算，四则运算一步到位。"; }, icon: APP_ICON.calculator, cat: "实用工具", rating: 4.7, size: "1.4 MB", cover: SC("1554224155-6726b3ff858f") },
   { id: "weather", label: "天气", get tagline() { return `${T("city")}天气与一周预报`; }, get desc() { return `出门${T("gig")}，先看天`; }, kicker: "生活方式", get story() { return `外景在即，先看${T("city")}这一周的阴晴。今日实时天气与一周走势，一屏尽览。`; }, icon: APP_ICON.weather, cat: "生活", rating: 4.6, size: "2.6 MB", cover: SC("1504608524841-42fe6f032b4b") },
   // 桌面美化小组件
   { id: "w-hero-clock", kind: "widget", label: "大字号时钟横幅", tagline: "整行大字号日期与时间", desc: "把时间放在你想要的位置", kicker: "桌面美化", story: "谁说时间一定在最顶端？这是你的手机。大字号日期时钟横幅，随手拖到任意位置，或干脆收起来。", icon: APP_ICON.clock, cat: "美化", rating: 4.9, size: "0.4 MB", cover: SC("1501139083538-0139583c060f") },
@@ -95,10 +96,10 @@ const APP_IDS = new Set([...CORE.map((c) => c.id), ...STORE.filter((s) => s.kind
 /* 旧官方应用封面回退（图标改由平台表 icon 字段驱动） */
 const CORE_META: Record<string, [tagline: string, desc: string, cat: string, story: string, cover: string]> = {
   wechat: ["聊天、朋友圈、钱包", "和圈内人保持联络", "社交", "私聊、群聊与朋友圈都在这里。谁先回你消息，谁的朋友圈又暗戳戳在说什么，一刷就知道。", SC("1611162617213-7d7a39e9b1d7")],
-  get sms(): [string, string, string, string, string] { return ["短信与通知", `${T("gig")}、快递与那条没署名的短信`, "通讯", `经纪公司的${T("gig")}、剧组的集合时间、银行的入账提醒，还有熟人发来的短信，都汇到这里。`, SC("1512941937669-90a1b58e7e9c")]; },
+  get sms(): [string, string, string, string, string] { return entertainmentPlayOn() ? ["短信与通知", `${T("gig")}、快递与那条没署名的短信`, "通讯", `经纪公司的${T("gig")}、剧组的集合时间、银行的入账提醒，还有熟人发来的短信，都汇到这里。`, SC("1512941937669-90a1b58e7e9c")] : ["短信与通知", "快递与那条没署名的短信", "通讯", "银行的入账提醒、快递与运营商通知，还有熟人发来的短信，都汇到这里。", SC("1512941937669-90a1b58e7e9c")]; },
   call: ["通话记录与拨号", "未接来电，往往最要紧", "通讯", "拨给想见的人，翻看未接来电和留言。每通电话都记在通话记录里。", SC("1523966211575-eb4a01e7dd51")],
   weibo: ["热搜、话题与博文", "今天，谁又上了热搜", "社交", "冲浪热榜随剧情实时更新。点进话题，看媒体、路人和圈内人怎么说你。", SC("1611162616475-46b635cb6868")],
-  xhs: ["种草笔记与穿搭", "红毯造型，先来这里抄作业", "生活", "造型、探店、试镜心得，一页页翻下去，也许会看到关于你的那篇。", SC("1483985988355-763728e1935b")],
+  get xhs(): [string, string, string, string, string] { return entertainmentPlayOn() ? ["种草笔记与穿搭", "红毯造型，先来这里抄作业", "生活", "造型、探店、试镜心得，一页页翻下去，也许会看到关于你的那篇。", SC("1483985988355-763728e1935b")] : ["种草笔记与穿搭", "想买的、想去的，先记在这里", "生活", "穿搭、探店、随手笔记，一页页翻下去。", SC("1483985988355-763728e1935b")]; },
   ticket: ["演出、首映与展览购票", "首映礼的票，抢到了吗", "生活", "演唱会、话剧、电影首映、展览，选好场次和票档就能下单，票会收进票夹。", SC("1501281668745-f7f57925c3b4")],
   cloudmusic: ["音乐、歌词与榜单", "片尾曲一响，就想起那场戏", "音乐", "能播放的歌单、滚动歌词和热评。剧里的插曲、她唱的 OST，都在榜上。", SC("1470225620780-dba8ba36b745")],
   get bosspin(): [string, string, string, string, string] { return [`试镜、${T("gig")}与招募`, "下一个角色，在这里等你", "事业", "剧组选角、品牌代言、综艺招募。投递之后，和对方 HR 直接聊。", SC("1521737604893-d14cc237f11d")]; },
@@ -330,6 +331,11 @@ function PhoneInner() {
     (id) => id !== "appstore" && id !== "settings" && !WIDGET_IDS.has(id) && !["pomodoro", "clock", "notes", "calculator", "weather", "forum", "xianyu", "peek", "couple"].includes(id),
   );
   const { published, byId } = usePlatformAppsCatalog(installedPlatformIds);
+  // 旧剧本的内置应用白名单不限制平台商店里已上架的应用。
+  const publishedIds = new Set(published.map((item) => item.appId));
+  const canUsePhoneApp = (id: string) =>
+    // 商店内置应用即使不在世界观 phoneApps 白名单中，也必须能从已安装列表显示到桌面。
+    phoneAppAllowed(id) || STORE.some((item) => item.kind !== "widget" && item.id === id) || (id !== "bosspin" && publishedIds.has(id));
   platformNameLookup = (id) => byId.get(id)?.name;
   platformIconLookup = (id) => {
     const icon = byId.get(id)?.icon;
@@ -407,8 +413,8 @@ function PhoneInner() {
     window.addEventListener("phone:open-app", h);
     return () => window.removeEventListener("phone:open-app", h);
   }, []);
-  // 功能注释：未主动换过桌面时用作品默认背景；玩家设置优先。不改场景背景与机身外壳。
-  const wp = resolveEffectiveHomeWallpaper(worldPhoneHomeWallpaper(), prefs);
+  // 功能注释：玩家换过的壁纸优先；创作者没设手机壁纸时用作品封面。不改场景背景与机身外壳。
+  const wp = resolveEffectiveHomeWallpaper(worldPhoneHomeWallpaper(), prefs, worldCoverImageUrl());
   // 应用打开时，顶/底系统条改用应用自身底色，避免露出主屏壁纸
   const chromeKey = app && platformAppLegacyUi(platformFocus?.content) ? platformAppLegacyUi(platformFocus?.content) : app;
   const chrome = chromeKey && APP_CHROME[chromeKey as keyof typeof APP_CHROME] ? APP_CHROME[chromeKey as keyof typeof APP_CHROME] : (app?.startsWith("platform:") ? { top: "#ffffff", bottom: "#ffffff", dark: false } : null);
@@ -417,6 +423,12 @@ function PhoneInner() {
   const sync = useSyncState(app);
   useProactiveMessages(); // 好友主动来消息：整部手机在线即生效，不必停在绿信里
   const [syncTip, setSyncTip] = useState("");
+  const [installTip, setInstallTip] = useState<{ text: string } | null>(null);
+  useEffect(() => {
+    if (!installTip) return;
+    const timer = setTimeout(() => setInstallTip(null), 2800);
+    return () => clearTimeout(timer);
+  }, [installTip]);
   // 真实手机式通知：未读会话逐条预览（锁屏）+ 新消息顶部横幅
   const previews = ph.threads.filter((t) => t.unread > 0).sort((a, b) => b.lastTs - a.lastTs).slice(0, 4)
     .map((t) => ({ id: t.id, title: t.title, n: t.unread, text: [...t.msgs].reverse().find((m) => m.role !== "me")?.text ?? "", ts: t.lastTs }));
@@ -438,21 +450,25 @@ function PhoneInner() {
     if (tip) { setSyncTip(tip); setTimeout(() => setSyncTip(""), 2000); }
   };
   const frame = frameById(prefs.frameColor);
-  const updatePrefs = (p: Partial<PhonePrefs>) => setPrefs((cur) => {
-    const next = { ...cur, ...p };
+  const updatePrefs = (patch: Partial<PhonePrefs> | ((cur: PhonePrefs) => Partial<PhonePrefs>)) => setPrefs((cur) => {
+    const next = { ...cur, ...(typeof patch === "function" ? patch(cur) : patch) };
     persistPrefs(next);
     return next;
   });
 
   // 应用商店中：应用与小组件都记入 installedSet 用于「获取/已装」判定
   const installedSet = new Set([...prefs.installed, ...prefs.widgets]);
-  const appendLayout = (id: string) => (prefs.layout.includes(id) ? prefs.layout : [...prefs.layout, id]);
   const install = (id: string) => {
-    if (WIDGET_IDS.has(id)) {
-      updatePrefs({ widgets: Array.from(new Set([...prefs.widgets, id])), layout: appendLayout(id) });
-    } else {
-      updatePrefs({ installed: Array.from(new Set([...prefs.installed, id])), layout: appendLayout(id) });
-    }
+    const item = storeCatalog.find((entry) => entry.id === id);
+    if (!item || installedSet.has(id)) return;
+    const isWidget = WIDGET_IDS.has(id);
+    updatePrefs((cur) => {
+      const layout = cur.layout.includes(id) ? cur.layout : [...cur.layout, id];
+      return isWidget
+        ? { widgets: Array.from(new Set([...cur.widgets, id])), layout }
+        : { installed: Array.from(new Set([...cur.installed, id])), layout };
+    });
+    setInstallTip({ text: `「${item.label}」已${isWidget ? "添加到主屏幕" : "安装"}` });
     if (prefs.haptics && "vibrate" in navigator) navigator.vibrate?.(15);
   };
   const removeItem = (id: string) => {
@@ -535,7 +551,7 @@ function PhoneInner() {
           <div id="phone-app-root" className="relative min-h-0 flex-1 overflow-hidden">
             {app === null && (
               <HomeGrid
-                layout={prefs.layout} installed={prefs.installed.filter(phoneAppAllowed)} widgets={prefs.widgets} widgetSizes={prefs.widgetSizes} widgetShapes={prefs.widgetShapes}
+                layout={prefs.layout} installed={prefs.installed.filter(canUsePhoneApp)} widgets={prefs.widgets} widgetSizes={prefs.widgetSizes} widgetShapes={prefs.widgetShapes}
                 iconOverrides={prefs.iconOverrides} onOpen={openApp} badges={badges}
                 onReorder={(layout) => updatePrefs({ layout })}
                 onRemove={removeItem}
@@ -556,7 +572,7 @@ function PhoneInner() {
                 {app === "appstore" && (
                   <AppStoreApp
                     onBack={back}
-                    catalog={storeCatalog.filter((c) => c.kind === "widget" || phoneAppAllowed(c.id) || c.core)}
+                    catalog={storeCatalog.filter((c) => c.kind === "widget" || canUsePhoneApp(c.id) || c.core)}
                     installed={installedSet}
                     onInstall={install}
                     onOpen={(id) => (WIDGET_IDS.has(id) ? setApp(null) : openApp(id as AppId))}
@@ -588,7 +604,9 @@ function PhoneInner() {
 
           <HomeIndicator active={app !== null} light={!!chrome && !chrome.dark} onHome={back} />
 
-          {syncTip && <div className="pointer-events-none absolute inset-x-0 top-12 z-40 flex justify-center"><span className="rounded-full bg-black/80 px-4 py-1.5 text-[12.5px] text-white shadow-lg">{syncTip}</span></div>}
+          <div role="status" className="pointer-events-none absolute inset-x-0 top-12 z-40 flex justify-center px-4">
+            {(installTip?.text || syncTip) && <span className="rounded-full bg-black/80 px-4 py-1.5 text-center text-[12.5px] text-white shadow-lg">{installTip?.text || syncTip}</span>}
+          </div>
 
           <GlobalPhoneAlerts dnd={prefs.dnd} />
 
@@ -756,13 +774,13 @@ function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconO
   };
   const endDrag = () => { drag.current = null; onReorder(order); };
 
-  // 按格权重分页：每页容量按屏幕实际可容纳的行数计算（行高 84 + 行距 16），排满才翻页
+  // 按格权重分页，容量与桌面网格的行高、行距及上下内边距一致。
   const scroller = useRef<HTMLDivElement | null>(null);
   const [rows, setRows] = useState(6);
   useEffect(() => {
     const el = scroller.current;
     if (!el) return;
-    const measure = () => setRows(Math.max(3, Math.floor((el.clientHeight - 24 + 16) / (84 + 16))));
+    const measure = () => setRows(Math.max(3, Math.floor((el.clientHeight - 24 + 8) / (78 + 8))));
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
@@ -821,7 +839,7 @@ function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconO
           <span className="pointer-events-none absolute -right-1.5 -top-1.5 z-10 flex h-[20px] min-w-[20px] items-center justify-center rounded-full bg-[#ff3b30] px-[5px] text-[12px] font-medium tabular-nums leading-none text-white">{badges[id] > 99 ? "99+" : badges[id]}</span>
         )}
         </span>
-        {!inDock && <span className="max-w-[70px] truncate text-center text-[11px] font-medium tracking-tight text-white/95 [text-shadow:0_1px_4px_rgba(0,0,0,0.55)]">{label}</span>}
+        {!inDock && <span className="max-w-[70px] shrink-0 truncate text-center text-[11px] font-medium leading-[14px] tracking-tight text-white [text-shadow:0_1px_4px_rgba(0,0,0,0.85)]">{label}</span>}
       </button>
     );
   };
@@ -875,8 +893,8 @@ function HomeGrid({ layout, installed, widgets, widgetSizes, widgetShapes, iconO
       <div ref={scroller} onScroll={onScroll}
         className="phone-pages relative flex flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden">
         {pages.map((ids, pi) => (
-          <div key={pi} className="phone-pages h-full w-full shrink-0 snap-center overflow-y-auto px-[22px] pt-4">
-            <div className="grid grid-cols-4 justify-items-center gap-x-3 gap-y-[18px] pb-4 [grid-auto-flow:row_dense] [grid-auto-rows:82px]">
+          <div key={pi} className="phone-pages h-full w-full shrink-0 snap-center overflow-y-auto px-[22px] pt-2">
+            <div className="grid grid-cols-4 justify-items-center gap-x-3 gap-y-2 pb-4 [grid-auto-flow:row_dense] [grid-auto-rows:78px]">
               {ids.map((id, i) => isWidget(id) ? <WidgetTile key={id} id={id} /> : <AppTile key={id} id={id} i={i} />)}
             </div>
           </div>

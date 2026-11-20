@@ -49,13 +49,7 @@ const write = (k: string, v: unknown) => {
 };
 
 let userMods: Mod[] = []; // 在校验函数定义之后再从本地读取（见下方）
-let selection: ModSelection = read<ModSelection>(K_SEL, { world: DEFAULT_WORLD, addons: [...ENT_PACK_IDS] });
-// 一次性迁移：娱乐圈拆包前保存的模组选择，补上原版玩法扩展包（之后玩家可自行关闭）
-if (!read<boolean>("star:mods:ent-split-v1", false)) {
-  if (shouldAutoAttachEntPacks(selection.world)) selection = { ...selection, addons: [...ENT_PACK_IDS.filter((id) => !selection.addons.includes(id)), ...selection.addons] };
-  write(K_SEL, selection);
-  write("star:mods:ent-split-v1", true);
-}
+let selection: ModSelection = read<ModSelection>(K_SEL, { world: DEFAULT_WORLD, addons: [] });
 // 清掉本地选择里残留的旧「pack-xianyu」记录（咸鱼是手机应用商店的 App，不是模组）
 for (const k of [K_SEL, K_APPLIED]) {
   const v = read<ModSelection | null>(k, null);
@@ -185,7 +179,10 @@ export function validateMod(raw: unknown): string[] {
 }
 
 /* 用户模组：仅载入仍能通过校验的条目 */
-userMods = read<Mod[]>(K_USER, []).filter((m) => validateMod(m).length === 0);
+// 功能注释：校验允许省略 content；落到内存时补成 {}，否则合并链 / 内容槽读取处处 .content.xxx 会崩
+userMods = asModArray<Mod>(read<Mod[]>(K_USER, []))
+  .filter((m) => validateMod(m).length === 0)
+  .map((m) => (m.content && typeof m.content === "object" ? m : { ...m, content: {} as ModContent }));
 
 /* —— 查询 —— */
 export const allMods = (): Mod[] => (
@@ -214,10 +211,15 @@ export function beginAuthorPreviewMod(draft: Mod): { ok: true } | { ok: false; e
     });
     if (!mod.id?.trim()) return { ok: false, errors: ["缺少模组 id"] };
     if (mod.kind !== "world" && mod.kind !== "addon") mod.kind = "world";
-    authorPreviewRestore = {
-      applied: { world: applied.world, addons: [...applied.addons] },
-      selection: { world: selection.world, addons: [...selection.addons] },
-    };
+    // 功能注释：实时预览每轮都会重入；只在首次进入时记还原点，否则会把上一轮预览状态当成玩家真实选择写回磁盘
+    if (!authorPreviewRestore) {
+      authorPreviewRestore = {
+        applied: { world: applied.world, addons: [...applied.addons] },
+        selection: { world: selection.world, addons: [...selection.addons] },
+      };
+    }
+    const realApplied = authorPreviewRestore.applied;
+    const realSelection = authorPreviewRestore.selection;
     authorPreviewMod = mod;
     if (mod.kind === "world") {
       // 功能注释：dependencies 偶发脏对象；asModArray 后再筛叠加包，禁止 .filter / for-of 炸预览
@@ -229,13 +231,16 @@ export function beginAuthorPreviewMod(draft: Mod): { ok: true } | { ok: false; e
       // 功能注释：封面 Cover / 建角 CharacterCreate 走 selectedSlot，必须与草稿 id 对齐
       selection = { world: mod.id, addons };
     } else {
-      const addons = [...asModArray<string>(applied.addons).filter((id) => id !== mod.id), mod.id];
-      applied = { world: applied.world || DEFAULT_WORLD, addons };
-      selection = { ...selection, addons };
+      // 功能注释：以真实选择为底叠加草稿，AI 中途改了草稿 id 时旧 id 不会残留在叠加链里
+      const addons = [...asModArray<string>(realApplied.addons).filter((id) => id !== mod.id), mod.id];
+      applied = { world: realApplied.world || DEFAULT_WORLD, addons };
+      selection = { ...realSelection, addons };
     }
     emit();
     return { ok: true };
   } catch (e) {
+    // 功能注释：失败时还原到进入前的真实状态，而不是丢掉还原点
+    if (authorPreviewRestore) { applied = authorPreviewRestore.applied; selection = authorPreviewRestore.selection; }
     authorPreviewMod = null;
     authorPreviewRestore = null;
     return { ok: false, errors: [`无法启动预览：${(e as Error).message || e}`] };
@@ -492,7 +497,7 @@ function resolveChain(sel: ModSelection, world: Mod): ResolvedWorld {
       const ok = merged.filter((d) => Array.isArray(d.options) && d.options.length > 0);
       content.worldRules = (ok.length ? ok : [...WORLD_RULE_DIMS]) as typeof content.worldRules;
     }
-    // 提示片段：各包的新旧剧本基调按加载顺序追加；terminology 追加，其余后包覆盖
+    // 提示片段：各包的新旧系统提示词按加载顺序追加；terminology 追加，其余后包覆盖
     const p = c.prompt ?? {};
     content.prompt = mergeScriptToneFragments(content.prompt, {
       ...p,
@@ -774,7 +779,8 @@ export function exportModJson(id: string): string {
 export function modTemplate(kind: "world" | "addon"): string {
   const t: Mod = {
     id: kind === "world" ? "my-world" : "my-addon", name: kind === "world" ? "我的世界观" : "我的叠加包", version: "0.1.0", author: "", description: "",
-    kind, dependencies: kind === "addon" ? ["ent"] : [],
+    // 功能注释：叠加包模板不再绑死娱乐圈 ent——否则任何世界都会套用娱乐圈叫法（粉丝 / 艺人 / 片酬）
+    kind, dependencies: [],
     content: {
       worldBook: [],
       prompt: {}, terms: {}, features: {},
@@ -915,13 +921,13 @@ const FEATURE_NEEDS: Partial<Record<Exclude<keyof FeatureFlags, "phoneApps" | "p
   career: (w) => w.content.gigs.length > 0 || hasSlot("projects"),
   // 孕育没有内容槽可判：须已添加孕育包 / features.pregnancy（未声明 = 关闭）
   pregnancy: (w) => w.content.features.pregnancy === true,
-  // 关系玩法：须已添加 pack-relations / features.relationsPlay（未声明 = 关闭；无表白婚礼入口）
-  relationsPlay: (w) => w.content.features.relationsPlay === true,
   // 阵营声望：须已添加 pack-faction-rep（未声明 = 关闭；势力只作设定与人物归属）
   factionRep: (w) => w.content.features.factionRep === true,
 };
 export const feature = (k: Exclude<keyof FeatureFlags, "phoneApps" | "phoneAppsExtra">): boolean => {
   const w = getWorld();
+  // 功能注释：表白、婚礼、牵线、伴侣加成是游戏本体。旧稿里的 relationsPlay:false 只表示当时没装玩法包，不再据此关闭。
+  if (k === "relationsPlay") return true;
   if (w.content.features[k] === false) return false;
   const need = FEATURE_NEEDS[k];
   return need ? need(w) : true;
@@ -1065,6 +1071,14 @@ export const getWorldStorylines = () => getWorld().content.storylines;
 export const getWorldSidelines = () => getWorld().content.sidelines;
 export const getWorldLookRules = () => getWorld().content.lookRules;
 export const getWorldFixedEvents = () => getWorld().content.fixedEvents;
+/** 功能注释：定日固定事件 id → 日期（YYYY.MM.DD），给主线「等到…」文案用 */
+export const getWorldEventDates = (): Record<string, string> => {
+  const out: Record<string, string> = {};
+  for (const ev of getWorld().content.fixedEvents ?? []) {
+    if (ev?.time?.kind === "date" && ev.time.date) out[ev.id] = ev.time.date;
+  }
+  return out;
+};
 export const getWorldEndings = () => getWorld().content.endings;
 export const getWorldTimeLimit = () => getWorld().content.timeLimit;
 export const getWorldGradeDims = () => getWorld().content.gradeDims;
@@ -1087,8 +1101,10 @@ function derived(): Derived {
   if (!d) {
     const items: RoomItem[] = [];
     const seen = new Set<string>();
-    for (const r of Object.values(w.content.rooms)) for (const it of r.items ?? []) if (!seen.has(it.id)) { seen.add(it.id); items.push(it); }
-    for (const it of w.content.items) if (!seen.has(it.id)) { seen.add(it.id); items.push(it); }
+    // 功能注释：AI 可能把 room.items 写成对象 / 混入空条目；asModArray + 判空，禁止物品索引整体崩
+    const add = (it: RoomItem | null | undefined) => { if (it && typeof it.id === "string" && !seen.has(it.id)) { seen.add(it.id); items.push(it); } };
+    for (const r of Object.values(w.content.rooms)) for (const it of asModArray<RoomItem>(r?.items)) add(it);
+    for (const it of w.content.items) add(it);
     d = { personById: Object.fromEntries(w.content.npcs.map((p) => [p.id, p])), items, itemById: new Map(items.map((i) => [i.id, i])) };
     derivedCache.set(w, d);
   }
@@ -1126,7 +1142,7 @@ export function worldItemMemo(id: string): ItemMemoEntry | undefined {
 /** 功能注释：本局合并链里玩法包的版本快照（开局写进存档，读档对比） */
 export const currentModStamp = (): ModStampEntry[] => stampFromChain(getWorld().chain);
 export const worldRoom = (id: string): RoomContent | undefined => getWorld().content.rooms[id];
-export const worldItemsOfRoom = (id: string): RoomItem[] => worldRoom(id)?.items ?? [];
+export const worldItemsOfRoom = (id: string): RoomItem[] => asModArray<RoomItem>(worldRoom(id)?.items).filter(Boolean);
 /* 各层子地点的活动互相独立；勾了「沿用父地点」时逐层向上叠加（去重、防环） */
 export const worldActivitiesOfRoom = (id: string): RoomActivity[] => {
   const out: RoomActivity[] = [];
@@ -1136,7 +1152,7 @@ export const worldActivitiesOfRoom = (id: string): RoomActivity[] => {
     seen.add(cur);
     const r = worldRoom(cur);
     if (!r) break;
-    for (const a of r.activities ?? []) if (!out.some((x) => x.id === a.id)) out.push(a);
+    for (const a of asModArray<RoomActivity>(r.activities)) if (a && !out.some((x) => x.id === a.id)) out.push(a);
     cur = r.inheritEvents ? r.parent : undefined;
   }
   return out;
@@ -1153,7 +1169,7 @@ export const LIVE_ITEMS: RoomItem[] = liveArray(() => getWorldItems());
 export const LIVE_GIGS: Gig[] = liveArray(() => getWorldGigs());
 export const LIVE_LOCATIONS: MapLocation[] = liveArray(() => getWorldLocations());
 
-/* AI 提示：剧本基调整段作开篇（旧模组仍由 gmIntro / worldIntro / 口吻并入） */
+/* AI 提示：系统提示词整段作开篇（旧模组仍由 gmIntro / worldIntro / 口吻并入） */
 export function getWorldPromptHeader(fallback = ""): string {
   return readScriptTone(getWorld().content.prompt) || fallback;
 }
@@ -1180,3 +1196,7 @@ export function useMods() {
 
 /* 当前世界观是否配置了工作委托（通告等）系统 */
 export const hasWorldGigs = (): boolean => (getWorld().content.gigs?.length ?? 0) > 0;
+/** 功能注释：没装通告 / 影视 / 行业时，叙事不得再套经纪、试镜、名气这套演艺圈 */
+export function entertainmentPlayOn(): boolean {
+  return feature("career") || feature("industryTab") || feature("weeklyPaper") || hasWorldGigs();
+}

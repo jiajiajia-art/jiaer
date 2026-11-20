@@ -256,6 +256,7 @@ export async function streamPlayViaPlatform(
     const reader = res.body.getReader();
     const dec = new TextDecoder();
     let buf = "", full = "", points = 0;
+    let settled = false;
     let remaining: number | undefined;
     for (;;) {
       const { value, done } = await reader.read();
@@ -271,10 +272,17 @@ export async function streamPlayViaPlatform(
         if (ev.delta) { full += ev.delta; onDelta(ev.delta, full); }
         if (ev.pointsDeducted != null) points = ev.pointsDeducted;
         if (ev.remainingPoints != null) remaining = ev.remainingPoints;
+        if (ev.done) settled = true;
       }
     }
     const tail = parsePlaySseLine(buf);
+    if (tail?.error) throw Object.assign(new Error(tail.error), { status: 500, code: tail.code, body: buf.slice(0, 400) });
     if (tail?.delta) { full += tail.delta; onDelta(tail.delta, full); }
+    if (tail?.pointsDeducted != null) points = tail.pointsDeducted;
+    if (tail?.remainingPoints != null) remaining = tail.remainingPoints;
+    if (!settled && !tail?.done && full.trim()) {
+      throw Object.assign(new Error("平台连接中断，未收到回合结算结果"), { status: 502 });
+    }
     if (!full.trim()) throw Object.assign(new Error("平台返回空内容"), { status: 204, body: "" });
     return { text: full, pointsDeducted: points, remainingPoints: remaining };
   } catch (e) {

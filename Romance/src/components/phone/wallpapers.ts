@@ -28,22 +28,30 @@ export function resolveWallpaper(id: string, customCss?: string): Wallpaper {
   return wallpaperById(id);
 }
 
+/** 功能注释：图片地址或已写好的 background 值，铺成壁纸。空串当没图。 */
+function imageWallpaper(id: string, label: string, raw: string | undefined, dark = false): Wallpaper | null {
+  const src = typeof raw === "string" ? raw.trim() : "";
+  if (!src) return null;
+  const css = /url\(/i.test(src) ? src : customWallpaperCss(src);
+  return { id, label, css, dark, kind: "photo" };
+}
+
 /**
- * 功能注释：作品默认桌面背景 vs 玩家设置覆盖。
- * 玩家在设置里换过（含上传）→ 用玩家的；否则有作品上传图就用作品的；再否则引擎默认。
+ * 功能注释：桌面背景优先级。
+ * 玩家在设置里换过（含上传）→ 用玩家的；
+ * 否则创作者上传了手机壁纸就用那张；
+ * 再否则用作品封面；都没有才用引擎默认写真。
  */
 export function resolveEffectiveHomeWallpaper(
   worldWallpaper: string | undefined,
   prefs: { wallpaper: string; customWallpaper?: string; wallpaperUserSet?: boolean },
+  coverUrl?: string,
 ): Wallpaper {
   if (prefs.wallpaperUserSet || (prefs.wallpaper === CUSTOM_WALLPAPER_ID && prefs.customWallpaper)) {
     return resolveWallpaper(prefs.wallpaper, prefs.customWallpaper);
   }
-  const world = typeof worldWallpaper === "string" ? worldWallpaper.trim() : "";
-  if (world) {
-    const css = /url\(/i.test(world) ? world : customWallpaperCss(world);
-    // 功能注释：作品桌面常见浅色写真；勿默认 dark=true，否则状态栏白字看不清
-    return { id: "world-home", label: "作品默认", css, dark: false, kind: "photo" };
-  }
-  return resolveWallpaper(prefs.wallpaper || DEFAULT_WALLPAPER, prefs.customWallpaper);
+  return imageWallpaper("world-home", "作品默认", worldWallpaper)
+    // 功能注释：封面常是深色海报，状态栏用白字；创作者另传的浅色壁纸仍走上面那支
+    ?? imageWallpaper("work-cover", "作品封面", coverUrl, true)
+    ?? resolveWallpaper(prefs.wallpaper || DEFAULT_WALLPAPER, prefs.customWallpaper);
 }

@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from "react"
-import { rememberImageAsset, touchAsset, uploadImage, type AssetKind } from "../lib/freeStyle"
+import { saveWorkImage } from "../lib/saveWorkImage"
 import { displayableImageSrc } from "../lib/displayableImageSrc"
 import { mediaCheck } from "../game/engineRules"
 import {
   SCENE_PORTRAIT_GEN_SIZE,
   SCENE_PORTRAIT_HINT,
-  fileToScenePortraitDataUrl,
-  rasterToScenePortraitDataUrl,
 } from "../lib/scenePortrait"
 import { Modal } from "./ui"
 import AiImageGen, { type AiImageGenPhase } from "./AiImageGen"
@@ -14,7 +12,7 @@ import type { EditorImagePromptParts } from "../lib/editorImagePrompts"
 import CreatorAssetLibrary from "./CreatorAssetLibrary"
 import type { LocationAssetPurpose } from "../lib/platformLocationAssetLibrary"
 
-/* 通用图片选择器：点缩略图或「上传」直接选本地图片（有图床走图床，否则本地压缩，并收进素材库）；
+/* 通用图片选择器：点缩略图或「上传」直接选本地图片并上传到云端；
  * 也可从素材库挑选、粘贴链接、清除。所有美化里需要图片的地方共用。
  * scenePortrait：地点场景图 / 大地图竖版，上传/素材库/生图一律裁成 9:16 / 1080×1920；「链接」改为「生图」。
  * aiGen：在「上传」旁出「生图」按钮，弹窗内填提示词；走平台既有生图入口，不在页内铺输入框。
@@ -51,7 +49,6 @@ export default function ImagePicker({
   scenePortrait = false,
   aiGen,
   platformAssetPurpose,
-  assetKind,
 }: {
   value?: unknown
   onChange: (url?: string) => void
@@ -65,8 +62,6 @@ export default function ImagePicker({
   aiGen?: ImagePickerAiGen
   /** 功能注释：有值时「素材库」打开统一面板并停在地点图 Tab。 */
   platformAssetPurpose?: LocationAssetPurpose
-  /** 功能注释：存进素材库的分类；缺省时地点竖图 = 地点、标签含「封面」= 封面、「头像」= 头像 */
-  assetKind?: AssetKind
 }) {
   const ref = useRef<HTMLInputElement>(null)
   const [mode, setMode] = useState<"" | "link">("")
@@ -82,8 +77,6 @@ export default function ImagePicker({
   const [broken, setBroken] = useState(false)
   useEffect(() => { setBroken(false) }, [src])
   const show = Boolean(src) && !broken
-  const kind: AssetKind | undefined = assetKind
-    ?? (scenePortrait ? "location" : /封面/.test(label) ? "cover" : /头像/.test(label) ? "avatar" : undefined)
   const portraitHint = scenePortrait ? SCENE_PORTRAIT_HINT : hint
   // 功能注释：地点场景用「生图」替换「链接」；封面等仍可同时有生图+链接
   const genOpts: ImagePickerAiGen | undefined = aiGen
@@ -93,22 +86,11 @@ export default function ImagePicker({
   const showGen = Boolean(genOpts)
   const showLink = !scenePortrait
 
-  const rememberAsset = (url: string, name = label) => rememberImageAsset(url, name, kind)
-
   const applyUrl = async (url: string) => {
     setBusy(true)
     setErr("")
     try {
-      if (scenePortrait) {
-        const fitted = await rasterToScenePortraitDataUrl(url)
-        onChange(fitted)
-        // 功能注释：P8 采用生图后一律进「我的素材库」，不限竖图位
-        rememberAsset(fitted)
-      } else {
-        onChange(url)
-        rememberAsset(url)
-      }
-      touchAsset(url)
+      onChange(scenePortrait || /^(data:|blob:)/i.test(url) ? await saveWorkImage(url, scenePortrait) : url)
       setMode("")
     } catch (e) {
       setErr(`应用失败：${(e as Error).message}`)
@@ -124,16 +106,8 @@ export default function ImagePicker({
     setBusy(true)
     setErr("")
     try {
-      if (scenePortrait) {
-        // 功能注释：任意本地图 cover 裁成 1080×1920 后写入预览，避免尺寸不合规时「点了没反应」
-        const fitted = await fileToScenePortraitDataUrl(f)
-        onChange(fitted)
-        rememberAsset(fitted, f.name.replace(/\.[^.]+$/, ""))
-        setMode("")
-      } else {
-        onChange((await uploadImage(f, max, kind)).url)
-        setMode("")
-      }
+      onChange(await saveWorkImage(f, scenePortrait, max))
+      setMode("")
     } catch (e) {
       setErr(`上传失败：${(e as Error).message}`)
     }
@@ -297,13 +271,11 @@ export default function ImagePicker({
             autoRun={genOpts.autoRun === true}
             autoApply={genOpts.autoApply === true}
             onPhaseChange={setGenPhase}
-            assetKind={kind}
-            assetName={label}
+            scenePortrait={scenePortrait}
             onPick={(url) => {
-              void applyUrl(url).then(() => {
-                setGenOpen(false)
-                setGenPhase("edit")
-              })
+              onChange(url)
+              setGenOpen(false)
+              setGenPhase("edit")
             }}
           />
         </Modal>

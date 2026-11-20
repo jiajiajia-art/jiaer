@@ -36,7 +36,7 @@ test('OpeningStyleStudio_开场剧情下不再套卡片大框', () => {
   assert.doesNotMatch(src, /space-y-3 rounded-2xl border border-line bg-paper\/50 p-3/);
   const panel = read('Romance/src/components/ModEditorPanel.tsx');
   const openingAt = panel.indexOf('title="开场剧情"');
-  const nextAt = panel.indexOf('title="剧情美化"', openingAt);
+  const nextAt = panel.indexOf('title="底栏页签"', openingAt);
   assert.ok(openingAt >= 0 && nextAt > openingAt);
   assert.match(panel.slice(openingAt, nextAt), /OpeningStyleStudio/);
 });

@@ -1,6 +1,11 @@
 /** 功能注释：平台「创作游戏 → 玩法 Mod」入口查询参数。 */
 export const PLAY_MOD_CREATE_QUERY = "createPlayMod";
 
+/** 功能注释：创作玩法 Mod 暂时测试中。改成 false 即重新开放入口与对话工坊。 */
+export const PLAY_MOD_CREATE_LOCKED = true;
+
+export const PLAY_MOD_CREATE_LOCKED_HINT = "玩法 Mod 暂时测试中，暂不开放创作。";
+
 export function shouldOpenPlayModCreate(
   search = typeof location !== "undefined" ? location.search : "",
 ): boolean {

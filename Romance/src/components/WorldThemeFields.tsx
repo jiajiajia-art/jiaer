@@ -12,6 +12,21 @@ const chip = (on: boolean) =>
     on ? "border-jade/50 bg-jade/15 text-jade" : "border-line bg-paper text-ink-soft hover:border-jade/40 hover:text-ink"
   }`;
 
+const preferredThemeNames = [
+  "恋爱言情", "现代都市", "校园青春", "古风历史", "宫廷侯门", "民国谍战",
+  "武侠江湖", "仙侠修真", "奇幻架空", "科幻赛博", "末世废土", "悬疑推理",
+  "恐怖怪谈", "同人衍生", "权谋争霸", "战争史诗", "经营创业", "体育竞技", "治愈日常",
+];
+
+const themeLabels: Record<string, string> = {
+  古风历史: "古代历史",
+  恋爱言情: "言情",
+  同人衍生: "同人",
+  经营创业: "商业创业",
+};
+
+const themeOrder = new Map(preferredThemeNames.map((name, index) => [name, index]));
+
 export default function WorldThemeFields({
   value,
   tags,
@@ -46,6 +61,10 @@ export default function WorldThemeFields({
     value.themeTagId != null && !tags.some((t) => t.id === value.themeTagId)
       ? { id: value.themeTagId, name: value.themeLabel || `题材 #${value.themeTagId}`, code: value.themeCode || "" }
       : null;
+  const orderedTags = [...tags].sort((a, b) =>
+    (themeOrder.get(a.name) ?? preferredThemeNames.length) -
+    (themeOrder.get(b.name) ?? preferredThemeNames.length),
+  );
 
   return (
     // 功能注释：data-author-field 供发布门禁定位滚动；题材只能从平台列表勾选
@@ -59,8 +78,8 @@ export default function WorldThemeFields({
       <div className={`grid grid-cols-1 gap-2 ${compact ? "" : "sm:grid-cols-2"}`}>
         <div className={compact ? undefined : "sm:col-span-2"} data-world-theme-tag>
           <span className={lbl}>题材 *</span>
-          {tags.length ? (
-            <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto" role="group" aria-label="平台题材">
+          {tags.length > 0 || orphan ? (
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="平台题材（单选）">
               {orphan && (
                 <button
                   type="button"
@@ -72,22 +91,23 @@ export default function WorldThemeFields({
                   {orphan.name} ×
                 </button>
               )}
-              {tags.map((t) => {
-                const on = value.themeTagId === t.id;
+              {orderedTags.map((tag) => {
+                const on = value.themeTagId === tag.id;
                 return (
                   <button
-                    key={t.id}
+                    key={tag.id}
                     type="button"
                     aria-pressed={on}
                     className={chip(on)}
-                    onClick={() => pickTag(t)}
+                    onClick={() => pickTag(tag)}
                   >
-                    {t.name || `#${t.id}`}
+                    {themeLabels[tag.name] || tag.name || `#${tag.id}`}
                   </button>
                 );
               })}
             </div>
-          ) : (
+          ) : null}
+          {!tags.length && (
             <p className="rounded-lg border border-dashed border-line bg-paper px-2.5 py-2 text-[12px] text-ink-soft">
               平台题材加载中或暂不可用，稍后再试。
             </p>

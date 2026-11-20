@@ -5,7 +5,7 @@ import { deleteSlot, listSaves, type CoverDiy, type SaveSlot } from "../lib/stor
 import { syncCloudSaves } from "../lib/storage";
 import { Modal } from "./ui";
 import { IconHeart, IconPlay, IconRefresh, IconSpark } from "../lib/icons";
-import { getWorld } from "../mods/registry";
+import { getWorld, getWorldSlot } from "../mods/registry";
 import { isAuthorPreview } from "../lib/authorPreview";
 import type { CoverCgOpts, CoverCopy } from "../mods/types";
 import { FONTS } from "../lib/skins";
@@ -65,6 +65,14 @@ export function resolveCoverBg(c: CgSrc): CoverBgPlan {
   if (c.image) return { kind: "images", images: [c.image] };
   if (cgs.length) return { kind: "images", images: cgs };
   return c.video ? { kind: "video", video: c.video } : { kind: "none" };
+}
+
+/** 功能注释：当前作品封面图。创作者没设手机壁纸时，局内桌面用这张。 */
+export function worldCoverImageUrl(): string | undefined {
+  const fromSlot = coverDisplayUrl(getWorldSlot("cover"));
+  if (fromSlot) return fromSlot;
+  const manifest = getWorld().chain[0]?.cover;
+  return typeof manifest === "string" && manifest.trim() ? manifest.trim() : undefined;
 }
 
 /** 功能注释：作品展示用封面图（列表/详情/书架）；取背景固定图、轮播首张或视频海报 */

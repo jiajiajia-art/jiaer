@@ -13,7 +13,7 @@ import { asModArray } from "../lib/asModArray";
 export const AUDIO_KIND_LABEL: Record<AudioKind, string> = { bgm: "背景音乐", sfx: "短音效", amb: "环境氛围音" };
 export const AUDIO_EXT = /\.(mp3|ogg|wav)$/i;
 export const AUDIO_ACCEPT = ".mp3,.ogg,.wav,audio/mpeg,audio/ogg,audio/wav,audio/x-wav";
-export const AUDIO_MAX_MB = 30;
+export const AUDIO_MAX_MB = 5;
 export const EMBED_MB = 1; // MOD 方式 A 内嵌上限（MOD 存 localStorage）
 export const audioUid = () => `au_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 export const loopOf = (a: AudioAsset) => a.loop ?? a.kind !== "sfx";

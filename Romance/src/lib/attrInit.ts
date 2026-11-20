@@ -1,4 +1,4 @@
-/* 自定义属性开局值：勾选「固定数值」用 init；不勾则在最小～最大之间由代码随机一次。
+/* 自定义属性开局值：默认由代码在最小～最大之间随机一次，作者锁定时用 init。
  * 旧稿 initMode=dice 与 random 同义（不再按骰子面数）。随机只发生在开局，不交给生成文本的模型。 */
 import type { AttrDef } from "./types.ts";
 
@@ -7,7 +7,7 @@ const cap = (max?: number) => (typeof max === "number" && max > 0 ? max : Infini
 
 /** 功能注释：是否走「最小～最大随机」（含旧 dice） */
 export function attrUsesRandomStart(a: Pick<AttrDef, "initMode">): boolean {
-  return a.initMode === "random" || a.initMode === "dice";
+  return a.initMode == null || a.initMode === "random" || a.initMode === "dice";
 }
 
 /**
@@ -36,7 +36,7 @@ export function clampAttrStart(a: Pick<AttrDef, "min" | "max">, value: number): 
 }
 
 export type AttrStartMode = "random" | "locked" | "choice" | "custom";
-/** 功能注释：开局取值方式（兼容旧稿：fixed / 缺省 = locked，dice = random；choice 无有效选项时退回 locked） */
+/** 功能注释：开局取值方式（兼容旧稿：缺省 / dice = random，fixed = locked；choice 无有效选项时退回 locked） */
 export function attrStartMode(a: Pick<AttrDef, "initMode" | "options">): AttrStartMode {
   if (attrUsesRandomStart(a)) return "random";
   if (a.initMode === "choice") return (a.options ?? []).some((o) => o && String(o.label ?? "").trim()) ? "choice" : "locked";
@@ -49,18 +49,20 @@ export function attrChoiceOptions(a: Pick<AttrDef, "options">): { label: string;
 }
 
 /**
- * 功能注释：开局只随机这一次。固定用 init；不勾固定则在最小…最大均匀取整。
+ * 功能注释：开局只随机这一次。随机模式在范围内均匀取整，固定模式用 init。
  * rand 可注入，便于单测；正式开局用 Math.random，不经过 AI。
  */
 export function attrStartValue(
   a: Pick<AttrDef, "init" | "initMode" | "dice" | "min" | "max" | "options">,
   rand: () => number = Math.random,
 ): number {
-  // 功能注释：玩家选择默认取第一个选项；玩家自定义默认取 init（玩家在建角页再改）
-  if (attrStartMode(a) === "choice") return clampAttrStart(a, attrChoiceOptions(a)[0]?.value ?? a.init);
+  if (attrStartMode(a) === "choice") {
+    const options = attrChoiceOptions(a);
+    return clampAttrStart(a, options[Math.floor(rand() * options.length)]?.value ?? a.init);
+  }
   if (attrUsesRandomStart(a)) {
     const lo = Math.floor(a.min ?? 0);
-    const hiRaw = a.max;
+    const hiRaw = a.max ?? (a.initMode == null ? Math.max(lo, 100) : undefined);
     if (typeof hiRaw !== "number" || !Number.isFinite(hiRaw) || hiRaw < lo) {
       return clampAttrStart(a, a.init);
     }

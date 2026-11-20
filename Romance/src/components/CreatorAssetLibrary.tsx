@@ -29,9 +29,7 @@ import {
 import {
   assetDaysLeft,
   loadAssets,
-  rememberImageAsset,
   type Asset,
-  uploadImage,
 } from "../lib/freeStyle";
 import type { PlatformLocationItem } from "../lib/platformLocationLibrary";
 import type { LocationAssetPurpose, PlatformLocationAssetItem } from "../lib/platformLocationAssetLibrary";
@@ -53,7 +51,7 @@ const UPLOAD_LABEL: Record<CreatorAssetTab, string> = {
 };
 
 const HINT =
-  "上传到「我的」后可在任意作品选用；公共素材由平台提供，可选用不可改。采用生图也会进「我的」。";
+  "上传到「我的」后可在任意作品选用；公共素材由平台提供，可选用不可改。生图采用后会保存到当前编辑位置。";
 
 const primaryBtn =
   "rounded-full bg-jade px-3.5 py-2 text-[12.5px] font-bold text-white shadow-sm transition hover:brightness-105 disabled:opacity-40";
@@ -233,13 +231,8 @@ export default function CreatorAssetLibrary({
           toast.success("已用于此处，并已保存到我的素材库");
         }
       } else {
-        const { url } = await uploadImage(file, 1600);
-        rememberImageAsset(url, file.name.replace(/\.[^.]+$/, "") || "图片");
-        try {
-          await upsertRomanceCloudAsset({ url, name: file.name.replace(/\.[^.]+$/, "").slice(0, 24) || "图片" });
-        } catch (e) {
-          toast.error(e instanceof Error ? e.message : "云端保存失败，已暂存本机");
-        }
+        const url = await uploadLocationImageFile(file);
+        await upsertRomanceCloudAsset({ url, name: file.name.replace(/\.[^.]+$/, "").slice(0, 24) || "图片" });
         toast.success("已上传到我的通用图");
         await reload();
         if (pickMode === "image" && onPickImage) {
@@ -271,9 +264,6 @@ export default function CreatorAssetLibrary({
         backgroundType: avatarMeta.backgroundType,
         title: avatarMeta.title || undefined,
       });
-      // 功能注释：默认同时放入通用图，列表里能找回
-      syncRememberToCloud(item.imageUrl, item.title || "头像");
-      rememberImageAsset(item.imageUrl, item.title || "头像");
       toast.success("已上传到我的头像");
       setAvatarMeta((s) => ({ ...s, open: false, file: null }));
       await reload();
@@ -575,11 +565,11 @@ export default function CreatorAssetLibrary({
                       type="button"
                       className="block w-full"
                       onClick={() => {
-                        onPickImage?.(a.url, { tab: "general", name: a.name });
+                        onPickImage?.(resolvePlatformAvatarUrl(a.url), { tab: "general", name: a.name });
                         toast.success("已用于此处，并已保存到我的素材库");
                       }}
                     >
-                      <img src={a.url} alt="" className="aspect-square w-full object-cover" loading="lazy" />
+                      <AssetThumb src={a.url} />
                     </button>
                     {a.temp && (
                       <span className="absolute inset-x-0 bottom-6 bg-black/55 text-center text-[9px] text-white">
@@ -618,7 +608,7 @@ export default function CreatorAssetLibrary({
                           toast.success("已用于此处");
                         }}
                       >
-                        <img src={a.url} alt="" className="aspect-square w-full object-cover" loading="lazy" />
+                        <AssetThumb src={a.url} />
                       </button>
                       <span className="absolute left-1 top-1 rounded bg-black/55 px-1 text-[9px] text-white">仅本机</span>
                       <div className="px-1.5 py-1">
@@ -781,4 +771,14 @@ export default function CreatorAssetLibrary({
       )}
     </Modal>
   );
+}
+
+/** 功能注释：素材缩略图——相对路径补平台域名；加载失败显示占位，不露浏览器裂图 */
+function AssetThumb({ src }: { src: string }) {
+  const [broken, setBroken] = useState(false);
+  const url = resolvePlatformAvatarUrl(src);
+  if (broken || !url) {
+    return <span className="grid aspect-square w-full place-items-center bg-paper-2 text-[10px] text-ink-soft">图片已失效</span>;
+  }
+  return <img src={url} alt="" className="aspect-square w-full object-cover" loading="lazy" onError={() => setBroken(true)} />;
 }

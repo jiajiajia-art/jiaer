@@ -14,10 +14,10 @@ const romance = join(root, 'Romance/src');
 test('worldGenSettingField_超限闸门与截断', async () => {
   const field = await import(pathToFileURL(join(romance, 'lib/worldGenSettingField.ts')).href);
   const wiz = await import(pathToFileURL(join(romance, 'lib/worldGenWizard.ts')).href);
-  assert.equal(wiz.WORLD_SETTING_MAX, 5000);
-  assert.equal(field.isWorldGenSettingOverLimit('x'.repeat(5000)), false);
-  assert.equal(field.isWorldGenSettingOverLimit('x'.repeat(5001)), true);
-  assert.equal(field.truncateWorldGenSetting('x'.repeat(5010)).length, 5000);
+  assert.equal(wiz.WORLD_SETTING_MAX, 10000);
+  assert.equal(field.isWorldGenSettingOverLimit('x'.repeat(10000)), false);
+  assert.equal(field.isWorldGenSettingOverLimit('x'.repeat(10001)), true);
+  assert.equal(field.truncateWorldGenSetting('x'.repeat(10010)).length, 10000);
 
   assert.deepEqual(field.gateWorldGenSettingSubmit({ setting: '', aiPolish: true }), {
     ok: false,
@@ -34,7 +34,7 @@ test('worldGenSettingField_超限闸门与截断', async () => {
     setting: short,
   });
 
-  const over = '字'.repeat(5001);
+  const over = '字'.repeat(10001);
   assert.deepEqual(field.gateWorldGenSettingSubmit({ setting: over, aiPolish: false }), {
     ok: false,
     needTruncateConfirm: true,
@@ -44,10 +44,10 @@ test('worldGenSettingField_超限闸门与截断', async () => {
     setting: over,
   });
 
-  assert.match(field.WORLD_GEN_SETTING_TRUNCATE_CONFIRM, /5000/);
+  assert.match(field.WORLD_GEN_SETTING_TRUNCATE_CONFIRM, /10000/);
   assert.match(field.WORLD_GEN_SETTING_TRUNCATE_CONFIRM, /截断/);
   assert.match(field.worldGenAiPolishPrompt(true), /作品名称/);
-  assert.match(field.worldGenAiPolishPrompt(true), /5000/);
+  assert.match(field.worldGenAiPolishPrompt(true), /10000/);
   assert.match(field.worldGenAiPolishPrompt(true), /禁止生成/);
   assert.match(field.worldGenAiPolishPrompt(false), /未勾选/);
   assert.match(field.worldGenAiPolishPrompt(false), /禁止生成/);
@@ -57,7 +57,7 @@ test('worldGenSettingField_校验_勾选AI可超限_未勾选不可', async () =
   const wiz = await import(pathToFileURL(join(romance, 'lib/worldGenWizard.ts')).href);
   const base = {
     title: '雾港来信',
-    setting: '字'.repeat(5001),
+    setting: '字'.repeat(10001),
     engineId: 'balanced',
     contentIds: ['world'],
     editorStepIds: ['prompt'],
@@ -65,7 +65,7 @@ test('worldGenSettingField_校验_勾选AI可超限_未勾选不可', async () =
   };
   assert.equal(
     wiz.validateWorldGenStep1({ ...base, aiPolish: false }),
-    '故事设定最多 5000 字',
+    '故事设定最多 10000 字',
   );
   assert.equal(wiz.validateWorldGenStep1({ ...base, aiPolish: true }), null);
   assert.equal(

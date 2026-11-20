@@ -12,6 +12,7 @@ export type PlatformAudio = {
   kind: AudioKind;
   src: string;
   loop?: boolean;
+  tags?: readonly string[];
 };
 
 const CC0 = "https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3";
@@ -39,7 +40,10 @@ function normalize(raw: unknown): PlatformAudio | null {
   const src = resolvePlatformAvatarUrl(String(r?.audioUrl ?? r?.url ?? r?.src ?? "").trim());
   if (!rid || !src || String(r?.status ?? "active") === "disabled") return null;
   const kind = KINDS.includes(r.kind as AudioKind) ? (r.kind as AudioKind) : "bgm";
-  return { id: rid.startsWith("platform:") ? rid : `platform:${rid}`, name: String(r.name ?? rid), kind, src, loop: typeof r.loop === "boolean" ? r.loop : kind !== "sfx" };
+  const tags = Array.isArray(r.tags)
+    ? [...new Set(r.tags.filter((tag): tag is string => typeof tag === "string").map((tag) => tag.trim()).filter(Boolean))]
+    : [];
+  return { id: rid.startsWith("platform:") ? rid : `platform:${rid}`, name: String(r.name ?? rid), kind, src, loop: typeof r.loop === "boolean" ? r.loop : kind !== "sfx", tags };
 }
 
 /** 功能注释：从运营后台拉取上架曲目；失败或为空时保留内置兜底。重复调用共用一次请求，force 强制刷新 */
@@ -55,9 +59,9 @@ export function loadPlatformAudioFromApi(force = false): Promise<void> {
   loading = fetch(`${base}/api/audio-library`, { headers: { Accept: "application/json", Authorization: `Bearer ${token}` } })
     .then((r) => (r.ok ? r.json() : null))
     .then((j) => {
-      const items: unknown[] = Array.isArray(j?.data) ? j.data : Array.isArray(j?.data?.items) ? j.data.items : [];
+      const items: unknown[] | null = Array.isArray(j?.data) ? j.data : Array.isArray(j?.data?.items) ? j.data.items : null;
+      if (!items) return;
       const list = items.map(normalize).filter((x): x is PlatformAudio => !!x);
-      if (!list.length) return;
       // 后台曲目在前；内置示例里后台没有的 id 保留，旧作品引用不失效
       PLATFORM_AUDIO = Object.freeze([...list, ...SEED.filter((s0) => !list.some((x) => x.id === s0.id))]);
       ver++;

@@ -8,8 +8,9 @@ import { useGame } from "../store/gameCtx";
 import { SIDEQUESTS } from "../worlds/star2005/content";
 import { dayDateLabel, startDateLabel } from "../game/logic";
 import { homeMainQuest } from "../lib/homeMainQuest";
+import { condBrief } from "./ruleText";
 import { storylineBrief } from "../game/fixedEvents";
-import { feature, getWorldSidelines, getWorldStorylines } from "../mods/registry";
+import { feature, getWorldSidelines, getWorldStorylines, getWorldEventDates } from "../mods/registry";
 import { SIDE_STATE_LABEL, visibleSidelines } from "../lib/sidelines";
 import type { SideState } from "../lib/types";
 import { limitDays } from "../lib/types";
@@ -89,9 +90,8 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
   const pastNotices = notices.filter((n) => n.status !== "open").slice(0, 12);
   const sideCount = openNotices.length + triggered.length + sides.filter((x) => x.state !== "pending").length;
   // 功能注释：主线与顶栏同一数据源（homeMainQuest / getWorldStorylines），没有章节设定就不硬造章号
-  const mainQuest = homeMainQuest(s, getWorldStorylines(), dayDateLabel(s.day ?? 0));
+  const mainQuest = homeMainQuest(s, getWorldStorylines(), dayDateLabel(s.day ?? 0), getWorldEventDates());
   const mainLineName = mainQuest?.lineName ?? (getWorldStorylines().find((l) => l.enabled !== false && l.name?.trim())?.name?.trim() || "主线");
-  const mainStepName = mainQuest?.stepName;
   const mainStatus = game.ended ? "已完成" : "进行中";
   // 功能注释：前情提要优先取玩家亲历的剧情（回顾里的单篇），没有时才退回清洗过的记忆摘要
   type RecapItem = { title: string; meta?: string };
@@ -108,15 +108,15 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
   ];
 
   return (
-    <div className="w-full pb-5">
-      <div className="mx-auto max-w-2xl space-y-3.5 px-4 pt-3">
+    <div className="w-full pb-3">
+      <div className="mx-auto max-w-2xl space-y-2.5 px-3 pt-2">
       {/* 分类页签：选中加重，未选更淡 */}
-      <div className="ui-card grid grid-cols-3 gap-0.5 p-1">
+      <div className="ui-card grid grid-cols-3 gap-0.5 p-0.5">
         {([["main", "主线", 0], ["side", "支线", sideCount], ["journal", "回顾", journal.length]] as const).map(([id, label, n]) => {
           const on = view === id;
           return (
             <button key={id} onClick={() => setView(id)} aria-pressed={on}
-              className={`flex items-center justify-center gap-1 rounded-xl py-2 text-[13px] transition ${on ? "bg-coral/10 font-bold text-ink ring-1 ring-coral/25" : "font-medium text-ink-soft/70 hover:text-ink"}`}>
+              className={`flex items-center justify-center gap-1 rounded-lg py-1.5 text-[13px] transition ${on ? "bg-coral/10 font-bold text-ink ring-1 ring-coral/25" : "font-medium text-ink-soft/70 hover:text-ink"}`}>
               {label}
               {n ? <span className={`min-w-[16px] rounded-full px-1 text-[10px] font-bold leading-4 tabular-nums ${on ? "bg-coral/20 text-coral" : "bg-ink-soft/10 text-ink-soft"}`}>{n}</span> : null}
             </button>
@@ -127,39 +127,58 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
       {view === "main" && (
         <article className="ui-card overflow-hidden">
           {/* 功能注释：卷首标题 + 状态；目标/时限/CTA 分区清楚，避免糊成一块 */}
-          <header className="relative overflow-hidden px-5 pb-4 pt-4">
-            <span aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(155deg,color-mix(in_srgb,var(--coral)_12%,var(--paper))_0%,color-mix(in_srgb,var(--jade)_6%,var(--paper))_48%,var(--paper)_100%)]" />
-            <span aria-hidden className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-coral/15 blur-3xl" />
-            <span aria-hidden className="pointer-events-none absolute -left-6 bottom-0 h-20 w-20 rounded-full bg-jade/10 blur-2xl" />
-            <div className="relative flex items-start gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-[10.5px] font-bold tracking-[0.2em] text-ink-soft/80">MAIN QUEST</p>
-                <h3 className="mt-1 font-serif text-[21px] font-bold leading-snug tracking-[0.02em] text-ink">
-                  {mainLineName}
-                  {mainStepName ? <span className="ml-2 align-middle text-[13.5px] font-medium text-ink-soft">{mainStepName}</span> : null}
-                </h3>
-                <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-paper/70 px-2.5 py-0.5 text-[11.5px] text-ink-soft ring-1 ring-line/50">
-                  第 {s.week} 周 · 第 {s.day + 1} 天
-                </p>
+          <header className="relative px-4 pb-3 pt-3.5">
+            <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-full bg-[radial-gradient(120%_90%_at_0%_0%,color-mix(in_srgb,var(--coral)_10%,transparent)_0%,transparent_60%)]" />
+            <div className="relative">
+              <div className="flex items-center gap-2 text-[11px] text-ink-soft">
+                <span className="font-bold tracking-[0.18em] text-coral">主线</span>
+                <span className="h-3 w-px bg-line" />
+                <span className="tabular-nums">第 {s.week} 周 · 第 {s.day + 1} 天</span>
+                <span className="ml-auto"><Status k={game.ended ? "done" : "doing"} /></span>
               </div>
-              <Status k={game.ended ? "done" : "doing"} />
+              <h3 className="mt-1.5 font-serif text-[21px] font-bold leading-snug tracking-[0.02em] text-ink">{mainLineName}</h3>
+              {/* 功能注释：章节进度——已完成节点 / 总节点，一眼看出走到哪 */}
+              {mainQuest && mainQuest.total > 0 ? (
+                <div className="mt-2.5 flex items-center gap-2.5">
+                  {mainQuest.total <= 12 ? (
+                    <div className="flex flex-1 gap-1">
+                      {Array.from({ length: mainQuest.total }, (_, k) => (
+                        <span key={k} className={`h-1.5 flex-1 rounded-full ${k < mainQuest.done ? "bg-coral" : k === mainQuest.done ? "bg-coral/40" : "bg-line/70"}`} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-line/70"><span className="block h-full rounded-full bg-coral" style={{ width: `${Math.round((mainQuest.done / mainQuest.total) * 100)}%` }} /></div>
+                  )}
+                  <span className="shrink-0 text-[11.5px] tabular-nums text-ink-soft">{Math.min(mainQuest.done + 1, mainQuest.total)} / {mainQuest.total} 章</span>
+                </div>
+              ) : null}
             </div>
           </header>
 
-          <div className="space-y-3 px-4 pb-4 pt-1">
+          <div className="space-y-2.5 px-3.5 pb-3 pt-0.5">
             {/* 功能注释：当前目标做成独立浅底块，和卷首/时限拉开层次 */}
-            <section className="relative overflow-hidden rounded-[calc(var(--radius-ui)+2px)] border border-coral/18 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--coral)_7%,var(--paper))_0%,var(--paper)_100%)] px-3.5 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
-              <span aria-hidden className="absolute bottom-2 left-0 top-2 w-[3px] rounded-full bg-gradient-to-b from-coral to-jade/70" />
-              <div className="pl-2.5">
-                <p className="text-[10.5px] font-bold tracking-[0.18em] text-coral">当前目标</p>
+            <section className="rounded-[calc(var(--radius-ui)+2px)] bg-paper-2/60 px-3.5 py-3 ring-1 ring-line/40">
+              <div>
+                <p className="text-[11px] font-bold tracking-[0.16em] text-ink-soft">当前目标</p>
                 {(() => {
                   // 功能注释：任务页也只展示创作者主线，不再塞引擎日程/通告占位提醒
                   const q = mainQuest;
                   if (q) {
                     return (<>
-                      <p className="mt-1.5 text-[14.5px] font-bold leading-snug text-ink">{q.lineName} · {q.stepName}</p>
+                      <p className="mt-0.5 font-serif text-[16px] font-bold leading-snug text-ink">{q.stepName || q.lineName}</p>
                       {q.waitLabel ? <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">{q.waitLabel}</p> : null}
-                      {q.stepDesc ? <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">{q.stepDesc}</p> : null}
+                      {q.stepDesc ? <p className="mt-1.5 text-[13px] leading-[1.75] text-ink-soft">{q.stepDesc}</p> : null}
+                      {/* 功能注释：给玩家看完成条件，知道要做到什么才算推进 */}
+                      {q.conds.length ? (
+                        <div className="mt-2">
+                          <p className="text-[11px] font-semibold text-ink-soft">完成条件</p>
+                          <ul className="mt-0.5 space-y-0.5 text-[12.5px] leading-relaxed text-ink">
+                            {q.conds.map((c, i) => <li key={i}>· {condBrief(c, game.fixedEvents ?? [])}</li>)}
+                          </ul>
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-[12px] text-ink-soft">这一步没有设置完成条件，跟随剧情自然推进。</p>
+                      )}
                     </>);
                   }
                   const brief = storylineBrief(s).trim();
@@ -241,7 +260,7 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
               <button
                 type="button"
                 onClick={() => { onNavigate?.(); go("home"); }}
-                className="diy-btn group flex w-full items-center justify-center gap-1.5 rounded-full border border-transparent bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] py-3 text-[13.5px] font-bold tracking-[0.06em] text-white shadow-[0_12px_24px_-12px_color-mix(in_srgb,var(--coral)_55%,var(--jade))] transition hover:brightness-110 active:scale-[0.98]"
+                className="diy-btn group flex w-full items-center justify-center gap-1.5 rounded-full border border-transparent bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] py-2.5 text-[13.5px] font-bold tracking-[0.06em] text-white shadow-[0_12px_24px_-12px_color-mix(in_srgb,var(--coral)_55%,var(--jade))] transition hover:brightness-110 active:scale-[0.98]"
               >
                 继续主线
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition group-hover:translate-x-0.5" aria-hidden><path d="M5 12h14M13 6l6 6-6 6" /></svg>
@@ -266,7 +285,7 @@ export default function StoryQuestPanel({ onNavigate }: { onNavigate?: () => voi
                       <b className="block truncate text-[14px] text-ink">{n.name}</b>
                       {n.summary && n.summary !== n.name && <p className="mt-0.5 line-clamp-2 text-[11.5px] leading-relaxed text-ink-soft">{n.summary}</p>}
                       <p className="mt-1 text-[11px] font-semibold text-coral">
-                        {left != null ? `剩 ${left} 天` : "仅本回合，下回合过期"}{place ? ` · ${n.room === s.room ? "就在这里" : `去「${place}」触发`}` : ""}
+                        {left != null ? `剩 ${left} 天` : "不限时"}{place ? ` · ${n.room === s.room ? "就在这里" : `去「${place}」触发`}` : ""}
                       </p>
                       {moveNote?.id === n.id && <p className="mt-1 text-[11px] text-danger">{moveNote.text}</p>}
                     </div>

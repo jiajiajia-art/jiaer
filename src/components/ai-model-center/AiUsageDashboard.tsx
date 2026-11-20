@@ -102,6 +102,8 @@ const SCENE_LABEL: Record<string, string> = {
   play_image: '游玩 · 生图',
   review_text: '审核预览 · 生文',
   review_image: '审核预览 · 生图',
+  romance_admin_preview: '管理员使用 · 预览',
+  romance_admin_play: '管理员使用 · 正式游玩',
   txt_doc_parse: 'TXT 文档解析',
   unknown: '未记录用途',
 };
@@ -359,7 +361,7 @@ const AiUsageDashboard: React.FC = () => {
   const unbilledRows = summary.unbilledByReason ?? [];
   const userRows = summary.userRanking ?? [];
   // 功能注释：后端开始返回溯源字段后，才显示「用途」列与用途 / 请求编号筛选，避免出现点了没用的控件
-  const hasTraceData = sceneRows.length > 0 || attempts.some((a) => a.scene || a.clientRequestId || a.traceGroupId);
+  const hasTraceData = sceneRows.length > 0 || attempts.some((a) => (a.scene && a.scene !== 'unknown') || a.clientRequestId || a.traceGroupId);
   const callRanking = useMemo(() => [...summary.modelRanking]
     .sort((a, b) => b.callCount - a.callCount)
     .slice(0, 8)
@@ -816,10 +818,10 @@ const AiUsageDashboard: React.FC = () => {
             { label: 'KK币', value: 'kk' },
             { label: '织梦豆', value: 'points' },
           ]} /></label>
-          {hasTraceData ? <label className={`${styles.field} ${styles.statusFilterField}`}><span>用途</span><Select size="middle" value={scene} onChange={setScene} options={[
+          <label className={`${styles.field} ${styles.statusFilterField}`}><span>用途</span><Select size="middle" value={scene} onChange={setScene} options={[
             { label: '全部用途', value: '' },
-            ...Object.entries(SCENE_LABEL).map(([value, label]) => ({ label, value })),
-          ]} /></label> : null}
+            ...Object.entries(SCENE_LABEL).filter(([value]) => value.startsWith('romance_admin_') || value === 'txt_doc_parse' || value === 'unknown').map(([value, label]) => ({ label, value })),
+          ]} /></label>
           {hasTraceData ? <label className={styles.field}><span>请求编号 / 任务分组</span><Input size="middle" allowClear value={traceKeyword} onChange={(event) => setTraceKeyword(event.target.value)} placeholder="clientRequestId / traceGroupId" /></label> : null}
           <Button type="primary" className={`${styles.queryButton} ${styles.detailQueryButton}`} onClick={query} loading={attemptLoading} disabled={period === 'custom' && !customRange}>查询</Button>
         </div>

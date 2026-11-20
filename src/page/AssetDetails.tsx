@@ -14,6 +14,7 @@ import type {
     PointsActivityDirection,
     PointsActivityItem,
     PointsActivityCurrency,
+    PointsActivitiesResponse,
 } from '../api/account/auth.type';
 import payApi from '../api/pay/payApi';
 import type { PayOrderRequest } from '../api/pay/pay.type';
@@ -152,12 +153,25 @@ const CURRENCY_TYPE_LABEL: Record<PointsActivityItem['currency'], string> = {
     diamonds: 'diamonds',
 };
 
-const AssetDetails: React.FC = () => {
+type AssetDetailsProps = {
+    /** 功能注释：嵌入模式——在游戏页上以浮层打开，返回 = 关闭浮层，不切路由（切路由会卸载游戏页导致会话丢失，P-14 / P-12） */
+    embedded?: boolean;
+    onClose?: () => void;
+};
+
+const AssetDetails: React.FC<AssetDetailsProps> = ({ embedded = false, onClose }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const now = useMemo(() => new Date(), []);
-    const defaultYear = now.getFullYear();
-    const defaultMonth = now.getMonth() + 1;
+    const { defaultYear, defaultMonth, defaultDay } = useMemo(() => {
+        const parts = new Intl.DateTimeFormat('en', {
+            timeZone: 'Asia/Shanghai', year: 'numeric', month: 'numeric', day: 'numeric',
+        }).formatToParts(new Date());
+        return {
+            defaultYear: Number(parts.find(({ type }) => type === 'year')?.value),
+            defaultMonth: Number(parts.find(({ type }) => type === 'month')?.value),
+            defaultDay: Number(parts.find(({ type }) => type === 'day')?.value),
+        };
+    }, []);
     const [currencyTab, setCurrencyTab] = useState<CurrencyTab>('all');
     const [direction, setDirection] = useState<PointsActivityDirection>('all');
     const [kkValidity, setKkValidity] = useState<KkValidityFilter>('all');
@@ -166,6 +180,8 @@ const AssetDetails: React.FC = () => {
     const [directionOpen, setDirectionOpen] = useState(false);
     const [selectedYear, setSelectedYear] = useState<number | null>(defaultYear);
     const [selectedMonth, setSelectedMonth] = useState<number | null>(defaultMonth);
+    const [selectedDay, setSelectedDay] = useState<number | null>(defaultDay);
+    const [draftDay, setDraftDay] = useState<number | null>(defaultDay);
     const [draftYear, setDraftYear] = useState<number | null>(defaultYear);
     const [draftMonth, setDraftMonth] = useState<number | null>(defaultMonth);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -173,12 +189,14 @@ const AssetDetails: React.FC = () => {
     const [diamonds, setDiamonds] = useState(0);
     const [kkBalance, setKkBalance] = useState<KkBalance>(EMPTY_KK_BALANCE);
     const [items, setItems] = useState<PointsActivityItem[]>([]);
+    const [totals, setTotals] = useState<PointsActivitiesResponse['totals']>();
     const [isLoading, setIsLoading] = useState(false);
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
     const loadingRef = useRef(false);
+    const requestIdRef = useRef(0);
 
     const yearOptions = useMemo(() => {
         const years = new Set<number>([defaultYear]);
@@ -194,7 +212,8 @@ const AssetDetails: React.FC = () => {
     );
 
     const loadActivities = useCallback(async (nextPage = 1, append = false) => {
-        if (loadingRef.current) return;
+        if (append && loadingRef.current) return;
+        const requestId = ++requestIdRef.current;
         loadingRef.current = true;
         setIsLoading(true);
         try {
@@ -213,14 +232,17 @@ const AssetDetails: React.FC = () => {
             if (selectedYear !== null && selectedMonth !== null) {
                 params.year = selectedYear;
                 params.month = selectedMonth;
+                if (selectedDay !== null) params.day = selectedDay;
             }
 
             const response = await auth.getPointsActivities(params);
+            if (requestId !== requestIdRef.current) return;
             if (!response.data.success || !response.data.data) {
                 throw new Error(response.data.message || 'Failed to load asset activities.');
             }
 
             const payload = response.data.data;
+            if (!append) setTotals(payload.totals);
             setPoints(payload.points ?? 0);
             setDiamonds(payload.diamonds ?? 0);
             setKkBalance(payload.kkBalance ?? {
@@ -236,6 +258,7 @@ const AssetDetails: React.FC = () => {
             setTotalPages(Number.isFinite(nextTotalPages) && nextTotalPages > 0 ? nextTotalPages : 1);
             setPage(nextPage);
         } catch (error: unknown) {
+            if (requestId !== requestIdRef.current) return;
             const message =
                 error && typeof error === 'object' && 'response' in error
                     ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
@@ -244,13 +267,16 @@ const AssetDetails: React.FC = () => {
                         : 'Failed to load asset activities.';
             toast.error(message || 'Failed to load asset activities.');
         } finally {
-            loadingRef.current = false;
-            setIsLoading(false);
+            if (requestId === requestIdRef.current) {
+                loadingRef.current = false;
+                setIsLoading(false);
+            }
         }
-    }, [currencyTab, direction, kkValidity, kkAssetCategory, kkEventType, selectedYear, selectedMonth]);
+    }, [currencyTab, direction, kkValidity, kkAssetCategory, kkEventType, selectedYear, selectedMonth, selectedDay]);
 
     useEffect(() => {
         setItems([]);
+        setTotals(undefined);
         setPage(1);
         setTotalPages(1);
         void loadActivities(1, false);
@@ -290,17 +316,15 @@ const AssetDetails: React.FC = () => {
         };
     }, [directionOpen]);
 
-    useEffect(() => {
-        if (!isFilterOpen) {
-            setDraftYear(selectedYear);
-            setDraftMonth(selectedMonth);
-        }
-    }, [isFilterOpen, selectedMonth, selectedYear]);
-
     const hasMore = page < totalPages;
-    const filterLabel = selectedYear !== null && selectedMonth !== null
-        ? `${selectedYear}.${String(selectedMonth).padStart(2, '0')}`
-        : t('assetDetails.allTime');
+    const daysInDraftMonth = draftYear !== null && draftMonth !== null
+        ? new Date(Date.UTC(draftYear, draftMonth, 0)).getUTCDate()
+        : 0;
+    const filterLabel = selectedYear === defaultYear && selectedMonth === defaultMonth && selectedDay === defaultDay
+        ? t('assetDetails.today', { defaultValue: '今天' })
+        : selectedYear !== null && selectedMonth !== null
+            ? [selectedYear, selectedMonth, selectedDay].filter((part) => part !== null).map((part) => String(part).padStart(2, '0')).join('.')
+            : t('assetDetails.allTime');
 
     // 功能注释：滚到底部 sentinel 自动加载下一页（移动端下拉/上滑翻页）
     useEffect(() => {
@@ -323,6 +347,7 @@ const AssetDetails: React.FC = () => {
         setDirectionOpen(false);
         setDraftYear(selectedYear);
         setDraftMonth(selectedMonth);
+        setDraftDay(selectedDay);
         setIsFilterOpen(true);
     };
 
@@ -335,6 +360,7 @@ const AssetDetails: React.FC = () => {
     const confirmFilter = () => {
         setSelectedYear(draftYear);
         setSelectedMonth(draftMonth);
+        setSelectedDay(draftDay);
         setIsFilterOpen(false);
     };
 
@@ -390,7 +416,7 @@ const AssetDetails: React.FC = () => {
                         <CenteredPageHeader
                             title={t('assetDetails.title')}
                             backLabel={t('common.back')}
-                            onBack={() => navigate(-1)}
+                            onBack={() => (embedded ? onClose?.() : navigate(-1))}
                         />
                     </div>
 
@@ -429,7 +455,11 @@ const AssetDetails: React.FC = () => {
                                             <button
                                                 type="button"
                                                 className={styles.balanceAction}
-                                                onClick={() => navigate('/points/earn')}
+                                                onClick={() => {
+                                                    // 功能注释：嵌入模式不离开游戏页，任务页在新标签打开
+                                                    if (embedded) window.open(`${import.meta.env.BASE_URL}points/earn`, '_blank', 'noopener');
+                                                    else navigate('/points/earn');
+                                                }}
                                             >
                                                 <span>{t('assetDetails.goToTasks')}</span>
                                                 <IoChevronForward aria-hidden="true" />
@@ -606,7 +636,7 @@ const AssetDetails: React.FC = () => {
                                                             key={year}
                                                             type="button"
                                                             className={`${styles.filterOption} ${draftYear === year ? styles.filterOptionActive : ''}`}
-                                                            onClick={() => setDraftYear(year)}
+                                                            onClick={() => { setDraftYear(year); setDraftMonth(draftMonth ?? defaultMonth); setDraftDay(null); }}
                                                         >
                                                             {year}{t('assetDetails.year')}
                                                         </button>
@@ -618,9 +648,21 @@ const AssetDetails: React.FC = () => {
                                                             key={month}
                                                             type="button"
                                                             className={`${styles.filterOption} ${draftMonth === month ? styles.filterOptionActive : ''}`}
-                                                            onClick={() => setDraftMonth(month)}
+                                                            onClick={() => { setDraftMonth(month); setDraftYear(draftYear ?? defaultYear); setDraftDay(null); }}
                                                         >
                                                             {month}{t('assetDetails.month')}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <div className={styles.filterColumn}>
+                                                    {daysInDraftMonth > 0 && [null, ...Array.from({ length: daysInDraftMonth }, (_, index) => index + 1)].map((day) => (
+                                                        <button
+                                                            key={day ?? 'month'}
+                                                            type="button"
+                                                            className={`${styles.filterOption} ${draftDay === day ? styles.filterOptionActive : ''}`}
+                                                            onClick={() => setDraftDay(day)}
+                                                        >
+                                                            {day === null ? t('assetDetails.wholeMonth', { defaultValue: '整月' }) : day}
                                                         </button>
                                                     ))}
                                                 </div>
@@ -633,6 +675,7 @@ const AssetDetails: React.FC = () => {
                                                     onClick={() => {
                                                         setDraftYear(null);
                                                         setDraftMonth(null);
+                                                        setDraftDay(null);
                                                     }}
                                                 >
                                                     {t('assetDetails.clear')}
@@ -643,9 +686,10 @@ const AssetDetails: React.FC = () => {
                                                     onClick={() => {
                                                         setDraftYear(defaultYear);
                                                         setDraftMonth(defaultMonth);
+                                                        setDraftDay(defaultDay);
                                                     }}
                                                 >
-                                                    {t('assetDetails.thisMonth')}
+                                                    {t('assetDetails.today', { defaultValue: '今天' })}
                                                 </button>
                                                 <button
                                                     type="button"
@@ -717,11 +761,27 @@ const AssetDetails: React.FC = () => {
                     ) : null}
 
                     <section className={styles.listSection}>
+                        {totals && (
+                            <div className={styles.activityTotals}>
+                                {(['income', 'expense'] as const).map((kind) => (
+                                    <span key={kind}>
+                                        {t(`assetDetails.total_${kind}`)}{' '}
+                                        <strong>
+                                            {tabs.flatMap(({ key, label }) => {
+                                                if (key === 'all' || !totals[key]) return [];
+                                                return `${formatKk(totals[key][kind])} ${t(`assetDetails.${label}`)}`;
+                                            }).join(' · ')}
+                                        </strong>
+                                    </span>
+                                ))}
+                            </div>
+                        )}
                         {isLoading && items.length === 0 ? (
                             <div className={styles.stateBlock}>{t('assetDetails.loading')}</div>
                         ) : items.length === 0 ? (
                             <div className={styles.stateBlock}>{t('assetDetails.empty')}</div>
                         ) : (
+                            <>
                             <div className={styles.list}>
                                 {items.map((item) => {
                                     const isIncome = item.direction === 'income';
@@ -782,6 +842,7 @@ const AssetDetails: React.FC = () => {
                                     );
                                 })}
                             </div>
+                            </>
                         )}
 
                         {items.length > 0 && hasMore ? (
@@ -803,7 +864,7 @@ const AssetDetails: React.FC = () => {
                     </section>
                 </section>
             </main>
-            <MobileBottomNav hidden />
+            {embedded ? null : <MobileBottomNav hidden />}
             <RechargeModal
                 isOpen={isRechargeModalOpen}
                 onClose={() => {

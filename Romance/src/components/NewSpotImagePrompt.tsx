@@ -56,6 +56,7 @@ export default function NewSpotImagePrompt() {
           <AiImageGen
             bare
             size={SCENE_PORTRAIT_GEN_SIZE}
+            scenePortrait
             placeholder="这个地点的画面：空间布局、陈设、光线……"
             initialParts={buildLocationScenePromptParts(
               // 功能注释：open.desc 是给玩家看的进入叙事（常为「你来到了「地名」。」），不能当画面主体；画面词交给拼装函数按地名生成脚手架
@@ -63,8 +64,6 @@ export default function NewSpotImagePrompt() {
               workImageSettingsOf(getWorld().chain[0]?.content?.imageGen),
             )}
             onPhaseChange={setPhase}
-            assetKind="location"
-            assetName={open.name}
             onPick={(url) => {
               const edits = game?.mapEdits ?? {};
               const spot = (edits[open.id] ?? {}) as MapSpotEdit;

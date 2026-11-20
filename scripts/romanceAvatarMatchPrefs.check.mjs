@@ -62,13 +62,13 @@ test('ModEditor_头像单块在①基础_仓库页无全局匹配设置', () => 
   // 功能注释：公共分类默认收起；开关/徽标用深色底
   assert.match(pools, /publicOpen/);
   assert.match(pools, /useState\(false\)/);
-  assert.match(pools, /点此展开青年/);
+  assert.match(pools, /点此选择|官方风格库/);
   assert.match(pools, /bg-ink\/80 text-paper/);
   assert.match(pools, /prefer === "public"\) setPublicOpen\(true\)/);
   // 块内用小标题，禁止再出现 Section 级 text-[13px] font-bold 三大标题
   assert.doesNotMatch(pools, /text-\[13px\] font-bold text-ink">匹配优先级/);
   assert.doesNotMatch(pools, /text-\[13px\] font-bold text-ink">我的头像池/);
-  assert.doesNotMatch(pools, /text-\[13px\] font-bold text-ink">平台公共头像分类/);
+  assert.doesNotMatch(pools, /text-\[13px\] font-bold text-ink">官方风格库/);
   assert.match(wizard, /id:\s*"avatars",\s*group:\s*"① 基础"/);
   assert.doesNotMatch(wizard, /id:\s*"avatars",\s*group:\s*"② 角色"/);
   assert.match(avatarPools, /resolveAvatarMatchPrefs/);

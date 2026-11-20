@@ -1,12 +1,11 @@
+import { parseBirthdayPreset } from "../game/creationSystemFields";
 import { feature } from "../mods/registry";
 import { wallet } from "../game/wallet";
-import { lazyPanel } from "../lib/lazyPanel";
-const WorldRuleCards = lazyPanel(() => import("./WorldRulesPanel").then((m) => ({ default: m.WorldRuleCards })));
-import { useState, useEffect, useRef, type ReactNode } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { useGame } from "../store/gameCtx";
 import { randomPlayerSeed } from "../lib/store";
 import { syncPlayerNameChange } from "../lib/syncPlayerName";
-import { randomName, type NameGender, type NameStyle } from "../game/names";
+import { randomName, type NameGender } from "../game/names";
 import type { PlayPrefs, Player } from "../lib/types";
 import PlayPrefsPicker from "./PlayPrefsPicker";
 import { fxSummary } from "../game/optFx";
@@ -15,11 +14,11 @@ import { Avatar, Modal } from "./ui";
 import { IconCake, IconCheck, IconDiceDuo, IconIdCard, IconLock, IconPlay, IconUser } from "../lib/icons";
 import { IDENTITIES, creationCopy, zodiacOf, optFx, defaultWorldRules, type BuiltinFieldCfg, type BuiltinFieldKey, type CreationField } from "../game/data";
 import { commitSelection, worldPersonById, getSelectedWorld, selectedFeature, selectedSlot, setStartDateOverride, useMods } from "../mods/registry";
-import NamePicker from "./NamePicker";
 import { factionSigningOffers, rollSigningOffers, type SigningContract } from "../worlds/star2005/content";
 import { creationVars, fillParts, fillText } from "../game/creationText";
 import { normalizeGenderOptions } from "../game/creationSystemFields";
 import { rollCreatorAttrStarts, visibleCreatorAttrs } from "../lib/creationItems";
+import { loadPathProgress, pathLockMet } from "../lib/pathProgress";
 import { attrChoiceOptions, attrStartMode, attrStartValue, attrUsesRandomStart, clampAttrStart } from "../lib/attrInit";
 import type { AttrDef } from "../lib/types";
 import { shouldShowPathPicker } from "../lib/pathPicker";
@@ -29,7 +28,8 @@ import { syncCloudSaves } from "../lib/storage";
 import { asModArray } from "../lib/asModArray";
 import PathRouteMap from "./PathRouteMap";
 import { pathRouteNodes } from "../lib/pathRoute";
-import { getWorldStorylines } from "../mods/registry";
+import { getWorldEndings, getWorldFixedEvents, getWorldStorylines } from "../mods/registry";
+import { formatPathLockHint, isPathLockCond } from "../lib/pathDeps";
 
 /** 功能注释：锁定图标统一走 Lucide；open=true 时略透明表示「未锁」。 */
 function LockGlyph({ open, className }: { open?: boolean; className?: string }) {
@@ -59,20 +59,20 @@ function Tpl({ text, vars }: { text: string; vars: Record<string, string> }) {
 /* 建角分组卡：一组相关字段放一张卡，标题 + 一句说明；titleAction 放标题行右侧（如属性整组重掷） */
 function Card({ title, desc, titleAction, children }: { title?: string; desc?: ReactNode; titleAction?: ReactNode; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-line/70 bg-paper-2/55 p-3">
+    <section className="rounded-[22px] border border-line/45 bg-paper px-4 py-4 shadow-[0_14px_36px_-26px_color-mix(in_srgb,var(--ink)_40%,transparent)]">
       {title && (
-        <div className="mb-2">
-          <div className="flex items-center gap-1.5">
-            <h3 className="flex min-w-0 flex-1 items-center gap-1.5 text-[13.5px] font-black tracking-wide text-ink">
-              <span aria-hidden className="h-3.5 w-1 shrink-0 rounded-full bg-gradient-to-b from-[var(--coral)] to-[var(--jade)]" />
+        <div className="mb-3.5">
+          <div className="flex items-center gap-2">
+            <h3 className="flex min-w-0 flex-1 items-center gap-2 text-[15px] font-black tracking-wide text-ink">
+              <span aria-hidden className="h-4 w-1 shrink-0 rounded-full bg-gradient-to-b from-[var(--coral)] to-[var(--jade)]" />
               {title}
             </h3>
             {titleAction}
           </div>
-          {desc && <p className="mt-0.5 text-[11.5px] leading-relaxed text-ink-soft">{desc}</p>}
+          {desc && <p className="mt-1 text-[12px] leading-relaxed text-ink-soft">{desc}</p>}
         </div>
       )}
-      <div className="space-y-3">{children}</div>
+      <div className="space-y-4">{children}</div>
     </section>
   );
 }
@@ -120,9 +120,12 @@ export default function CharacterCreate() {
   // 建角页预览所选世界观：星座 / 八维叫法 / 开局合约等内容槽都按「所选」读取
   useEffect(() => { commitSelection(); }, [modSel.world, modSel.addons.join("|")]);
   const seed = randomPlayerSeed();
-  const cc = creationCopy();
+  const cc = creationCopy(getSelectedWorld().content.creation ?? {});
+  const creationPresetKey = JSON.stringify([cc.builtin, cc.fixedAge]);
   // 功能注释：AI 常把 paths/fields/startFactions 写成单对象；一律 asModArray，禁止 .filter / 展开崩建角
-  const PATHS = asModArray<NonNullable<typeof cc.paths>[number]>(cc.paths);
+  // 功能注释：未解锁线路若满足跨周目条件（二周目 / 结局 / 线路通关 / 事件），本次建角视为已解锁
+  const progress = loadPathProgress();
+  const PATHS = asModArray<NonNullable<typeof cc.paths>[number]>(cc.paths).map((p) => (!p.open && pathLockMet(p.lockConds, progress) ? { ...p, open: true } : p));
   // 功能注释：开放路径 >1 才弹窗自选；仅 1 条直接用，不再看 pathPicker
   const PICKABLE = shouldShowPathPicker(PATHS);
   const [pathId, setPathId] = useState<string | null>(PATHS.find((p) => p.open)?.id ?? "free");
@@ -130,20 +133,32 @@ export default function CharacterCreate() {
   const [wizOpen, setWizOpen] = useState(true);
   const [stepK, setStepK] = useState<string>(PICKABLE ? "path" : "who");
   const topRef = useRef<HTMLDivElement>(null);
+  // 功能注释：创作者在「建角 · 内置字段」预设的值优先作开局默认（不锁定时玩家仍可改），没预设才随机——避免中世纪作品一进来就是中文名
+  const preset = (c: typeof cc, k: BuiltinFieldKey) => String(c.builtin?.[k]?.value ?? "").trim();
+  const presetGender = (c: typeof cc, fb: string) => {
+    const opts = normalizeGenderOptions(c.builtin?.gender?.options);
+    const v = preset(c, "gender");
+    return v && opts.includes(v) ? v : opts.includes(fb) ? fb : "女";
+  };
   const [form, setForm] = useState({
-    name: seed.name!,
-    age: cc.fixedAge ?? seed.age!,
-    gender: normalizeGenderOptions(cc.builtin?.gender?.options).includes(seed.gender!) ? seed.gender! : "女",
-    description: seed.description!,
+    name: preset(cc, "name") || seed.name!,
+    age: preset(cc, "age") || cc.fixedAge || seed.age!,
+    gender: presetGender(cc, seed.gender!),
+    description: preset(cc, "description") || seed.description!,
     birthMonth: 1 + Math.floor(Math.random() * 12),
     birthDay: 1 + Math.floor(Math.random() * 28),
+    ...parseBirthdayPreset(preset(cc, "birthday")),
     avatar: "",
   });
   // 功能注释：自定义字段可按人物线路过滤；系统四项不走线路过滤
   const curPath = pathId ?? "";
-  /* 系统字段：只读显示名；旧稿 hidden 对系统四项无效 */
+  /* 系统字段：年龄、生日名称固定；姓名/性别仍可读旧稿里的显示名。旧稿 hidden 对系统四项无效 */
   const bf = (k: BuiltinFieldKey): BuiltinFieldCfg => cc.builtin?.[k] ?? {};
-  const bl = (k: BuiltinFieldKey, fb: string) => bf(k).label || fb;
+  const bl = (k: BuiltinFieldKey, fb: string) => (k === "age" || k === "birthday" ? fb : bf(k).label || fb);
+  // 功能注释：创作者锁定的系统字段（姓名 / 性别）——玩家只能看，不能改
+  const nameFixed = !!(bf("name").locked && String(bf("name").value ?? "").trim());
+  const presetName = preset(cc, "name");
+  const genderFixed = !!(bf("gender").locked && String(bf("gender").value ?? "").trim());
   // 功能注释：建角页预览隐藏项不展示；开局仍按完整 customAttrs 写入
   const creatorAttrs = visibleCreatorAttrs(selectedSlot("customAttrs"));
   const creatorAttrsKey = creatorAttrs.map((a) => a.id).join("|");
@@ -184,6 +199,7 @@ export default function CharacterCreate() {
   /* 开局游玩偏好：世界观默认预选模式/视角；屏幕方向默认竖屏，换世界观时保留玩家已选方向 */
   const playSlot = selectedSlot("play");
   const playKey = JSON.stringify(playSlot ?? {});
+  const [endless, setEndless] = useState(false);
   const [prefs, setPrefs] = useState<PlayPrefs>(() => ({ mode: "novel", pov: playSlot?.pov, orient: "portrait" }));
   useEffect(() => {
     setPrefs(() => ({ mode: "novel", pov: playSlot?.pov, orient: "portrait" }));
@@ -191,12 +207,10 @@ export default function CharacterCreate() {
   // 功能注释：开局日期只用创作者填的那天；进入建角时清掉上一局可能残留的玩家日期覆盖
   useEffect(() => { setStartDateOverride(undefined); }, []);
   const [locked, setLocked] = useState<Record<string, boolean>>({});
-  const [nameStyle, setNameStyle] = useState<NameStyle>("any");
-  const [pickName, setPickName] = useState(false);
-  // 记录字库生成过的名字：切换性别时，若名字仍是自动生成的就按新性别换一个（手动输入的不动）
+  // 记录自动生成过的名字：切换性别时，若名字仍是自动生成的就按新性别换一个（手动输入的不动）
   const autoNames = useRef(new Set<string>());
-  const genName = (g: string) => { const n = randomName(g as NameGender, nameStyle); autoNames.current.add(n); return n; };
-  if (!autoNames.current.size) autoNames.current.add(form.name);
+  const genName = (g: string) => { const n = randomName(g as NameGender, "any"); autoNames.current.add(n); return n; };
+  if (!autoNames.current.size && !presetName) autoNames.current.add(form.name);
   // 配置了开局阵营 → 合约来自这些阵营（签约即入阵营）；否则按公司名气随机递合约
   // 功能注释：startFactions.name 偶发非字符串；禁止 .trim 崩建角势力/合约
   // 功能注释：势力签约 / 加入势力属于「阵营声望」玩法；未添加时不出现
@@ -209,11 +223,11 @@ export default function CharacterCreate() {
   // 所签合约绑定的阵营总是计入「已加入」
   const signedFaction = offers.find((o) => o.id === contractId)?.factionId;
   const joined = signedFaction && !joinedRaw.includes(signedFaction) ? [signedFaction, ...joinedRaw] : joinedRaw;
-  const [worldRules, setWorldRulesState] = useState(defaultWorldRules);
+  const [worldRules] = useState(defaultWorldRules);
 
   // 切换世界观：按新世界的建角池重置选项（避免残留上一个世界的 id）
   useEffect(() => {
-    const c = creationCopy();
+    const c = creationCopy(getSelectedWorld().content.creation ?? {});
     const s0 = randomPlayerSeed();
     // 功能注释：切换世界时 paths 仍可能脏；与首屏 PATHS 一样先 asModArray
     const nextPaths = asModArray<NonNullable<typeof c.paths>[number]>(c.paths);
@@ -223,13 +237,15 @@ export default function CharacterCreate() {
     setWizOpen(true);
     setForm((f) => ({
       ...f,
-      age: c.fixedAge ?? s0.age!,
-      gender: normalizeGenderOptions(c.builtin?.gender?.options).includes(s0.gender!) ? s0.gender! : "女",
-      description: s0.description!,
+      name: preset(c, "name") || s0.name!,
+      age: preset(c, "age") || c.fixedAge || s0.age!,
+      gender: presetGender(c, s0.gender!),
+      description: preset(c, "description") || s0.description!,
       birthMonth: 1 + Math.floor(Math.random() * 12),
       birthDay: 1 + Math.floor(Math.random() * 28),
+      ...parseBirthdayPreset(preset(c, "birthday")),
     }));
-  }, [modSel.world, modSel.addons.join("|")]);
+  }, [modSel.world, modSel.addons.join("|"), creationPresetKey]);
 
   const upd = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
   const toggleLock = (k: string) => setLocked((l) => ({ ...l, [k]: !l[k] }));
@@ -246,7 +262,7 @@ export default function CharacterCreate() {
 
   /* 单字段掷骰（尊重锁定）；只覆盖系统四项 */
   const rollField = (k: string) => {
-    if (locked[k]) return;
+    if (locked[k] || (k === "name" && nameFixed) || (k === "gender" && genderFixed)) return;
     const s = randomPlayerSeed();
     switch (k) {
       case "name": setPlayerName(genName(form.gender)); break;
@@ -254,7 +270,7 @@ export default function CharacterCreate() {
       case "gender": {
         const opts = normalizeGenderOptions(bf("gender").options);
         const g = opts.includes(s.gender!) ? s.gender! : (opts[0] ?? "女");
-        if (locked.name) upd({ gender: g });
+        if (locked.name || nameFixed) upd({ gender: g });
         else setForm((f) => syncPlayerNameChange({ ...f, gender: g }, genName(g), {
           descLocked: locked.description,
           seedDescription: cc.seedDescription,
@@ -315,39 +331,40 @@ export default function CharacterCreate() {
         fx,
         // 功能注释：始终带上游玩偏好（含屏幕方向），开局写入 theme.orient，不再弹首次方向窗；开局日期不由玩家覆盖
         playPrefs: { ...prefs, orient: prefs.orient ?? "portrait" },
+        endless: hasWorkLimit && endless,
         // 功能注释：线路人际 npcs 也可能是脏对象；开局前收成数组
         pathNpcs: asModArray((PATHS.find((p) => p.id === pathId) ?? PATHS.find((p) => p.open))?.npcs),
         route: PATHS.find((p) => p.id === pathId) ?? PATHS.find((p) => p.open),
         // 功能注释：startFactions 可能是 AI 单对象；开局前收成数组，避免 GameContext 侧再炸
         factions: asModArray<NonNullable<typeof cc.startFactions>[number]>(cc.startFactions),
         joined,
-        ...(Object.keys(attrStarts).length ? { cattrStarts: attrStarts } : {}),
+        ...(Object.keys(attrStarts).length ? { cattrStarts: withPathFixedAttrs(attrStarts) } : {}),
       },
     );
   };
 
-  const field = "w-full rounded-xl border border-line bg-paper px-3 py-2.5 text-[13.5px] text-ink outline-none transition focus:border-jade focus:ring-2 focus:ring-jade/15 disabled:opacity-70";
+  const field = "w-full rounded-2xl border border-line/70 bg-paper-2/80 px-3.5 text-[15px] font-semibold text-ink outline-none transition placeholder:font-normal focus:border-jade focus:bg-paper focus:ring-2 focus:ring-jade/15 disabled:opacity-70";
+  const control = `${field} h-12`;
   /* 功能注释：pr-8 给自定义下拉箭头留空，避免箭头压住文字 */
-  const selectField = `${field} pr-8`;
+  const selectField = `${control} pr-8`;
 
-  /* 字段头：线性图标 · 名称 · 中间附加（姓名风格条）· 右侧锁定 / 双骰子重掷 */
-  const Head = ({ k, text, hint, extra }: { k: string; text: string; hint?: string; extra?: ReactNode }) => {
+  /* 字段头：线性图标 · 名称 · 右侧锁定 / 重掷 */
+  const Head = ({ k, text, hint }: { k: string; text: string; hint?: string }) => {
     const I = FIELD_ICONS[k];
     const label = stripFieldEmoji(text);
     return (
-      <div className="mb-1.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
-        {I && <I size={14} className="shrink-0 text-coral" />}
-        <span className="shrink-0 text-[12.5px] font-bold text-ink">{label}</span>
-        {hint && <span className="min-w-0 truncate text-[10.5px] text-ink-soft">{hint}</span>}
-        {extra}
-        <div className="ml-auto flex shrink-0 items-center gap-0.5">
+      <div className="mb-2 flex min-w-0 items-center gap-1.5">
+        {I && <I size={15} className="shrink-0 text-coral" />}
+        <span className="shrink-0 text-[13px] font-bold text-ink">{label}</span>
+        {hint && <span className="min-w-0 truncate text-[11px] text-ink-soft">{hint}</span>}
+        <div className="ml-auto flex shrink-0 items-center">
           <button type="button" onClick={() => toggleLock(k)} aria-pressed={!!locked[k]} title={locked[k] ? "已锁定，重掷时保留" : "锁定此项，重掷时保留"} aria-label={locked[k] ? "解锁" : "锁定"}
-            className={`grid h-6 w-6 place-items-center rounded-full transition ${locked[k] ? "bg-jade/12 text-jade" : "text-ink-soft/50 hover:bg-ink/5 hover:text-ink"}`}>
+            className={`grid h-7 w-7 place-items-center rounded-full transition ${locked[k] ? "bg-jade/12 text-jade" : "text-ink-soft/55 hover:bg-ink/5 hover:text-ink"}`}>
             <LockGlyph open={!locked[k]} />
           </button>
-          <button type="button" onClick={() => rollField(k)} disabled={locked[k]} title="单独掷一次" aria-label="单独重掷"
-            className="grid h-6 w-6 place-items-center rounded-full text-ink-soft/50 transition hover:bg-ink/5 hover:text-jade disabled:opacity-30">
-            <IconDiceDuo size={14} />
+          <button type="button" onClick={() => rollField(k)} disabled={locked[k] || (k === "name" && nameFixed) || (k === "gender" && genderFixed)} title="单独掷一次" aria-label="单独重掷"
+            className="grid h-7 w-7 place-items-center rounded-full text-ink-soft/55 transition hover:bg-ink/5 hover:text-jade disabled:opacity-30">
+            <IconDiceDuo size={15} />
           </button>
         </div>
       </div>
@@ -369,19 +386,38 @@ export default function CharacterCreate() {
   const whoComplete = systemFieldsComplete && customFieldsComplete;
   const okToFinish = whoComplete && (!needSigning || !!contractId);
   const path = PATHS.find((p) => p.id === pathId);
-  // 人物线路 · 预设主角：选中后用 TA 的档案填好自设页（玩家仍可微调）
+  // 功能注释：线路「锁定属性」——选这条线路时这些属性固定为作者设定的初始值，玩家不可改
+  const pathFixedAttrs = new Set(asModArray<string>(path?.fixed));
+  const withPathFixedAttrs = (cur: Record<string, number>) => ({
+    ...cur,
+    ...Object.fromEntries(creatorAttrs.filter((a) => pathFixedAttrs.has(a.label)).map((a) => [a.id, clampAttrStart(a, a.init)])),
+  });
+  // 人物线路补全主角档案；建角显式预设了姓名时，保留建角表单中的名字。
   const heroId = path?.hero;
+  const heroCustom = !heroId ? path?.heroCustom : undefined;
+  const hasPresetAge = !!(preset(cc, "age") || cc.fixedAge);
+  const hasPresetGender = !!preset(cc, "gender");
+  useEffect(() => {
+    if (!heroCustom?.name?.trim()) return;
+    setForm((f) => ({
+      ...f,
+      name: presetName ? f.name : heroCustom.name.trim(),
+      ...(!hasPresetAge && heroCustom.age ? { age: String(heroCustom.age) } : {}),
+      ...(!hasPresetGender && heroCustom.gender ? { gender: heroCustom.gender } : {}),
+      description: heroCustom.bio || f.description,
+    }));
+  }, [heroCustom?.name, heroCustom?.age, heroCustom?.gender, heroCustom?.bio, presetName, hasPresetAge, hasPresetGender]);
   useEffect(() => {
     const h = heroId ? worldPersonById(heroId) : undefined;
     if (!h) return;
     setForm((f) => ({
       ...f,
-      name: h.name || f.name,
-      ...(h.age ? { age: String(h.age) } : {}),
-      ...(h.gender === "男" || h.gender === "女" || normalizeGenderOptions(bf("gender").options).includes(String(h.gender || "")) ? { gender: String(h.gender) } : {}),
+      name: presetName ? f.name : h.name || f.name,
+      ...(!hasPresetAge && h.age ? { age: String(h.age) } : {}),
+      ...(!hasPresetGender && (h.gender === "男" || h.gender === "女" || normalizeGenderOptions(bf("gender").options).includes(String(h.gender || ""))) ? { gender: String(h.gender) } : {}),
       description: h.bio || f.description,
     }));
-  }, [heroId]);
+  }, [heroId, presetName, hasPresetAge, hasPresetGender]);
   // 文案占位：世界名 / 路径 / 城市 / 年份季节 / 母校…随世界观自动替换
   const tv = creationVars({ world: selWorld?.name, path: path?.name });
   const pv = (name: string) => ({ ...tv, path: name });
@@ -400,13 +436,33 @@ export default function CharacterCreate() {
   const step = STEPS[si];
   const last = si === STEPS.length - 1;
   const goStep = (k: string) => setStepK(k);
-  useEffect(() => { topRef.current?.closest(".ui-dialog-body")?.scrollTo({ top: 0 }); }, [stepK, wizOpen]);
+  useLayoutEffect(() => {
+    topRef.current?.closest(".ui-dialog-body")?.scrollTo({ top: 0, behavior: "instant" });
+  }, [stepK, wizOpen]);
 
   /* ① 路径：多条开放路径时弹窗；卡片只展示路径名 + 开局处境 */
   const STORYLINES = asModArray<import("../lib/types").Storyline>(getWorldStorylines());
+  // 功能注释：锁定线路的提示按当前配置实时生成，避免旧草稿里过期的提示文案
+  const lockHintPools = {
+    events: asModArray<{ id: string; name?: string }>(getWorldFixedEvents()).map((e) => ({ id: e.id, label: e.name || e.id })),
+    endings: asModArray<{ id: string; title?: string }>(getWorldEndings()).map((e) => ({ id: e.id, label: e.title || e.id })),
+    routes: PATHS.map((p) => ({ id: p.id, label: String(p.name || p.id) })),
+  };
   const stepPath = (
     <div className="space-y-2.5">
       {cc.pathIntro && <p className="text-[12.5px] leading-relaxed text-ink-soft"><Tpl text={cc.pathIntro} vars={tv} /></p>}
+      {PATHS.filter((p) => !p.open && asModArray(p.lockConds).some(isPathLockCond)).map((p) => {
+        const hint = formatPathLockHint(p.lockConds, lockHintPools);
+        return (
+        <div key={`locked-${p.id}`} className="flex w-full items-center gap-2.5 rounded-2xl border border-dashed border-line bg-paper-2/40 px-3.5 py-3 text-left opacity-75" aria-disabled>
+          <IconLock size={14} className="shrink-0 text-ink-soft" />
+          <div className="min-w-0 flex-1">
+            <span className="text-[14px] font-bold text-ink-soft">{p.name}</span>
+            {hint && <p className="mt-0.5 text-[11.5px] text-ink-soft">{hint}</p>}
+          </div>
+        </div>
+        );
+      })}
       {PATHS.filter((p) => p.open).map((p) => {
         const current = pathId === p.id;
         return (
@@ -441,56 +497,53 @@ export default function CharacterCreate() {
     </div>
   );
 
-  /* 功能注释：姓名风格条放在「姓名」标签行，不压在输入框下面 */
-  const nameStyleBar = (
-    <div className="flex min-w-0 flex-wrap items-center gap-1">
-      <div role="radiogroup" aria-label="名字风格" className="flex rounded-full bg-ink/[0.05] p-0.5">
-        {([["any", "不限"], ["modern", "现代"], ["ancient", "古风"]] as const).map(([k, t]) => (
-          <button key={k} type="button" role="radio" aria-checked={nameStyle === k} onClick={() => setNameStyle(k)}
-            className={`rounded-full px-2 py-0.5 text-[10.5px] font-medium transition ${nameStyle === k ? "bg-paper text-jade shadow-sm" : "text-ink-soft"}`}>{t}</button>
-        ))}
-      </div>
-      <button type="button" disabled={locked.name} onClick={() => setPlayerName(genName(form.gender))}
-        className="inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-[10.5px] text-ink transition hover:border-jade hover:text-jade disabled:opacity-40">
-        <IconDiceDuo size={12} />换一个
-      </button>
-      <button type="button" disabled={locked.name} onClick={() => setPickName(true)}
-        className="rounded-full border border-jade/40 bg-jade/10 px-2 py-0.5 text-[10.5px] font-semibold text-jade disabled:opacity-40">字库</button>
-    </div>
-  );
-
   /* ② 人设 · 身份：名字 · 年龄性别 · 生日星座 · 登记身份（线路已在上一步选定，自设页不再重复展示「人物线路选择」）
    * 功能注释：人设页不展示 formIntro / 作品简介——地点季节与生成提示词只干扰填表 */
+  const fieldNote = (id: string) => {
+    const note = cc.fieldNotes?.[id];
+    return typeof note === "string" && note.trim()
+      ? <p className="mt-1 whitespace-pre-wrap break-words text-[11px] leading-relaxed text-ink-soft">{note.trim()}</p>
+      : null;
+  };
+
   const stepWho = (
     <>
+      {/* 功能注释：创作者备注——告诉玩家扮演的是谁、怎么填 */}
+      {String(cc.playerNote ?? "").trim() && (
+        <p className="rounded-xl border border-line bg-paper-2/60 px-3 py-2 text-[12.5px] leading-relaxed text-ink">{String(cc.playerNote).trim()}</p>
+      )}
       <Card title="基本信息">
-        <div className="flex items-start gap-3">
-          <div className="shrink-0 pt-6"><Avatar src={form.avatar} name={form.name} size={68} onPick={(d) => upd({ avatar: d })} avatarSlot={selectedSlot("avatars") ?? null} /></div>
+        <div className="flex items-center gap-3.5">
+          <div className="shrink-0 rounded-[20px] shadow-[0_10px_22px_-14px_color-mix(in_srgb,var(--jade)_80%,transparent)]">
+            <Avatar src={form.avatar} name={form.name} size={76} onPick={(d) => upd({ avatar: d })} avatarSlot={selectedSlot("avatars") ?? null} />
+          </div>
           <fieldset className="min-w-0 flex-1">
-            <Head k="name" text={bl("name", "姓名")} extra={nameStyleBar} />
-            <input className={field} value={form.name} onChange={(e) => setPlayerName(e.target.value)} placeholder={form.gender === "男" ? "为他取个名字" : "为她取个名字"} />
-            {pickName && <NamePicker gender={form.gender as NameGender} value={form.name} onClose={() => setPickName(false)} onPick={(n) => setPlayerName(n)} />}
+            <Head k="name" text={bl("name", "姓名")} />
+            <input className={control} value={form.name} readOnly={nameFixed} title={nameFixed ? "创作者已固定主角姓名" : undefined} onChange={(e) => setPlayerName(e.target.value)} placeholder={form.gender === "男" ? "为他取个名字" : "为她取个名字"} />
+            {fieldNote("name")}
           </fieldset>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3.5">
           <div className="min-w-0">
             <Head k="age" text={bl("age", "年龄")} />
-            <input type="number" min={1} className={field} value={form.age} onChange={(e) => upd({ age: e.target.value })} />
+            <input type="number" min={1} className={control} value={form.age} onChange={(e) => upd({ age: e.target.value })} />
+            {fieldNote("age")}
           </div>
           <fieldset className="min-w-0">
             <Head k="gender" text={bl("gender", "性别")} />
-            <div role="radiogroup" className="grid gap-1 rounded-xl bg-ink/[0.05] p-1" style={{ gridTemplateColumns: `repeat(${normalizeGenderOptions(bf("gender").options).length}, minmax(0, 1fr))` }}>
+            <div role="radiogroup" className="grid h-12 gap-1 rounded-2xl bg-ink/[0.05] p-1" style={{ gridTemplateColumns: `repeat(${normalizeGenderOptions(bf("gender").options).length}, minmax(0, 1fr))` }}>
               {normalizeGenderOptions(bf("gender").options).map((g) => (
-                <button key={g} type="button" role="radio" aria-checked={form.gender === g}
-                  onClick={() => upd(!locked.name && autoNames.current.has(form.name) ? { gender: g, name: genName(g) } : { gender: g })}
-                  className={`rounded-lg py-1.5 text-[13px] font-bold transition ${form.gender === g ? "bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] text-white shadow-sm" : "text-ink-soft hover:bg-paper"}`}>{g}</button>
+                <button key={g} type="button" role="radio" aria-checked={form.gender === g} disabled={genderFixed && form.gender !== g}
+                  onClick={() => upd(!nameFixed && !locked.name && autoNames.current.has(form.name) ? { gender: g, name: genName(g) } : { gender: g })}
+                  className={`rounded-xl text-[14px] font-bold transition ${form.gender === g ? "bg-gradient-to-r from-[var(--jade)] to-[var(--coral)] text-white shadow-sm" : "text-ink-soft hover:bg-paper"}`}>{g}</button>
               ))}
             </div>
+            {fieldNote("gender")}
           </fieldset>
         </div>
         <div>
           <Head k="birthday" text={bl("birthday", "生日")} />
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2.5">
             <select className={selectField} value={form.birthMonth} onChange={(e) => upd({ birthMonth: Number(e.target.value) })}>
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{m} 月</option>)}
             </select>
@@ -498,15 +551,19 @@ export default function CharacterCreate() {
               {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{d} 日</option>)}
             </select>
           </div>
+          {fieldNote("birthday")}
           {zodiac?.name ? (
-            <p className="mt-1.5 text-[12px] text-ink-soft">星座 · {zodiac.name}</p>
+            <p className="mt-2 inline-flex rounded-full bg-jade/10 px-2.5 py-1 text-[12px] font-semibold text-jade">星座 · {zodiac.name}</p>
           ) : null}
         </div>
         {/* 功能注释：属性并入同一张基本信息卡，去掉中间空白带（3.16） */}
         {creatorAttrs.length > 0 ? (
-          <div className="mt-3 border-t border-line/60 pt-3" data-creator-attrs-inline="1">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="text-[13px] font-bold text-ink">属性</p>
+          <div className="border-t border-line/50 pt-4" data-creator-attrs-inline="1">
+            <div className="mb-2.5 flex items-center justify-between gap-2">
+              <p className="flex items-center gap-2 text-[15px] font-black tracking-wide text-ink">
+                <span aria-hidden className="h-4 w-1 shrink-0 rounded-full bg-gradient-to-b from-[var(--coral)] to-[var(--jade)]" />
+                属性
+              </p>
               {canRerollAttrs ? (
                 <button
                   type="button"
@@ -521,14 +578,15 @@ export default function CharacterCreate() {
             </div>
             <ul className="space-y-1.5">
               {creatorAttrs.map((a) => {
-                const mode = attrStartMode(a);
-                const v = attrStarts[a.id];
+                const pathLocked = pathFixedAttrs.has(a.label);
+                const mode = pathLocked ? "locked" : attrStartMode(a);
+                const v = pathLocked ? clampAttrStart(a, a.init) : attrStarts[a.id];
                 const maxN = Number(a.max);
                 const range = `${a.min ?? 0}~${Number.isFinite(maxN) && maxN > 0 ? maxN : "∞"}`;
                 return (
-                  <li key={a.id} className="rounded-xl border border-line/70 bg-paper px-3 py-2" data-attr-mode={mode}>
+                  <li key={a.id} className="rounded-2xl bg-paper-2/75 px-3.5 py-2.5" data-attr-mode={mode}>
                     <div className="flex items-center gap-2">
-                      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">{a.label}</span>
+                      <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-ink">{a.label}</span>
                       {mode === "custom" ? (
                         <input
                           type="number"
@@ -565,6 +623,7 @@ export default function CharacterCreate() {
                         })}
                       </div>
                     )}
+                    {fieldNote(`attr:${a.id}`)}
                   </li>
                 );
               })}
@@ -609,14 +668,15 @@ export default function CharacterCreate() {
               ) : f.type === "textarea" ? (
                 <textarea className={`${field} h-20 resize-none`} value={val} placeholder={f.placeholder} onChange={(e) => set(e.target.value)} />
               ) : f.type === "number" ? (
-                <input type="number" className={field} value={val} min={f.min} max={f.max} placeholder={f.placeholder}
+                <input type="number" className={control} value={val} min={f.min} max={f.max} placeholder={f.placeholder}
                   onChange={(e) => { const n = Number(e.target.value); set(e.target.value === "" ? "" : String(Math.min(f.max ?? Infinity, Math.max(f.min ?? -Infinity, n)))); }} />
               ) : f.type === "date" ? (
                 /* 功能注释：自定义日期用文本，禁止 type=date（与「建角不可自选开局日期」契约冲突） */
-                <input className={field} value={val} placeholder={f.placeholder || "如：3月15日"} onChange={(e) => set(e.target.value)} />
+                <input className={control} value={val} placeholder={f.placeholder || "如：3月15日"} onChange={(e) => set(e.target.value)} />
               ) : (
-                <input className={field} value={val} placeholder={f.placeholder} onChange={(e) => set(e.target.value)} />
+                <input className={control} value={val} placeholder={f.placeholder} onChange={(e) => set(e.target.value)} />
               )}
+              {fieldNote(`custom:${f.id}`)}
             </fieldset>
           );
         })}
@@ -624,15 +684,26 @@ export default function CharacterCreate() {
     </Card>
   ) : null;
 
-  /* ③ 开局 · 游玩偏好 · 开局日期 · 世界规则 */
+  /* ③ 开局 · 游玩偏好 · 无限模式。
+   * 功能注释：世界规则创作者无处配置，建角不再让玩家选（按默认规则）；作品设了时限时，玩家可勾选无限模式 */
+  const workLimit = [...getSelectedWorld().chain].reverse().map((m) => m.content?.timeLimit).find((t) => t !== undefined);
+  const hasWorkLimit = !!(workLimit && (workLimit.endDate || (workLimit.value ?? 0) > 0));
   const stepSetup = (
     <>
       <Card title="游玩偏好">
         <PlayPrefsPicker value={prefs} onChange={setPrefs} />
       </Card>
-      <Card title="世界规则" desc="恋爱、婚姻、继承与社会秩序——决定这个世界怎么看待你">
-        <WorldRuleCards rules={worldRules} onChange={setWorldRulesState} female={!/男/.test(form.gender ?? "女")} compact />
-      </Card>
+      {hasWorkLimit && (
+        <Card title="游玩时长">
+          <label className="flex cursor-pointer items-start gap-2 text-[13px] text-ink">
+            <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--jade)]" checked={endless} onChange={(e) => setEndless(e.target.checked)} />
+            <span>
+              无限模式
+              <span className="mt-0.5 block text-[11.5px] text-ink-soft">不按作品设定的时限结算，玩到你想结束为止；不勾选则按作品时限进入结局</span>
+            </span>
+          </label>
+        </Card>
+      )}
     </>
   );
 
@@ -740,13 +811,14 @@ export default function CharacterCreate() {
     <Modal
       title={step.k === "path" ? (fillText(cc.pathTitle, tv) || "选择开局") : formTitle}
       onClose={() => setWizOpen(false)}
+      locked
       heavyBackdrop
       panelClassName="ui-dialog-create"
       footer={wizardFoot}
     >
       <div ref={topRef} />
       {/* 步骤条：可直接点跳到任一步 */}
-      <div className="-mx-1 mb-3 flex items-center gap-2">
+      <div className="-mx-1 mb-4 flex items-center gap-2">
         <ol className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-1 py-0.5 [scrollbar-width:none]">
           {STEPS.map((x, i) => {
             const on = i === si, done = i < si;
@@ -814,24 +886,6 @@ export default function CharacterCreate() {
           )}
         </Modal>
       )}
-      {/* 功能注释：向导打开时隐藏背后进度卡，避免半透明遮罩透出旧入口 */}
-      <div
-        className={`w-full max-w-sm rounded-[24px] border border-line/70 bg-paper/85 p-6 text-center shadow-[0_16px_40px_-24px_rgba(0,0,0,0.4)] backdrop-blur ${wizOpen ? "invisible pointer-events-none" : ""}`}
-        aria-hidden={wizOpen}
-      >
-        <p className="text-[11px] font-semibold tracking-[0.2em] text-ink-soft">{selWorld?.name ?? "新的人生"}</p>
-        <div className="mx-auto mt-4 w-fit"><Avatar src={form.avatar} name={form.name} size={76} editable={false} /></div>
-        <h1 className="mt-3 font-serif text-[22px] font-black tracking-wide text-ink">{form.name || "无名"}</h1>
-        <p className="mt-0.5 text-[12px] text-ink-soft">{[path?.name, form.age && `${form.age} 岁`, form.gender, zodiac.name].filter(Boolean).join(" · ")}</p>
-        <p className="mt-3 text-[12px] text-ink-soft">角色创建中 · 第 {si + 1} / {STEPS.length} 步「{step.label}」</p>
-        <button type="button" onClick={() => setWizOpen(true)} className="ui-btn ui-btn-primary ui-btn-lg mt-4 w-full">继续创建</button>
-        {!previewing && saves.length > 0 && (
-          <button type="button" onClick={() => setContinueOpen(true)} className="ui-btn ui-btn-lg mt-2 w-full">读取存档</button>
-        )}
-        {previewing && (
-          <button type="button" onClick={() => requestAuthorPreviewEnd()} className="mt-2 text-[12px] text-ink-soft transition hover:text-ink">退出预览</button>
-        )}
-      </div>
     </div>
   );
 }

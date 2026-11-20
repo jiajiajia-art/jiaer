@@ -32,12 +32,12 @@ test('CreateType_二级弹窗文案_SDK归平台禁止产出专属', () => {
   const tsx = read('src/page/CreateType.tsx');
   const desc = tsx.match(/createTypeModalDesc[^>]*>\s*([\s\S]*?)<\/div>/)?.[1] ?? '';
   // 功能注释：玩法/应用行中间可能插入 badge 属性，hint 不保证紧挨 title
-  const playHint = tsx.match(/title="玩法 Mod"[\s\S]*?hint="([^"]+)"/)?.[1] ?? '';
   const phoneHint = tsx.match(/title="手机应用"[\s\S]*?hint="([^"]+)"/)?.[1] ?? '';
   assert.match(desc, /都运行在平台 SDK 上/);
-  assert.match(playHint, /可以是新地点、游戏内页面，或填进已有玩法格子的数据/);
+  // 功能注释：玩法 Mod 的 hint 现为表达式（含锁定态文案），直接在源码中断言主文案
+  assert.match(tsx, /可以是新地点、游戏内页面，或填进已有玩法格子的数据/);
   assert.match(phoneHint, /供游戏世界里的手机安装。用平台 SDK/);
-  for (const piece of [desc, playHint, phoneHint]) {
+  for (const piece of [desc, tsx.match(/title="玩法 Mod"[\s\S]*?hint=\{[\s\S]*?\}/)?.[0] ?? '', phoneHint]) {
     assert.doesNotMatch(piece, /并产出专属 SDK|产出 SDK|专属 SDK/);
   }
 });

@@ -17,21 +17,29 @@ test('resolvePublicListingState_与平台门禁', async () => {
   assert.equal(mod.resolvePublicListingState({ is_public: 0, moderation_status: 'rejected' }).message, '未通过');
   assert.equal(mod.shouldGateRomancePlatformShell({ search: '' }), true);
   assert.equal(mod.shouldGateRomancePlatformShell({ search: '?createWorld=1' }), false);
-  assert.equal(mod.shouldGateRomancePlatformShell({ search: '?platformTest=1' }), false);
+  assert.equal(mod.shouldGateRomancePlatformShell({ search: '?platformTest=1' }), true);
   assert.equal(mod.shouldGateRomancePlatformShell({ search: '', isStaff: true }), false);
   assert.equal(mod.shouldGateRomancePlatformShell({ search: '', isAuthorPreview: true }), false);
 });
 
-test('Romance_App_玩家访问平台本体应出门禁', () => {
+test('Romance_App_玩家访问平台本体应出门禁', async () => {
   const app = readFileSync(join(romance, 'App.tsx'), 'utf8');
   const gate = readFileSync(join(romance, 'components/PlatformShellGate.tsx'), 'utf8');
-  const lib = readFileSync(join(romance, 'lib/platformShellGate.ts'), 'utf8');
+  const { shouldGateRomancePlatformShell } = await import(
+    pathToFileURL(join(romance, 'lib/platformShellGate.ts')).href
+  );
   assert.match(app, /PlatformShellGate/);
   assert.match(app, /shouldGateRomancePlatformShell/);
-  assert.match(gate, /全部作品/);
+  assert.match(gate, /页面不可用/);
   assert.match(gate, /data-romance-platform-gate/);
-  assert.match(lib, /platformTest/);
-  assert.match(lib, /createWorld/);
+  assert.doesNotMatch(gate, /href=|<button|这是平台本体/);
+  for (const search of ['', '?platformTest=1', '?play=1', '?reviewPreview=1', '?play=1&fileId=%20']) {
+    assert.equal(shouldGateRomancePlatformShell({ search }), true, search);
+  }
+  for (const search of ['?createWorld=1', '?play=1&fileId=work', '?reviewPreview=1&fileId=work']) {
+    assert.equal(shouldGateRomancePlatformShell({ search }), false, search);
+  }
+  assert.equal(shouldGateRomancePlatformShell({ isStaff: true }), false);
 });
 
 test('GameDetail_非在架应只显示说明', () => {

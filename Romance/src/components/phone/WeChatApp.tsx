@@ -7,6 +7,7 @@ import { useGame } from "../../store/gameCtx";
 import { Avatar } from "../ui";
 import { ensurePhone, threadFor, openThread, createGroup, pushMsg, msgId, gameMinutes, gameTimeLabel, togglePinned, markRead, setThreadCustom, type Thread } from "../../game/phone";
 import { LIVE_PERSON_BY_ID as PERSON_BY_ID } from "../../mods/registry";
+import { shownAvatar } from "../../game/avatarPools";
 import { Empty } from "./shared";
 import { ChatView } from "./chat";
 import { Moments, addFeedMoments, type FeedMoment } from "./Moments";
@@ -125,7 +126,11 @@ function ContactList({ onOpen, onOpenPid }: { onOpen: (threadId: string) => void
   const [sub, setSub] = useState<"new" | "groups" | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const nameOf = (pid: string) => game!.npcs.find((n) => n.id === pid)?.name ?? strangers[pid]?.name ?? PERSON_BY_ID[pid]?.name ?? "";
-  const avatarOf = (pid: string) => game!.npcs.find((n) => n.id === pid)?.avatar ?? strangers[pid]?.avatar;
+  const avatarOf = (pid: string) => {
+    const n = game!.npcs.find((x) => x.id === pid);
+    const st = strangers[pid];
+    return shownAvatar({ id: pid, avatar: n?.avatar || st?.avatar, avatarVariant: n?.avatarVariant, name: n?.name || st?.name }, { byName: true, peers: game!.npcs });
+  };
   const pending = ph.pending ?? [];
   const reqs = incomingReqs(game!).filter((r) => game!.npcs.some((n) => n.id === r.pid) || strangers[r.pid]);
   const reqNew = reqs.filter((r) => r.state === "pending").length;
@@ -1220,7 +1225,7 @@ function ThreadRow({ t, notify, open, onSwipe, onOpen, onMenu, onToggleUnread, o
         className={`relative flex w-full select-none items-stretch gap-3 px-4 py-3 text-left active:bg-[#dedede] ${t.pinned ? "bg-[#f7f7f7]" : "bg-white"}`}
       >
         <div className="relative shrink-0">
-          {t.kind === "group" ? <GroupAvatar members={t.members ?? []} /> : <WxAvatar src={npc?.avatar} name={t.title} size={48} />}
+          {t.kind === "group" ? <GroupAvatar members={t.members ?? []} /> : <WxAvatar src={shownAvatar({ id: npc?.id ?? t.personId, avatar: npc?.avatar, avatarVariant: (npc as { avatarVariant?: string } | undefined)?.avatarVariant, name: npc?.name ?? t.title }, { byName: true, peers: game!.npcs })} name={t.title} size={48} />}
           {showNum && <span className="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#fa5151] px-1 text-[11px] text-white">{t.unread > 99 ? "···" : t.unread}</span>}
           {showDot && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#fa5151]" />}
         </div>

@@ -12,6 +12,7 @@ import { getImageUrl } from '../../utils/constants';
 import { getAppBasePath } from '../../lib/appBasePath';
 import styles from './CommentAdminManager.module.css';
 import local from './ContentReportAdminManager.module.css';
+import previewStyles from './PublishReviewAdminManager.module.css';
 
 const PAGE_SIZE = 20;
 
@@ -150,34 +151,28 @@ const PublishReviewAdminManager: React.FC = () => {
   }, [loadQueue]);
 
   const openFormPreview = async (item: AdminPublishQueueItem) => {
-    setFormPreview({
+    const pending: FormPreviewState = {
       fileId: item.fileId,
       title: item.title?.trim() || item.fileId,
       loading: true,
       error: null,
       summary: null,
-    });
+    };
+    setFormPreview(pending);
     try {
       const response = await adminReportApi.getRomancePendingReviewContent(item.fileId);
       if (!response.data.success) {
         throw new Error(response.data.message || '拉取待审正文失败');
       }
-      const content = response.data.data?.content;
-      setFormPreview({
-        fileId: item.fileId,
-        title: item.title?.trim() || item.fileId,
-        loading: false,
-        error: null,
-        summary: summarizeRomancePending(content),
-      });
+      const summary = summarizeRomancePending(response.data.data?.content);
+      setFormPreview((current) =>
+        current === pending ? { ...pending, loading: false, summary } : current,
+      );
     } catch (error) {
-      setFormPreview({
-        fileId: item.fileId,
-        title: item.title?.trim() || item.fileId,
-        loading: false,
-        error: getApiErrorMessage(error, '拉取待审正文失败'),
-        summary: null,
-      });
+      const message = getApiErrorMessage(error, '拉取待审正文失败');
+      setFormPreview((current) =>
+        current === pending ? { ...pending, loading: false, error: message } : current,
+      );
     }
   };
 
@@ -527,6 +522,7 @@ const PublishReviewAdminManager: React.FC = () => {
         isOpen={Boolean(formPreview)}
         tone="admin"
         variant="alert"
+        scrollable
         title={`预览表单 · ${formPreview?.title || ''}`}
         message={
           formPreview?.loading ? (
@@ -534,24 +530,21 @@ const PublishReviewAdminManager: React.FC = () => {
           ) : formPreview?.error ? (
             <p style={{ color: 'var(--color-primary)' }}>{formPreview.error}</p>
           ) : formPreview?.summary ? (
-            <div style={{ fontSize: 13, lineHeight: 1.55 }}>
-              <p style={{ margin: '0 0 8px' }}>
-                <b>只读</b> · fileId <code>{formPreview.fileId}</code> · 改动不会写回待审包
-              </p>
-              <p style={{ margin: '0 0 6px' }}>
-                <b>名称</b>：{formPreview.summary.name || '（空）'}
-              </p>
-              <p style={{ margin: '0 0 6px' }}>
-                <b>介绍</b>：{formPreview.summary.intro || '（空）'}
-              </p>
-              <p style={{ margin: '0 0 6px' }}>
-                <b>设定摘要</b>：{formPreview.summary.setting || '（空）'}
-              </p>
-              <p style={{ margin: '0 0 6px' }}>
+            <div className={previewStyles.preview}>
+              <p>只读 · 文件 ID <code>{formPreview.fileId}</code></p>
+              <p>
                 人物 {formPreview.summary.npcCount} · 地点 {formPreview.summary.roomCount}（有背景图{' '}
                 {formPreview.summary.roomsWithBg}）· 世界书 {formPreview.summary.loreCount} · 封面{' '}
                 {formPreview.summary.hasCover ? '有' : '缺'}
               </p>
+              <dl className={previewStyles.fields}>
+                <dt>名称</dt>
+                <dd>{formPreview.summary.name || '（空）'}</dd>
+                <dt>介绍</dt>
+                <dd>{formPreview.summary.intro || '（空）'}</dd>
+                <dt>设定摘要</dt>
+                <dd>{formPreview.summary.setting || '（空）'}</dd>
+              </dl>
             </div>
           ) : (
             <p>无内容</p>

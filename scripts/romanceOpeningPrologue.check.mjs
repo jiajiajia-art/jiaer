@@ -13,6 +13,8 @@ const romance = join(root, 'Romance/src');
 test('Opening_只渲染编辑器开场白_禁止手记时间地点与AI正文', () => {
   const opening = readFileSync(join(romance, 'components/Opening.tsx'), 'utf8');
   assert.match(opening, /data-opening-editor-only/);
+  assert.match(opening, /<main/);
+  assert.doesNotMatch(opening, /role="dialog"|aria-modal|fixed inset|animate-pop/);
   assert.doesNotMatch(opening, /的手记/);
   assert.doesNotMatch(opening, /故事，就从/);
   assert.doesNotMatch(opening, /此刻 ·/);
@@ -47,19 +49,20 @@ test('GameContext_开局剧情应延后到进入game', () => {
   assert.doesNotMatch(startBlock, /void runTurn\(/);
 });
 
-test('ModEditorPanel_开场只留外观工作室_禁止开场白表单', () => {
+test('ModEditorPanel_开场可编辑标题与正文及外观', () => {
   const panel = readFileSync(join(romance, 'components/ModEditorPanel.tsx'), 'utf8');
   assert.match(panel, /OpeningStyleStudio/);
-  assert.doesNotMatch(panel, /<ModOpeningEditor/);
+  assert.match(panel, /<ModOpeningEditor value=\{c\.opening\} compact/);
   assert.doesNotMatch(panel, /ui-label border-t[\s\S]{0,80}开场白/);
   // 改 page 时须展开保留旧 opening 字段
   assert.match(panel, /\.\.\.\(c\.opening \?\? \{\}\),\s*page/);
   // 功能注释：底部不再挂「首次/开局可触发事件」脚注
   const openingAt = panel.indexOf('title="开场剧情"');
-  const lookAt = panel.indexOf('title="剧情美化"', openingAt);
+  const lookAt = panel.indexOf('title="底栏页签"', openingAt);
   assert.doesNotMatch(panel.slice(openingAt, lookAt), /首次\s*\/\s*开局可触发事件|④ 剧情 → 固定事件/);
-  // ModOpeningEditor 文件可留作 Cover 导出，但面板不得再挂整套输入
+  // 简洁表单只显示正文相关输入
   const ed = readFileSync(join(romance, 'components/ModOpeningEditor.tsx'), 'utf8');
   assert.match(ed, /export default function ModOpeningEditor/);
-  assert.doesNotMatch(ed, /开幕正文来源/);
+  assert.match(ed, /Row label="标题"/);
+  assert.match(ed, /Row label="正文段落/);
 });

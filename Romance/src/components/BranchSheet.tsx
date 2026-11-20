@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { romancePortalRoot } from "../lib/romancePortalRoot";
 import { useGame, useLive } from "../store/gameCtx";
 import { Segments } from "./StoryTab";
+import { splitStateRepair } from "../lib/liveStatus";
 import NewcomerCards from "./NewcomerCards";
 import { newcomerSlots } from "../game/npcIntro";
 import { hopEnergy, tripPoints } from "../game/mud";
@@ -11,7 +12,7 @@ import { hopEnergy, tripPoints } from "../game/mud";
  * 可「收起」去看别的页面（右下角留一枚续玩胶囊），也可「结束支线」回到主线，整段落入剧情志。 */
 export default function BranchSheet() {
   const { game, busy, branchAct, leaveBranch } = useGame();
-  const live = useLive();
+  const { text: live, repairing } = splitStateRepair(useLive());
   const b = game?.branch;
   const [min, setMin] = useState(false);
   const [input, setInput] = useState("");
@@ -19,7 +20,7 @@ export default function BranchSheet() {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { if (b && !b.turns.length) setMin(false); }, [b]);
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [b?.turns.length, live]);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [b?.turns.length, live, repairing]);
   useEffect(() => { setConfirm(false); }, [b?.srcId]);
   if (!game || !b) return null;
 
@@ -72,11 +73,12 @@ export default function BranchSheet() {
               </div>
             ),
           )}
-          {busy && (
+          {busy && (live || !repairing) && (
             <p className="mt-3 whitespace-pre-wrap text-[13.5px] leading-relaxed text-ink-soft">
               {live || "剧情展开中"}<span className="ml-0.5 inline-block animate-pulse">▍</span>
             </p>
           )}
+          {busy && repairing && <p role="status" className="mt-2 text-[12px] text-jade">正在整理本回合的选项与状态…</p>}
           <div ref={endRef} />
         </div>
 

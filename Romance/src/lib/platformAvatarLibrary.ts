@@ -22,7 +22,8 @@ export type PlatformStylePackOption = {
   label: string;
 };
 
-const DEFAULT_STYLE_PACKS: readonly PlatformStylePackOption[] = Object.freeze([
+/** 功能注释：与后端内置 style_pack 种子一致；接口失败时编辑器仍能列出这三档 */
+export const DEFAULT_STYLE_PACKS: readonly PlatformStylePackOption[] = Object.freeze([
   { id: 'anime', label: '二次元' },
   { id: 'realistic', label: '写实' },
   { id: 'ink', label: '水墨' },
@@ -170,17 +171,36 @@ async function listScope(token: string, scope: 'public' | 'system'): Promise<Pla
 }
 
 /**
- * 功能注释：拉公共+系统库并按性别×年龄分组成 AvatarSource（供选择器 / 抽图缓存）。
- * stylePack 有值时只保留该风格包素材。
+ * 功能注释：按风格库和时代收图。
+ * stylePack 单值，或 stylePacks 数组（空数组 = 一张都不要）。两个都不传 = 不按风格过滤。
+ */
+export function filterPlatformAvatarItems(
+  items: PlatformAvatarItem[],
+  { stylePack = '', stylePacks, background = '' }: { stylePack?: string; stylePacks?: string[]; background?: string } = {},
+): PlatformAvatarItem[] {
+  const style = String(stylePack || '').trim();
+  const many = Array.isArray(stylePacks)
+    ? new Set(stylePacks.map((x) => String(x || '').trim()).filter(Boolean))
+    : null;
+  const bg = String(background || '').trim();
+  return items.filter((it) => {
+    const sp = String(it.stylePack || '').trim();
+    if (style && sp !== style) return false;
+    if (many && !many.has(sp)) return false;
+    if (bg && String(it.backgroundType || '').trim() !== bg) return false;
+    return true;
+  });
+}
+
+/**
+ * 功能注释：拉公共+系统库并按性别×年龄分组成 AvatarSource（供选择器 / 抽图）。
+ * 风格包只决定用哪套官方图。性别和年龄仍在分组里，给人物自动对上，不给创作者当开关。
  */
 export function groupPlatformAvatars(
   items: PlatformAvatarItem[],
-  { stylePack = '' }: { stylePack?: string } = {},
+  opts: { stylePack?: string; stylePacks?: string[]; background?: string } = {},
 ): AvatarSource[] {
-  const style = String(stylePack || '').trim();
-  const source = style
-    ? items.filter((it) => String(it.stylePack || '').trim() === style)
-    : items;
+  const source = filterPlatformAvatarItems(items, opts);
   const pools: AvatarSource[] = [];
   for (const g of PLATFORM_AVATAR_GROUPS) {
     const images = source
@@ -223,8 +243,23 @@ export function getCachedPlatformAvatarItems(): PlatformAvatarItem[] {
 }
 
 /** 功能注释：基于缓存按风格包重分组，不重复请求 */
-export function regroupCachedPlatformAvatarPools(stylePack = ''): AvatarSource[] {
-  return groupPlatformAvatars(cachedPlatformItems || [], { stylePack });
+export function regroupCachedPlatformAvatarPools(stylePack = '', background = ''): AvatarSource[] {
+  return groupPlatformAvatars(cachedPlatformItems || [], { stylePack, background });
+}
+
+/** 功能注释：背景类型（时代）筛选项——只列缓存里实际出现过的 */
+export const AVATAR_BACKGROUND_OPTIONS: readonly PlatformStylePackOption[] = Object.freeze([
+  { id: 'ancient', label: '古代' },
+  { id: 'modern', label: '现代' },
+  { id: 'fantasy', label: '西幻' },
+]);
+export function listCachedBackgroundIds(): string[] {
+  const seen = new Set<string>();
+  for (const it of cachedPlatformItems || []) {
+    const id = String(it.backgroundType || '').trim();
+    if (id) seen.add(id);
+  }
+  return [...seen];
 }
 
 /** 功能注释：从缓存推导出现有风格包 id，供筛选条展示 */

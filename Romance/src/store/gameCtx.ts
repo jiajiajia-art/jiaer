@@ -16,14 +16,24 @@ export type StartOpts = {
   playPrefs?: import("../lib/types").PlayPrefs;
   startDate?: string;
   pathNpcs?: import("../game/data").PathNpc[];
-  route?: Pick<import("../game/data").CreationPath, "hero" | "room" | "memory" | "event" | "eventId" | "fx">;
+  route?: Pick<import("../game/data").CreationPath, "id" | "hero" | "heroCustom" | "room" | "memory" | "event" | "eventId" | "fx">;
   factions?: import("../game/data").StartFaction[];
   joined?: string[];
   /** 功能注释：建角页已掷的自定义属性开局值；有则开局沿用，避免预览与入局再掷不一致 */
   cattrStarts?: Record<string, number>;
+  /** 功能注释：玩家勾选「无限模式」——本局不按作品时限结算 */
+  endless?: boolean;
 };
 /* 弹窗重试参数：弹窗类行动（事件 / 支线 / 询问）演绎失败时存下原请求，供「重新触发」原样重发 */
-export type PopupRetry = { input: string; hideInput?: boolean; journalMeta?: Omit<import("../lib/types").JournalEntry, "id" | "ts" | "text">; preSettled?: boolean };
+export type SimLock = {
+  keys: string[];
+  rel: string[];
+  cattrs: string[];
+  stats: string[];
+  item?: { id: string; name: string };
+};
+export type PopupRetry = { input: string; hideInput?: boolean; journalMeta?: Omit<import("../lib/types").JournalEntry, "id" | "ts" | "text">; preSettled?: boolean; lock?: SimLock | null; popupTitle?: string };
+export type BagAction = "use" | "gift" | "discard";
 /* 周结算报告：结构化呈现（不再拼成一大段系统文字） */
 export type WeekReport = { week: number; weekTo?: number; span?: string; grade?: string; act: string; gains: string[]; events: { tag: string; text: string }[]; settle: string[]; warnings: string[] };
 /* 推进手记：时间解析 + 日程 + 属性变化解析 */
@@ -69,6 +79,9 @@ export type Ctx = {
   setNpcDim: (pid: string, label: string, value: number) => void; // 手动调节情感印象（爱慕/友善/敌意…）
   saveNow: () => Promise<boolean>; // 立即把当前进度刷入自动存档
   regenerate: () => void; // 重新生成上一回合（AI 输出异常时）
+  rerollTurn: (turnId: string) => void; // 重新生成最新的成功 AI 回合（换一版剧情）
+  rewindTo: (turnId: string) => boolean; // 回溯到某个 AI 回合刚落地时的状态，之后的进度丢弃
+  snapIds: string[]; // 本次会话内可重新生成 / 回溯的 AI 回合 id
   saveEpoch: number; // 切档代数：游戏界面以此为 key 整树重挂载
   canRetry: boolean; // 最近一次主线请求失败，可重新生成
   retryPopup: () => void; // 弹窗行动失败后「重新触发」
@@ -100,8 +113,7 @@ export type Ctx = {
   simEvent: (encounterId: string) => void; // 触发条件邂逅：结算数值并交 AI 演绎
   simMove: (roomId: string, companionId?: string, trip?: { fee: number; minutes: number; modeLabel: string; ownCar?: boolean }) => string[];
   simPickup: (itemId: string) => string;
-  simUseItem: (itemId: string) => string; // 使用背包物品：记录一次确定性交互，不消耗物品
-  simGiftItem: (itemId: string, personId: string) => string; // 赠送物品：消耗物品并提升该联系人的关系
+  simActOnItem: (action: BagAction, itemId: string, quantity: number, personId?: string) => string;
   simActivity: (actId: string) => string; // 居家活动：看电视/休息/看书
   simBuy: (itemId: string) => string; // 购买标价物品（书店买书）
   simAskIntel: (personId: string, intelId: string) => string;

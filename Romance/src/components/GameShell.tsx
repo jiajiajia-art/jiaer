@@ -1,4 +1,5 @@
 import { wallet } from "../game/wallet";
+import { recordFiredEvents } from "../lib/pathProgress";
 import { lazyPanel } from "../lib/lazyPanel";
 import DiaryCard from "./DiaryCard";
 import DiyIcon from "./DiyIcon";
@@ -8,19 +9,18 @@ import { tierOf } from "../game/data";
 import { withFontPreset } from "../lib/gameFonts";
 import { FONTS } from "../lib/skins";
 import BgmPanel, { hookWorldBgm } from "./BgmPanel";
-import { enterScene, setWorkVolume, switchBgm } from "../game/audioEngine";
+import { enterScene, switchBgm } from "../game/audioEngine";
 import { setAuthorAudio } from "../game/audioLib";
 import { roomBgmOf } from "../game/mud";
 const CustomCssPanel = lazyPanel(() => import("./CustomCssPanel"));
 const ThemePackPanel = lazyPanel(() => import("./ThemePackPanel"));
 const ScenePanel = lazyPanel(() => import("./ScenePanel"));
-import { AssetLibrary, FreeColors, FreeFont, SlotImage, SubTitle } from "./FreeStylePanel";
+import { AssetLibrary, FreeColors, SlotImage, SubTitle } from "./FreeStylePanel";
 import { loadAssets } from "../lib/freeStyle";
 const NavStylePanel = lazyPanel(() => import("./NavStylePanel"));
 const IconDiyPanel = lazyPanel(() => import("./IconDiyPanel"));
 const CoverDiyPanel = lazyPanel(() => import("./CoverDiyPanel"));
 import DialogDiyPanel, { DialogPreview } from "./DialogDiyPanel";
-import { PlotLookPanel } from "./LookRulesEditor";
 import { Suspense, lazy, useCallback, useEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { romancePortalRoot } from "../lib/romancePortalRoot";
@@ -46,10 +46,10 @@ const PanelLoading = () => <p className="py-10 text-center text-[12px] text-ink-
 const NpcKbPanel = lazyPanel(() => import("./NpcKbPanel"));
 import EditorHub from "./EditorHub";
 import PlayPrefsPicker from "./PlayPrefsPicker";
-import { playPrefsOf } from "../lib/ai";
+import { playPrefsOf, POV_LABEL } from "../lib/ai";
 import { LIVE_LOCATIONS } from "../mods/registry";
 import AllowanceWatcher from "./AllowanceWatcher";
-import { feature, getWorldStorylines, useMods, worldGrowEnabled, worldHas } from "../mods/registry";
+import { feature, getWorldStorylines, getWorldEventDates, useMods, worldGrowEnabled, worldHas } from "../mods/registry";
 import { shouldShowPlayModMenuEntry } from "../mods/playModCatalog";
 import { EDITOR_HUB_MENUS } from "../lib/editorHubMenus";
 const EndingsPanel = lazyPanel(() => import("./EndingsPanel"));
@@ -65,7 +65,7 @@ import ScheduleBoard from "./ScheduleBoard";
 import { Chip, Modal, toneColor } from "./ui";
 import NewSpotImagePrompt from "./NewSpotImagePrompt";
 import { useConfirm } from "./EditorKit";
-import { IconBook, IconCamera, IconClose, IconFlag, IconHeart, IconMenu, IconMoon, IconMusic, IconPin, IconPlay, IconSave, IconScroll, IconSpark, IconSparkle, IconStar, IconSun, IconUser, IconWallet, IconClock } from "../lib/icons";
+import { IconBook, IconCamera, IconChevronLeft, IconClose, IconFlag, IconHeart, IconMenu, IconMoon, IconMusic, IconPin, IconPlay, IconSave, IconScroll, IconSpark, IconSparkle, IconStar, IconSun, IconUser, IconWallet, IconClock } from "../lib/icons";
 import { Segments, CastRow } from "./StoryTab";
 import NewcomerCards from "./NewcomerCards";
 import BranchSheet from "./BranchSheet";
@@ -105,8 +105,8 @@ import CgUnlockReveal from "./CgUnlockReveal";
 import { resolveCgImageFile } from "../game/cgImageStore";
 import { applyCgUnlocks, cgRevealBatch, hasCgMenu, latestCgDialogue } from "../lib/cgGallery";
 import { liveTerm as T } from "../mods/live";
-const GameTour = lazyPanel(() => import("./GameTour"));
-const PhoneTour = lazyPanel(() => import("./PhoneTour"));
+const GameTour = lazyPanel(() => import("./GameTour"), false);
+const PhoneTour = lazyPanel(() => import("./PhoneTour"), false);
 
 type Tab = MudTab;
 
@@ -121,15 +121,15 @@ function SettingBranch({ title, en: _en, desc, current, swatch, children, defaul
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="settings-card overflow-hidden rounded-2xl border bg-paper transition">
-      <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center gap-3 px-3.5 py-3 text-left transition hover:bg-paper-2/60">
-        <div className="min-w-0 flex-1">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-start gap-2 px-3.5 py-3 text-left transition hover:bg-paper-2/60 sm:gap-3">
+        <span className="min-w-0 flex-1">
           <span className="block text-[14px] font-bold text-ink">{title}</span>
-          {desc ? <span className="mt-0.5 block truncate text-[11px] text-ink-soft">{desc}</span> : null}
-        </div>
+          {desc ? <span className="mt-1 block text-[12px] leading-relaxed text-ink-soft">{desc}</span> : null}
+        </span>
         <span className="settings-chip flex max-w-[42%] shrink-0 items-center gap-1 truncate rounded-full border px-2.5 py-1 text-[11.5px] font-semibold">
           {swatch}<span className="truncate">{current}</span>
         </span>
-        <span className={`shrink-0 text-[16px] leading-none text-jade transition-transform ${open ? "rotate-90" : ""}`}>›</span>
+        <span aria-hidden="true" className={`mt-1 shrink-0 text-[16px] leading-none text-jade transition-transform ${open ? "rotate-90" : ""}`}>›</span>
       </button>
       {open && <div className="settings-card-body border-t p-3">{children}</div>}
     </div>
@@ -214,7 +214,7 @@ function BeautyGroup({ no, title, en, desc }: { no: string; title: string; en: s
 /* 美化页分组导航：吸顶胶囊条，点一组只看这一组（分支自动展开），「全部」回到总览 */
 const BEAUTY_GROUPS = [
   ["all", "全部"], ["preset", "主题包"], ["global", "全局风格"], ["dialog", "对话框"], ["scene", "场景"],
-  ["chrome", "栏与图标"], ["cover", "封面"], ["plot", "剧情美化"], ["assets", "素材与代码"],
+  ["chrome", "栏与图标"], ["cover", "封面"], ["assets", "素材与代码"],
 ] as const;
 type BeautyKey = (typeof BEAUTY_GROUPS)[number][0];
 function BeautyNav({ cur, onPick }: { cur: BeautyKey; onPick: (k: BeautyKey) => void }) {
@@ -247,7 +247,7 @@ function BeautyNav({ cur, onPick }: { cur: BeautyKey; onPick: (k: BeautyKey) => 
 
 /* 美化页顶部：当前外观一览 + 恢复默认（仅外观字段；屏幕方向、深浅模式、自定义 CSS 不动） */
 function BeautySummary() {
-  const { theme, setTheme, activeLooks } = useGame();
+  const { theme, setTheme } = useGame();
   const [confirm, confirmEl] = useConfirm();
   const tags = [
     (SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.cute)[0],
@@ -257,12 +257,14 @@ function BeautySummary() {
     theme.free?.font?.url ? "自定义字体" : "",
     theme.free?.imgs && Object.keys(theme.free.imgs).length ? `贴图 ${Object.keys(theme.free.imgs).length} 处` : "",
     theme.dialogDiy && theme.dialogDiy.on !== false ? "对话框已微调" : "",
+    theme.gameFrame?.style && theme.gameFrame.style !== "none"
+      ? ({ vine: "藤蔓边框", filigree: "卷草边框", lace: "蕾丝边框", window: "花窗边框", tarot: "塔罗边框" } as Record<string, string>)[theme.gameFrame.style] || "阅读卡边框"
+      : "",
     theme.navActive ? "底栏自定" : "",
     theme.topbarDiy && theme.topbarDiy.on !== false ? `顶栏 ${topbarSummary(theme.topbarDiy)}` : "",
     theme.icons ? "图标自定" : "",
     theme.cover && theme.cover.on !== false ? "封面自定" : "",
     theme.sceneBg ? "自定义场景" : "",
-    (theme.lookRules?.length ?? 0) > 0 ? `剧情美化 ${theme.lookRules!.length} 条` : "",
   ].filter(Boolean);
   return (
     <div className="settings-card flex items-center gap-3 rounded-2xl border bg-gradient-to-r from-jade/10 via-paper to-coral/10 px-4 py-3">
@@ -272,9 +274,6 @@ function BeautySummary() {
         <div className="mt-1 flex flex-wrap gap-1">
           {tags.map((t) => <span key={t} className="settings-chip rounded-full border px-2 py-0.5 text-[11px]">{t}</span>)}
         </div>
-        {activeLooks.length > 0 && (
-          <p className="mt-1.5 text-[11px] text-jade">剧情美化生效中：{activeLooks.map((a) => a.rule.name || "未命名").join("、")} · 部分外观暂时被覆盖，条件不满足后恢复</p>
-        )}
       </div>
       <button className="shrink-0 rounded-full border border-line bg-paper px-3 py-1 text-[11.5px] font-semibold text-ink-soft transition hover:border-danger hover:text-danger"
         onClick={async () => { if (await confirm("把外观恢复为默认？\n屏幕方向、深浅模式与自定义 CSS 保留；建议先在「一键套用」里收藏当前外观。", { ok: "恢复默认" })) setTheme({ ...defaultTheme, mode: theme.mode, orient: theme.orient }); }}>
@@ -287,7 +286,7 @@ function BeautySummary() {
 /* 设置页面板：界面皮肤 / 字体风格 / 版式方向（作为常驻页签内容，与其他页面同级） */
 function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; section?: "general" | "beauty"; /** @deprecated 玩家设置不再跳进完整美化 */ onBeauty?: () => void }) {
   const beauty = section === "beauty";
-  const { theme, setTheme, activeLooks, game, patchGame } = useGame();
+  const { theme, setTheme, game, patchGame } = useGame();
   // 美化分组导航：全部 / 单组；单组时只渲染该组，分支默认展开
   const [beautyGroup, setBeautyGroup] = useState<BeautyKey>("all");
   const bg = (k: BeautyKey) => beautyGroup === "all" || beautyGroup === k;
@@ -316,10 +315,13 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
       <div className={bare ? "space-y-2.5 pt-1" : "mx-auto max-w-3xl space-y-2.5 px-4 py-4"}>
         {/* 功能注释：玩家「游戏设置」只留皮肤风格选择；主题包/对话框/图标等仍在编辑器·美化 */}
         {!beauty && (
-        <SettingBranch title="皮肤" current={(SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.dream)[0]} swatch={<span>{(SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.dream)[1]}</span>}>
+        <>
+        <h2 className="px-1 text-sm font-bold text-ink">界面外观</h2>
+        <SettingBranch title="皮肤" desc="切换界面的配色与卡片风格，选中后即刻应用。" current={(SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.dream)[0]} swatch={<span>{(SKIN_LABEL[theme.skin ?? "cute"] ?? SKIN_LABEL.dream)[1]}</span>}>
           {/* 功能注释：默认收起——标题行已显示当前皮肤，点开再选，避免一打开设置就是一大片皮肤卡 */}
           <PlayerSkinPicker skin={theme.skin ?? "cute"} onPick={(skin) => setTheme({ ...theme, skin })} />
         </SettingBranch>
+        </>
         )}
         {/* 功能注释：暗色模式不再折叠，整行就是开关，点一次立即切换（3.7）；样式与分支标题行一致 */}
         {!beauty && (
@@ -330,7 +332,10 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
           aria-pressed={isDark}
           className="settings-card flex w-full items-center gap-3 overflow-hidden rounded-2xl border bg-paper px-3.5 py-3 text-left transition hover:bg-paper-2/60"
         >
-          <span className="min-w-0 flex-1 text-[14px] font-bold text-ink">暗色模式</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14px] font-bold text-ink">暗色模式</span>
+            <span className="mt-1 block text-[12px] leading-relaxed text-ink-soft">降低界面亮度，适合夜间阅读。点击即可切换。</span>
+          </span>
           <span className={`settings-chip flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold ${isDark ? "!border-jade !bg-jade/15 !text-jade" : ""}`}>
             {isDark ? <IconMoon size={16} /> : <IconSun size={16} />}{isDark ? "已开启" : "已关闭"}
           </span>
@@ -383,7 +388,7 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
           <SubTitle t="自定义取色" d="覆盖皮肤与主色，留空跟随" />
           <FreeColors />
         </SettingBranch>
-        <SettingBranch title="字体" en="FONT" desc="预设 8 款字体：剧情正文、气泡与编辑器一并跟随；也可上传自定义字体" current={theme.free?.font?.url ? "自定义字体" : (FONT_LABEL[theme.font ?? "song"] ?? "典雅宋体")} swatch={<span className="font-serif text-[12px]">字</span>}>
+        <SettingBranch title="字体" en="FONT" desc="预设 8 款剧情字体" current={theme.free?.font?.url ? "自定义字体" : (FONT_LABEL[theme.font ?? "song"] ?? "典雅宋体")} swatch={<span className="font-serif text-[12px]">字</span>}>
           <SubTitle t="预设字体（8 款可选）" />
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
             {FONTS.map((ft) => {
@@ -402,8 +407,6 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
               );
             })}
           </div>
-          <SubTitle t="自定义字体文件" />
-          <FreeFont />
         </SettingBranch>
         <SettingBranch title="全局背景图" en="BACKGROUND" desc="整个游戏界面的底图" current={theme.free?.imgs?.page ? "已设置" : "无"} swatch={<span className="h-3 w-5 rounded-[3px] bg-gradient-to-br from-jade/50 to-coral/50" />}>
           <SlotImage slot="page" />
@@ -476,6 +479,17 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
             ["细节 DIY", <DialogDiyPanel />],
           ]} />
         </SettingBranch>
+        {/* 功能注释：阅读卡边框跟对话框同组——小说模式下围住中央剧情卡（含藤蔓缠绕） */}
+        <SettingBranch
+          defaultOpen={beautyGroup !== "all"}
+          title="阅读卡边框"
+          en="STORY FRAME"
+          desc="给中央剧情卡围一圈装饰：藤蔓缠绕、卷草、花窗、蕾丝等"
+          current={theme.gameFrame ? ({ vine: "藤蔓缠绕", filigree: "欧式卷草", lace: "千金蕾丝", window: "中式花窗", tarot: "星盘塔罗" } as Record<string, string>)[theme.gameFrame.style ?? ""] || "已自定" : "无"}
+          swatch={<span className="h-3 w-5 rounded-[3px] border-2 border-jade" />}
+        >
+          <FrameEditor value={theme.gameFrame} onChange={(gameFrame) => setTheme({ ...theme, gameFrame })} />
+        </SettingBranch>
         </>)}
         {bg("scene") && (<>
         <BeautyGroup no="04" title="场景" en="SCENE" desc="主界面上半部分的地点实景与对话立绘" />
@@ -487,9 +501,6 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
         <BeautyGroup no="05" title="顶栏、底栏与图标" en="CHROME & ICONS" desc="顶部状态栏、底部导航，以及界面上每一个图标与按钮" />
         <SettingBranch title="顶栏" en="TOP BAR" desc="自由组合版式、名牌头像、状态栏模块与配色；上传样式文件、HTML 模板与样式正则" current={topbarSummary(theme.topbarDiy)} swatch={<span className="h-3 w-6 rounded-full bg-gradient-to-r from-jade to-coral" />}>
           <TopbarDiyPanel />
-        </SettingBranch>
-        <SettingBranch title="画面边框" en="FRAME" desc="给游玩界面加一圈装饰边框：细线、双线、四角等，可调颜色、粗细、圆角" current={theme.gameFrame ? "已自定" : "无"} swatch={<span className="h-3 w-5 rounded-[3px] border-2 border-jade" />}>
-          <FrameEditor value={theme.gameFrame} onChange={(gameFrame) => setTheme({ ...theme, gameFrame })} />
         </SettingBranch>
         <SettingBranch title="底栏选中态" en="NAV STYLE" desc="选中按钮的底衬形状、填充、颜色、动效，以及每个按钮的自定义图标" current={theme.navActive ? "已自定" : "默认"} swatch={<span className="h-3 w-6 rounded-full bg-gradient-to-r from-jade/40 to-coral/40" />}>
           <NavStylePanel />
@@ -504,14 +515,8 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
           <CoverDiyPanel />
         </SettingBranch>
         </>)}
-        {bg("plot") && (<>
-        <BeautyGroup no="07" title="随剧情变化" en="PLOT LOOK" desc="条件满足时自动换装：深夜转暗、压力爆表变灰、成名后换上流金" />
-        <SettingBranch defaultOpen={beautyGroup !== "all"} title="剧情美化" en="CONDITIONAL" desc="按属性、关系、地点、时段、规则变量等条件临时切换外观" current={activeLooks.length ? `生效 ${activeLooks.length}` : `${theme.lookRules?.length ?? 0} 条`} swatch={<span className="h-3 w-6 rounded-full bg-gradient-to-r from-jade via-ink-soft to-gold" />}>
-          <PlotLookPanel />
-        </SettingBranch>
-        </>)}
         {bg("assets") && (<>
-        <BeautyGroup no="08" title="素材与代码" en="ASSETS" desc="所有图片位共用素材库；CSS 优先级最高，可覆盖以上一切" />
+        <BeautyGroup no="07" title="素材与代码" en="ASSETS" desc="所有图片位共用素材库；CSS 优先级最高，可覆盖以上一切" />
         <SettingBranch title="素材库与图床" en="ASSETS" desc="批量上传图片、配置图床；任意图片位都能直接选用" current={`${loadAssets().length} 张`} swatch={<span className="h-3 w-5 rounded-[3px] border border-dashed border-jade/70" />}>
           <AssetLibrary />
         </SettingBranch>
@@ -521,9 +526,11 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
         </>)}
         </>)}
 
-        {/* 游戏字体：常规设置页也能直接切换 8 款预设字体或上传字体文件 */}
+        {/* 游戏字体：常规设置页也能直接切换 8 款预设字体 */}
         {!beauty && (
-        <SettingBranch title="剧情字体" current={theme.free?.font?.url ? "自定义字体" : (FONT_LABEL[theme.font ?? "song"] ?? "典雅宋体")} swatch={<span className="font-serif text-[12px]">字</span>}>
+        <>
+        <h2 className="px-1 pt-3 text-sm font-bold text-ink">剧情阅读</h2>
+        <SettingBranch title="剧情字体" desc="更换剧情正文的字形。展开后可以对照样字挑选。" current={theme.free?.font?.url ? "自定义字体" : (FONT_LABEL[theme.font ?? "song"] ?? "典雅宋体")} swatch={<span className="font-serif text-[12px]">字</span>}>
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
             {FONTS.map((ft) => {
               const cur = (theme.font ?? "song") === ft.id && !theme.free?.font?.url;
@@ -540,30 +547,45 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
               );
             })}
           </div>
-          <SubTitle t="自定义字体文件" />
-          <FreeFont />
+        </SettingBranch>
+        </>
+        )}
+
+        {/* 功能注释：阅读卡边框放进玩家设置，免得到编辑器美化里翻「栏与图标」才找得到 */}
+        {!beauty && (
+        <SettingBranch
+          title="阅读卡边框"
+          desc="给剧情阅读卡加一圈装饰，可选择藤蔓、花窗或蕾丝等样式。"
+          current={theme.gameFrame ? ({ vine: "藤蔓缠绕", filigree: "欧式卷草", lace: "千金蕾丝", window: "中式花窗", tarot: "星盘塔罗" } as Record<string, string>)[theme.gameFrame.style ?? ""] || "已自定" : "无"}
+          swatch={<span className="h-3 w-5 rounded-[3px] border-2 border-jade" />}
+        >
+          <FrameEditor value={theme.gameFrame} onChange={(gameFrame) => setTheme({ ...theme, gameFrame })} />
         </SettingBranch>
         )}
 
         {/* 功能注释：叙事段落浅色底透明度；叠图旁白与小说内容卡共用，字色固定近黑 */}
         {!beauty && (
-        <SettingBranch title="叙事底透明度" current={`${theme.storyBgAlpha ?? 88}%`}>
+        <SettingBranch title="叙事底不透明度" desc="数值越高，文字底色越实；调低可以透出更多场景。" current={`${theme.storyBgAlpha ?? 65}%`}>
           <div className="flex items-center gap-2">
             <input
               type="range"
               min={40}
               max={100}
               step={5}
-              value={theme.storyBgAlpha ?? 88}
+              value={theme.storyBgAlpha ?? 65}
               onChange={(e) => setTheme({ ...theme, storyBgAlpha: +e.target.value })}
               className="min-w-0 flex-1 accent-[var(--jade)]"
-              aria-label="叙事底透明度"
+              aria-label="叙事底不透明度"
             />
-            <span className="w-10 shrink-0 text-right text-[12px] tabular-nums text-ink-soft">{theme.storyBgAlpha ?? 88}%</span>
+            <span className="w-10 shrink-0 text-right text-[12px] tabular-nums text-ink-soft">{theme.storyBgAlpha ?? 65}%</span>
+          </div>
+          <div className="mr-12 mt-1 flex justify-between text-[11px] text-ink-soft" aria-hidden="true">
+            <span>更透景</span>
+            <span>底色更实</span>
           </div>
           <p
             className="story-prose story-narration-panel mt-2 rounded-xl px-3 py-2 text-[12.5px] leading-relaxed"
-            style={{ ["--story-panel-a" as string]: String((theme.storyBgAlpha ?? 88) / 100) }}
+            style={{ ["--story-panel-a" as string]: String((theme.storyBgAlpha ?? 65) / 100) }}
           >
             预览：天色将晚，街灯初上。
           </p>
@@ -572,43 +594,21 @@ function SettingsPanel({ bare = false, section = "general" }: { bare?: boolean; 
 
         {/* 背景音乐：上传 / 点播 */}
         {!beauty && (
-        <SettingBranch title="背景音乐" current="歌单" swatch={<IconMusic size={16} />}>
+        <>
+        <h2 className="px-1 pt-3 text-sm font-bold text-ink">游玩体验</h2>
+        <SettingBranch title="背景音乐" desc="打开歌单点播曲目，为当前场景搭配背景音乐。" current="歌单" swatch={<IconMusic size={16} />}>
           <BgmPanel />
         </SettingBranch>
+        </>
         )}
 
-        {/* 功能注释：每局默认竖屏；游玩中可切横屏，不锁定 */}
-        {!beauty && (
-        <div>
-          <span className="text-[14px] font-bold leading-tight tracking-[0.06em] text-ink">屏幕方向</span>
-          <span className="mb-2 mt-0.5 block text-[11px] text-ink-soft">每局默认竖屏，游玩中可随时切换</span>
-          <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="屏幕方向">
-            {([
-              { id: "portrait", label: "竖屏" },
-              { id: "landscape", label: "横屏" },
-            ] as const).map((o) => {
-              const on = (theme.orient ?? "portrait") === o.id;
-              return (
-                <button
-                  key={o.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={on}
-                  onClick={() => setTheme({ ...theme, orient: o.id })}
-                  className={`rounded-xl border px-3 py-2 text-[13px] font-bold transition ${on ? "border-jade bg-jade/10 text-jade" : "border-line bg-paper text-ink-soft"}`}
-                >
-                  {o.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        )}
+        {/* 功能注释：屏幕方向切换暂时隐藏，固定竖屏 */}
         {/* 本局游玩偏好：开局时按世界观默认 / 建角所选，之后随时可改，下一回合起生效 */}
         {!beauty && game && (
         <SettingBranch
           title="游玩偏好"
-          current={playPrefsOf(game).mode === "novel" ? "剧情模式" : "游戏模式"}
+          desc="选择用「我」「你」或角色名字来讲故事，叙事视角从下一回合起生效。"
+          current={`${playPrefsOf(game).mode === "novel" ? "剧情模式" : "游戏模式"}${playPrefsOf(game).pov ? ` · ${POV_LABEL[playPrefsOf(game).pov!]}` : ""}`}
         >
           <PlayPrefsPicker value={playPrefsOf(game)} onChange={(playPrefs) => patchGame((g) => ({ ...g, playPrefs }))} />
         </SettingBranch>
@@ -668,16 +668,17 @@ function MenuRow({
 }
 
 // 合并「养成/人物」后，本文件不再引用 CharacterTab（触发一次全量重转译，清除旧 HMR 残留）。
-export default function GameShell() {
+export default function GameShell({ returnHref }: { returnHref?: string } = {}) {
   useEffect(() => { hookWorldBgm(); }, []);
   const { game, theme, look, saveNow, loadState, endManually, popup, setPopup, retryPopup, busy, autosaveOn, setAutosaveOn, commitGame } = useGame();
   // 进入设了 BGM 的地点（含任意一层子地点）自动切歌；没设的地点不打断当前音乐
   const curRoom = game?.sim.room;
   // 地点 / RP 房间 BGM：进入自动播放；离开到没设 BGM 的地方，停止由场景开的那首
   useEffect(() => { enterScene(curRoom ? roomBgmOf(curRoom) : undefined); }, [curRoom]);
-  // 音频库：作者音频与作品音量同步给播放器（MOD 注入的随 MOD 启用自动合并）
+  // 音频库：作者音频同步给播放器（MOD 注入的随 MOD 启用自动合并）
   useEffect(() => { setAuthorAudio(game?.audio); }, [game?.audio]);
-  useEffect(() => { setWorkVolume(game?.audioVolume ?? 1); }, [game?.audioVolume]);
+  // 跨周目记录：任意一局触发过的事件并入本机进度，供人物线路解锁判定
+  useEffect(() => { recordFiredEvents(game?.sim.eventsFired); }, [game?.sim.eventsFired]);
   // 皮肤联动 BGM
   const skinBgm = look.skin ? game?.skinBgm?.[look.skin] : undefined;
   useEffect(() => { if (skinBgm) void switchBgm(skinBgm); }, [skinBgm]);
@@ -810,7 +811,7 @@ export default function GameShell() {
   // 功能注释：小说模式固定三行顶栏；Studio 预览也要开，否则产品验收对不上稿
   const novelLayout = playPrefsOf(game).mode === "novel";
   const mainQuest = game.sim
-    ? homeMainQuest(game.sim, getWorldStorylines(), dayDateLabel(game.sim.day ?? 0))
+    ? homeMainQuest(game.sim, getWorldStorylines(), dayDateLabel(game.sim.day ?? 0), getWorldEventDates())
     : null;
   const topbarData = {
     ...topbarDataOf(game, modWorld.chain[0].name),
@@ -921,7 +922,8 @@ export default function GameShell() {
          叠一层轻量悬浮操作栏，其余页签(人物/形象/…)以侧栏浮层打开。
          此壳覆盖在竖屏外壳之上；菜单(z-40)与弹窗(z-50)仍渲染其上，得以共用。 */
       <div className="mud-shell fixed inset-0 z-30 flex flex-col overflow-hidden bg-paper landscape-world">
-        <FrameOverlay f={theme.gameFrame} />
+        {/* 功能注释：小说布局边框挂在阅读卡上，避免整屏与卡边双重描边 */}
+        {!novelLayout && <FrameOverlay f={theme.gameFrame} />}
         {/* 顶栏：名牌 + 世界状态 + 菜单，随设置里的皮肤 / 主色调换色 */}
         <TopbarView
           compact
@@ -963,6 +965,18 @@ export default function GameShell() {
       data-author-preview-game={authorPreviewing ? "1" : undefined}
       aria-hidden={landscape}
     >
+      {returnHref && (
+        <nav aria-label="游玩导航" className="shrink-0 border-b border-line bg-paper pt-[env(safe-area-inset-top)]">
+          <a href={returnHref} onClick={(event) => {
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            window.location.replace(returnHref);
+          }} className="inline-flex min-h-11 items-center gap-1 px-3 text-sm font-semibold text-ink" aria-label="返回作品详情">
+            <IconChevronLeft size={18} aria-hidden="true" />
+            返回
+          </a>
+        </nav>
+      )}
       {/* 顶部世界动态栏：跟随全局界面皮肤；功能注释：仅「世界」Tab 显示（3.10），其它页签从自己的内容顶起 */}
       {tab === "home" && (
       <TopbarView
@@ -985,7 +999,7 @@ export default function GameShell() {
               const t = (d.display ?? "both") !== "num" ? tierOf(v, d.tiers) : undefined;
               return (
                 <span key={d.id} className="flex shrink-0 items-center gap-1 rounded-full border border-line bg-paper/90 px-2.5 py-0.5 text-[11px] text-ink shadow-sm">
-                  {d.icon && <span>{d.icon}</span>}<span className="text-ink-soft">{d.label}</span>
+                  <span className="text-ink-soft">{d.label}</span>
                   {t && <b style={{ color: toneColor(d.color ?? "coral") }}>{t}</b>}
                   {(!t || d.display === "both" || !d.display) && <AttrValueEdit def={d} className="text-[11px]" />}
                 </span>
@@ -1107,7 +1121,7 @@ export default function GameShell() {
               </div>
               <div className="grid grid-cols-1 gap-1.5">
                 <MenuRow
-                  icon={IconSparkle} label="游戏设置" romaji="OPTIONS" hint="暗色模式 · 界面皮肤 · 背景音乐 · 字体风格 · 屏幕方向"
+                  icon={IconSparkle} label="游戏设置" romaji="OPTIONS" hint="界面外观 · 剧情阅读 · 游玩体验"
                   onClick={() => { setSetOpen(true); setMenuOpen(false); }}
                 />
               </div>
@@ -1204,7 +1218,7 @@ export default function GameShell() {
       {/* 人物档案：点左上角头像唤出（原「人物」页内容，现以弹窗呈现） */}
       {simOpen && (
         <Modal panelClassName="ui-dialog-game" title="人物档案" onClose={() => setSimOpen(false)}>
-          <SimTab embedded />
+          <SimTab embedded onItemAction={() => setSimOpen(false)} />
         </Modal>
       )}
 

@@ -23,8 +23,10 @@ const data = read("game/data.ts");
 const createSec = panel.slice(panel.indexOf('title="建角"'), panel.indexOf('title="地点"'));
 
 test("creationItems_添加类型固定为文本单选数值日期货币", () => {
-  assert.deepEqual(items.CREATION_ITEM_ADD_TYPES.map((t) => t.id), ["text", "radio", "number", "date", "currency"]);
-  assert.deepEqual(items.CREATION_ITEM_ADD_TYPES.map((t) => t.label), ["文本", "单选", "数值", "日期", "货币"]);
+  assert.deepEqual(items.CREATION_ITEM_ADD_TYPES.map((t) => t.id), ["text", "radio", "number", "skill", "date", "currency"]);
+  assert.deepEqual(items.CREATION_ITEM_ADD_TYPES.map((t) => t.label), ["文本", "单选", "数值", "技能（分档）", "日期", "货币"]);
+  // 功能注释：技能 = 带五档的数值
+  assert.equal(items.newSkillAttr("s1").tiers.length, 5);
   assert.match(items.CURRENCY_ATTR_DESC, /这是货币/);
   const num = items.newNumberAttr("a1");
   assert.equal(num.label, "新数值");
@@ -52,8 +54,8 @@ test("visibleCreatorAttrs_隐藏项与空壳名不进建角预览列表", () => 
 });
 
 test("formatCreatorAttrPreview_禁止开局undefined", () => {
-  assert.equal(items.formatCreatorAttrPreview({ id: "x", label: "学力", init: 10, max: 100 }), "开局 10 · 上限 100");
-  assert.equal(items.formatCreatorAttrPreview({ id: "y", label: "运气", init: undefined, max: 100 }), "开局 0 · 上限 100");
+  assert.equal(items.formatCreatorAttrPreview({ id: "x", label: "学力", init: 10, max: 100 }), "开局随机 0~100");
+  assert.equal(items.formatCreatorAttrPreview({ id: "y", label: "运气", init: undefined, max: 100 }), "开局随机 0~100");
   assert.equal(items.formatCreatorAttrPreview({ id: "z", label: "战力", init: 5, min: 1, max: 20, initMode: "random" }), "开局随机 1~20");
   assert.doesNotMatch(items.formatCreatorAttrPreview({ id: "w", label: "空", init: undefined }), /undefined/);
 });
@@ -78,7 +80,8 @@ test("ModCreationFieldsEditor_统一添加与系统四项置顶", () => {
   assert.match(editor, /开局资金/);
   assert.match(editor, /authorField: "author-field-start-money"/);
   assert.match(editor, /货币名称/);
-  assert.match(editor, /Badge tone="gold">必填/);
+  assert.match(editor, /Badge tone="gold">玩家必填/);
+  assert.match(editor, /Badge tone="gold">创作者必填/);
   assert.doesNotMatch(editor, /Badge tone="jade">货币/);
   assert.match(editor, /货币名称/);
   assert.match(editor, /＋ 添加</);

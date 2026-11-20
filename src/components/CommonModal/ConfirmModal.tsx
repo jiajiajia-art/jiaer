@@ -14,6 +14,7 @@ interface ConfirmModalProps {
     variant?: 'confirm' | 'alert';
     /** dark：个人中心墨黑酒红；glass：磨砂深色提示；admin：管理后台暖色 */
     tone?: 'default' | 'dark' | 'glass' | 'admin';
+    scrollable?: boolean;
 }
 
 const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -26,6 +27,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
     cancelButtonText = "取消",
     variant = 'confirm',
     tone = 'default',
+    scrollable = false,
 }) => {
     if (!isOpen) return null;
 
@@ -35,12 +37,12 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
     const modalContent = tone === 'admin' ? (
         <div className={styles.modalOverlay} onClick={onCancel}>
             <div className={styles.modalWrapper} onClick={(e) => e.stopPropagation()}>
-                <div className={`${styles.deleteModal} ${styles.adminModal}`} role="dialog" aria-modal="true" aria-labelledby="confirm-admin-title">
-                    <button className={styles.adminClose} onClick={onCancel} type="button" aria-label="close">×</button>
+                <div className={`${styles.deleteModal} ${styles.adminModal} ${scrollable ? styles.adminScrollable : ''}`} role="dialog" aria-modal="true" aria-labelledby="confirm-admin-title">
+                    <button className={styles.adminClose} onClick={onCancel} type="button" aria-label={scrollable ? confirmButtonText : 'close'}>×</button>
                     <div className={styles.adminHeader}>
-                        <h1 id="confirm-admin-title" className={styles.adminTitle}>{title}</h1>
+                        <h1 id="confirm-admin-title" className={styles.adminTitle} title={scrollable ? title : undefined}>{title}</h1>
                     </div>
-                    <div className={styles.adminBody}>
+                    <div className={styles.adminBody} tabIndex={scrollable ? 0 : undefined}>
                         <div className={styles.adminMessage}>{message}</div>
                     </div>
                     <div className={styles.adminFooter}>

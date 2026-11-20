@@ -16,9 +16,9 @@ export type AttrTier = { min: number; label: string; prompt?: string }; // promp
 export type AttrDef = {
   id: string;
   label: string;
-  icon?: string; // emoji
+  icon?: string; // 仅货币属性使用（钱包显示）
   init: number; // 固定开局值；勾选「固定数值」时用；不勾则开局在 min～max 随机
-  /** 开局取值：缺省 / fixed = 作者锁定用 init；random = 最小～最大随机（玩家可重掷）；
+  /** 开局取值：fixed = 作者锁定用 init；缺省 / random = 最小～最大随机（玩家可重掷）；
    * choice = 玩家从 options 里选；custom = 玩家在最小～最大内自填；dice 为旧稿，开局按 random 处理 */
   initMode?: "fixed" | "random" | "dice" | "choice" | "custom";
   /** 功能注释：initMode=choice 时的选项（选中即取 value 作开局值；label 会写进主角档案给 AI 看） */
@@ -62,6 +62,8 @@ export type Player = {
   klass: string; // 阶层
   description: string;
   avatar: string; // dataURL 或空
+  /** 平台头像库条目 id。同一局内同一 id 只分给一个人 */
+  avatarAssetId?: string;
   attrs: Attr[];
   traits?: Trait[]; // 旧存档遗留，已不再使用
   history: HistoryItem[];
@@ -73,12 +75,15 @@ export type Interaction = { turn: number; time: string; text: string };
 export type AffinityLog = { turn: number; delta: number; reason: string };
 
 export type Npc = {
+  encounterLabel?: string;
   id: string;
   name: string;
   age: string;
   identity: string;
   relation: string; // 与玩家关系
   avatar: string;
+  /** 平台头像库条目 id。同一局内同一 id 只分给一个人 */
+  avatarAssetId?: string;
   bio: string;
   mood: string;
   affinity: number; // 总好感 -100~100
@@ -236,6 +241,7 @@ export type GameState = {
   endingTitle?: string; // 结局定级标题（依据名气/口碑/奖项或破产）
   endingTag?: string; // 结局定级副标题
   endingId?: string; // 命中的自定义结局 id
+  routeId?: string; // 开局所选人物线路 id（跨周目解锁用）
   endingBadge?: string; // 结局类型标签（如「隐藏结局」「真结局」「结局 2/5」）
   endingSubTitle?: string; // 同时获得的副称号（如「超级美」）
   endingQuote?: string; // 结局画框底部寄语金句
@@ -283,6 +289,7 @@ export type GameState = {
   addons?: string[]; // 模组：本局启用的叠加包 id（按优先级顺序）
   modStamp?: import("../mods/modStamp").ModStampEntry[]; // 本局合并链里玩法包的版本（读档时对比，提示移除 / 新增 / 更新）
   itemMemo?: import("../mods/modStamp").ItemMemo; // 背包物品备忘：卸包后定义消失仍能显示名字与来源
+  storyItems?: Record<string, { name: string; desc: string }>;
   entSplit?: boolean; // 娱乐圈拆包后创建 / 已迁移的存档（缺省 = 老存档，读档时补上原版玩法扩展包）
   diaries?: DiaryEntry[]; // NPC 视角日记
   cgs?: CgDef[]; // CG 定义（作者编排）
@@ -546,7 +553,9 @@ export type Pov = "1" | "2" | "3";
 /** 屏幕方向：建角游玩偏好选定；局内主题 theme.orient 同步生效，设置里可随时改（无锁定） */
 export type ScreenOrient = "portrait" | "landscape";
 export type PlayPrefs = { mode?: PlayMode; pov?: Pov; orient?: ScreenOrient }; // 不填 mode/pov = 游戏模式 / 跟随世界观；orient 缺省按竖屏
-/* 头像池开关（按剧本）：pools 以「我的头像池」池名为键；publicRandom = 参与随机抽图的公共分类名 */
+/* 头像池开关（按剧本）：pools 以「我的头像池」池名为键。
+ * stylePacks = 本剧启用的官方风格库 id（对应头像库 style_pack，如 anime / realistic / ink）。
+ * publicRandom 是旧的年龄段分类名，不再参与抽图。 */
 export type AvatarPoolToggle = { pick?: boolean; random?: boolean };
 /** 剧本级头像匹配优先级：私人/创作者库 vs 公共库；通用性别兜底。手动锁定始终最高，系统库始终最后。 */
 export type AvatarMatchPrefer = "private" | "public";
@@ -556,6 +565,9 @@ export type AvatarMatchPrefsSlot = {
 };
 export type AvatarSlot = {
   pools?: Record<string, AvatarPoolToggle>;
+  /** 官方风格库 id。写成数组（含空数组）= 创作者明确选过；缺省 = 全部已上架风格库 */
+  stylePacks?: string[];
+  /** @deprecated 旧年龄段分类名。读档可留，抽图与编辑器都不再使用 */
   publicRandom?: string[];
   /** 匹配优先级：随模组导入/导出；未写则用平台默认，不读也不写平台全局设置 */
   match?: AvatarMatchPrefsSlot;
@@ -746,9 +758,8 @@ export type EventChoice = {
   failPrompt?: string; failEffects?: FixedEffect[]; failNextIds?: string[]; // 失败分支
 };
 
-/* 世界书条目：名称 · 正文 · 关键词 · 必须挂本作品地点或人物。
- * 注入时机：玩家在挂靠地点、挂靠人物在场、或正文提到关键词（OR）。
- * 旧条目可无依赖（constant / 全局），兼容内置世界；创作者新写必须有 bindRooms / bindNpcs。 */
+/* 世界书条目：名称 · 正文 · 关键词。地点和人物可选，只作过滤。
+ * 绿灯：最近对话里出现关键词才注入。蓝灯：每回合注入，挂了地点或人物时只在那个场合注入。 */
 export type WorldBookEntry = {
   _mod?: string; // 归属标记：由模板库 MOD 装入（卸载时只删带此标记的资源）
   id: string;
@@ -756,7 +767,7 @@ export type WorldBookEntry = {
   keywords: string[]; // 触发关键词（子串命中即算）
   content: string; // 设定正文
   enabled: boolean; // 单条开关
-  constant?: boolean; // 蓝灯：每回合常驻注入（无需关键词命中）；兼容旧档时以「关键词为空」视为常驻
+  constant?: boolean; // 蓝灯：每回合注入。关键词为空不会因此变成蓝灯。
   order?: number; // 插入顺序/优先级（越小越靠前、越受重视），缺省 100
   probability?: number; // 绿灯触发概率 0~100（命中关键词后仍按此概率决定是否注入），缺省 100 必触发
   /* —— 细化设定（均可缺省，旧条目行为不变）—— */
@@ -862,9 +873,11 @@ export type AIStep = {
     attrs?: { key: string; label?: string; delta?: number; value?: number; max?: number; icon?: string }[];
     identity?: string;
     history_add?: { title: string; detail: string };
+    items_add?: { id?: string; name?: string; desc?: string }[];
     extra?: { label: string; value: string }[];
   };
   npc_changes?: {
+    encounterLabel?: string;
     id?: string;
     name: string;
     /** 功能注释：新人物必填；男 / 女 / 其他，写入 persona 供剧情人称锁定 */
@@ -881,7 +894,7 @@ export type AIStep = {
     reason?: string;
     interaction?: string;
     self_event?: string; // NPC 自身发生的事 → 私有 selfMemory
-    avatar_variant?: string; // 新人物的头像池名（须与池名一字不差）
+    avatar_variant?: string; // 已忽略：头像由代码按性别/年龄匹配，不读模型给出的池名
     links?: { id?: string; name?: string; kind?: string; note?: string }[]; // 仅新人物：剧情明确交代的、与已有人物（按 id；只给全名时按名字 / 别名精确匹配）的关系；kind 指对方是 TA 的什么人
   }[];
   thoughts?: { name: string; text: string; diary?: string }[]; // 在场角色心事；diary 为可选的第一人称日记
@@ -893,7 +906,7 @@ export type AIStep = {
   narrative?: string; // 本回合剧情文本（= narration）
   state_diff?: { world?: Partial<World>; player_changes?: AIStep["player_changes"]; npc_changes?: AIStep["npc_changes"]; intimate?: string[]; game_end?: boolean };
   tabs?: Record<string, unknown>; // 分发给各 Tab 的数据（仅作展示提示，事实以状态中枢为准）
-  memory_updates?: { scope?: "main" | "npc"; npc?: string; text: string; imp?: number; who?: string[]; keys?: string[] }[] | string[];
+  memory_updates?: { scope?: "main" | "npc"; npc?: string; text: string; imp?: number; who?: string[]; keys?: string[]; op?: "add" | "update" | "delete"; replaces?: string }[] | string[];
   scene_memory?: import("./chronicle").SceneUpdate; // 此地陈设 / 状态与在场者穿着的变化（无变化省略）
   save_summary?: string;
   need_clarification?: string[];

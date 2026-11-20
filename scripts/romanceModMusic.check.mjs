@@ -23,11 +23,10 @@ const look = {
 };
 
 test('基础里只有一块音乐_不再挂美化也不叠两个折叠区', () => {
-  // 功能注释：C1.2 音乐进①基础，⑤美化不得再有音乐区块
-  assert.match(panel, /g="base" title="音乐"/);
+  // 功能注释：C1.2 音乐并进①基础「基本信息」，⑤美化不得再有音乐区块
   assert.doesNotMatch(panel, /g="look" title="音乐"/);
-  assert.match(panel, /hint: "作品封面、名称与简介、剧本基调、时间与推进、头像、建角、人物线路、地点、音乐、已添加的玩法"/);
-  // ⑤ 美化分组说明已去掉「剧情美化」；关键是美化里不得再出现音乐
+  assert.match(panel, /title="基本信息"[\s\S]*?ModBgmEditor/);
+  assert.match(panel, /hint: "作品封面、名称与简介、系统提示词、时间与推进、头像、建角、人物线路、地点、音乐、已添加的玩法"/);
   const lookHint = panel.match(/k: "look", label: "⑤ 美化", hint: "([^"]*)"/)?.[1] ?? '';
   assert.match(lookHint, /手机外观、皮肤美化、开场页外观/);
   assert.doesNotMatch(lookHint, /音乐/);
@@ -127,17 +126,29 @@ test('自动播放全列表只一首_引用不能勾_失效平台不能勾上', 
   assert.equal(gone.platformAutoplay, undefined);
 });
 
-test('地点下拉直接含平台曲_引用名后带引用_未加入列表也能选', () => {
-  const opts = lib.locationBgmOptions({
+test('地点下拉列本作品曲目_引用名后带引用_已挂平台曲或地点已选才含平台', () => {
+  const base = {
     bgm: [{ id: 't1', name: '雨', src: 'https://a.mp3' }],
     audio: [{ id: 'pack', name: '包内', kind: 'bgm' }],
     audioRefs: ['missing'],
-  }, look);
+  };
+  const opts = lib.locationBgmOptions(base, look);
   assert.ok(opts.some((o) => o.id === 't1' && o.name === '雨'));
   assert.ok(opts.some((o) => o.id === 'pack'));
   assert.ok(opts.some((o) => o.id === 'missing' && o.name.endsWith('（引用）')));
-  assert.ok(opts.some((o) => o.id === 'platform:cc0-bed' && o.name.endsWith('（平台）')));
-  assert.ok(opts.some((o) => o.id === 'platform:cc0-roar' && o.name.endsWith('（平台）')));
+  assert.equal(opts.some((o) => o.id === 'platform:cc0-bed'), false);
+
+  const withPlat = lib.locationBgmOptions(
+    { ...base, platformAudioRefs: ['platform:cc0-bed'] },
+    look,
+  );
+  assert.ok(withPlat.some((o) => o.id === 'platform:cc0-bed' && o.name.endsWith('（平台）')));
+
+  const viaRoom = lib.locationBgmOptions(
+    { ...base, rooms: { inn: { bgm: 'platform:cc0-roar' } } },
+    look,
+  );
+  assert.ok(viaRoom.some((o) => o.id === 'platform:cc0-roar' && o.name.endsWith('（平台）')));
 });
 
 test('缺失与下架只警告_脏数据不抛', () => {

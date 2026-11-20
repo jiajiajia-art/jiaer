@@ -719,6 +719,7 @@ export function storylineBrief(s: QuestSrc, lines: Storyline[] | undefined = get
     if (st !== "active") return `【${l.name}】${QUEST_STATE_LABEL[st]}`;
     const act = l.nodes.filter((_, i) => nodeState(l, i, s) === "active");
     const done = l.nodes.filter((n) => qFlag(s, n.id) > 0).length;
-    return `【${l.name}】${done}/${l.nodes.length} · 当前：${act.map((n) => `${n.optional ? "（可选）" : ""}${n.name}${n.desc ? `——${n.desc}` : ""}`).join("；") || "无"}`;
+    const goals = act.map((n) => `${n.optional ? "（可选）" : ""}${n.name}${n.desc ? `——${n.desc}` : ""}`).join("；") || "无";
+    return `【${l.name}】${done}/${l.nodes.length}${l.desc?.trim() ? ` · 主线目标：${l.desc.trim()}` : ""} · 当前：${goals}`;
   }).join("\n");
 }

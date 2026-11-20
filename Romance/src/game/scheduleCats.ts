@@ -19,7 +19,7 @@ export const SCHEDULE_CAT_DEFAULTS: Record<ScheduleCatId, ScheduleCatDefault> = 
   work: { id: "work", label: (t) => `进行中的${t("gig")}`, hint: "已接下的长期任务，按天推进进度", color: "#e0533d", source: "接下长期任务（如通告）后自动出现" },
   lesson: { id: "lesson", label: () => "学习课程", hint: "花费学费与体力，提升属性", color: "#c79a3a", source: "来自「培训课程」" },
   job: { id: "job", label: () => "打工赚钱", hint: "按档位解锁，档位越高收入越多", color: "#b3823c", source: "来自「打工」" },
-  rest: { id: "rest", label: () => "休息调整", hint: "恢复状态，缓解压力", color: "#3a9d78", source: "内置「休息」+ 归入此类的周末活动" },
+  rest: { id: "rest", label: () => "休息调整", hint: "恢复状态，缓解压力", color: "#3a9d78", source: "勾选「休息减压」，或把周末活动归入此类" },
   social: { id: "social", label: () => "外出社交", hint: "自由活动，结识人物、调整心情", color: "#d76d77", source: "归入此类的周末活动" },
 };
 

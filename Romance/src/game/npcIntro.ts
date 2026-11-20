@@ -66,3 +66,34 @@ export function skipPerson(g: GameState, id: string): GameState {
   if (introState(g, id) === "met") return g;
   return { ...g, npcIntro: { ...(g.npcIntro ?? {}), [id]: "skip" } };
 }
+
+/** 清理已确认的旧版误建名单，只处理带有旧自动建档特征的人物。 */
+export function cleanLegacyNpcArtifacts(g: GameState): GameState {
+  const confirmedNames = new Set(["有事想", "一句", "没有", "只是需要一个由头", "你现在"]);
+  const introIds = new Set(g.story.flatMap((turn) => turn.newcomers ?? []));
+  const removed = new Set(g.npcs.filter((npc) => confirmedNames.has(npc.name)
+    && npc.identity === "初次登场" && !npc.age && !npc.bio && introIds.has(npc.id)
+    && /^(本回合在场$|与你说上了话：「|在场，穿着：)/.test(npc.interactions?.[0]?.text ?? "")
+  ).map((npc) => npc.id));
+  if (!removed.size) return g;
+
+  const keepId = (id: string) => !removed.has(id);
+  const keepEntries = <T,>(entries: Record<string, T>) =>
+    Object.fromEntries(Object.entries(entries).filter(([id]) => keepId(id)));
+  return {
+    ...g,
+    npcs: g.npcs.filter((npc) => keepId(npc.id)),
+    npcIntro: g.npcIntro && keepEntries(g.npcIntro),
+    looks: g.looks && keepEntries(g.looks),
+    npcKb: g.npcKb && keepEntries(g.npcKb),
+    story: g.story.map((turn) => turn.newcomers?.some((id) => removed.has(id))
+      ? { ...turn, newcomers: turn.newcomers.filter(keepId) }
+      : turn),
+    sim: {
+      ...g.sim,
+      mobs: keepEntries(g.sim.mobs ?? {}),
+      rel: keepEntries(g.sim.rel ?? {}),
+      metPeople: (g.sim.metPeople ?? []).filter(keepId),
+    },
+  };
+}

@@ -43,6 +43,41 @@ export function customSpotIdFor(name: string): string {
   return `cus_ai_${h.toString(36)}`;
 }
 
+/** 功能注释：太泛的场所词不能单独当「同一个地点」 */
+const GENERIC_PLACE = /^(公寓|宿舍|别墅|酒店|旅馆|民宿|宾馆|大厦|大楼|小区|房间|卧室|客厅|厨房|书房|浴室|家|屋|室|楼|馆|店|铺|吧|厅)$/;
+
+/**
+ * 功能注释：地名可比对的几种写法。去掉行政区前缀（巴黎第16区·）和「的」，
+ * 「曦瑶的公寓」与「巴黎第16区·曦瑶公寓」会得到同一个「曦瑶公寓」。
+ */
+export function placeKeys(name: string): string[] {
+  const raw = name.trim().replace(/\s+/g, "");
+  if (raw.length < 2) return [];
+  const chunks = raw.split(/[·・•.|/／\-—]/).map((s) => s.trim()).filter((s) => s.length >= 2);
+  const keys = new Set<string>();
+  for (const s of [raw, ...chunks]) {
+    keys.add(s);
+    keys.add(s.replace(/的(?=公寓|宿舍|别墅|酒店|旅馆|民宿|宾馆|大厦|大楼|小区|房间|卧室|客厅|厨房|书房|浴室|宅|府|苑|屋|室|楼|馆|店|铺|吧|厅|家)/g, ""));
+  }
+  return [...keys].filter((k) => k.length >= 2);
+}
+
+/** 功能注释：两个地名是不是同一个地方。全等、去掉「的」和区域前缀后全等，或较短的一侧被较长的一侧包含。 */
+export function samePlaceName(a: string, b: string): boolean {
+  const ak = placeKeys(a);
+  const bk = placeKeys(b);
+  for (const x of ak) {
+    for (const y of bk) {
+      if (x === y) return true;
+      const short = x.length <= y.length ? x : y;
+      const long = x.length <= y.length ? y : x;
+      if (short.length < 3 || GENERIC_PLACE.test(short)) continue;
+      if (long.includes(short)) return true;
+    }
+  }
+  return false;
+}
+
 /**
  * 功能注释：把新地点叠进本局 mapEdits（custom 自建点，link 连回转场前房间，保证可寻路返回）。
  * 已存在同 id 时原样返回（不覆盖作者 / 玩家已改的坐标、图片、说明）。
@@ -108,7 +143,7 @@ export function pickSimilarSceneAsset(
   const contain = usable
     .filter((a) => {
       const n = a.name.trim().toLowerCase();
-      return n.length >= 2 && (n.includes(q) || q.includes(n));
+      return n.length >= 2 && (n.includes(q) || q.includes(n) || samePlaceName(placeName, a.name));
     })
     .sort((a, b) => Math.abs(a.name.length - q.length) - Math.abs(b.name.length - q.length))[0];
   if (contain) return contain;

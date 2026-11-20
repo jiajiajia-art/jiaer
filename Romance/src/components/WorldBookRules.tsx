@@ -1,7 +1,6 @@
 /* 世界书条目 · 细化设定（模组编辑器与游戏内世界书共用）：
  * 依赖地点 / 人物（可选）· 有效期 · 互斥组 · 检索权重。规则实现见 game/worldbookPick。 */
 import type { WorldBookEntry, WorldBookMode } from "../lib/types";
-import { keywordTexts } from "../lib/worldBookKeywords";
 import { worldBookBindNpcs, worldBookBindRooms, withWorldBookDeps } from "../lib/worldBookDeps";
 import { modeOf } from "../game/worldbookPick";
 
@@ -9,9 +8,9 @@ type Opt = { id: string; name: string };
 const field = "w-full min-w-0 rounded-full border border-line bg-paper-2 px-3 py-1 text-[12px] text-ink outline-none focus:border-jade";
 const lab = "mb-0.5 block text-[10.5px] font-bold tracking-[0.12em] text-ink-soft";
 const MODES: { k: WorldBookMode; t: string; d: string }[] = [
-  { k: "keyword", t: "检索命中", d: "上下文出现关键词才注入（有依赖时：在地点 / 人物在场也会注入）" },
-  { k: "constant", t: "每轮全局", d: "无依赖时每轮注入；也可挂地点或人物收窄范围" },
-  { k: "once", t: "一次性", d: "注入一次后标记消耗，不再触发" },
+  { k: "keyword", t: "检索命中", d: "最近对话里出现关键词才注入。挂了地点或人物时，还要人在那个场合，地点本身不会把条目点亮。" },
+  { k: "constant", t: "每轮全局", d: "每回合都注入。挂了地点或人物时，只在那个场合注入。" },
+  { k: "once", t: "一次性", d: "关键词命中并注入一次后不再触发。没填关键词不会自动注入。" },
 ];
 
 export function WorldBookModePills({ e, onChange }: { e: WorldBookEntry; onChange: (p: Partial<WorldBookEntry>) => void }) {
@@ -24,7 +23,7 @@ export function WorldBookModePills({ e, onChange }: { e: WorldBookEntry; onChang
             className={`rounded-full px-3 py-1 text-[11.5px] font-bold transition ${m === x.k ? "bg-ink text-paper-2" : "text-ink-soft hover:text-ink"}`}>{x.t}</button>
         ))}
       </div>
-      <p className="text-[10.5px] text-ink-soft">{MODES.find((x) => x.k === m)?.d}{m === "once" && keywordTexts(e.keywords).length === 0 ? "；未填关键词时下一轮直接注入" : ""}</p>
+      <p className="text-[10.5px] text-ink-soft">{MODES.find((x) => x.k === m)?.d}</p>
     </div>
   );
 }
@@ -56,7 +55,7 @@ export function WorldBookDepsPicker({
   return (
     <div className="space-y-2 sm:col-span-2">
       <div>
-        <p className={lab}>所属地点 · 可选 · 主角在这些地点时注入</p>
+        <p className={lab}>所属地点 · 可选 · 只在这些地点才允许注入</p>
         {rooms.length === 0 ? (
           <p className="rounded-lg border border-dashed border-line px-2.5 py-2 text-[11.5px] text-ink-soft">还没有地点。请先去「地点」添加，这里只列出本作品自己的地点。</p>
         ) : (
@@ -79,7 +78,7 @@ export function WorldBookDepsPicker({
         ))}
       </div>
       <div>
-        <p className={lab}>所属人物 · 可选 · 该人物在场时注入</p>
+        <p className={lab}>所属人物 · 可选 · 只在该人物在场时才允许注入</p>
         {npcs.length === 0 ? (
           <p className="rounded-lg border border-dashed border-line px-2.5 py-2 text-[11.5px] text-ink-soft">还没有人物。请先去「人物」添加，这里只列出本作品自己的人物。</p>
         ) : (

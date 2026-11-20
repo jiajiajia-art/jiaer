@@ -45,7 +45,7 @@ const ARRAY_FIELD_KEYS = new Set([
   // 功能注释：门槛 requires 常被 AI 写成单对象；不洗则 evalRequires for-of → is not iterable
   "requires", "requirements",
   // 功能注释：分档 / 公共随机池名常被 AI 写成对象；必须进清洗，否则 [...tiers] / new Set(publicRandom) 炸 is not iterable
-  "tiers", "publicRandom", "looksTiers", "fameTiers",
+  "tiers", "publicRandom", "stylePacks", "looksTiers", "fameTiers",
   // 功能注释：开局势力 / 手机扩展 / 依赖常被 AI 写成对象；必须进清洗，否则预览建角 flatMap/展开仍炸
   "startFactions", "phoneAppsExtra", "dependencies",
 ]);
@@ -133,7 +133,7 @@ export function unwrapRoomRow(raw: unknown): Record<string, unknown> | null {
  */
 function deepCoerceContent(value: unknown, keyHint = ""): unknown {
   if (Array.isArray(value)) {
-    if (["keywords", "tags", "roam", "works", "childNames", "options", "paragraphs", "publicRandom"].includes(keyHint)) {
+    if (["keywords", "tags", "roam", "works", "childNames", "options", "paragraphs", "publicRandom", "stylePacks"].includes(keyHint)) {
       return coerceStringList(value) ?? [];
     }
     return value.map((row) => deepCoerceContent(row));
@@ -210,7 +210,7 @@ function deepCoerceContent(value: unknown, keyHint = ""): unknown {
     }
     if (ARRAY_FIELD_KEYS.has(k)) {
       const arr = coerceArray(v);
-      const stringLists = new Set(["keywords", "tags", "roam", "works", "childNames", "options", "paragraphs", "publicRandom", "audioRefs", "platformAudioRefs", "musicOrder", "parentJobs", "identityOpts", "backgroundOpts", "klassOpts", "phoneAppsExtra", "dependencies"]);
+      const stringLists = new Set(["keywords", "tags", "roam", "works", "childNames", "options", "paragraphs", "publicRandom", "stylePacks", "audioRefs", "platformAudioRefs", "musicOrder", "parentJobs", "identityOpts", "backgroundOpts", "klassOpts", "phoneAppsExtra", "dependencies"]);
       out[k] = stringLists.has(k)
         ? (coerceStringList(arr) ?? [])
         : arr.map((row) => deepCoerceContent(row));

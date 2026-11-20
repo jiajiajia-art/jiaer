@@ -15,6 +15,18 @@ import styles from './WarehouseHub.module.css';
 
 const GROUP_ORDER: WarehouseNavItem['group'][] = ['mine', 'public', 'extra'];
 
+/** 这些分区页内已有导入 / 新建 / 上传，手机顶栏再放「立即上传」会和页内主按钮叠成两套入口 */
+const SECTION_OWNS_CREATE = new Set([
+  'persona',
+  'characters',
+  'avatars',
+  'worldbooks',
+  'plugins',
+  'public-cards',
+  'public-worldbooks',
+  'public-plugins',
+]);
+
 const WarehouseHub: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -135,10 +147,12 @@ const WarehouseHub: React.FC = () => {
             {renderNavLinks(railItems, 'rail')}
           </nav>
 
-          <button type="button" className={styles.mobileUploadStrip} onClick={goUpload}>
-            <span className={styles.mobileUploadCopy}>{t('warehouse.uploadShareShort')}</span>
-            <span className={styles.mobileUploadCta}>{t('warehouse.uploadNow')}</span>
-          </button>
+          {current && SECTION_OWNS_CREATE.has(current.id) ? null : (
+            <button type="button" className={styles.mobileUploadStrip} onClick={goUpload}>
+              <span className={styles.mobileUploadCopy}>{t('warehouse.uploadShareShort')}</span>
+              <span className={styles.mobileUploadCta}>{t('warehouse.uploadNow')}</span>
+            </button>
+          )}
         </div>
 
         <main className={styles.content}>

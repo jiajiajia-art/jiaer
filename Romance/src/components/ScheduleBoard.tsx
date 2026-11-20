@@ -137,8 +137,12 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
   return (
     <Modal title={`本周日程 · 第 ${s.week} 周`} onClose={() => { onClose(); setPickSeg(null); }}>
       <div className="mb-2 flex justify-end gap-2 text-[11.5px]">
-        <button onClick={() => fillWeek("rest")} className="text-ink-soft transition hover:text-jade">余下休息</button>
-        <span className="text-line">·</span>
+        {restStressValue() != null && (
+          <>
+            <button onClick={() => fillWeek("rest")} className="text-ink-soft transition hover:text-jade">余下休息</button>
+            <span className="text-line">·</span>
+          </>
+        )}
         <button onClick={() => fillWeek(null)} className="text-ink-soft transition hover:text-danger">清空</button>
       </div>
 
@@ -299,8 +303,8 @@ export default function ScheduleBoard({ open, onClose }: { open: boolean; onClos
               );
             }
 
-            // 休息 / 外出社交：从固定活动集取
-            const ids = [...(c === "rest" ? ["rest"] : []), ...WEEKEND_ACTS.filter((w) => weekendCat(w) === c).map((w) => w.id)];
+            // 功能注释：内置「休息」只在本作品写了减压（娱乐圈有默认值）时出现，避免每份作品日程里都有一条没有效果的休息。
+            const ids = [...(c === "rest" && restStressValue() != null ? ["rest"] : []), ...WEEKEND_ACTS.filter((w) => weekendCat(w) === c).map((w) => w.id)];
             const group = ids.map((id) => describeAct(s, id)).filter((x): x is ActInfo => !!x);
             if (!group.length) return null;
             return (

@@ -1,5 +1,5 @@
 /* 画面边框 DIY：封面与游玩界面共用。纯装饰层（pointer-events: none），不影响点击与布局。
- * 提供精致的 SVG 艺术角花、欧式卷草、中式回纹花窗、星盘塔罗、蕾丝珍珠、取景框与自定义边框图。 */
+ * 提供精致的 SVG 艺术角花、欧式卷草、中式回纹花窗、星盘塔罗、蕾丝珍珠、藤蔓缠绕、取景框与自定义边框图。 */
 import type { CSSProperties, ReactNode } from "react";
 import ImagePicker from "./ImagePicker";
 import { IconCamera, IconClose, IconSpark, IconStar } from "../lib/icons";
@@ -13,6 +13,7 @@ export type FrameStyleId =
   | "window"
   | "tarot"
   | "lace"
+  | "vine"
   | "cinema"
   | "inset"
   | "dashed"
@@ -100,6 +101,94 @@ function CornerSvg({ kind, size, strokeWidth }: { kind: "filigree" | "window" | 
   );
 }
 
+/* —— 藤蔓缠绕：四角密叶卷须 + 四边可平铺藤段（禁止 stretch，避免被拉成细线） —— */
+function VineLeaf({ x, y, rot = 0, s = 1 }: { x: number; y: number; rot?: number; s?: number }) {
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${rot}) scale(${s})`}>
+      <path d="M0 0 C4 -7 12 -6 10 0 C12 6 4 7 0 0 Z" fill="currentColor" opacity="0.78" />
+      <path d="M0 0 C-4 -6 -11 -5 -9 0 C-11 5 -4 6 0 0 Z" fill="currentColor" opacity="0.62" />
+      <path d="M0 -1 L8 0" stroke="currentColor" strokeWidth="0.7" opacity="0.45" fill="none" />
+    </g>
+  );
+}
+function VineBloom({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
+  return (
+    <g transform={`translate(${x} ${y}) scale(${s})`}>
+      <circle cx="0" cy="-3.2" r="2.1" fill="currentColor" opacity="0.7" />
+      <circle cx="2.8" cy="-1" r="2.1" fill="currentColor" opacity="0.65" />
+      <circle cx="1.8" cy="2.4" r="2.1" fill="currentColor" opacity="0.6" />
+      <circle cx="-1.8" cy="2.4" r="2.1" fill="currentColor" opacity="0.6" />
+      <circle cx="-2.8" cy="-1" r="2.1" fill="currentColor" opacity="0.65" />
+      <circle cx="0" cy="0" r="1.5" fill="currentColor" opacity="0.95" />
+    </g>
+  );
+}
+
+function VineCornerSvg({ size, strokeWidth }: { size: number; strokeWidth: number }) {
+  const sw = Math.max(1.8, Math.min(3.2, strokeWidth * 1.15));
+  return (
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" stroke="currentColor" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 68 C8 38 12 20 32 10 C46 3 60 6 68 18" />
+      <path d="M16 68 C16 44 20 28 36 20 C48 14 58 16 64 24" opacity="0.7" />
+      <path d="M32 10 C40 0 52 4 48 16 C46 24 34 22 32 14" opacity="0.9" />
+      <path d="M8 44 C-2 38 0 26 12 28 C20 30 18 42 10 46" opacity="0.85" />
+      <VineLeaf x={26} y={24} rot={-35} s={1.15} />
+      <VineLeaf x={18} y={40} rot={-80} s={1} />
+      <VineLeaf x={42} y={16} rot={10} s={1.05} />
+      <VineLeaf x={54} y={28} rot={55} s={0.9} />
+      <VineBloom x={50} y={36} s={1.05} />
+      <VineBloom x={22} y={52} s={0.8} />
+    </svg>
+  );
+}
+
+/** 横/竖边藤段：固定比例 pattern 平铺，叶子不会被拉扁；id 按边区分避免重复 */
+function VineEdgeSvg({ horizontal, strokeWidth, edgeKey }: { horizontal: boolean; strokeWidth: number; edgeKey: string }) {
+  const sw = Math.max(1.6, Math.min(3, strokeWidth * 1.05));
+  const pid = `vinePat-${edgeKey}`;
+  return (
+    <svg
+      viewBox={horizontal ? "0 0 96 40" : "0 0 40 96"}
+      preserveAspectRatio="xMidYMid slice"
+      style={{ display: "block", width: "100%", height: "100%" }}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={sw}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <defs>
+        {horizontal ? (
+          <pattern id={pid} width="96" height="40" patternUnits="userSpaceOnUse">
+            <path d="M2 24 C18 10 30 30 48 18 C66 6 78 28 94 16" />
+            <path d="M6 28 C22 16 34 32 52 22 C70 12 82 30 94 22" opacity="0.55" />
+            <g transform="translate(22 16)"><path d="M0 0 C4 -7 12 -6 10 0 C12 6 4 7 0 0 Z" fill="currentColor" opacity="0.75" /><path d="M0 0 C-4 -6 -11 -5 -9 0 C-11 5 -4 6 0 0 Z" fill="currentColor" opacity="0.58" /></g>
+            <g transform="translate(48 14) rotate(18)"><path d="M0 0 C4 -7 12 -6 10 0 C12 6 4 7 0 0 Z" fill="currentColor" opacity="0.72" /><path d="M0 0 C-4 -6 -11 -5 -9 0 C-11 5 -4 6 0 0 Z" fill="currentColor" opacity="0.55" /></g>
+            <g transform="translate(74 18) rotate(-12)"><path d="M0 0 C4 -7 12 -6 10 0 C12 6 4 7 0 0 Z" fill="currentColor" opacity="0.7" /><path d="M0 0 C-4 -6 -11 -5 -9 0 C-11 5 -4 6 0 0 Z" fill="currentColor" opacity="0.52" /></g>
+            <circle cx="36" cy="12" r="2.2" fill="currentColor" opacity="0.85" />
+            <circle cx="34" cy="10.2" r="1.3" fill="currentColor" opacity="0.55" />
+            <circle cx="38.2" cy="10.4" r="1.3" fill="currentColor" opacity="0.55" />
+            <circle cx="62" cy="10" r="1.8" fill="currentColor" opacity="0.7" />
+          </pattern>
+        ) : (
+          <pattern id={pid} width="40" height="96" patternUnits="userSpaceOnUse">
+            <path d="M24 2 C10 18 30 30 18 48 C6 66 28 78 16 94" />
+            <path d="M28 6 C16 22 32 34 22 52 C12 70 30 82 22 94" opacity="0.55" />
+            <g transform="translate(16 22) rotate(-70)"><path d="M0 0 C4 -7 12 -6 10 0 C12 6 4 7 0 0 Z" fill="currentColor" opacity="0.75" /><path d="M0 0 C-4 -6 -11 -5 -9 0 C-11 5 -4 6 0 0 Z" fill="currentColor" opacity="0.58" /></g>
+            <g transform="translate(14 48) rotate(-55)"><path d="M0 0 C4 -7 12 -6 10 0 C12 6 4 7 0 0 Z" fill="currentColor" opacity="0.72" /><path d="M0 0 C-4 -6 -11 -5 -9 0 C-11 5 -4 6 0 0 Z" fill="currentColor" opacity="0.55" /></g>
+            <g transform="translate(18 74) rotate(-85)"><path d="M0 0 C4 -7 12 -6 10 0 C12 6 4 7 0 0 Z" fill="currentColor" opacity="0.7" /><path d="M0 0 C-4 -6 -11 -5 -9 0 C-11 5 -4 6 0 0 Z" fill="currentColor" opacity="0.52" /></g>
+            <circle cx="12" cy="36" r="2.2" fill="currentColor" opacity="0.85" />
+            <circle cx="10.2" cy="34" r="1.3" fill="currentColor" opacity="0.55" />
+            <circle cx="10.4" cy="38.2" r="1.3" fill="currentColor" opacity="0.55" />
+            <circle cx="10" cy="62" r="1.8" fill="currentColor" opacity="0.7" />
+          </pattern>
+        )}
+      </defs>
+      <rect width="100%" height="100%" fill={`url(#${pid})`} stroke="none" />
+    </svg>
+  );
+}
+
 /* 顶部/底部居中徽章装饰 */
 function CrestSvg({ kind, width }: { kind: "filigree" | "tarot" | "lace" | "window"; width: number }) {
   return (
@@ -137,17 +226,19 @@ export function FrameOverlay({ f, fixed }: { f?: FrameDiy; fixed?: boolean }) {
   const w = Math.max(1, Math.min(6, f.width ?? 1.5));
   const g = Math.max(4, Math.min(40, f.gap ?? 14));
   const r = Math.max(0, Math.min(40, f.radius ?? 14));
-  const c = f.color || "rgba(244, 224, 186, 0.88)";
-  const cs = Math.max(28, Math.min(76, f.cornerSize ?? 48));
+  const c = f.color || (f.style === "vine" ? "#6f9a5c" : "rgba(244, 224, 186, 0.88)");
+  const cs = Math.max(28, Math.min(76, f.cornerSize ?? (f.style === "vine" ? 56 : 48)));
   const glowFilter = f.glow !== false ? `drop-shadow(0 0 8px color-mix(in srgb, ${c} 45%, transparent))` : undefined;
+  // 功能注释：藤蔓贴卡边；其它框仍保留最小 4px 内缩
+  const insetGap = f.style === "vine" ? Math.max(0, Math.min(40, f.gap ?? 0)) : g;
 
   const base: CSSProperties = {
     position: fixed ? "fixed" : "absolute",
-    inset: g,
+    inset: insetGap,
     borderRadius: r,
     pointerEvents: "none",
     zIndex: 30,
-    opacity: f.opacity ?? 0.88,
+    opacity: f.opacity ?? (f.style === "vine" ? 0.95 : 0.88),
     color: c,
     filter: glowFilter,
   };
@@ -157,6 +248,53 @@ export function FrameOverlay({ f, fixed }: { f?: FrameDiy; fixed?: boolean }) {
     return (
       <div aria-hidden className="frame-diy" style={{ ...base, inset: Math.max(0, g - 6), filter: undefined }}>
         <img src={f.image} alt="" className="h-full w-full object-fill select-none" />
+      </div>
+    );
+  }
+
+  // 藤蔓缠绕：四角密叶卷须 + 四边平铺藤段，贴住阅读卡外沿
+  // 功能注释：整层禁止 filter/drop-shadow——父级 filter 会新建层叠上下文，把下面的阅读卡罩成黑块
+  if (f.style === "vine") {
+    const rot = ["rotate(0deg)", "scaleX(-1)", "scaleY(-1)", "scale(-1,-1)"] as const;
+    const pos: CSSProperties[] = [
+      { top: -6, left: -6 },
+      { top: -6, right: -6 },
+      { bottom: -6, left: -6 },
+      { bottom: -6, right: -6 },
+    ];
+    const edgePad = Math.max(22, Math.round(cs * 0.58));
+    const edgeThick = Math.max(28, Math.round(cs * 0.55));
+    const pieceGlow = f.glow !== false ? `drop-shadow(0 0 3px color-mix(in srgb, ${c} 55%, transparent))` : undefined;
+    return (
+      <div aria-hidden className="frame-diy frame-diy-vine" style={{ ...base, overflow: "visible", filter: undefined }}>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: r,
+            border: `${Math.max(1.5, w * 0.7)}px solid color-mix(in srgb, ${c} 42%, transparent)`,
+          }}
+        />
+        {/* 上/下边藤：slice 平铺，不拉伸变形 */}
+        <span style={{ position: "absolute", top: -10, left: edgePad - 4, right: edgePad - 4, height: edgeThick, filter: pieceGlow }}>
+          <VineEdgeSvg horizontal strokeWidth={w} edgeKey="t" />
+        </span>
+        <span style={{ position: "absolute", bottom: -10, left: edgePad - 4, right: edgePad - 4, height: edgeThick, transform: "scaleY(-1)", filter: pieceGlow }}>
+          <VineEdgeSvg horizontal strokeWidth={w} edgeKey="b" />
+        </span>
+        {/* 左/右边藤 */}
+        <span style={{ position: "absolute", left: -10, top: edgePad - 4, bottom: edgePad - 4, width: edgeThick, filter: pieceGlow }}>
+          <VineEdgeSvg horizontal={false} strokeWidth={w} edgeKey="l" />
+        </span>
+        <span style={{ position: "absolute", right: -10, top: edgePad - 4, bottom: edgePad - 4, width: edgeThick, transform: "scaleX(-1)", filter: pieceGlow }}>
+          <VineEdgeSvg horizontal={false} strokeWidth={w} edgeKey="r" />
+        </span>
+        {/* 四角卷须 */}
+        {pos.map((p, i) => (
+          <span key={i} style={{ position: "absolute", width: cs, height: cs, transform: rot[i], filter: pieceGlow, ...p }}>
+            <VineCornerSvg size={cs} strokeWidth={w} />
+          </span>
+        ))}
       </div>
     );
   }
@@ -311,6 +449,7 @@ const STYLES: { id: FrameStyleId; label: string; desc: string; icon: ReactNode }
   { id: "tarot", label: "星盘塔罗", desc: "星芒新月秘仪几何框", icon: <IconStar size={14} /> },
   { id: "window", label: "中式花窗", desc: "东方回纹轩窗格栅", icon: <IconSpark size={14} /> },
   { id: "lace", label: "千金蕾丝", desc: "浪漫扇边珍珠花框", icon: <IconSpark size={14} /> },
+  { id: "vine", label: "藤蔓缠绕", desc: "绿意卷须与叶花围边", icon: <IconSpark size={14} /> },
   { id: "double", label: "画报双线", desc: "杂志感内外双层衬线", icon: <IconStar size={14} /> },
   { id: "corner", label: "极简四角", desc: "轻盈折角 + 呼吸内线", icon: <IconStar size={14} /> },
   { id: "cinema", label: "电影取景", desc: "宽银幕准星取景线", icon: <IconCamera size={14} /> },
@@ -326,6 +465,7 @@ const COLOR_PRESETS: [string, string][] = [
   ["#f7c6db", "樱粉玫瑰"],
   ["#d4bfff", "星云淡紫"],
   ["#a8e6df", "青玉琉璃"],
+  ["#8fb87a", "藤叶绿意"],
   ["#1f1f24", "复古墨黑"],
 ];
 
@@ -334,6 +474,14 @@ export default function FrameEditor({ value, onChange }: { value?: FrameDiy; onC
   const on = !!f.style && f.style !== "none";
   const set = (p: Partial<FrameDiy>) => {
     const n = { ...f, ...p };
+    // 功能注释：选藤蔓时给可贴卡边的默认：贴边、加粗、绿叶色（用户已改过的字段不覆盖）
+    if (n.style === "vine") {
+      if (n.gap == null && p.style === "vine") n.gap = 0;
+      if (n.width == null && p.style === "vine") n.width = 2.5;
+      if (n.cornerSize == null && p.style === "vine") n.cornerSize = 56;
+      if (n.color == null && p.style === "vine") n.color = "#6f9a5c";
+      if (n.opacity == null && p.style === "vine") n.opacity = 0.95;
+    }
     onChange(!n.style || n.style === "none" ? undefined : n);
   };
   const range = (label: string, k: "width" | "radius" | "gap" | "cornerSize", min: number, max: number, def: number) => (
@@ -433,11 +581,11 @@ export default function FrameEditor({ value, onChange }: { value?: FrameDiy; onC
           </div>
 
           <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
-            {range("线条粗细", "width", 1, 5, 2)}
-            {range("距画面边距", "gap", 4, 36, 14)}
+            {range("线条粗细", "width", 1, 5, f.style === "vine" ? 2.5 : 2)}
+            {range("距画面边距", "gap", f.style === "vine" ? 0 : 4, 36, f.style === "vine" ? 0 : 14)}
             {f.style !== "cinema" && range("圆角弧度", "radius", 0, 36, 14)}
-            {(f.style === "filigree" || f.style === "window" || f.style === "tarot" || f.style === "lace" || f.style === "corner") &&
-              range("角花大小", "cornerSize", 28, 72, 48)}
+            {(f.style === "filigree" || f.style === "window" || f.style === "tarot" || f.style === "lace" || f.style === "vine" || f.style === "corner") &&
+              range("角花大小", "cornerSize", 28, 72, f.style === "vine" ? 56 : 48)}
             <label className="block">
               <span className="mb-1 mt-2.5 flex justify-between text-[11.5px] font-bold text-ink">
                 不透明度

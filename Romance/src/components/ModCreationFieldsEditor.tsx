@@ -13,6 +13,7 @@ import {
   creationAttrKindLabel,
   newCurrencyAttr,
   newNumberAttr,
+  newSkillAttr,
   type CreationItemAddType,
 } from "../lib/creationItems";
 
@@ -172,7 +173,8 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
   const setAttr = (id: string, p: Partial<AttrDef>) => setAttrs(attrList.map((a) => (a.id === id ? { ...a, ...p } : a)));
 
   const row = (key: string, id: string, title: string, type: string, badges: React.ReactNode, children: React.ReactNode, extra?: React.ReactNode, opts?: { authorField?: string; flash?: boolean }) => {
-    const isOpen = open === id;
+    const hasBody = children != null;
+    const isOpen = hasBody && open === id;
     return (
       <div
         key={key}
@@ -181,12 +183,20 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
         className={`rounded-xl border bg-paper transition ${opts?.flash ? "border-coral ring-2 ring-coral/45 shadow-[0_0_0_3px_color-mix(in_srgb,var(--coral)_18%,transparent)]" : "border-line"}`}
       >
         <div className="flex items-center gap-2 px-3 py-2.5">
-          <button type="button" onClick={() => setOpen(isOpen ? null : id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
-            <span className="text-[13px] font-semibold text-ink">{title}</span>
-            <span className="rounded-full bg-paper-2 px-2 py-0.5 text-[10.5px] text-ink-soft">{type}</span>
-            {badges}
-            <span className={`ml-auto text-ink-soft transition ${isOpen ? "rotate-180" : ""}`}><IconChevronDown size={12} /></span>
-          </button>
+          {hasBody ? (
+            <button type="button" onClick={() => setOpen(isOpen ? null : id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+              <span className="text-[13px] font-semibold text-ink">{title}</span>
+              <span className="rounded-full bg-paper-2 px-2 py-0.5 text-[10.5px] text-ink-soft">{type}</span>
+              {badges}
+              <span className={`ml-auto text-ink-soft transition ${isOpen ? "rotate-180" : ""}`}><IconChevronDown size={12} /></span>
+            </button>
+          ) : (
+            <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
+              <span className="text-[13px] font-semibold text-ink">{title}</span>
+              <span className="rounded-full bg-paper-2 px-2 py-0.5 text-[10.5px] text-ink-soft">{type}</span>
+              {badges}
+            </div>
+          )}
           {extra}
         </div>
         {isOpen && <div className="space-y-2.5 border-t border-line px-3 py-3">{children}</div>}
@@ -198,11 +208,29 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
   );
   const lbl = "mb-0.5 block text-[11px] text-ink-soft";
 
+  const fieldNote = (id: string) => (
+    <label className="block">
+      <span className={lbl}>创作者备注（显示在玩家建角对应字段下方）</span>
+      <input className={inp} maxLength={200} value={cc.fieldNotes?.[id] ?? ""} onChange={(e) => {
+        const notes = { ...cc.fieldNotes };
+        if (e.target.value) notes[id] = e.target.value;
+        else delete notes[id];
+        commit({ fieldNotes: notes });
+      }} />
+    </label>
+  );
+
   /** 功能注释：同一「＋ 添加」按类型写入 fields 或 customAttrs，不再分「添加属性 / 添加字段」 */
   const addItem = (kind: CreationItemAddType) => {
     setPicking(false);
     if (kind === "number") {
       const a = newNumberAttr(attrUid());
+      setAttrs([...attrList, a]);
+      setOpen(a.id);
+      return;
+    }
+    if (kind === "skill") {
+      const a = newSkillAttr(attrUid());
       setAttrs([...attrList, a]);
       setOpen(a.id);
       return;
@@ -221,15 +249,40 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
 
   return (
     <div className="space-y-2">
-      {/* 功能注释：标题下列表即玩家要填的字段；不写系统规则长说明 */}
-      <p className="mb-1 text-[12px] font-bold text-ink">建角字段</p>
+      <div className="flex items-start gap-2">
+        <p className="text-[12px] font-bold text-ink">建角字段 · 玩家角色（主角）</p>
+        <details className="min-w-0 text-[11px] text-ink-soft">
+          <summary aria-label="建角字段说明" className="grid h-5 w-5 cursor-pointer list-none place-items-center rounded-full border border-line font-bold text-ink">?</summary>
+          <p className="mt-1">这里设置玩家开局填写的内容。NPC 在「② 角色」配置。玩家必填指开局填写，创作者必填指发布前设置。</p>
+        </details>
+      </div>
+      {cc.playerNote && <label className="block">
+        <span className={lbl}>旧版全局备注</span>
+        <textarea className={inp} rows={2} value={cc.playerNote} maxLength={200}
+          onChange={(e) => commit({ playerNote: e.target.value || undefined })} />
+      </label>}
 
       {BUILTINS.map((b) => {
         const c = cfg(b.k);
+        const configurable = b.k === "name" || b.k === "gender";
         return (
-          row(b.k, b.k, c.label || b.label, TYPE_LABEL[b.type],
-            <><Badge tone="jade">系统字段</Badge><Badge tone="gold">必填</Badge></>, <>
-            <label><span className={lbl}>显示名称</span><input className={inp} value={c.label ?? ""} placeholder={b.label} onChange={(e) => setCfg(b.k, { label: e.target.value })} /></label>
+          row(b.k, b.k, b.label, TYPE_LABEL[b.type],
+            <><Badge tone="soft">系统字段</Badge><Badge tone="gold">玩家必填</Badge>{c.value ? <Badge tone="soft">{c.locked ? "已锁定" : "有预设"}</Badge> : null}</>, <>
+            {configurable && <>
+            <div className="space-y-1.5">
+              {/* 功能注释：系统四项名称固定。姓名 / 性别只配预设默认值，可锁定；年龄 / 生日另填预设 */}
+              {b.k === "name" ? (
+                <label><span className={lbl}>预设姓名（玩家开局默认，留空 = 随机起名）</span>
+                  <input className={inp} value={c.value ?? ""} maxLength={24} placeholder="如：Arthur / 苏晚" onChange={(e) => setCfg("name", { value: e.target.value })} /></label>
+              ) : (
+                <label><span className={lbl}>预设性别（留空 = 随机）</span>
+                  <select className={inp} value={c.value ?? ""} onChange={(e) => setCfg("gender", { value: e.target.value })}>
+                    <option value="">随机</option>
+                    {normalizeGenderOptions(c.options).map((o) => <option key={o} value={o}>{o}</option>)}
+                  </select></label>
+              )}
+              <Toggle on={!!c.locked} onClick={() => setCfg(b.k, { locked: !c.locked || undefined })}>锁定为预设值（玩家不能改）</Toggle>
+            </div>
             {b.k === "gender" && (() => {
               const genderOptions = normalizeGenderOptions(c.options);
               return <div className="space-y-1.5">
@@ -242,13 +295,27 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
                 <button type="button" className={btn} onClick={() => setCfg("gender", { options: [...genderOptions, `自定义性别 ${genderOptions.length - 1}`] })}>＋ 添加性别</button>
               </div>;
             })()}
+            </>}
+            {b.k === "age" && <label className="block">
+              <span className={lbl}>预设年龄（留空随机）</span>
+              <input className={inp} type="number" min={1} step={1} value={c.value ?? ""}
+                onChange={(e) => setCfg("age", { value: e.target.value })} />
+            </label>}
+            {b.k === "birthday" && <label className="block">
+              <span className={lbl}>预设生日（留空随机）</span>
+              <input className={inp} type="date"
+                value={c.value ? `2000-${c.value.split("-").map((part) => part.padStart(2, "0")).join("-")}` : ""}
+                min="2000-01-01" max="2000-12-31"
+                onChange={(e) => setCfg("birthday", { value: e.target.value.slice(5) })} />
+            </label>}
+            {fieldNote(b.k)}
           </>)
         );
       })}
 
       {/* 功能注释：开局资金与系统四项同级必填；类型位=可改货币名；金额默认 0 已算填好 */}
-      {row("startMoney", "startMoney", "开局资金", (moneyLabel?.trim() || "请填货币名"),
-        <Badge tone="gold">必填</Badge>,
+      {row("startMoney", "startMoney", "资金", (moneyLabel?.trim() || "请填货币名"),
+        <Badge tone="gold">创作者必填</Badge>,
         <>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <label>
@@ -262,7 +329,7 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
               />
             </label>
             <label>
-              <span className={lbl}>开局金额 *</span>
+              <span className={lbl}>金额 *</span>
               <input
                 data-author-field-input="author-field-start-money-amount"
                 type="number"
@@ -278,7 +345,6 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
               />
             </label>
           </div>
-          <p className="text-[10.5px] text-ink-soft">金额默认 0（已算填好，不必再填）。货币名称会出现在开局页与游戏内资金文案，请改成「元」「灵石」「星币」等。</p>
         </>,
         undefined,
         { authorField: "author-field-start-money", flash: flashMoney })}
@@ -286,7 +352,10 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
       {attrList.map((a, i) => (
         row(a.id, a.id, a.label || "未命名", creationAttrKindLabel(a),
           <>{a.pin && <Badge tone="jade">顶栏主属性</Badge>}{a.hidden && <Badge tone="soft">隐藏</Badge>}{(a.tiers?.length ?? 0) > 0 && <Badge tone="soft">{`${a.tiers!.length} 档`}</Badge>}</>,
-          <AttrDefForm a={a} onChange={(p) => setAttr(a.id, p)} pinnedOthers={attrList.filter((x) => x.pin && x.id !== a.id).length} />,
+          <>
+            <AttrDefForm a={a} onChange={(p) => setAttr(a.id, p)} pinnedOthers={attrList.filter((x) => x.pin && x.id !== a.id).length} />
+            {fieldNote(`attr:${a.id}`)}
+          </>,
           <>
             <button type="button" disabled={!i} className={`${btn} !px-1.5`} onClick={() => { const l = [...attrList]; [l[i - 1], l[i]] = [l[i], l[i - 1]]; setAttrs(l); }} aria-label="上移">↑</button>
             <button type="button" className="px-1 text-ink-soft hover:text-coral" onClick={() => setAttrs(attrList.filter((x) => x.id !== a.id))} aria-label="删除"><IconClose size={14} /></button>
@@ -295,7 +364,7 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
 
       {fields.map((f, fieldIndex) => (
         row(f.id, f.id, f.label || "未命名字段", TYPE_LABEL[f.type] ?? f.type,
-          <>{f.required && <Badge tone="gold">必填</Badge>}{(f.paths || f.bgs) && <Badge tone="jade">条件出现</Badge>}</>, <>
+          <>{f.required && <Badge tone="gold">玩家必填</Badge>}{(f.paths || f.bgs) && <Badge tone="jade">条件出现</Badge>}</>, <>
           <div className="grid grid-cols-2 gap-2">
             <label><span className={lbl}>字段名</span><input className={inp} value={f.label} onChange={(e) => setField(f.id, { label: e.target.value })} placeholder="如：座右铭" /></label>
             <label><span className={lbl}>类型</span>
@@ -316,6 +385,7 @@ export default function ModCreationFieldsEditor({ creation, backgrounds, onChang
               <label><span className={lbl}>占位提示</span><input className={inp} value={f.placeholder ?? ""} onChange={(e) => setField(f.id, { placeholder: e.target.value || undefined })} /></label>
             )}
           </div>
+          {fieldNote(`custom:${f.id}`)}
           {(f.type === "select" || f.type === "radio") && (
             <label><span className={lbl}>选项（一行一个）</span>
               <textarea className={inp} rows={3} value={(f.options ?? []).join("\n")} onChange={(e) => setField(f.id, { options: e.target.value.split("\n") })} />

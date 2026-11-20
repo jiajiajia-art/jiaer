@@ -17,7 +17,7 @@ test('游戏设置_玩家美化只留皮肤风格选择', () => {
   // 功能注释：玩家 general 设置不得再跳进主题包/对话框等完整美化
   assert.match(shell, /PlayerSkinPicker/);
   // 玩家游戏设置只留「皮肤」分支；完整美化弹窗标题仍是「美化」
-  assert.match(shell, /!beauty && \(\s*<SettingBranch title="皮肤"/);
+  assert.match(shell, /!beauty &&[\s\S]*<SettingBranch title="皮肤"/);
   assert.match(shell, /<Modal title="美化"/);
   assert.doesNotMatch(shell, /主题包 · 全局风格 · 对话框/);
   assert.doesNotMatch(shell, /onBeauty && \(/);

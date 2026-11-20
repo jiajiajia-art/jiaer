@@ -591,8 +591,8 @@ const MOODS = ["😊", "🥰", "😌", "😎", "😢", "😤", "😴", "🤩"];
 export function NotesApp({ onBack }: { onBack: () => void }) {
   const [list, setList] = useState<Memo[]>(() => {
     return loadData<Memo[]>(MEMO_KEY, [
-      { id: "m1", text: "试镜清单\n· 提前一周背台词\n· 准备两套定妆造型\n· 早睡，别熬夜", ts: Date.now() },
-      { id: "m2", text: "第一次进组\n今天第一次走进摄影棚，灯光亮得睁不开眼。导演说我眼睛里有故事。\n哪怕只是个小角色，也告诉自己——总有一天，今夜她是主角。", ts: Date.now() - 86400000 },
+      { id: "m1", text: "今天要办的事\n· 回一条消息\n· 出门前看一眼天气\n· 早睡", ts: Date.now() },
+      { id: "m2", text: "随手记\n路过时想起来的一句话，先写在这里，免得回头忘了。", ts: Date.now() - 86400000 },
     ]);
   });
   const [open, setOpen] = useState<string | null>(null);

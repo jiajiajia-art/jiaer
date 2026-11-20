@@ -35,47 +35,17 @@ export default function ModTravelEditor({ value, rooms, onChange, part }: { valu
   return (
     <div className="space-y-3">
       {pace && (
-        <div className="space-y-2">
-          {/* 功能注释：三格并排，去掉大段扣点说明，只留一行短提示 */}
-          <div className="grid grid-cols-3 gap-2">
-            <label className="block text-[11px] text-ink-soft">
-              每回合行动点
-              <input
-                type="number"
-                min={1}
-                max={99}
-                value={t.apPerTurn ?? 10}
-                onChange={(e) => set({ apPerTurn: num(e.target.value, 1) })}
-                className={`${inp} mt-0.5`}
-              />
-            </label>
-            <label className="block text-[11px] text-ink-soft">
-              剧情扣点
-              <input
-                type="number"
-                min={0}
-                max={99}
-                value={t.apPerAct ?? 1}
-                onChange={(e) => set({ apPerAct: num(e.target.value, 0) })}
-                className={`${inp} mt-0.5`}
-              />
-            </label>
-            <label className="block text-[11px] text-ink-soft">
-              对话扣点
-              <input
-                type="number"
-                min={0}
-                max={99}
-                value={t.apPerTalk ?? 1}
-                onChange={(e) => set({ apPerTalk: num(e.target.value, 0) })}
-                className={`${inp} mt-0.5`}
-              />
-            </label>
-          </div>
-          <p className="text-[10.5px] leading-snug text-ink-soft">
-            点选项 / 开对话各扣对应点数（填 0 不扣）；支线用尽后需回主线推进。
-          </p>
-        </div>
+          <label className="block max-w-40 text-[11px] text-ink-soft">
+            每回合行动点
+            <input
+              type="number"
+              min={1}
+              max={99}
+              value={t.apPerTurn ?? 10}
+              onChange={(e) => set({ apPerTurn: num(e.target.value, 1) })}
+              className={`${inp} mt-0.5`}
+            />
+          </label>
       )}
 
       {/* 出行面板文案：模组自定义（如古风世界改成「如何前往 / 文 / 不费分文」） */}

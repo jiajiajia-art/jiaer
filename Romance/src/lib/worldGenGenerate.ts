@@ -128,11 +128,13 @@ export const WORLD_GEN_PHASE1_BATCH_ID = "phase1Foundation";
 
 /**
  * 功能注释：大地图 / 地点树生成规则（prompt 与本地纠偏 healGeneratedWorldMaps 一致）：
- * 大地图 = 区域；顶层地点 = 区域里的主要场所；子地点 = 场所内部。
+ * 大地图 = 区域；能从地图直接走进的场所都是同级顶层；只有走进后才到的内部才挂 parent。
  */
 const ROOM_TREE_RULES =
-  "先写 worldMaps：大地图是「区域」（如 山岚旅馆、青云宗、临溪镇），通常 1 张，故事跨多个大区域才写 2–3 张；" +
-  "每个地点写 mapId 指向所属大地图；用 parent 分层：顶层地点 = 区域里的主要场所（如 大堂、餐厅、庭院、二楼走廊），子地点 = 场所内部（如 前台登记台、203客房），最多 3 层；" +
+  "先写 worldMaps：大地图是「区域」（如 巴黎十六区、临溪镇、青云宗），通常 1 张，故事跨多个大区域才写 2–3 张；" +
+  "每个地点写 mapId 指向所属大地图。同一张大地图上、玩家能从地图直接走进的场所全部是顶层地点，parent 留空：公寓、街区、河畔、学院琴房、咖啡馆彼此独立，不要互相挂靠；" +
+  "只有走进某地点之后才能到达的内部才写 parent（如公寓里的卧室、旅馆大堂里的前台），最多 3 层；" +
+  "startRoom 只是开局落脚点，不是其他地点的父级；禁止把街区、河流、学校、另一栋建筑挂到住所或开局地点下面；" +
   "parent 必须是同一张大地图里的地点 id，不能指向自己或成环；" +
   "大地图名禁止与任何地点同名；顶层地点不要再带区域名前缀（写「大堂」，不要写「山岚旅馆大堂」）；地点之间不得重名";
 
@@ -157,9 +159,10 @@ export function isWorldGenTwoPhaseBatch(batchId: string): boolean {
  */
 export const WORLD_GEN_MODULE_MAX_RETRIES = 2;
 
-/** 功能注释：固定事件 / 剧情线 / 剧本基调文案长；单模组用 8000；大类合并见 worldGenBatchMaxTokens。 */
+/** 功能注释：固定事件 / 剧情线 / 系统提示词文案长；单模组用 8000；大类合并见 worldGenBatchMaxTokens。 */
 export function worldGenModuleMaxTokens(moduleId: string): number {
-  return moduleId === "fixedEvents" || moduleId === "storylines" || moduleId === "prompt" ? 8000 : 4000;
+  if (moduleId === "prompt") return 12000; // 功能注释：系统提示词目标约 4000 字，给足输出额度避免写到一半被截
+  return moduleId === "fixedEvents" || moduleId === "storylines" ? 8000 : 4000;
 }
 
 /**
@@ -360,7 +363,7 @@ export function pickWorldGenScrollTargetId(
 
 /**
  * 功能注释：生成进度与请求的「大类」。核心默认两次串联请求；扩展玩法仍按大类合并。
- * 例：第1次「基础设定」、第2次「人物地点事件结局」；关系玩法并入「已添加的玩法」。
+ * 例：第1次「基础设定」、第2次「人物地点事件结局」；关系玩法在游戏本体内配置。
  */
 export type WorldGenBatchCategory = {
   id: string;
@@ -1175,7 +1178,7 @@ export function progressHasStaleChunkFailure(p: WorldGenProgress | null | undefi
 /** 功能注释：各编辑器模组对应的 content 字段提示，供 AI 只产出相关键，避免覆盖未勾选模组 */
 const MODULE_FIELD_HINT: Record<string, string> = {
   "hub:rules": "worldRules[{id,name,options?}]、gameRules[{id,name,branches?}]：每条必须带稳定非空 id（小写英文/数字/-_），禁止只写文案不写 id",
-  "hub:book": "worldBook[{id,title,keywords,content,enabled}]：第1次只写标题/关键词/正文，不要写 bindRooms/bindNpcs（挂靠在人物地点写出后再填）；条数见瘦身配额；正文宜短；剧本基调只写在同批 prompt.scriptTone，勿再写 worldIntro",
+  "hub:book": "worldBook[{id,title,keywords,content,enabled}]：第1次只写标题/关键词/正文，不要写 bindRooms/bindNpcs（挂靠在人物地点写出后再填），不要写 constant。keywords 必须是人名、地名、势力名这类专名（至少 2 字），禁止用「的」「她」「世界」这类每句都会出现的词。条数见瘦身配额；正文宜短，只写这条关键词该带出的设定，不要写属性数值。系统提示词只写在同批 prompt.scriptTone，勿再写 worldIntro",
   "hub:paths": "creation.paths[]、identities[]：线路条数见配额；第1次生成写出线路骨架（线路只写 id/name/tag/blurb/about；hero 与 room 在第2次人物地点写出后回填，每名人物只当一条线路主角，对不上的线路按顺序分给未占用人物；若设定有组织/势力，同批写 creation.startFactions[{id,name}] 作为唯一势力名单，设定没有组织就不要写势力名单；不要写 pathTitle、pathIntro、formTitle、formIntro、identityLabel、fixedAge、parentNote、seedDescription 或 paths[].formIntro；这些留空，建角页用游戏默认句）",
   travelTime: "startDate（必填，YYYY.MM.DD，须贴合本世界观时代，如现代都市 2019.09.01、民国 1935.03.12；禁止留空；缺日期时服务端会本地兜底）、travel（apPerTurn / advanceUnit / advanceDays；换地点扣点与日程叙事字数内置，勿写 apPerMove / advanceWords / advanceStory / play.ageAuto）",
   opening: "opening{kicker?,title?,subtitle?,paragraphs:[至少2段开场白],waiting?,cta?}：必须写 paragraphs（每段按瘦身配额，贴合本世界观；可用占位 {name}{school}{money}{parents}）；不要写 page/html 自定义开场页代码；title/waiting/cta 可简短",
@@ -1185,10 +1188,10 @@ const MODULE_FIELD_HINT: Record<string, string> = {
   bgm: "bgm[]（内嵌 data: / 本机 local: / 链接；不要把作品引用或平台曲写成 bgm）",
   audioRefs: "audioRefs[]（只写作品音频库已有 id，可空，勿编造）",
   platformAudioRefs: "platformAudioRefs[]（只写 platform: 前缀的平台曲目 id，可空，勿编造；不要写入 bgm 或 audioRefs）",
-  avatars: "avatars{pools?,publicRandom?,match?}",
+  avatars: "avatars{pools?,match?}（不要写 stylePacks 或 publicRandom；官方风格库由创作者在编辑器勾选，性别年龄由前端按人物自动匹配）",
   creation: `customAttrs[]：建议约 2–4 条数值属性（参考 ${WORLD_GEN_CUSTOM_ATTRS_COUNT}），每条必有明确 label（禁止「未命名」/空名）、desc、id/min/max/init；条数可少可多，禁止为凑数补空壳；勿单独生成 fameTiers；不要预填空壳属性。creation.fields / creation.builtin（系统字段固定为姓名/性别/年龄/生日，只能改显示名；creation.fields 仅按作品明确需要生成）`,
-  npcs: `npcs[{id,name,role,kind,home,roam,bio,appearancePrompt?,gender,age,tags?,relation?,metStart?,wxStart?,factionId?,pathId?}]：建议约 2–6 名（参考 ${WORLD_GEN_NPCS_COUNT}）；每名必须有名有姓的 name（如沈晚晴/林晚舟，禁止「夜班房客」「店员」「厨娘」等身份占位当姓名——身份写到 role 或 bio）、gender、age、bio；另写 appearancePrompt（形象提示词：性别年龄感/发型五官服装，不含关系剧情）；home 必须是同批 rooms 的 id（写成地名时按名对回 id，对不上整批重试，禁止清空 home）；设定里到处走动才标 roam 并列出可出现地点 id；factionId 只能填本作品势力名单 id，无组织则省略；pathId 填该人物对应的第1次线路 id（线路主角）；age 为单个整数且须与开局日期同一时代；设定无人物关系时不要写 metStart/wxStart；不要写 summary；不要写 works/代表作除非设定明确是演艺圈`,
-  relations: "relations{confess?,wedding?,bridge?:{off?,perDay?},partnerPerks?}（须已添加关系玩法包；勿写介绍认识/三人同行/撮合/劝和/挑拨等 bridge.modes 预置）",
+  npcs: `npcs[{id,name,role,kind,home,roam,bio,appearancePrompt?,gender,age,tags?,relation?,affTo?:[{id,value}]（此人对该人物的好感，-100~100，有方向，没有就省略）,metStart?,wxStart?,factionId?,pathId?}]：建议约 2–6 名（参考 ${WORLD_GEN_NPCS_COUNT}）；每名必须有完整真实姓名 name（禁止「夜班房客」「店员」「厨娘」等身份占位当姓名——身份写到 role 或 bio）、gender、age、bio；name 与身份必须贴合本作品的世界观、地域与时代：中式古风 / 现代中国用中文名（如沈晚晴），西幻 / 中世纪 / 欧美乡村题材用西式名（如 Arthur、艾琳·霍克），日式题材用日式名；改编或同人作品（如星露谷、某部动漫）优先使用原作角色与原作名字，不得混入与原作无关、风格不搭的人物，也不得给西式世界起中文名；另写 appearancePrompt（形象提示词：性别年龄感/发型五官服装，不含关系剧情）；home 必须是同批 rooms 的 id（写成地名时按名对回 id，对不上整批重试，禁止清空 home）；设定里到处走动才标 roam 并列出可出现地点 id；factionId 只能填本作品势力名单 id，无组织则省略；pathId 填该人物对应的第1次线路 id（线路主角）；age 为单个整数且须与开局日期同一时代；设定无人物关系时不要写 metStart/wxStart；不要写 summary；不要写 works/代表作除非设定明确是演艺圈`,
+  relations: "relations{confess?,wedding?,bridge?:{off?,perDay?},partnerPerks?}（游戏本体，直接写；未写的字段用引擎默认。勿写介绍认识/三人同行/撮合/劝和/挑拨等 bridge.modes 预置）",
   contacts: "contacts{stages:[{id,label,min,tone?}]}（嵌人物上方；禁止写 metrics/卡片数值；禁止 groups/orgs/stage.groups）",
   startResources: "startMoney（非负数字）、moneyLabel（货币名称，如 元/灵石/星币，必填，开局页与局内文案共用）",
   trainings: "trainings[]",
@@ -1201,7 +1204,7 @@ const MODULE_FIELD_HINT: Record<string, string> = {
   startWeather: "weather",
   rooms: `worldMaps[{id,name}]、rooms{id:{name,desc必填非空（进入后给玩家读的文字）,scenePrompt?（画面描述：空间陈设光线，与 desc 分开）,mapId,parent?,exits?,bg?,bgm?}}、startRoom：${ROOM_TREE_RULES}；建议约 3–8 个地点（参考 ${WORLD_GEN_ROOMS_COUNT}）；不要写 locations[]；startRoom 必须是 rooms 里的 id`,
   travel: "travel{}、cars[]",
-  prompt: `prompt{scriptTone}（系统提示词写完整口吻/时代/铁律，建议 ${SCRIPT_TONE_TARGET_MIN}–${SCRIPT_TONE_TARGET_MAX} 字，硬上限 ${SCRIPT_TONE_MAX}，少于 ${SCRIPT_TONE_TARGET_MIN} 字视为偏短；禁止「约 700 字」截短，禁止留空或只贴创作者原文）；并在同级 manifest.description 写约 100 字玩家可见简介`,
+  prompt: `prompt{scriptTone}（系统提示词只写世界观：时代、地点、人物身份与关系、文风、禁忌、开局画面。建议 ${SCRIPT_TONE_TARGET_MIN}–${SCRIPT_TONE_TARGET_MAX} 字，硬上限 ${SCRIPT_TONE_MAX}。禁止写入属性点数、好感、行动点、金钱数额、名气、等级、概率、面板格式和 JSON 字段；这些由引擎另管。禁止「约 700 字」截短，禁止留空或只贴创作者原文）；并在同级 manifest.description 写约 100 字玩家可见简介`,
   lore: "worldBook[]（旧详细设定已并入世界书：title/content/keywords；挂靠见人物地点之后）",
   festivals: "worldBook[]（旧节日已并入世界书）",
   cover: "cover{}",
@@ -1347,7 +1350,7 @@ export function extractManifestDescription(raw: string): string | undefined {
 
 /**
  * 功能注释：已生成内容的上下文，供第 2 次读到第 1 次的 id。
- * 剧本基调必须完整带上（禁止截成 600 字摘要）；含建角属性 / 货币 / 世界书标题 / 势力 / 线路 / 开局日期。
+ * 系统提示词必须完整带上（禁止截成 600 字摘要）；含建角属性 / 货币 / 世界书标题 / 势力 / 线路 / 开局日期。
  */
 export function buildGeneratedContext(mod: Mod, max = 12000): string {
   const c = mod.content ?? {};
@@ -1358,8 +1361,8 @@ export function buildGeneratedContext(mod: Mod, max = 12000): string {
   if (c.prompt && typeof c.prompt === "object") {
     const p = c.prompt as { scriptTone?: string; gmIntro?: string; worldIntro?: string; narratorPersona?: string };
     const tone = [p.scriptTone, p.gmIntro, p.worldIntro, p.narratorPersona].map((x) => (typeof x === "string" ? x.trim() : "")).filter(Boolean).join("\n\n");
-    // 功能注释：第 2 次必须读完整剧本基调，不得截断或改成摘要
-    if (tone) bits.push(`剧本基调：\n${tone}`);
+    // 功能注释：第 2 次必须读完整系统提示词，不得截断或改成摘要
+    if (tone) bits.push(`系统提示词：\n${tone}`);
   }
   const attrs = asModArray<{ id?: string; label?: string; name?: string; desc?: string }>(c.customAttrs);
   if (attrs.length) {
@@ -1491,16 +1494,16 @@ export function softValidateBatchPatch(
       return `开局地点 startRoom「${startRoom}」不在 rooms 里`;
     }
   }
-  // 功能注释：①基础剧本基调必须由 AI 写进 scriptTone，开局不得空着或只贴设定原文占位
+  // 功能注释：①基础系统提示词必须由 AI 写进 scriptTone，开局不得空着或只贴设定原文占位
   if (ids.includes("prompt")) {
     const tone = readScriptTone(
       patch.prompt && typeof patch.prompt === "object" && !Array.isArray(patch.prompt)
         ? (patch.prompt as { scriptTone?: string })
         : null,
     );
-    if (!tone) return "缺少剧本基调 scriptTone";
-    if (tone.length > SCRIPT_TONE_MAX) return `剧本基调超过 ${SCRIPT_TONE_MAX} 字`;
-    if (tone.length < 80) return "剧本基调过短（须写出完整系统提示词）";
+    if (!tone) return "缺少系统提示词 scriptTone";
+    if (tone.length > SCRIPT_TONE_MAX) return `系统提示词超过 ${SCRIPT_TONE_MAX} 字`;
+    if (tone.length < 80) return "系统提示词过短（须写出完整系统提示词）";
   }
   // 功能注释：时间与推进必须给出合法开局日期，发布清单与日历都依赖它
   if (ids.includes("travelTime")) {
@@ -1725,7 +1728,7 @@ ${ctx || "（尚无其它模组）"}
 ${leanBlock}
 
 要求：内容须能被编辑器继续手改；地点/人物 id 与上下文已有 id 对齐；不要编造无法访问的外链大图。
-${needPrompt ? `本批必须：1) content.prompt.scriptTone 写完整系统提示词（建议 ${SCRIPT_TONE_TARGET_MIN}–${SCRIPT_TONE_TARGET_MAX} 字，硬上限 ${SCRIPT_TONE_MAX}，少于 ${SCRIPT_TONE_TARGET_MIN} 字视为偏短；禁止「约 700 字」截短，禁止留空或只粘贴上方「故事设定」原文）；2) manifest.description 写约 ${WORLD_DESC_SUMMARY_TARGET} 字玩家可见简介。\n` : ""}${stepIds.includes("travelTime") ? `本批必须写 content.startDate，格式严格 YYYY.MM.DD（例 2024.03.15），按上方故事设定与已生成上下文的时代/人物年龄选取，禁止留空、禁止中文日期、禁止只写 travel 不写 startDate（缺日期时本地会兜底，但仍应尽量写出）。\n` : ""}${stepIds.includes("creation") ? `本批 customAttrs 建议约 2–4 条：每条有贴合本世界观的中文名称与 desc，禁止「未命名」或空壳凑数；少了或多了都可以。\n` : ""}${stepIds.includes("startResources") ? `本批必须写 content.startMoney（非负）与 content.moneyLabel（货币名，如 元/灵石），禁止只写金额不写货币名。\n` : ""}${stepIds.includes("fixedEvents") ? `本批 fixedEvents 建议约 2–5 条完整叙事事件：每条含 name、prompt（≥20字），有数值变化时写 effects（key 必须用上方建角属性/人物关系/地点的 id，不要写中文名）；可含 openingPrompt（开局提示词勾选）；需要选择才写 choices；nextIds 只能指向本次事件 id；不要写 events[]。\n` : ""}${stepIds.includes("rooms") ? `本批 rooms 建议约 3–8 个地点：每条含 name 与非空 desc；写 startRoom（须为 rooms 内 id）；不要写 locations[]。\n地点树规则：${ROOM_TREE_RULES}。\n` : ""}${stepIds.includes("npcs") ? `${platformNpcTagsPromptLine()}\n本批 npcs 建议约 2–6 名；每条必须含有名有姓的 name、gender、age、bio、appearancePrompt；home 必须是同批 rooms id；设定无组织则不要写 factionId；设定无人物关系则不要写 metStart/wxStart。` : ""}${stepIds.includes("storylines") ? `\n本批须写 1 条主线 storylines[]（节点含 name/desc；conds 每条格式：属性 {kind:"metric",key:"<建角属性id>",op:"gte",value:数字}、关系 {kind:"rel",key:"<人物id>",op:"gte",value:数字}、地点 {kind:"location"|"visited",key:"<地点id>"}、事件 {kind:"event",key:"<固定事件id>"}、天数 {kind:"time",unit:"day",op:"gte",value:数字}；每个节点至少 1 条，优先用「已触发某固定事件」串起剧情；禁止自动补名气）与 endings[]；禁止写 sidelines。\n` : ""}${stepIds.includes("npcs") || stepIds.includes("rooms") ? `\n世界书挂靠：人物与地点写出后，可另写 worldBook:[{id,bindRooms,bindNpcs}]（id 取上方「世界书」已有 id；bindRooms/bindNpcs 只能填本批 rooms/npcs 的 id，对不上的会被删除；不写则按名称自动回填）。\n事件效果与主线条件的属性 key 只能来自上方「建角属性」id，人物/地点只能用本批或上方「已生成上下文」里的 id；上方「势力：无」时不要写势力；设定没有好感恋爱时不要写 rel 效果。\n` : ""}`,
+${needPrompt ? `本批必须：1) content.prompt.scriptTone 只写世界观（时代、地点、人物身份与关系、文风、禁忌、开局画面；建议 ${SCRIPT_TONE_TARGET_MIN}–${SCRIPT_TONE_TARGET_MAX} 字，硬上限 ${SCRIPT_TONE_MAX}，少于 ${SCRIPT_TONE_TARGET_MIN} 字视为偏短；禁止写入属性点数、好感、行动点、金钱数额、名气、等级、概率、面板格式和 JSON 字段；禁止「约 700 字」截短，禁止留空或只粘贴上方「故事设定」原文）；2) manifest.description 写约 ${WORLD_DESC_SUMMARY_TARGET} 字玩家可见简介。\n` : ""}${stepIds.includes("travelTime") ? `本批必须写 content.startDate，格式严格 YYYY.MM.DD（例 2024.03.15），按上方故事设定与已生成上下文的时代/人物年龄选取，禁止留空、禁止中文日期、禁止只写 travel 不写 startDate（缺日期时本地会兜底，但仍应尽量写出）。\n` : ""}${stepIds.includes("creation") ? `本批 customAttrs 建议约 2–4 条：每条有贴合本世界观的中文名称与 desc，禁止「未命名」或空壳凑数；少了或多了都可以。\n` : ""}${stepIds.includes("startResources") ? `本批必须写 content.startMoney（非负）与 content.moneyLabel（货币名，如 元/灵石），禁止只写金额不写货币名。\n` : ""}${stepIds.includes("fixedEvents") ? `本批 fixedEvents 建议约 2–5 条完整叙事事件：每条含 name、prompt（≥20字），有数值变化时写 effects（key 必须用上方建角属性/人物关系/地点的 id，不要写中文名）；可含 openingPrompt（开局提示词勾选）；需要选择才写 choices；nextIds 只能指向本次事件 id；不要写 events[]。\n` : ""}${stepIds.includes("rooms") ? `本批 rooms 建议约 3–8 个地点：每条含 name 与非空 desc；写 startRoom（须为 rooms 内 id）；不要写 locations[]。\n地点树规则：${ROOM_TREE_RULES}。\n` : ""}${stepIds.includes("npcs") ? `${platformNpcTagsPromptLine()}\n本批 npcs 建议约 2–6 名；每条必须含有名有姓的 name、gender、age、bio、appearancePrompt；home 必须是同批 rooms id；设定无组织则不要写 factionId；设定无人物关系则不要写 metStart/wxStart。` : ""}${stepIds.includes("storylines") ? `\n本批须写 1 条主线 storylines[]（节点含 name/desc；conds 每条格式：属性 {kind:"metric",key:"<建角属性id>",op:"gte",value:数字}、关系 {kind:"rel",key:"<人物id>",op:"gte",value:数字}、地点 {kind:"location"|"visited",key:"<地点id>"}、事件 {kind:"event",key:"<固定事件id>"}、天数 {kind:"time",unit:"day",op:"gte",value:数字}；每个节点至少 1 条，优先用「已触发某固定事件」串起剧情；禁止自动补名气）与 endings[]；禁止写 sidelines。\n` : ""}${stepIds.includes("npcs") || stepIds.includes("rooms") ? `\n世界书挂靠：人物与地点写出后，可另写 worldBook:[{id,bindRooms,bindNpcs}]（id 取上方「世界书」已有 id；bindRooms/bindNpcs 只能填本批 rooms/npcs 的 id，对不上的会被删除；不写则按名称自动回填）。\n事件效果与主线条件的属性 key 只能来自上方「建角属性」id，人物/地点只能用本批或上方「已生成上下文」里的 id；上方「势力：无」时不要写势力；设定没有好感恋爱时不要写 rel 效果。\n` : ""}`,
     },
   ];
 }

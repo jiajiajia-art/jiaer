@@ -71,14 +71,11 @@ test('CSS_每套预设同时改 serif 与 sans_对话跟套', () => {
   assert.match(css, /\.dlg-bubble[\s\S]*?font-family:\s*var\(--font-serif\)/);
 });
 
-test('FreeFont_删除粘贴字体直链输入', () => {
+test('剧情字体设置只提供预设，小说正文使用剧情字体', () => {
   const panel = read('Romance/src/components/FreeStylePanel.tsx');
-  const start = panel.indexOf('export function FreeFont');
-  assert.ok(start >= 0);
-  const end = panel.indexOf('export function AssetLibrary', start);
-  const block = panel.slice(start, end > start ? end : undefined);
-  assert.match(block, /上传字体文件/);
-  assert.doesNotMatch(block, /粘贴字体直链/);
-  assert.doesNotMatch(block, /或粘贴字体/);
-  assert.doesNotMatch(block, /onKeyDown[\s\S]*https\?:\/\//);
+  const shell = read('Romance/src/components/GameShell.tsx');
+  const css = read('Romance/src/index.css');
+  assert.doesNotMatch(panel, /上传字体文件/);
+  assert.doesNotMatch(shell, /自定义字体文件/);
+  assert.doesNotMatch(css, /\.novel-read-card \.story-prose[^{}]*\{[^{}]*font-family:\s*var\(--font-ui\)/);
 });

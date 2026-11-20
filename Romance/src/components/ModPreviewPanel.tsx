@@ -2,6 +2,7 @@
  * 草稿一改就重渲染：属性条与分档、头衔门槛、日程收益、事件链串联、规则开关、结局。
  * 属性名按「底层世界 + 本 Mod」的 customAttrs 解析，引用不存在的属性标红。
  * 「进入试玩」由外层调用作者预览，把草稿叠加到世界上真实开一局。 */
+import { attrUsesRandomStart } from "../lib/attrInit";
 import { useMemo, useState, type ReactNode } from "react";
 import { collectAttrSpecs, type AttrSpec } from "../mods/kkmod/attrs";
 import { IconPlay } from "../lib/icons";
@@ -200,11 +201,6 @@ export default function ModPreviewPanel({ modContent, baseContent, onPlaytest, p
                 ))}
               </Card>
             ))}
-            {list(c.lookRules).length > 0 && (
-              <Card title="剧情美化" sub="条件满足时临时换外观">
-                <ul className="space-y-1">{list(c.lookRules).map((l) => <li key={s(l.id)} className="flex flex-wrap items-center gap-1 text-[11.5px]"><span className="font-semibold">{s(l.name)}</span>{list(l.conds).map(condText)}</li>)}</ul>
-              </Card>
-            )}
             {!counts.rules && <Empty text="还没有规则或开关" />}
           </>
         )}
@@ -218,7 +214,7 @@ function AttrBar({ a }: { a: AttrSpec }) {
   const pct = Math.round(((a.init - a.min) / span) * 100);
   const color = a.color === "coral" ? "var(--coral)" : a.color === "gold" ? "var(--gold)" : a.color === "danger" ? "var(--danger)" : "var(--jade)";
   return (
-    <Card title={a.label} sub={`${a.id} · ${a.min}~${a.max} · 初始 ${a.initMode === "random" ? "随机" : a.init}`}>
+    <Card title={a.label} sub={`${a.id} · ${a.min}~${a.max} · 初始 ${attrUsesRandomStart(a) ? "随机" : a.init}`}>
       <div className="relative mt-1 h-2 overflow-hidden rounded-full bg-paper-2">
         <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
         {a.tiers?.map((t) => <span key={t.min} className="absolute top-0 h-full w-px bg-ink/30" style={{ left: `${Math.round(((t.min - a.min) / span) * 100)}%` }} />)}

@@ -34,6 +34,8 @@ import { readFunloomStaffFromStorage, shouldGateRomancePlatformShell } from "./l
 import {
   clearPlayModCreateQuery,
   ensurePlayModCreateQuery,
+  PLAY_MOD_CREATE_LOCKED,
+  PLAY_MOD_CREATE_LOCKED_HINT,
   shouldOpenPlayModCreate,
 } from "./lib/playModCreate";
 
@@ -150,7 +152,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   }
 }
 
-function PlayScreens() {
+function PlayScreens({ returnHref }: { returnHref?: string } = {}) {
   const { screen, saveEpoch, game, go } = useGame();
   if (screen === "create" || screen === "cover") return <CharacterCreate />;
   // 功能注释：开幕只挂 Opening，禁止底层 GameShell/底栏透出；点「开始」后再挂载局内界面
@@ -180,7 +182,7 @@ function PlayScreens() {
         </div>
       );
     }
-    return <GameShell key={`shell-${saveEpoch}`} />;
+    return <GameShell key={`shell-${saveEpoch}`} returnHref={returnHref} />;
   }
   if (screen === "ending") return <Ending />;
   // 功能注释：默认建角；封面开始菜单（标题+开始/继续/配置 AI）已下线
@@ -322,7 +324,7 @@ function Root() {
       root.style.setProperty("--scene-dim", String((look.sceneDim ?? 45) / 100));
       root.style.setProperty("--scene-blur", `${look.sceneBlur ?? 0}px`);
       // 功能注释：叙事段落半透明底；设置里可调，正文黑字叠在浅底上才看得清
-      const storyA = Math.min(100, Math.max(40, look.storyBgAlpha ?? 88));
+      const storyA = Math.min(100, Math.max(40, look.storyBgAlpha ?? 65));
       root.style.setProperty("--story-panel-a", String(storyA / 100));
       // 功能注释：正文/地点描写字号跟对话框 DIY「字号」；未设则清掉，回落 CSS 默认 15px
       const storyFs = look.dialogDiy?.on !== false ? look.dialogDiy?.fontSize : undefined;
@@ -351,8 +353,12 @@ function Root() {
 
   return (
     <>
-      {playerPlayBoot.mode && playerPlayBoot.fileId && !previewing ? (
-        <PlayerPlayBootstrap mode={playerPlayBoot.mode} fileId={playerPlayBoot.fileId} />
+      {playerPlayBoot.mode && playerPlayBoot.fileId && (!previewing || playerPlayBoot.mode === "reviewPreview") ? (
+        <PlayerPlayBootstrap mode={playerPlayBoot.mode} fileId={playerPlayBoot.fileId}>
+          {!playModCreateOpen && !worldGenOpen ? <PlayScreens returnHref={playerPlayBoot.mode === "play"
+            ? `${window.location.pathname.replace(/\/romance(?:\/.*)?$/, "")}/game/${encodeURIComponent(playerPlayBoot.fileId)}?from=romance-play`
+            : undefined} /> : null}
+        </PlayerPlayBootstrap>
       ) : null}
       {/* 功能注释：C2.2 玩法对话壳在预览时保活（hidden），避免聊完一轮预览后对话丢失；大屏与预览左右分栏 */}
       {playModCreateOpen ? (
@@ -365,12 +371,29 @@ function Root() {
           data-platform-ui={previewing ? undefined : "1"}
           aria-hidden={previewing || undefined}
         >
-          <PlayModCreateShell
-            onClose={() => {
-              closePlayModCreate(true);
-              leaveToPlatformCreate();
-            }}
-          />
+          {PLAY_MOD_CREATE_LOCKED ? (
+            <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-3 px-6 text-center">
+              <p className="text-[18px] font-bold text-ink">玩法 Mod 暂时测试中</p>
+              <p className="text-[13px] leading-relaxed text-ink-soft">{PLAY_MOD_CREATE_LOCKED_HINT}</p>
+              <button
+                type="button"
+                className="rounded-full bg-jade px-5 py-2 text-[13px] font-bold text-white"
+                onClick={() => {
+                  closePlayModCreate(true);
+                  leaveToPlatformCreate();
+                }}
+              >
+                返回
+              </button>
+            </div>
+          ) : (
+            <PlayModCreateShell
+              onClose={() => {
+                closePlayModCreate(true);
+                leaveToPlatformCreate();
+              }}
+            />
+          )}
         </div>
       ) : null}
       {worldGenOpen && !playModCreateOpen ? (
@@ -391,7 +414,7 @@ function Root() {
           />
         </div>
       ) : null}
-      {!previewing && !playModCreateOpen && !worldGenOpen ? (
+      {!playerPlayBoot.mode && !previewing && !playModCreateOpen && !worldGenOpen ? (
         <PlayScreens />
       ) : null}
 
@@ -406,7 +429,7 @@ function Root() {
           <AuthorPreviewChrome />
           {/* 功能注释：结局页自带 h-full overflow-y-auto 纵向滚动容器；预览舞台对 ending 放开纵向滚动，避免后记 / 按钮被裁死（3.15） */}
           <div
-            className={`author-preview-stage min-h-0 flex-1 ${screen === "ending" ? "overflow-y-auto overflow-x-hidden" : "overflow-hidden"}`}
+            className={`author-preview-stage min-h-0 flex-1 ${screen === "ending" || screen === "opening" ? "overflow-y-auto overflow-x-hidden" : "overflow-hidden"}`}
             data-author-preview-stage="1"
           >
             <AuthorPreviewPlayShell>

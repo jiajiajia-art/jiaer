@@ -1,6 +1,6 @@
 /**
  * 开幕页：优先播自定义开场页（opening.page）；否则用内置排版播 opening 里的标题 / 段落等旧字段。
- * 编辑器已下架「开场白」表单，但旧模组字段仍由此处读取，保存不得清空。
+ * 旧模组字段仍由此处读取，作者可在「开场剧情」中编辑。
  * 禁止系统追加手记标题、时间、地点或 AI 开局剧情；点「开始」后再入局并由剧情区单独生成开局。
  */
 import { useEffect, useRef, useState } from "react";
@@ -8,6 +8,7 @@ import { useGame } from "../store/gameCtx";
 import { wallet } from "../game/wallet";
 import { getWorldSlot } from "../mods/registry";
 import type { OpeningCopy } from "../mods/types";
+import { worldCoverImageUrl } from "./Cover";
 import { openingSrcDoc, postOpening, type OpeningPageData } from "../lib/openingPage";
 import { asModArray } from "../lib/asModArray";
 
@@ -32,6 +33,7 @@ export default function Opening() {
 
   const copy = getWorldSlot("opening") ?? GENERIC_OPENING;
   const openingTitle = copy.title ?? "开幕";
+  const background = copy.image || worldCoverImageUrl();
   const money = game ? wallet.balance(game).toLocaleString("zh-CN") : "";
   const vars: Record<string, string> = { name, school, father, mother, money };
   const parents = copy.parents ? fill(copy.parents[backgroundId] ?? copy.parents.default ?? "", vars) : "";
@@ -103,7 +105,7 @@ export default function Opening() {
   const endFilm = () => (paragraphs.length || html || copy.page ? setFilm(false) : go("game"));
   if (film) {
     return (
-      <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black">
+      <main className="relative flex h-dvh items-center justify-center bg-black" aria-label="开场视频">
         <video
           src={copy.video || undefined}
           autoPlay
@@ -119,7 +121,7 @@ export default function Opening() {
         >
           跳过 ›
         </button>
-      </div>
+      </main>
     );
   }
 
@@ -127,7 +129,7 @@ export default function Opening() {
 
   if (pageData && copy.page) {
     return (
-      <div className="fixed inset-0 z-[90] bg-black animate-fade" role="dialog" aria-modal="true" aria-label="开幕">
+      <main className="relative h-dvh bg-black" aria-label="开场剧情">
         <iframe
           ref={pageRef}
           title="开场页"
@@ -143,28 +145,29 @@ export default function Opening() {
         >
           {copy.cta ?? "开始"} ›
         </button>
-      </div>
+      </main>
     );
   }
 
   const cover = copy.video && copy.videoMode !== "full" ? "video" : copy.image ? "image" : null;
 
   return (
-    <div
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-paper px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-[max(12px,env(safe-area-inset-top))] animate-fade"
-      role="dialog"
-      aria-modal="true"
-      aria-label="开幕"
+    <main
+      className="flex min-h-dvh items-center bg-paper px-4 pb-[max(32px,env(safe-area-inset-bottom))] pt-[max(32px,env(safe-area-inset-top))] sm:px-8"
+      aria-label="开场剧情"
       data-opening-editor-only="1"
     >
-      <div className="solid-sheet flex max-h-full w-full max-w-[600px] flex-col items-center overflow-y-auto overscroll-contain rounded-[18px] border border-line bg-paper-2 px-4 py-5 text-ink shadow-[0_24px_60px_-20px_rgba(0,0,0,0.35)] animate-pop [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <article className="mx-auto w-full max-w-[600px] rounded-[var(--radius-ui-lg)] border border-line bg-paper-2 px-5 py-7 text-ink shadow-[var(--shadow-ui-lift)] sm:px-9 sm:py-9">
+        <header className="pb-2 text-center">
+
         {copy.kicker ? (
           <p className="text-[11px] font-semibold uppercase tracking-[0.4em] text-coral">{copy.kicker}</p>
         ) : null}
         {openingTitle ? (
-          <h1 className="mt-1 font-serif text-[24px] font-black leading-tight text-ink">{openingTitle}</h1>
+          <h1 className="mt-1 text-balance text-[clamp(1.5rem,5vw,2.25rem)] font-semibold leading-tight text-ink [font-family:var(--font-serif)]">{openingTitle}</h1>
         ) : null}
-        {copy.subtitle ? <p className="mt-1 text-[12.5px] text-ink-soft">{copy.subtitle}</p> : null}
+        {copy.subtitle ? <p className="mt-2 text-sm text-ink-soft">{copy.subtitle}</p> : null}
+        </header>
 
         {cover ? (
           <figure className="relative mt-4 w-full overflow-hidden rounded-xl border border-line">
@@ -185,13 +188,13 @@ export default function Opening() {
         ) : null}
 
         {html ? (
-          <div className="story-prose mt-4 w-full text-left" dangerouslySetInnerHTML={{ __html: html }} />
+          <div className="story-prose mt-5 w-full text-left leading-[1.95]" dangerouslySetInnerHTML={{ __html: html }} />
         ) : paragraphs.length ? (
-          <div className="mt-4 w-full space-y-3 text-left">
+          <div className="mt-5 w-full space-y-4 text-left">
             {paragraphs.map((text, i) => (
               <p
                 key={i}
-                className="font-serif text-[14.5px] leading-relaxed text-ink transition-all duration-700 ease-out"
+                className="story-prose text-[15px] leading-[1.95] text-ink transition-all duration-700 ease-out motion-reduce:transition-none"
                 style={{ opacity: i < shown ? 1 : 0, transform: i < shown ? "translateY(0)" : "translateY(4px)" }}
               >
                 {text}
@@ -200,7 +203,7 @@ export default function Opening() {
           </div>
         ) : null}
 
-        <div className="mt-5 flex w-full items-center justify-between gap-3">
+        <footer className="mt-6 flex w-full flex-col items-center gap-3 pt-2">
           {!ready ? (
             <button
               type="button"
@@ -209,19 +212,23 @@ export default function Opening() {
             >
               跳过 ›
             </button>
-          ) : (
+          ) : copy.waiting ? (
             <span className="text-[12px] tracking-wide text-ink-soft">{copy.waiting}</span>
-          )}
+          ) : null}
           <button
             type="button"
             onClick={() => go("game")}
             disabled={!ready}
-            className="shrink-0 whitespace-nowrap rounded-full bg-coral px-6 py-2.5 text-[14px] font-bold tracking-wide text-paper shadow-sm transition hover:brightness-110 disabled:opacity-40"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-jade-deep px-7 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-jade disabled:opacity-40 sm:w-auto"
           >
             {copy.cta ?? "开始"}
+
           </button>
-        </div>
-      </div>
-    </div>
+        </footer>
+      </article>
+    </main>
   );
 }
+
+
+

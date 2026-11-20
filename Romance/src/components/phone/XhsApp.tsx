@@ -6,7 +6,7 @@ import { CommentSheet, PullToRefresh, delay, LoadMoreButton, seenOf } from "./sh
 import { addPost, setFollow, toggleLike, toggleSave } from "../../game/phone";
 import { useWorldSync, syncJson, loadFeed, saveFeed } from "./worldSync";
 import { IconHeart, IconStar, IconComment, IconSearch, IconPlus } from "./icons";
-import { liveTerm as T } from "../../mods/live";
+import { entertainmentPlayOn } from "../../mods/registry";
 import { wallet } from "../../game/wallet";
 import { logAct, logNpcNet } from "../../game/phoneLink";
 import { loadData, saveData } from "../../lib/saveScope";
@@ -121,6 +121,12 @@ const SHOP_ITEMS = [
   { id: "s5", name: "红毯高跟鞋", price: 1280, cover: COVERS[6] },
   { id: "s6", name: "限定应援手幅（为自己打 call）", price: 66, cover: COVERS[3] },
 ];
+const LIFE_SHOP: Record<string, string> = { s3: "便携挂烫机", s5: "细跟高跟鞋", s6: "小卡片套装" };
+/** 功能注释：没装演艺事业时，商城不卖剧组装备和应援物 */
+function shopItems() {
+  if (entertainmentPlayOn()) return SHOP_ITEMS;
+  return SHOP_ITEMS.map((it) => (LIFE_SHOP[it.id] ? { ...it, name: LIFE_SHOP[it.id] } : it));
+}
 
 /* 旧存档里的笔记曾被塞入图库占位图：只保留真实附带的图片 */
 const stripStock = (list: Note[]): Note[] => list.map((n) => ({ ...n, imgs: (n.imgs ?? []).filter((u) => !/images\.unsplash\.com/.test(u)) }));
@@ -171,7 +177,9 @@ export default function XhsApp({ onBack }: { onBack: () => void }) {
     }).filter((n) => n.author && n.title && n.body);
   };
   const syncNotes = async (): Promise<string> => {
-    const r = await syncJson<{ notes?: unknown }>(cfg, game!, "xhs", "小粉书", `生成小粉书（类小红书）最新笔记，返回 JSON 对象：{"notes":[{"author":"作者(圈内人物名或网友昵称)","title":"笔记标题(≤20字，带小红书语气，可含 emoji)","body":"正文(60~200字)","tags":["话题词",...最多3个]}]}。给 6 篇：由圈内人物或网友发布，围绕最近剧情事件、主角近况与人物关系（探店、片场、穿搭、吃瓜、心情等），语气各异。`);
+    const xhsTopics = entertainmentPlayOn() ? "探店、片场、穿搭、吃瓜、心情" : "探店、穿搭、天气、心情";
+    const xhsBan = entertainmentPlayOn() ? "" : "不要写经纪公司、试镜、通告、粉丝、片场、红毯。";
+    const r = await syncJson<{ notes?: unknown }>(cfg, game!, "xhs", "小粉书", `生成小粉书（类小红书）最新笔记，返回 JSON 对象：{"notes":[{"author":"作者(人物名或网友昵称)","title":"笔记标题(≤20字，带小红书语气，可含 emoji)","body":"正文(60~200字)","tags":["话题词",...最多3个]}]}。给 6 篇：由作品里的人物或网友发布，围绕最近剧情事件、主角近况与人物关系（${xhsTopics}等），语气各异。${xhsBan}`);
     if (!r) return "未配置 AI，无法联动剧情";
     const fresh = parseNotes(r.notes, "ws").slice(0, 8);
     if (!fresh.length) return "生成失败，请重试";
@@ -211,7 +219,7 @@ export default function XhsApp({ onBack }: { onBack: () => void }) {
     setCart(next);
     if (d > 0 && !cartOpen) flash(`已加入购物车「${it.name}」`);
   };
-  const cartLines = SHOP_ITEMS.filter((it) => cart[it.id]).map((it) => ({ it, n: cart[it.id] }));
+  const cartLines = shopItems().filter((it) => cart[it.id]).map((it) => ({ it, n: cart[it.id] }));
   const cartCount = cartLines.reduce((t, l) => t + l.n, 0);
   const cartTotal = cartLines.reduce((t, l) => t + l.it.price * l.n, 0);
   const checkout = () => {
@@ -238,7 +246,8 @@ export default function XhsApp({ onBack }: { onBack: () => void }) {
     setMoreLoading(true);
     try {
       const seen = seenOf(notes.map((n) => n.title));
-      const r = await syncJson<{ notes?: unknown }>(cfg, game!, "xhs", "小粉书", `再生成一批小粉书（类小红书）笔记，返回 JSON 对象：{"notes":[{"author":"作者(圈内人物名或网友昵称)","title":"笔记标题(≤20字，带小红书语气，可含 emoji)","body":"正文(60~200字)","tags":["话题词",...最多3个]}]}。给 6 篇，围绕主角近况与最近剧情，也可有圈内日常与路人分享，语气各异；不要与这些已有内容重复：${seen}`);
+      const moreFence = entertainmentPlayOn() ? "" : "不要写经纪公司、试镜、通告、粉丝、片场、红毯。";
+      const r = await syncJson<{ notes?: unknown }>(cfg, game!, "xhs", "小粉书", `再生成一批小粉书（类小红书）笔记，返回 JSON 对象：{"notes":[{"author":"作者(人物名或网友昵称)","title":"笔记标题(≤20字，带小红书语气，可含 emoji)","body":"正文(60~200字)","tags":["话题词",...最多3个]}]}。给 6 篇，围绕主角近况与最近剧情，也可有日常生活与路人分享，语气各异；不要与这些已有内容重复：${seen}${moreFence}`);
       if (!r) { flash("未配置 AI，暂无更多"); return; }
       const fresh = parseNotes(r.notes, "wm");
       if (!fresh.length) { flash("生成失败，请重试"); return; }
@@ -393,7 +402,7 @@ export default function XhsApp({ onBack }: { onBack: () => void }) {
         </div>
         <div className="flex-1 overflow-y-auto p-2">
           <div className="grid grid-cols-2 gap-2">
-            {SHOP_ITEMS.map((it) => (
+            {shopItems().map((it) => (
               <div key={it.id} className="overflow-hidden rounded-xl bg-white shadow-sm">
                 <div style={{ background: it.cover, height: 92 }} />
                 <div className="px-2 py-2">

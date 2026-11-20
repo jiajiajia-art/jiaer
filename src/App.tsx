@@ -72,6 +72,7 @@ import DeveloperExternalGames from './page/external/DeveloperExternalGames';
 import DeveloperCliAuthorize from './page/external/DeveloperCliAuthorize';
 import ExternalOAuthAuthorize from './page/external/ExternalOAuthAuthorize';
 import ExternalRecharge from './page/external/ExternalRecharge';
+import RomanceRoute from './page/RomanceRoute';
 import LegalDocument from './page/LegalDocument';
 import { useEffect, lazy, Suspense } from 'react';
 import { useAuthStore } from './store/useAuthStore';
@@ -79,8 +80,6 @@ import { useGeoRegionStore } from './store/useGeoRegionStore';
 import { getAppBasePath } from './lib/appBasePath';
 
 const FunloomLotteryPage = lazy(() => import('./activities/funloom-lottery-20260731'));
-const RomanceHost = lazy(() => import('./page/RomanceHost'));
-
 const LegacyPromotionRedirect = () => {
   const { promotionView } = useParams<{ promotionView?: string }>();
   const allowedViews = ['create', 'list', 'ticker', 'reviews'];
@@ -183,11 +182,7 @@ function App() {
         {/* Romance 子应用：同构建同端口，访问 /funloom/romance/ */}
         <Route
           path="/romance/*"
-          element={(
-            <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text)' }}>加载中…</div>}>
-              <RomanceHost />
-            </Suspense>
-          )}
+          element={<RomanceRoute />}
         />
         <Route element={<ProtectedRoute />}>
           <Route path="/bookshelf" element={<CreateWorks />} />
@@ -312,8 +307,8 @@ function App() {
           <Route path="/admin/themes/all" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/themes/featured" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/lottery" element={<AdminRoute><AdminPanel /></AdminRoute>} />
-          <Route path="/admin/avatars" element={<AdminRoute><AdminPanel /></AdminRoute>} />
-          <Route path="/admin/art-styles" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/avatars" element={<Navigate to="/operator/avatars" replace />} />
+          <Route path="/admin/art-styles" element={<Navigate to="/operator/art-styles" replace />} />
           <Route path="/admin/components" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/play-mods" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/comments" element={<AdminRoute><CommentAdminPage /></AdminRoute>} />

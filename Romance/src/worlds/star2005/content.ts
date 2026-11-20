@@ -57,6 +57,8 @@ export type PersonContent = {
   metStart?: boolean; // 通用开关：开局已认识，但不一定在联系人里
   wxStart?: boolean; // 通用开关：开局出现在联系人里，并视为已认识
   relation?: string; // 与玩家的关系（档案「与你」栏；缺省则显示「尚未得知」）
+  /** 功能注释：此人对其他人物的好感，有方向。id 是对方人物 id，value 为 -100~100。不是对主角的好感。 */
+  affTo?: { id: string; value: number }[];
   gender?: string; // 性别（档案确定性数据，非推断）
   groups?: string[]; // 旧数据兼容：人脉页已不读取，玩家列表只按实时关系阶段分组
   org?: string; // 人物所属组织资料（只显示在卡片上，不参与人脉分组）

@@ -8,8 +8,6 @@ import { useWorldSync, syncJson, loadFeed, saveFeed } from "./worldSync";
 import { Empty } from "./shared";
 import { ChatView } from "./chat";
 import { IconEdit, IconSearch, IconClose } from "./icons";
-import { liveTerm as T } from "../../mods/live";
-
 const IOS_BLUE = "#0b8aff";
 
 function timeLabel(m?: ChatMsg) {
@@ -54,7 +52,7 @@ export default function SmsApp({ onBack }: { onBack: () => void }) {
     const g0 = ensurePhone(game!);
     const people = g0.phone!.contacts.filter((id) => canInitiate(g0, id)).map((id) => g0.npcs.find((n) => n.id === id)).filter((n): n is NonNullable<typeof n> => !!n);
     const res = await syncJson<{ notices?: unknown; texts?: unknown }>(cfg, g0, "sms", "信息",
-      `为手机短信生成新内容。1) notices：1~3 条服务号/机构短信（如经纪公司、剧组${T("gig")}、片方、银行、快递、运营商），sender 为机构名（≤12 字），text ≤90 字，内容需与当前剧情/行程相关；2) texts：0~2 条联系人发来的短信，pid 只能从【联系人】中选。
+      `为手机短信生成新内容。1) notices：1~3 条服务号/机构短信（如银行、快递、运营商，或剧情里已经出现的机构；不要另编经纪公司、剧组、试镜或通告），sender 为机构名（≤12 字），text ≤90 字，内容需与当前剧情/行程相关；2) texts：0~2 条联系人发来的短信，pid 只能从【联系人】中选。
 【联系人】${people.map((n) => `${n.id}=${n.name}`).join("、") || "（无）"}
 返回 {"notices":[{"sender":"","text":""}],"texts":[{"pid":"","text":""}]}`);
     if (!res) return "未配置 AI，无法联动剧情";

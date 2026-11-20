@@ -28,6 +28,7 @@ import {
 } from "../../game/phone";
 import { EmotionBadge, IconClose, IconHeart, IconMessage, IconMic, IconMonitor, IconStar, IconUndo, IconUsers, InnerOsLabel } from "../../lib/icons";
 import { requestChatReply, requestGroupReply, groupMemoryOf, notAMessage } from "../../lib/phoneChat";
+import { shownAvatar } from "../../game/avatarPools";
 import { moneyDecision, moneyStance, type Gift } from "../../lib/chatMoney";
 import { relOf } from "../../game/relations";
 import { isConfigured } from "../../lib/ai";
@@ -164,7 +165,7 @@ export function useChat() {
           await delay(600 + Math.min(1400, (l.text || "红包").length * 45));
           if (l.text) step((cur) => isBlocked(cur, l.id) ? cur : pushMsg(cur, threadId, {
             id: msgId(), role: "npc", from: l.id, text: l.text, ts: Date.now(), gt: gameMinutes(cur), label: gameTimeLabel(cur), ...asMsg(l.text),
-            ...(l.emotion ? { emo: l.emotion, bpm: bpmOf(l.emotion) } : {}), ...(l.inner_os ? { os: l.inner_os } : {}),
+            ...(l.emotion ? { emo: l.emotion, bpm: bpmOf(l.emotion) } : {}), ...(l.inner_os ? { os: l.inner_os, osOn: true } : {}),
           }));
           // 成员当场发给主角的红包（频率、上限由 chatMoney 校正，不该发的不落卡片）
           if (l.gift) step((cur) => { const c = giftMsg(cur, l.id, l.gift, true); return c ? pushMsg(cur, threadId, c) : cur; });
@@ -179,8 +180,10 @@ export function useChat() {
           }
           return x;
         });
-      } catch {
-        fail("群里暂时没人回应，请检查网络或稍后重试");
+      } catch (error) {
+        fail(error instanceof Error && error.message === "群聊回复格式有误，请稍后重试"
+          ? error.message
+          : "群里暂时没人回应，请检查网络或稍后重试");
       }
       setTypingIn(null);
       return true;
@@ -219,7 +222,7 @@ export function useChat() {
         const nm: ChatMsg = {
           id: msgId(), role: "npc", text: b, ts: Date.now(), gt: gameMinutes(cur), label: gameTimeLabel(cur), ...(asMsg(b) as object),
           ...(lastOne && reply.emotion ? { emo: reply.emotion, bpm: bpmOf(reply.emotion) } : {}),
-          ...(lastOne && reply.inner_os ? { os: reply.inner_os } : {}),
+          ...(lastOne && reply.inner_os ? { os: reply.inner_os, osOn: true } : {}),
         };
         return pushMsg(cur, threadId, nm);
       });
@@ -903,6 +906,14 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
   };
   const isGroup = thread.kind === "group";
   const speaker = (m: ChatMsg) => (isGroup ? game!.npcs.find((n) => n.id === m.from) : npc);
+  // 功能注释：局内头像空了或会话 id 对不上时，用作品里已经设好的头像，避免有头像的人在气泡旁只剩首字
+  const npcIds = new Set(game!.npcs.map((n) => n.id));
+  const myAvatar = shownAvatar(
+    { id: game!.sim?.hero, avatar: game!.player.avatar, name: game!.player.name },
+    { byName: true, avoidIds: npcIds, peers: game!.npcs },
+  );
+  const face = (id?: string, name?: string, avatar?: string, variant?: string) =>
+    shownAvatar({ id, name, avatar, avatarVariant: variant }, { byName: true, peers: game!.npcs });
   const typing = typingIn === thread.id || watching; // 旁观等待中复用「正在输入」气泡
   const hasReal = thread.msgs.some((m) => m.role !== "sys");
   const quicks = quickReplies(hasReal);
@@ -1016,7 +1027,7 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
         await delay(i ? 600 + Math.min(1400, (l.text || "红包").length * 45) : 300); // 首条紧跟请求返回，后面按字数模拟打字
         const ok = (!l.text || isBlocked(g0, l.id) || append((g) => ({
           id: msgId(), role: "npc", from: l.id, text: l.text, ts: Date.now(), gt: gameMinutes(g), label: gameTimeLabel(g),
-          ...(l.emotion ? { emo: l.emotion, bpm: bpmOf(l.emotion) } : {}), ...(l.inner_os ? { os: l.inner_os } : {}),
+          ...(l.emotion ? { emo: l.emotion, bpm: bpmOf(l.emotion) } : {}), ...(l.inner_os ? { os: l.inner_os, osOn: true } : {}),
         }))) && (!l.gift || append((g) => giftMsg(g, l.id, l.gift, true)));
         if (!ok) { done = false; break; }
       }
@@ -1123,7 +1134,7 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
     <div className={`relative flex h-full flex-col ${sms ? "bg-[#f4f5f7]" : ""}`} style={sms ? undefined : { background: look.bg }} data-wx-chat-bg={!sms && !(thread.custom as XCustom | undefined)?.bg && !wxSet.chat.chatBg ? "default" : undefined}>
       {infoOpen && <ChatInfoPage thread={thread} onClose={() => setInfoOpen(false)} onBg={() => setSetOpen(true)} onJump={jumpTo} />}
       {setOpen && <ChatSettingsSheet thread={thread} onClose={() => setSetOpen(false)} />}
-      {calling && <VoiceCall thread={thread} name={thread.title} avatar={npc?.avatar} onClose={() => setCalling(false)} />}
+      {calling && <VoiceCall thread={thread} name={thread.title} avatar={face(npc?.id ?? pid, npc?.name ?? thread.title, npc?.avatar, npc?.avatarVariant)} onClose={() => setCalling(false)} />}
       {money && (
         <MoneySheet kind={money} to={thread.title} balance={wallet.balance(game!)} unit={walletDef(game!)?.label} onClose={() => setMoney(null)}
           onSend={(amount, note) => { const k = money; setMoney(null); setMoreOpen(false); void send(thread.id, k === "redpacket" ? note || "恭喜发财，大吉大利" : note, undefined, k, { amount, note, pstate: "pending" }); }} />
@@ -1224,10 +1235,10 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
                 </p>
               ) : (
                 <div className={`bubble-in flex items-start gap-2.5 ${right ? "flex-row-reverse" : ""}`}>
-                  <div className="shrink-0 overflow-hidden" style={{ borderRadius: sms ? 4 : look.avatarRadius }}>
+                  <div className="h-10 w-10 shrink-0 overflow-hidden" style={{ borderRadius: sms ? 4 : look.avatarRadius }}>
                     {!right
-                      ? <button type="button" onClick={() => !sms && onFriendAvatar(isGroup ? m.from : pid)} aria-label={`${speaker(m)?.name ?? thread.title}：单击看心声，双击拍一拍`} className="block"><Avatar src={speaker(m)?.avatar} name={speaker(m)?.name ?? thread.title} size={40} editable={false} /></button>
-                      : <Avatar src={game!.player.avatar} name={game!.player.name} size={40} editable={false} />}
+                      ? <button type="button" onClick={() => !sms && onFriendAvatar(isGroup ? m.from : pid)} aria-label={`${speaker(m)?.name ?? thread.title}：单击看心声，双击拍一拍`} className="block"><Avatar src={face(speaker(m)?.id ?? (isGroup ? m.from : pid), speaker(m)?.name ?? thread.title, speaker(m)?.avatar, speaker(m)?.avatarVariant)} name={speaker(m)?.name ?? thread.title} size={40} editable={false} /></button>
+                      : <Avatar src={myAvatar} name={game!.player.name} size={40} editable={false} />}
                   </div>
                   <div className={`flex max-w-[70%] flex-col ${right ? "items-end" : "items-start"}`}>
                     {!sms && ((isGroup && !right) || (isGroup && right && wxSet.groupShowMyName) || (!isGroup && wxSet.privateShowNames)) && (
@@ -1294,7 +1305,7 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
                         <EmotionBadge id={m.emo} bpm={m.bpm} />
                       </span>
                     )}
-                    {m.role === "npc" && m.os && (
+                    {m.role === "npc" && m.os && m.osOn && (
                       <div className="mt-1 max-w-full rounded-xl border border-dashed border-[#c9a3ff] bg-[#f6f0ff]/95 px-2.5 py-1.5 text-[12px] leading-snug text-[#5b3f86]">
                         <InnerOsLabel text={m.os} />
                       </div>
@@ -1308,7 +1319,7 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
         })}
         {typing && (
           <div className="bubble-in flex items-start gap-2.5">
-            <div className="overflow-hidden rounded-[4px]">{isGroup ? <span className="flex h-10 w-10 items-center justify-center bg-black/10 text-ink-soft" aria-hidden><IconUsers size={18} /></span> : <Avatar src={npc?.avatar} name={thread.title} size={40} editable={false} />}</div>
+            <div className="overflow-hidden rounded-[4px]">{isGroup ? <span className="flex h-10 w-10 items-center justify-center bg-black/10 text-ink-soft" aria-hidden><IconUsers size={18} /></span> : <Avatar src={face(npc?.id ?? pid, npc?.name ?? thread.title, npc?.avatar, npc?.avatarVariant)} name={thread.title} size={40} editable={false} />}</div>
             <div className={sms ? "rounded-[18px] bg-[#e9e9eb] px-4 py-3" : "wx-bubble wx-bubble-left rounded-[4px] bg-white px-4 py-3"}>
               <span className="inline-flex items-end gap-1"><Dot /><Dot /><Dot /></span>
             </div>
@@ -1528,7 +1539,7 @@ export function ChatView({ thread, onBack, sms, autoSend }: { thread: Thread; on
           <div className="absolute inset-0 z-50 flex flex-col justify-end bg-black/40" onClick={() => setInnerOpen(null)}>
             <div className="max-h-[78%] overflow-y-auto rounded-t-2xl bg-[#f7f4ff] px-4 pb-6 pt-4" onClick={(e) => e.stopPropagation()}>
               <div className="mb-3 flex items-center gap-3">
-                <div className="overflow-hidden rounded-full"><Avatar src={p0?.avatar ?? getStranger(innerOpen)?.avatar} name={nm} size={44} editable={false} /></div>
+                <div className="overflow-hidden rounded-full"><Avatar src={face(p0?.id ?? innerOpen, nm, p0?.avatar ?? getStranger(innerOpen)?.avatar, p0?.avatarVariant)} name={nm} size={44} editable={false} /></div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[16px] font-semibold text-ink">{nm}</p>
                   <p className="text-[11.5px] text-[#7b68a6]">TA 最近的心声与随笔</p>

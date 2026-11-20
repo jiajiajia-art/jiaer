@@ -24,8 +24,6 @@ import {
 import { mergeNegativePrompt, type WorkImageGenBinding } from "../lib/editorImagePrompts";
 import ArtStylePicker from "./ArtStylePicker";
 import { platformImageConfigured } from "../lib/platformImageGen";
-import { rasterToScenePortraitDataUrl } from "../lib/scenePortrait";
-import { rememberImageAsset } from "../lib/freeStyle";
 import type { RoomContent } from "../worlds/star2005/content";
 import type { WorldMapDef } from "../lib/worldMaps";
 
@@ -84,19 +82,11 @@ export default function ModBatchImageGen({ rooms, maps, curMapId, imageGen, onAp
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  /** 功能注释：把本轮新完成的图裁成 9:16、入素材库，再一次性回写；裁剪失败退回原图 URL */
-  const applyDone = async (final: BatchImageJobResult[]) => {
+  const applyDone = (final: BatchImageJobResult[]) => {
     const fresh = final.filter((r) => r.status === "done" && r.url && !appliedRef.current.has(r.id));
     if (!fresh.length) return 0;
-    const fitted: BatchImageJobResult[] = [];
-    for (const r of fresh) {
-      let url = r.url as string;
-      try { url = await rasterToScenePortraitDataUrl(url); } catch { /* 裁剪失败保留原图 */ }
-      rememberImageAsset(url, r.label, "location");
-      appliedRef.current.add(r.id);
-      fitted.push({ ...r, url });
-    }
-    const patch = collectBatchApplyPatch(fitted);
+    for (const r of fresh) appliedRef.current.add(r.id);
+    const patch = collectBatchApplyPatch(fresh);
     // 功能注释：先用 applyBatchPatch 预演，确认确有可写项（用户批量期间删掉的地点会被忽略）再通知父组件
     const probe = applyBatchPatch(roomsRef.current, mapsRef.current, patch);
     if (probe.changed > 0) onApplyRef.current(patch);
@@ -141,7 +131,7 @@ export default function ModBatchImageGen({ rooms, maps, curMapId, imageGen, onAp
         onProgress: (r) => setResults(r.map((x) => ({ ...x }))),
       });
       setResults(final);
-      report(final, await applyDone(final));
+      report(final, applyDone(final));
     } finally {
       abortRef.current = null;
       setRunning(false);
@@ -165,7 +155,7 @@ export default function ModBatchImageGen({ rooms, maps, curMapId, imageGen, onAp
         onProgress: (sub) => setResults(mergeById(base, sub.map((x) => ({ ...x })))),
       });
       setResults(final);
-      report(final, await applyDone(final));
+      report(final, applyDone(final));
     } finally {
       abortRef.current = null;
       setRunning(false);

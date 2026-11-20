@@ -1473,6 +1473,10 @@ const GameDetail: React.FC = () => {
     }, []);
 
     const handleBack = () => {
+        if (new URLSearchParams(location.search).get('from') === 'romance-play') {
+            navigate('/home', { replace: true });
+            return;
+        }
         if (window.history.length > 1) {
             navigate(-1);
         } else {
